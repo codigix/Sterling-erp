@@ -1,0 +1,362 @@
+import React from "react";
+import { Zap } from "lucide-react";
+import Input from "../../../ui/Input";
+import FormSection from "../shared/FormSection";
+import FormRow from "../shared/FormRow";
+import { useFormData } from "../hooks";
+import { PRIORITY_LEVELS } from "../constants";
+
+export default function Step2_SalesOrder() {
+  const { formData, updateField, setNestedField } = useFormData();
+
+  return (
+    <div className="space-y-6">
+      <FormSection
+        title="Sales Order & Order Information"
+        subtitle="Enter order specifications, pricing, and delivery terms"
+        icon={Zap}
+      >
+        <div className="space-y-6">
+          {/* Sales & Contact Details */}
+          <div>
+            <h5 className="text-sm font-semibold text-slate-300 mb-3">Sales & Contact Details</h5>
+            <FormRow cols={2}>
+              <Input
+                label="Customer Contact Person *"
+                value={formData.customerContact}
+                onChange={(e) => updateField("customerContact", e.target.value)}
+                placeholder="Enter contact person name"
+              />
+              <Input
+                label="Client Email *"
+                type="email"
+                value={formData.clientEmail}
+                onChange={(e) => updateField("clientEmail", e.target.value)}
+                placeholder="Enter email address"
+              />
+            </FormRow>
+            <FormRow cols={2}>
+              <Input
+                label="Client Phone *"
+                value={formData.clientPhone}
+                onChange={(e) => updateField("clientPhone", e.target.value)}
+                placeholder="Enter phone number"
+              />
+              <Input
+                label="Estimated End Date *"
+                type="date"
+                value={formData.estimatedEndDate}
+                onChange={(e) => updateField("estimatedEndDate", e.target.value)}
+              />
+            </FormRow>
+            <FormRow cols={2}>
+              <Input
+                label="Billing Address"
+                value={formData.billingAddress}
+                onChange={(e) => updateField("billingAddress", e.target.value)}
+                placeholder="Enter billing address"
+              />
+              <Input
+                label="Shipping Address"
+                value={formData.shippingAddress}
+                onChange={(e) => updateField("shippingAddress", e.target.value)}
+                placeholder="Enter shipping address"
+              />
+            </FormRow>
+          </div>
+
+          {/* Client PO Information */}
+          <div>
+            <h5 className="text-sm font-semibold text-slate-300 mb-3">Client PO Information</h5>
+            <FormRow cols={2}>
+              <Input
+                label="Client PO Number"
+                value={formData.clientPO?.poNumber || ""}
+                onChange={(e) => setNestedField("clientPO", "poNumber", e.target.value)}
+                placeholder="Enter Client PO number"
+              />
+              <Input
+                label="Client PO Date"
+                type="date"
+                value={formData.clientPO?.poDate || ""}
+                onChange={(e) => setNestedField("clientPO", "poDate", e.target.value)}
+              />
+            </FormRow>
+            <Input
+              label="PO Value"
+              type="number"
+              step="0.01"
+              value={formData.clientPO?.poValue || ""}
+              onChange={(e) => setNestedField("clientPO", "poValue", e.target.value)}
+              placeholder="Enter PO value"
+            />
+          </div>
+
+          {/* Product/Item Details */}
+          <div>
+            <h5 className="text-sm font-semibold text-slate-300 mb-3">Product / Item Details</h5>
+            <FormRow cols={2}>
+              <Input
+                label="Item Name"
+                value={formData.productDetails?.itemName || ""}
+                onChange={(e) => setNestedField("productDetails", "itemName", e.target.value)}
+                placeholder="e.g., CCIS – Container Canister Integration Stand"
+              />
+              <Input
+                label="Item Description"
+                value={formData.productDetails?.itemDescription || ""}
+                onChange={(e) => setNestedField("productDetails", "itemDescription", e.target.value)}
+                placeholder="Brief description of the item"
+              />
+            </FormRow>
+            <Input
+              label="Components Included"
+              value={formData.productDetails?.componentsList || ""}
+              onChange={(e) => setNestedField("productDetails", "componentsList", e.target.value)}
+              placeholder="e.g., Long Base Frame, Roller Saddle Assemblies"
+            />
+            <Input
+              label="Certification/Testing Requirements"
+              value={formData.productDetails?.certification || ""}
+              onChange={(e) => setNestedField("productDetails", "certification", e.target.value)}
+              placeholder="e.g., QAP, FAT Report, CoC"
+            />
+          </div>
+
+          {/* Quantity & Pricing */}
+          <div>
+            <h5 className="text-sm font-semibold text-slate-300 mb-3">Quantity & Pricing</h5>
+            <FormRow cols={3}>
+              <Input
+                label="Quantity"
+                type="number"
+                value={formData.pricingDetails?.quantity || ""}
+                onChange={(e) => setNestedField("pricingDetails", "quantity", e.target.value)}
+                placeholder="e.g., 1"
+              />
+              <Input
+                label="Unit Price (₹)"
+                type="number"
+                step="0.01"
+                value={formData.pricingDetails?.unitPrice || ""}
+                onChange={(e) => setNestedField("pricingDetails", "unitPrice", e.target.value)}
+                placeholder="Enter unit price"
+              />
+              <Input
+                label="Total Price *"
+                type="number"
+                step="0.01"
+                value={formData.pricingDetails?.totalPrice || ""}
+                onChange={(e) => setNestedField("pricingDetails", "totalPrice", e.target.value)}
+                placeholder="Enter total price"
+              />
+            </FormRow>
+            <FormRow cols={2}>
+              <Input
+                label="Discount / Special Terms"
+                value={formData.pricingDetails?.discount || ""}
+                onChange={(e) => setNestedField("pricingDetails", "discount", e.target.value)}
+                placeholder="e.g., 5%, bulk discount"
+              />
+              <Input
+                label="Taxes Applicable"
+                value={formData.pricingDetails?.taxesApplicable || ""}
+                onChange={(e) => setNestedField("pricingDetails", "taxesApplicable", e.target.value)}
+                placeholder="e.g., 18% GST"
+              />
+            </FormRow>
+          </div>
+
+          {/* Delivery & Production Terms */}
+          <div>
+            <h5 className="text-sm font-semibold text-slate-300 mb-3">Delivery & Production Terms</h5>
+            <Input
+              label="Delivery Schedule"
+              value={formData.deliveryTerms?.deliverySchedule || ""}
+              onChange={(e) => setNestedField("deliveryTerms", "deliverySchedule", e.target.value)}
+              placeholder="e.g., 12–16 Weeks from PO"
+            />
+            <FormRow cols={2}>
+              <Input
+                label="Packaging Information"
+                value={formData.deliveryTerms?.packagingInfo || ""}
+                onChange={(e) => setNestedField("deliveryTerms", "packagingInfo", e.target.value)}
+                placeholder="e.g., Industrial pallet + wooden box"
+              />
+              <Input
+                label="Dispatch Mode"
+                value={formData.deliveryTerms?.dispatchMode || ""}
+                onChange={(e) => setNestedField("deliveryTerms", "dispatchMode", e.target.value)}
+                placeholder="e.g., Road transport / Truck"
+              />
+            </FormRow>
+            <FormRow cols={2}>
+              <Input
+                label="Installation Required"
+                value={formData.deliveryTerms?.installationRequired || ""}
+                onChange={(e) => setNestedField("deliveryTerms", "installationRequired", e.target.value)}
+                placeholder="e.g., Yes, On-site installation"
+              />
+              <Input
+                label="Site Commissioning"
+                value={formData.deliveryTerms?.siteCommissioning || ""}
+                onChange={(e) => setNestedField("deliveryTerms", "siteCommissioning", e.target.value)}
+                placeholder="e.g., Included / Not Included"
+              />
+            </FormRow>
+          </div>
+
+          {/* Quality & Compliance */}
+          <div>
+            <h5 className="text-sm font-semibold text-slate-300 mb-3">Quality & Compliance</h5>
+            <Input
+              label="Quality Standards"
+              value={formData.qualityCompliance?.qualityStandards || ""}
+              onChange={(e) => setNestedField("qualityCompliance", "qualityStandards", e.target.value)}
+              placeholder="e.g., ISO 9001:2015, DRDO standards"
+            />
+            <FormRow cols={2}>
+              <Input
+                label="Welding Standards"
+                value={formData.qualityCompliance?.weldingStandards || ""}
+                onChange={(e) => setNestedField("qualityCompliance", "weldingStandards", e.target.value)}
+                placeholder="e.g., AWS D1.1"
+              />
+              <Input
+                label="Surface Finish"
+                value={formData.qualityCompliance?.surfaceFinish || ""}
+                onChange={(e) => setNestedField("qualityCompliance", "surfaceFinish", e.target.value)}
+                placeholder="e.g., Blasting + Epoxy primer + PU coat"
+              />
+            </FormRow>
+            <FormRow cols={2}>
+              <Input
+                label="Mechanical Load Testing"
+                value={formData.qualityCompliance?.mechanicalLoadTesting || ""}
+                onChange={(e) => setNestedField("qualityCompliance", "mechanicalLoadTesting", e.target.value)}
+                placeholder="e.g., 6000 kg load test"
+              />
+              <Input
+                label="Electrical Compliance"
+                value={formData.qualityCompliance?.electricalCompliance || ""}
+                onChange={(e) => setNestedField("qualityCompliance", "electricalCompliance", e.target.value)}
+                placeholder="e.g., IEC 61010, Safety compliance"
+              />
+            </FormRow>
+            <Input
+              label="Documents Required"
+              value={formData.qualityCompliance?.documentsRequired || ""}
+              onChange={(e) => setNestedField("qualityCompliance", "documentsRequired", e.target.value)}
+              placeholder="e.g., QAP, FAT Report, Installation Manual, Warranty Certificate"
+            />
+          </div>
+
+          {/* Warranty & Support */}
+          <div>
+            <h5 className="text-sm font-semibold text-slate-300 mb-3">Warranty & Support</h5>
+            <FormRow cols={2}>
+              <Input
+                label="Warranty Period"
+                value={formData.warrantySupport?.warrantyPeriod || ""}
+                onChange={(e) => setNestedField("warrantySupport", "warrantyPeriod", e.target.value)}
+                placeholder="e.g., 12 Months from installation"
+              />
+              <Input
+                label="Service Support"
+                value={formData.warrantySupport?.serviceSupport || ""}
+                onChange={(e) => setNestedField("warrantySupport", "serviceSupport", e.target.value)}
+                placeholder="e.g., AMC available / On-call support"
+              />
+            </FormRow>
+          </div>
+
+          {/* Payment & Priority */}
+          <div>
+            <h5 className="text-sm font-semibold text-slate-300 mb-3">Payment & Priority</h5>
+            <FormRow cols={2}>
+              <Input
+                label="Payment Terms"
+                value={formData.paymentTerms}
+                onChange={(e) => updateField("paymentTerms", e.target.value)}
+                placeholder="e.g., 40% advance, 40% before dispatch, 20% after installation"
+              />
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Project Priority
+                </label>
+                <select
+                  value={formData.projectPriority}
+                  onChange={(e) => updateField("projectPriority", e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
+                >
+                  {PRIORITY_LEVELS.map((level) => (
+                    <option key={level.value} value={level.value}>
+                      {level.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </FormRow>
+          </div>
+
+          {/* Internal Information */}
+          <div>
+            <h5 className="text-sm font-semibold text-slate-300 mb-3">Internal Information (For ERP)</h5>
+            <FormRow cols={2}>
+              <Input
+                label="Total Amount *"
+                type="number"
+                step="0.01"
+                value={formData.totalAmount}
+                onChange={(e) => updateField("totalAmount", e.target.value)}
+                placeholder="0.00"
+              />
+              <Input
+                label="Project Code"
+                value={formData.projectCode}
+                onChange={(e) => updateField("projectCode", e.target.value)}
+                placeholder="Enter project code"
+              />
+            </FormRow>
+            <FormRow cols={2}>
+              <Input
+                label="Estimated Costing (₹)"
+                type="number"
+                step="0.01"
+                value={formData.internalInfo?.estimatedCosting || ""}
+                onChange={(e) => setNestedField("internalInfo", "estimatedCosting", e.target.value)}
+                placeholder="Enter estimated costing"
+              />
+              <Input
+                label="Estimated Profit (₹)"
+                type="number"
+                step="0.01"
+                value={formData.internalInfo?.estimatedProfit || ""}
+                onChange={(e) => setNestedField("internalInfo", "estimatedProfit", e.target.value)}
+                placeholder="Enter estimated profit"
+              />
+            </FormRow>
+            <Input
+              label="Job Card Number"
+              value={formData.internalInfo?.jobCardNo || ""}
+              onChange={(e) => setNestedField("internalInfo", "jobCardNo", e.target.value)}
+              placeholder="Auto-generated or enter manual number"
+            />
+          </div>
+
+          {/* Special Instructions */}
+          <div>
+            <h5 className="text-sm font-semibold text-slate-300 mb-3">Special Instructions</h5>
+            <textarea
+              value={formData.specialInstructions}
+              onChange={(e) => updateField("specialInstructions", e.target.value)}
+              rows="4"
+              className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter any special instructions or notes"
+            />
+          </div>
+        </div>
+      </FormSection>
+    </div>
+  );
+}

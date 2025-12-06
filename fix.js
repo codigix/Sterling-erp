@@ -1,0 +1,1 @@
+const fs = require('fs'); const c = fs.readFileSync('frontend/src/utils/api.js','utf8'); fs.writeFileSync('frontend/src/utils/api.js', c.replace('if (token && token ^!== '\''demo-token'\'')', 'if (token)'));  

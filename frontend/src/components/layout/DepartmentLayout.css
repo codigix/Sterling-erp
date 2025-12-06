@@ -1,0 +1,48 @@
+/* Department Layout Styles */
+
+.min-h-screen {
+  min-height: 100vh;
+}
+
+.dark\:bg-slate-900 {
+  --tw-bg-opacity: 1;
+}
+
+/* Smooth scrolling for sidebar */
+aside {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.3) transparent;
+}
+
+aside::-webkit-scrollbar {
+  width: 6px;
+}
+
+aside::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+aside::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.3);
+  border-radius: 3px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  aside {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  }
+}
+
+/* Transition animations */
+* {
+  transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  body {
+    background-color: rgb(15, 23, 42);
+    color: rgb(226, 232, 240);
+  }
+}

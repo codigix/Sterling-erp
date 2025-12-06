@@ -1,0 +1,86 @@
+
+> frontend@0.0.0 lint
+> eslint . src/components/admin/SalesOrderForm.jsx
+
+
+d:\codigix-projects\Sterling-ERP\frontend\src\components\admin\EmployeePortal.jsx
+  10:10  error    'selectedTask' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                   no-unused-vars
+  10:24  error    'setSelectedTask' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                no-unused-vars
+  15:6   warning  React Hook useEffect has a missing dependency: 'fetchTasks'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+d:\codigix-projects\Sterling-ERP\frontend\src\components\admin\ProductionPlanDetail.jsx
+  19:43  error    'onRefresh' is defined but never used                                                                           no-unused-vars
+  33:6   warning  React Hook useEffect has a missing dependency: 'fetchStages'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+d:\codigix-projects\Sterling-ERP\frontend\src\components\layout\AdminLayout.jsx
+  255:39  error  'idx' is defined but never used  no-unused-vars
+
+d:\codigix-projects\Sterling-ERP\frontend\src\components\sales\SalesOrderWizard.jsx
+   43:10  error    'assignments' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                            no-unused-vars
+   48:6   warning  React Hook useEffect has a missing dependency: 'fetchWorkflowSteps'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+   75:13  error    'response' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                               no-unused-vars
+  191:38  error    'idx' is defined but never used                                                                                        no-unused-vars
+
+d:\codigix-projects\Sterling-ERP\frontend\src\pages\admin\AdminDashboard.jsx
+  3340:6   warning  React Hook useEffect has a missing dependency: 'fetchOrders'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  3354:29  error    'order' is defined but never used                                                                               no-unused-vars
+
+d:\codigix-projects\Sterling-ERP\frontend\src\pages\admin\EmployeeManagement.jsx
+   20:10  error  'roles' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u     no-unused-vars
+   20:17  error  'setRoles' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+  220:15  error  'response' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+  270:16  error  'err' is defined but never used                                                           no-unused-vars
+
+d:\codigix-projects\Sterling-ERP\frontend\src\pages\admin\SalesOrdersManagementPage.jsx
+  29:6  warning  React Hook useEffect has a missing dependency: 'fetchOrders'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+d:\codigix-projects\Sterling-ERP\frontend\src\pages\employee\EmployeeAlerts.jsx
+  12:10  error  'loading' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+d:\codigix-projects\Sterling-ERP\frontend\src\pages\employee\EmployeeAttendance.jsx
+  21:10  error  'loading' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+  22:10  error  'error' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u    no-unused-vars
+
+d:\codigix-projects\Sterling-ERP\frontend\src\pages\employee\EmployeeDashboardHome.jsx
+  17:10  error  'loading' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+d:\codigix-projects\Sterling-ERP\frontend\src\pages\employee\EmployeePortalPage.jsx
+  29:6  warning  React Hook useEffect has missing dependencies: 'fetchAlerts', 'fetchEmployeeStats', and 'fetchEmployeeTasks'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+d:\codigix-projects\Sterling-ERP\frontend\src\pages\employee\EmployeeProfile.jsx
+  9:10  error  'isEditing' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u     no-unused-vars
+  9:21  error  'setIsEditing' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+d:\codigix-projects\Sterling-ERP\frontend\src\pages\employee\EmployeeProjects.jsx
+  11:10  error  'loading' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+  12:10  error  'error' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u    no-unused-vars
+
+d:\codigix-projects\Sterling-ERP\frontend\src\pages\employee\EmployeeUpdates.jsx
+  9:10  error  'loading' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+d:\codigix-projects\Sterling-ERP\frontend\src\pages\procurement\MaterialRequestPage.jsx
+  8:7  error  'formatCurrency' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+d:\codigix-projects\Sterling-ERP\frontend\src\pages\procurement\ProcurementTasksPage.jsx
+  14:10  error  'error' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+d:\codigix-projects\Sterling-ERP\frontend\src\pages\production\ProductionTasksPage.jsx
+  12:10  error  'productionStats' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+  13:10  error  'stageStats' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u       no-unused-vars
+
+d:\codigix-projects\Sterling-ERP\frontend\src\pages\production\RootCardBuilderPage.jsx
+  16:10  error  'loading' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+  49:14  error  'err' is defined but never used                                                          no-unused-vars
+
+d:\codigix-projects\Sterling-ERP\frontend\src\pages\reports\EmployeeTrackingDashboard.jsx
+  23:6  warning  React Hook useEffect has a missing dependency: 'fetchEmployeeDetails'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+d:\codigix-projects\Sterling-ERP\frontend\src\pages\reports\ProjectTrackingDashboard.jsx
+  28:6  warning  React Hook useEffect has a missing dependency: 'fetchProjectDetails'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+d:\codigix-projects\Sterling-ERP\frontend\src\pages\sales\SalesDashboard.jsx
+  13:18  error  'setFilter' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u         no-unused-vars
+  59:9   error  'getPriorityColor' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+✖ 37 problems (29 errors, 8 warnings)
+

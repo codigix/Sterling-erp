@@ -1,0 +1,103 @@
+@import "tailwindcss";
+
+@theme {
+  --color-slate-50: #f8fafc;
+  --color-slate-100: #f1f5f9;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-800: #1e293b;
+  --color-slate-900: #0f172a;
+
+  --color-primary-50: #f8fafc;
+  --color-primary-100: #f1f5f9;
+  --color-primary-200: #e2e8f0;
+  --color-primary-300: #cbd5e1;
+  --color-primary-400: #94a3b8;
+  --color-primary-500: #64748b;
+  --color-primary-600: #475569;
+  --color-primary-700: #334155;
+  --color-primary-800: #1e293b;
+  --color-primary-900: #0f172a;
+
+  --color-secondary-50: #eff6ff;
+  --color-secondary-100: #dbeafe;
+  --color-secondary-200: #bfdbfe;
+  --color-secondary-300: #93c5fd;
+  --color-secondary-400: #60a5fa;
+  --color-secondary-500: #3b82f6;
+  --color-secondary-600: #2563eb;
+  --color-secondary-700: #1d4ed8;
+  --color-secondary-800: #1e40af;
+  --color-secondary-900: #1e3a8a;
+
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+
+  --font-family-sans: 'Inter', system-ui, sans-serif;
+
+  --shadow-soft: 0 2px 8px rgba(0,0,0,0.1);
+  --shadow-medium: 0 4px 16px rgba(0,0,0,0.12);
+  --shadow-strong: 0 8px 32px rgba(0,0,0,0.15);
+}
+
+@layer base {
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+}
+
+@layer components {
+  .layout-container {
+    @apply min-h-screen flex;
+  }
+
+  .sidebar {
+    @apply w-64 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 transition-all duration-300;
+  }
+
+  .sidebar-collapsed {
+    @apply w-16;
+  }
+
+  .main-content {
+    @apply flex-1 flex flex-col min-w-0;
+  }
+
+  .topbar {
+    @apply h-16 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 flex items-center justify-between;
+  }
+
+  .content-area {
+    @apply flex-1 p-6 overflow-auto;
+  }
+
+  .btn {
+    @apply px-4 py-2 rounded-lg font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2;
+  }
+
+  .btn-primary {
+    @apply bg-primary-600 hover:bg-primary-700 text-white focus:ring-primary-500;
+  }
+
+  .btn-secondary {
+    @apply bg-white hover:bg-slate-50 text-slate-900 border border-slate-300 focus:ring-primary-500;
+  }
+
+  .btn-sm {
+    @apply px-3 py-1.5 text-sm;
+  }
+
+  .card {
+    @apply bg-white dark:bg-slate-800 rounded-xl shadow-soft border border-slate-200 dark:border-slate-700 p-6;
+  }
+}
