@@ -84,9 +84,15 @@ export default function Step3_DesignEngineering() {
     const files = Array.from(e.target.files);
     setUploadedFiles((prev) => ({
       ...prev,
-      [type]: [...prev[type], ...files.map((f) => ({ name: f.name, size: f.size, type: f.type }))],
+      [type]: [
+        ...prev[type],
+        ...files.map((f) => ({ name: f.name, size: f.size, type: f.type })),
+      ],
     }));
-    updateDesignField("attachments", type, [...(uploadedFiles[type] || []), ...files]);
+    updateDesignField("attachments", type, [
+      ...(uploadedFiles[type] || []),
+      ...files,
+    ]);
   };
 
   const removeFile = (index, type) => {
@@ -109,13 +115,21 @@ export default function Step3_DesignEngineering() {
           <Input
             label="Design ID"
             value={designEng.generalDesignInfo?.designId || ""}
-            onChange={(e) => updateDesignField("generalDesignInfo", "designId", e.target.value)}
+            onChange={(e) =>
+              updateDesignField("generalDesignInfo", "designId", e.target.value)
+            }
             placeholder="e.g., DES-2024-001"
           />
           <Input
             label="Product Name *"
             value={designEng.productSpecification?.productName || ""}
-            onChange={(e) => updateDesignField("productSpecification", "productName", e.target.value)}
+            onChange={(e) =>
+              updateDesignField(
+                "productSpecification",
+                "productName",
+                e.target.value
+              )
+            }
             placeholder="e.g., CCIS Container Stand"
             required
           />
@@ -124,13 +138,25 @@ export default function Step3_DesignEngineering() {
           <Input
             label="Design Status"
             value={designEng.generalDesignInfo?.designStatus || "Pending"}
-            onChange={(e) => updateDesignField("generalDesignInfo", "designStatus", e.target.value)}
+            onChange={(e) =>
+              updateDesignField(
+                "generalDesignInfo",
+                "designStatus",
+                e.target.value
+              )
+            }
             placeholder="Pending / In Progress / Completed"
           />
           <Input
             label="Design Engineer Name"
             value={designEng.generalDesignInfo?.designEngineerName || ""}
-            onChange={(e) => updateDesignField("generalDesignInfo", "designEngineerName", e.target.value)}
+            onChange={(e) =>
+              updateDesignField(
+                "generalDesignInfo",
+                "designEngineerName",
+                e.target.value
+              )
+            }
             placeholder="Enter engineer name"
           />
         </FormRow>
@@ -145,19 +171,37 @@ export default function Step3_DesignEngineering() {
           <Input
             label="Length (mm)"
             value={designEng.productSpecification?.systemLength || ""}
-            onChange={(e) => updateDesignField("productSpecification", "systemLength", e.target.value)}
+            onChange={(e) =>
+              updateDesignField(
+                "productSpecification",
+                "systemLength",
+                e.target.value
+              )
+            }
             placeholder="e.g., 3000"
           />
           <Input
             label="Width (mm)"
             value={designEng.productSpecification?.systemWidth || ""}
-            onChange={(e) => updateDesignField("productSpecification", "systemWidth", e.target.value)}
+            onChange={(e) =>
+              updateDesignField(
+                "productSpecification",
+                "systemWidth",
+                e.target.value
+              )
+            }
             placeholder="e.g., 2000"
           />
           <Input
             label="Height (mm)"
             value={designEng.productSpecification?.systemHeight || ""}
-            onChange={(e) => updateDesignField("productSpecification", "systemHeight", e.target.value)}
+            onChange={(e) =>
+              updateDesignField(
+                "productSpecification",
+                "systemHeight",
+                e.target.value
+              )
+            }
             placeholder="e.g., 1500"
           />
         </FormRow>
@@ -165,13 +209,25 @@ export default function Step3_DesignEngineering() {
           <Input
             label="Load Capacity (kg)"
             value={designEng.productSpecification?.loadCapacity || ""}
-            onChange={(e) => updateDesignField("productSpecification", "loadCapacity", e.target.value)}
+            onChange={(e) =>
+              updateDesignField(
+                "productSpecification",
+                "loadCapacity",
+                e.target.value
+              )
+            }
             placeholder="e.g., 6000"
           />
           <Input
             label="Operating Environment"
             value={designEng.productSpecification?.operatingEnvironment || ""}
-            onChange={(e) => updateDesignField("productSpecification", "operatingEnvironment", e.target.value)}
+            onChange={(e) =>
+              updateDesignField(
+                "productSpecification",
+                "operatingEnvironment",
+                e.target.value
+              )
+            }
             placeholder="e.g., Indoor, Outdoor, Humid"
           />
         </FormRow>
@@ -179,13 +235,25 @@ export default function Step3_DesignEngineering() {
           <Input
             label="Material Grade"
             value={designEng.productSpecification?.materialGrade || ""}
-            onChange={(e) => updateDesignField("productSpecification", "materialGrade", e.target.value)}
+            onChange={(e) =>
+              updateDesignField(
+                "productSpecification",
+                "materialGrade",
+                e.target.value
+              )
+            }
             placeholder="e.g., EN8, ASTM A36"
           />
           <Input
             label="Surface Finish"
             value={designEng.productSpecification?.surfaceFinish || ""}
-            onChange={(e) => updateDesignField("productSpecification", "surfaceFinish", e.target.value)}
+            onChange={(e) =>
+              updateDesignField(
+                "productSpecification",
+                "surfaceFinish",
+                e.target.value
+              )
+            }
             placeholder="e.g., Painted, Powder coated"
           />
         </FormRow>
@@ -196,47 +264,59 @@ export default function Step3_DesignEngineering() {
         subtitle="Select all material types needed to produce this design"
         icon={FileText}
       >
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4  ">
           <MultiSelect
             label="Steel Sections Required"
             options={STEEL_SECTIONS_OPTIONS}
             value={designEng.materialsRequired?.steelSections || []}
-            onChange={(value) => updateDesignField("materialsRequired", "steelSections", value)}
+            onChange={(value) =>
+              updateDesignField("materialsRequired", "steelSections", value)
+            }
             placeholder="Select steel sections..."
           />
           <MultiSelect
             label="Plates Required"
             options={PLATES_OPTIONS}
             value={designEng.materialsRequired?.plates || []}
-            onChange={(value) => updateDesignField("materialsRequired", "plates", value)}
+            onChange={(value) =>
+              updateDesignField("materialsRequired", "plates", value)
+            }
             placeholder="Select plates..."
           />
           <MultiSelect
             label="Fasteners & Hardware"
             options={FASTENERS_OPTIONS}
             value={designEng.materialsRequired?.fasteners || []}
-            onChange={(value) => updateDesignField("materialsRequired", "fasteners", value)}
+            onChange={(value) =>
+              updateDesignField("materialsRequired", "fasteners", value)
+            }
             placeholder="Select fasteners..."
           />
           <MultiSelect
             label="Mechanical Components"
             options={COMPONENTS_OPTIONS}
             value={designEng.materialsRequired?.components || []}
-            onChange={(value) => updateDesignField("materialsRequired", "components", value)}
+            onChange={(value) =>
+              updateDesignField("materialsRequired", "components", value)
+            }
             placeholder="Select components..."
           />
           <MultiSelect
             label="Electrical & Automation"
             options={ELECTRICAL_OPTIONS}
             value={designEng.materialsRequired?.electrical || []}
-            onChange={(value) => updateDesignField("materialsRequired", "electrical", value)}
+            onChange={(value) =>
+              updateDesignField("materialsRequired", "electrical", value)
+            }
             placeholder="Select electrical items..."
           />
           <MultiSelect
             label="Consumables & Paint"
             options={CONSUMABLES_OPTIONS}
             value={designEng.materialsRequired?.consumables || []}
-            onChange={(value) => updateDesignField("materialsRequired", "consumables", value)}
+            onChange={(value) =>
+              updateDesignField("materialsRequired", "consumables", value)
+            }
             placeholder="Select consumables..."
           />
         </div>
@@ -247,7 +327,7 @@ export default function Step3_DesignEngineering() {
         subtitle="Upload technical drawings and design documents"
         icon={FileText}
       >
-        <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-3 text-left">
               Design Drawings *
@@ -263,18 +343,29 @@ export default function Step3_DesignEngineering() {
               />
               <label htmlFor="drawingsUpload" className="cursor-pointer block">
                 <Upload className="mx-auto mb-2 text-slate-400" size={32} />
-                <p className="text-slate-300 font-medium">Click to upload or drag drawings</p>
-                <p className="text-slate-500 text-xs mt-1">PDF, DWG, DXF, STEP, IGS, PNG, JPG</p>
+                <p className="text-slate-300 font-medium">
+                  Click to upload or drag drawings
+                </p>
+                <p className="text-slate-500 text-xs mt-1">
+                  PDF, DWG, DXF, STEP, IGS, PNG, JPG
+                </p>
               </label>
             </div>
             {uploadedFiles.drawings.length > 0 && (
               <div className="mt-4 space-y-2">
-                <h4 className="text-sm font-medium text-slate-300">Uploaded Drawings:</h4>
+                <h4 className="text-sm font-medium text-slate-300">
+                  Uploaded Drawings:
+                </h4>
                 {uploadedFiles.drawings.map((file, idx) => (
-                  <div key={idx} className="flex items-center justify-between bg-slate-800 p-2 rounded">
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between bg-slate-800 p-2 rounded"
+                  >
                     <div className="flex items-center gap-2">
                       <File size={16} className="text-blue-400" />
-                      <span className="text-sm text-slate-300">{file.name}</span>
+                      <span className="text-sm text-slate-300">
+                        {file.name}
+                      </span>
                     </div>
                     <button
                       onClick={() => removeFile(idx, "drawings")}
@@ -303,18 +394,29 @@ export default function Step3_DesignEngineering() {
               />
               <label htmlFor="documentsUpload" className="cursor-pointer block">
                 <Upload className="mx-auto mb-2 text-slate-400" size={32} />
-                <p className="text-slate-300 font-medium">Click to upload or drag documents</p>
-                <p className="text-slate-500 text-xs mt-1">PDF, DOC, DOCX, XLSX, TXT</p>
+                <p className="text-slate-300 font-medium">
+                  Click to upload or drag documents
+                </p>
+                <p className="text-slate-500 text-xs mt-1">
+                  PDF, DOC, DOCX, XLSX, TXT
+                </p>
               </label>
             </div>
             {uploadedFiles.documents.length > 0 && (
               <div className="mt-4 space-y-2">
-                <h4 className="text-sm font-medium text-slate-300">Uploaded Documents:</h4>
+                <h4 className="text-sm font-medium text-slate-300">
+                  Uploaded Documents:
+                </h4>
                 {uploadedFiles.documents.map((file, idx) => (
-                  <div key={idx} className="flex items-center justify-between bg-slate-800 p-2 rounded">
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between bg-slate-800 p-2 rounded"
+                  >
                     <div className="flex items-center gap-2">
                       <File size={16} className="text-green-400" />
-                      <span className="text-sm text-slate-300">{file.name}</span>
+                      <span className="text-sm text-slate-300">
+                        {file.name}
+                      </span>
                     </div>
                     <button
                       onClick={() => removeFile(idx, "documents")}
@@ -335,30 +437,56 @@ export default function Step3_DesignEngineering() {
         subtitle="Additional specifications and manufacturing notes"
         icon={FileText}
       >
-        <Input
-          label="Design Specifications Summary"
-          value={designEng.commentsNotes?.designSpecifications || ""}
-          onChange={(e) => updateDesignField("commentsNotes", "designSpecifications", e.target.value)}
-          placeholder="Detailed technical specifications and design features"
-        />
-        <Input
-          label="Manufacturing Instructions"
-          value={designEng.commentsNotes?.manufacturingInstructions || ""}
-          onChange={(e) => updateDesignField("commentsNotes", "manufacturingInstructions", e.target.value)}
-          placeholder="Special instructions for fabrication, assembly, and testing"
-        />
-        <Input
-          label="Quality & Safety Requirements"
-          value={designEng.commentsNotes?.qualitySafety || ""}
-          onChange={(e) => updateDesignField("commentsNotes", "qualitySafety", e.target.value)}
-          placeholder="QC checkpoints, safety standards, and testing requirements"
-        />
-        <Input
-          label="Additional Notes"
-          value={designEng.commentsNotes?.additionalNotes || ""}
-          onChange={(e) => updateDesignField("commentsNotes", "additionalNotes", e.target.value)}
-          placeholder="Any other relevant information or special requirements"
-        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Input
+            label="Design Specifications Summary"
+            value={designEng.commentsNotes?.designSpecifications || ""}
+            onChange={(e) =>
+              updateDesignField(
+                "commentsNotes",
+                "designSpecifications",
+                e.target.value
+              )
+            }
+            placeholder="Detailed technical specifications and design features"
+          />
+          <Input
+            label="Manufacturing Instructions"
+            value={designEng.commentsNotes?.manufacturingInstructions || ""}
+            onChange={(e) =>
+              updateDesignField(
+                "commentsNotes",
+                "manufacturingInstructions",
+                e.target.value
+              )
+            }
+            placeholder="Special instructions for fabrication, assembly, and testing"
+          />
+          <Input
+            label="Quality & Safety Requirements"
+            value={designEng.commentsNotes?.qualitySafety || ""}
+            onChange={(e) =>
+              updateDesignField(
+                "commentsNotes",
+                "qualitySafety",
+                e.target.value
+              )
+            }
+            placeholder="QC checkpoints, safety standards, and testing requirements"
+          />
+          <Input
+            label="Additional Notes"
+            value={designEng.commentsNotes?.additionalNotes || ""}
+            onChange={(e) =>
+              updateDesignField(
+                "commentsNotes",
+                "additionalNotes",
+                e.target.value
+              )
+            }
+            placeholder="Any other relevant information or special requirements"
+          />
+        </div>
       </FormSection>
     </div>
   );

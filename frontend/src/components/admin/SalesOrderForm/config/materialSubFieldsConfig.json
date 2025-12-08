@@ -1,0 +1,227 @@
+{
+  "rollerMovementComponents": {
+    "Rollers": {
+      "label": "Rollers (Nylon/PU/Steel)",
+      "fields": [
+        { "name": "rollerDiameter", "label": "Roller Diameter (mm)", "placeholder": "e.g., 50, 100" },
+        { "name": "rollerWidth", "label": "Roller Width (mm)", "placeholder": "e.g., 30, 50" },
+        { "name": "rollerMaterial", "label": "Material Type", "placeholder": "Nylon/PU/Steel", "type": "select", "options": ["Nylon", "PU", "Steel"] },
+        { "name": "rollerBearingType", "label": "Bearing Type", "placeholder": "e.g., inserted" }
+      ]
+    },
+    "Bearings": {
+      "label": "Bearings",
+      "fields": [
+        { "name": "bearingType", "label": "Bearing Type", "placeholder": "Ball/Tapered/Spherical", "type": "select", "options": ["Ball", "Tapered", "Spherical"] },
+        { "name": "bearingBore", "label": "Bore (ID mm)", "placeholder": "e.g., 15, 20" },
+        { "name": "bearingOD", "label": "Outer Diameter (OD mm)", "placeholder": "e.g., 42, 47" },
+        { "name": "bearingWidth", "label": "Width (mm)", "placeholder": "e.g., 13, 15" },
+        { "name": "bearingNumber", "label": "Bearing Number", "placeholder": "e.g., 6202, 6205" }
+      ]
+    },
+    "Linear Guide Rails": {
+      "label": "Linear Guide Rails",
+      "fields": [
+        { "name": "railSize", "label": "Rail Size", "placeholder": "e.g., 15, 20, 25, 35" },
+        { "name": "railLength", "label": "Rail Length (mm)", "placeholder": "e.g., 500, 1000" },
+        { "name": "blockType", "label": "Block Type (Carriage)", "placeholder": "e.g., THK, Hiwin" }
+      ]
+    },
+    "Guide Wheels": {
+      "label": "Guide Wheels",
+      "fields": [
+        { "name": "wheelDiameter", "label": "Wheel Diameter (mm)", "placeholder": "e.g., 40, 50" },
+        { "name": "wheelThickness", "label": "Wheel Thickness (mm)", "placeholder": "e.g., 20, 25" },
+        { "name": "wheelMaterial", "label": "Material", "placeholder": "Steel/PU", "type": "select", "options": ["Steel", "PU"] }
+      ]
+    },
+    "Gear Rack / Pinion": {
+      "label": "Gear Rack / Pinion",
+      "fields": [
+        { "name": "gearModule", "label": "Module (M)", "placeholder": "e.g., 1.5, 2, 3" },
+        { "name": "rackLength", "label": "Rack Length (mm)", "placeholder": "e.g., 1000, 2000" },
+        { "name": "pinionTeeth", "label": "Pinion Teeth Count", "placeholder": "e.g., 20, 30" }
+      ]
+    }
+  },
+  "liftingPullingMechanisms": {
+    "Winch Drum": {
+      "label": "Winch Drum",
+      "fields": [
+        { "name": "drumDiameter", "label": "Drum Diameter (mm)", "placeholder": "e.g., 100, 150" },
+        { "name": "drumLength", "label": "Drum Length (mm)", "placeholder": "e.g., 300, 500" },
+        { "name": "drumMaterialGrade", "label": "Material Grade", "placeholder": "e.g., MS, SS" },
+        { "name": "ropeCapacity", "label": "Rope Capacity (m × mm)", "placeholder": "e.g., 100 x 12" }
+      ]
+    },
+    "Hydraulic System": {
+      "label": "Hydraulic System",
+      "fields": [
+        { "name": "hydraulicBore", "label": "Bore Size (mm)", "placeholder": "e.g., 25, 32, 40" },
+        { "name": "strokeLength", "label": "Stroke Length (mm)", "placeholder": "e.g., 100, 200" },
+        { "name": "mountingType", "label": "Mounting Type", "placeholder": "e.g., Clevis, Trunnion" },
+        { "name": "pressureRating", "label": "Pressure Rating (Bar)", "placeholder": "e.g., 210, 280" }
+      ]
+    }
+  },
+  "electricalAutomation": {
+    "Panel Components": {
+      "label": "Panel Components",
+      "fields": [
+        { "name": "componentType", "label": "Component Type", "placeholder": "MCB/MCCB/Contactor/Relay/VFD/SMPS", "type": "select", "options": ["MCB", "MCCB", "Contactor", "Relay", "VFD", "SMPS"] },
+        { "name": "componentRating", "label": "Rating (A / kW)", "placeholder": "e.g., 16A, 32A, 5.5kW" },
+        { "name": "componentVoltage", "label": "Voltage", "placeholder": "e.g., 230V, 415V", "type": "select", "options": ["230V", "415V"] },
+        { "name": "componentPhase", "label": "Phase", "placeholder": "1/3", "type": "select", "options": ["1 Phase", "3 Phase"] },
+        { "name": "componentPoles", "label": "Poles", "placeholder": "e.g., 1P, 2P, 3P, 4P" }
+      ]
+    },
+    "Sensors": {
+      "label": "Sensors",
+      "fields": [
+        { "name": "sensorType", "label": "Sensor Type", "placeholder": "Proximity/Limit/Load cell/Position", "type": "select", "options": ["Proximity", "Limit", "Load Cell", "Position"] },
+        { "name": "sensorRange", "label": "Range", "placeholder": "e.g., 0-5mm, 0-100kg" },
+        { "name": "sensorVoltage", "label": "Voltage Rating", "placeholder": "e.g., 12DC, 24DC" },
+        { "name": "sensorOutput", "label": "Output Type", "placeholder": "NO/NC", "type": "select", "options": ["NO (Normally Open)", "NC (Normally Closed)"] }
+      ]
+    },
+    "Wiring": {
+      "label": "Wiring",
+      "fields": [
+        { "name": "powerCableSize", "label": "Power Cable Size (sqmm)", "placeholder": "e.g., 1.5, 2.5, 4, 6, 10" },
+        { "name": "powerCableCores", "label": "Core Count", "placeholder": "e.g., 2, 3, 4" },
+        { "name": "controlCableSize", "label": "Control Cable Size (sqmm)", "placeholder": "e.g., 0.75, 1.5" },
+        { "name": "controlCableShield", "label": "Shielded/Unshielded", "placeholder": "Shielded/Unshielded", "type": "select", "options": ["Shielded", "Unshielded"] },
+        { "name": "dragChainSize", "label": "Drag Chain Cable Size (sqmm)", "placeholder": "e.g., 2.5, 4" },
+        { "name": "dragChainFlexibility", "label": "Flexibility Rating", "placeholder": "e.g., Dynamic, Static" }
+      ]
+    }
+  },
+  "safetyMaterials": {
+    "Emergency Stop & Guards": {
+      "label": "Emergency Stop & Guards",
+      "fields": [
+        { "name": "estopType", "label": "Type", "placeholder": "E-stop/Guard Panel/Cover", "type": "select", "options": ["E-stop", "Guard Panel", "Cover"] },
+        { "name": "estopSize", "label": "Size", "placeholder": "e.g., 40mm, 60mm" },
+        { "name": "estopMaterial", "label": "Material", "placeholder": "e.g., Stainless Steel, ABS" }
+      ]
+    },
+    "Protective Barriers & Accessories": {
+      "label": "Protective Barriers & Accessories",
+      "fields": [
+        { "name": "barrierType", "label": "Barrier Type", "placeholder": "e.g., Mesh, Polycarbonate" },
+        { "name": "barrierHeight", "label": "Height/Length (mm)", "placeholder": "e.g., 1000, 1500" },
+        { "name": "barrierMaterial", "label": "Material", "placeholder": "e.g., Steel, Aluminum" }
+      ]
+    }
+  },
+  "surfacePrepPainting": {
+    "Blasting & Primer": {
+      "label": "Blasting & Primer",
+      "fields": [
+        { "name": "gritType", "label": "Grit Type", "placeholder": "e.g., Steel grit, Chilled iron" },
+        { "name": "blastingGrade", "label": "Blasting Grade", "placeholder": "SA2/SA2.5", "type": "select", "options": ["SA1", "SA2", "SA2.5", "SA3"] },
+        { "name": "primerType", "label": "Primer Type", "placeholder": "e.g., Epoxy, Polyester" },
+        { "name": "primerDFT", "label": "DFT Required (microns)", "placeholder": "e.g., 80, 100" }
+      ]
+    },
+    "Topcoat & Finishing": {
+      "label": "Topcoat & Finishing",
+      "fields": [
+        { "name": "topcoatShade", "label": "PU Topcoat Shade", "placeholder": "e.g., Red, Blue, White" },
+        { "name": "mixingRatio", "label": "Mixing Ratio", "placeholder": "e.g., 2:1, 3:1" },
+        { "name": "topcoatDFT", "label": "DFT Required (microns)", "placeholder": "e.g., 100, 120" }
+      ]
+    }
+  },
+  "fabricationConsumables": {
+    "Welding Materials": {
+      "label": "Welding Materials",
+      "fields": [
+        { "name": "electrodeType", "label": "Electrode Type", "placeholder": "E6013/E7018", "type": "select", "options": ["E6013", "E7018", "E8018", "ER70S-2"] },
+        { "name": "electrodeDiameter", "label": "Diameter (mm)", "placeholder": "e.g., 2.4, 3.2, 4.0" }
+      ]
+    },
+    "Cutting & Grinding": {
+      "label": "Cutting & Grinding",
+      "fields": [
+        { "name": "cuttingWheelDiameter", "label": "Cutting Wheel Diameter (mm)", "placeholder": "e.g., 100, 115, 125" },
+        { "name": "grindingWheelGrit", "label": "Grinding Wheel Grit", "placeholder": "e.g., 60, 80, 120" }
+      ]
+    }
+  },
+  "hardwareMisc": {
+    "Hardware Items": {
+      "label": "Hardware Items",
+      "fields": [
+        { "name": "hingeType", "label": "Hinge Type", "placeholder": "e.g., Butt hinge, Piano hinge" },
+        { "name": "eyeBoltSize", "label": "Eye Bolt Size (mm)", "placeholder": "e.g., M8, M10, M12" },
+        { "name": "rubberPadSize", "label": "Rubber Pad Size (mm)", "placeholder": "e.g., 20x20, 30x30" }
+      ]
+    },
+    "Fasteners & Supports": {
+      "label": "Fasteners & Supports",
+      "fields": [
+        { "name": "uClampSize", "label": "U-Clamp Size", "placeholder": "e.g., 10mm, 12mm" },
+        { "name": "shackleSize", "label": "Shackle Size (mm)", "placeholder": "e.g., M10, M12" },
+        { "name": "levelingJackCapacity", "label": "Leveling Jack Capacity (Ton)", "placeholder": "e.g., 1, 2, 5" }
+      ]
+    }
+  },
+  "documentationMaterials": {
+    "Labeling & Tags": {
+      "label": "Labeling & Tags",
+      "fields": [
+        { "name": "tagType", "label": "Tag Type", "placeholder": "e.g., QR Code, Barcode, Metal tag" },
+        { "name": "tagMaterial", "label": "Material", "placeholder": "e.g., Aluminum, Plastic, Vinyl" },
+        { "name": "tagSize", "label": "Size (mm)", "placeholder": "e.g., 50x50, 100x100" }
+      ]
+    },
+    "Certificates & Documentation": {
+      "label": "Certificates & Documentation",
+      "fields": [
+        { "name": "certificateType", "label": "Certificate Type", "placeholder": "Calibration/QC/FAT", "type": "select", "options": ["Calibration Certificate", "QC Certificate", "FAT Certificate", "Material Certificate"] },
+        { "name": "certificateExpiry", "label": "Expiry Date", "placeholder": "e.g., 2025-12-31", "type": "date" }
+      ]
+    }
+  },
+  "machinedParts": {
+    "Shaft": {
+      "label": "Shaft",
+      "fields": [
+        { "name": "shaftDiameter", "label": "Diameter (mm)", "placeholder": "e.g., 20, 25, 32" },
+        { "name": "shaftLength", "label": "Length (mm)", "placeholder": "e.g., 100, 150" },
+        { "name": "shaftMaterial", "label": "Material Grade", "placeholder": "e.g., EN8, EN19" },
+        { "name": "shaftTolerance", "label": "Tolerance Class", "placeholder": "e.g., h7, h6" },
+        { "name": "shaftFinish", "label": "Surface Finish", "placeholder": "e.g., Polished, Ground" }
+      ]
+    },
+    "Bush": {
+      "label": "Bush",
+      "fields": [
+        { "name": "bushID", "label": "Inner Diameter (mm)", "placeholder": "e.g., 20, 25" },
+        { "name": "bushOD", "label": "Outer Diameter (mm)", "placeholder": "e.g., 30, 40" },
+        { "name": "bushLength", "label": "Length (mm)", "placeholder": "e.g., 30, 50" },
+        { "name": "bushMaterial", "label": "Material Type", "placeholder": "e.g., Bronze, Steel" }
+      ]
+    },
+    "Bracket": {
+      "label": "Bracket",
+      "fields": [
+        { "name": "bracketLength", "label": "Length (mm)", "placeholder": "e.g., 100, 150" },
+        { "name": "bracketWidth", "label": "Width (mm)", "placeholder": "e.g., 50, 75" },
+        { "name": "bracketThickness", "label": "Thickness (mm)", "placeholder": "e.g., 5, 8, 10" },
+        { "name": "bracketMaterial", "label": "Material", "placeholder": "e.g., MS, SS, Aluminum" },
+        { "name": "bracketMachining", "label": "Machining Operations", "placeholder": "e.g., Drilling, Tapping" }
+      ]
+    },
+    "Flange": {
+      "label": "Flange",
+      "fields": [
+        { "name": "flangePCD", "label": "Pitch Circle Diameter (mm)", "placeholder": "e.g., 80, 100" },
+        { "name": "flangeHoles", "label": "Number of Holes", "placeholder": "e.g., 4, 6, 8" },
+        { "name": "flangeHoleSize", "label": "Hole Diameter (mm)", "placeholder": "e.g., 12, 14" },
+        { "name": "flangeThickness", "label": "Thickness (mm)", "placeholder": "e.g., 10, 15" }
+      ]
+    }
+  }
+}

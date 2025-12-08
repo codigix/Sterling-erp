@@ -19,18 +19,15 @@ const Input = ({
 
   const inputClasses = `
   w-full border border-slate-600 rounded-lg
-  bg-slate-800 text-slate-100
-  placeholder-slate-400
-    focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
-    disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-50
-    transition-all duration-200
+   text-slate-100
+  
     ${sizeClasses[size]}
     ${error ? "border-red-500 focus:ring-red-500" : ""}
     ${className}
   `;
 
   return (
-    <div className={`space-y-2 ${containerClassName}`}>
+    <div className={`space-y-2 mt-3 ${containerClassName}`}>
       {label && (
         <label className="block text-sm font-medium text-slate-300 text-left">
           {label}

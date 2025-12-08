@@ -7,8 +7,12 @@ export default function FormSection({ title, subtitle, icon: Icon, children }) {
         <div className="flex items-center gap-3 mb-6">
           {Icon && <Icon className="text-blue-400" size={24} />}
           <div>
-            <h4 className="text-lg font-semibold text-white">{title}</h4>
-            {subtitle && <p className="text-xs text-slate-400 mt-1">{subtitle}</p>}
+            <h4 className="text-lg font-semibold text-white text-left">
+              {title}
+            </h4>
+            {subtitle && (
+              <p className="text-xs text-slate-400 mt-1">{subtitle}</p>
+            )}
           </div>
         </div>
       )}

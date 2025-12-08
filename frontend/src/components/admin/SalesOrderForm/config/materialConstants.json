@@ -1,0 +1,31 @@
+{
+  "complexSpecTypes": [
+    "machinedParts",
+    "rollerMovementComponents",
+    "liftingPullingMechanisms",
+    "electricalAutomation",
+    "safetyMaterials",
+    "surfacePrepPainting",
+    "fabricationConsumables",
+    "hardwareMisc",
+    "documentationMaterials"
+  ],
+  "specTypesWithoutCommonFields": [
+    "machinedParts",
+    "rollerMovementComponents",
+    "liftingPullingMechanisms",
+    "electricalAutomation",
+    "safetyMaterials",
+    "surfacePrepPainting",
+    "fabricationConsumables",
+    "hardwareMisc",
+    "documentationMaterials"
+  ],
+  "quantityPlaceholders": {
+    "steelSection": "e.g., 10",
+    "plateType": "e.g., 5",
+    "materialGrade": "e.g., 100",
+    "fastenerType": "e.g., 500"
+  },
+  "qualityPlaceholder": "e.g., A Grade, Premium"
+}

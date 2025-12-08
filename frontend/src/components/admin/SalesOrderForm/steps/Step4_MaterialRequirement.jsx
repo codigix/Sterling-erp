@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Package, Plus, Trash2, Edit2, X, FileText, Save } from "lucide-react";
 import Input from "../../../ui/Input";
+import Select from "../../../ui/Select";
 import FormSection from "../shared/FormSection";
 import FormRow from "../shared/FormRow";
 import Modal from "../../../ui/Modal";
@@ -8,7 +9,9 @@ import Button from "../../../ui/Button";
 import { useFormData, useSalesOrderContext } from "../hooks";
 import {
   MACHINED_PARTS_SPECS,
+  MACHINED_PARTS_SPECIFIC_FIELDS,
   ROLLER_MOVEMENT_COMPONENTS_SPECS,
+  ROLLER_MOVEMENT_COMPONENTS_SPECIFIC_FIELDS,
   LIFTING_PULLING_MECHANISMS_SPECS,
   ELECTRICAL_AUTOMATION_SPECS,
   SAFETY_MATERIALS_SPECS,
@@ -19,23 +22,34 @@ import {
   STEEL_SECTIONS_SPECS,
   PLATE_TYPES_SPECS,
   MATERIAL_GRADES_SPECS,
+  MATERIAL_GRADE_SPECIFIC_FIELDS,
   FASTENER_TYPES_SPECS,
+  FASTENER_SPECIFIC_FIELDS,
 } from "../constants";
+import materialSelectionConfig from "../config/materialSelectionConfig.json";
+import formFieldsConfig from "../config/formFieldsConfig.json";
+import materialInitialState from "../config/materialInitialState.json";
+import materialConstants from "../config/materialConstants.json";
+import materialDetailsConfig from "../config/materialDetailsConfig.json";
+import {
+  formatDetailDisplay,
+  getModalTitle,
+  getMaterialTypeLabel,
+  getDetailRowConfig,
+  buildSpecsObject,
+  getDetailRowEditData,
+  getSpecsKeyName,
+  getQuantityKeyName,
+  getQualityKeyName,
+  getSubFieldsForMaterialType,
+  getSubFieldsForCategory,
+  getAllSubCategories,
+  getSubCategoryLabel,
+} from "../utils/materialUtilities";
 
-const materialUnits = [
-  { key: "kg", value: "kg", label: "Kilogram (kg)" },
-  { key: "ton", value: "ton", label: "Ton" },
-  { key: "m", value: "m", label: "Meter (m)" },
-  { key: "mm", value: "mm", label: "Millimeter (mm)" },
-  { key: "piece", value: "piece", label: "Piece" },
-  { key: "set", value: "set", label: "Set" },
-];
+const STEEL_SECTION_CATEGORY_FIELDS = formFieldsConfig.steelSectionFields;
 
-const materialSources = [
-  { key: "local", value: "local", label: "Local" },
-  { key: "imported", value: "imported", label: "Imported" },
-  { key: "vendor", value: "vendor", label: "Vendor" },
-];
+const PLATE_CATEGORY_FIELDS = formFieldsConfig.plateFields;
 
 export default function Step4_MaterialRequirement() {
   const { formData, updateField } = useFormData();
@@ -46,53 +60,14 @@ export default function Step4_MaterialRequirement() {
     deleteMaterialDetail,
   } = useSalesOrderContext();
 
-  const [currentMaterial, setCurrentMaterial] = useState({
-    quantity: "",
-    unit: "",
-    source: "",
-    assignee: "",
-    steelSection: "",
-    steelSize: "",
-    steelLength: "",
-    steelTolerance: "",
-    plateType: "",
-    plateThickness: "",
-    plateLength: "",
-    plateWidth: "",
-    plateSurfaceFinish: "",
-    materialGrade: "",
-    gradeCertificationRequired: "",
-    gradeTestingStandards: "",
-    gradeSpecialRequirements: "",
-    fastenerType: "",
-    fastenerSize: "",
-    fastenerQuantityPerUnit: "",
-    fastenerPlating: "",
-    machinedParts: "",
-    machinedPartsSpecs: {},
-    rollerMovementComponents: "",
-    rollerMovementComponentsSpecs: {},
-    liftingPullingMechanisms: "",
-    liftingPullingMechanismsSpecs: {},
-    electricalAutomation: "",
-    electricalAutomationSpecs: {},
-    safetyMaterials: "",
-    safetyMaterialsSpecs: {},
-    surfacePrepPainting: "",
-    surfacePrepPaintingSpecs: {},
-    fabricationConsumables: "",
-    fabricationConsumablesSpecs: {},
-    hardwareMisc: "",
-    hardwareMiscSpecs: {},
-    documentationMaterials: "",
-    documentationMaterialsSpecs: {},
-  });
+  const [currentMaterial, setCurrentMaterial] = useState(materialInitialState);
 
   const [specModalOpen, setSpecModalOpen] = useState(false);
   const [specModalType, setSpecModalType] = useState(null);
   const [editingDetail, setEditingDetail] = useState(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [viewingMaterial, setViewingMaterial] = useState(null);
+  const [selectedSubCategory, setSelectedSubCategory] = useState(null);
 
   const enabledMaterials = state.enabledMaterials;
   const materialDetailsTable = state.materialDetailsTable;
@@ -105,19 +80,7 @@ export default function Step4_MaterialRequirement() {
     const { name, value } = e.target;
     setCurrentMaterial((prev) => ({ ...prev, [name]: value }));
 
-    const specTypes = [
-      "machinedParts",
-      "rollerMovementComponents",
-      "liftingPullingMechanisms",
-      "electricalAutomation",
-      "safetyMaterials",
-      "surfacePrepPainting",
-      "fabricationConsumables",
-      "hardwareMisc",
-      "documentationMaterials",
-    ];
-
-    if (specTypes.includes(name) && value) {
+    if (materialConstants.complexSpecTypes.includes(name) && value) {
       setTimeout(() => openSpecModal(name), 100);
     }
   };
@@ -154,47 +117,7 @@ export default function Step4_MaterialRequirement() {
   };
 
   const resetMaterial = () => {
-    setCurrentMaterial({
-      quantity: "",
-      unit: "",
-      source: "",
-      assignee: "",
-      steelSection: "",
-      steelSize: "",
-      steelLength: "",
-      steelTolerance: "",
-      plateType: "",
-      plateThickness: "",
-      plateLength: "",
-      plateWidth: "",
-      plateSurfaceFinish: "",
-      materialGrade: "",
-      gradeCertificationRequired: "",
-      gradeTestingStandards: "",
-      gradeSpecialRequirements: "",
-      fastenerType: "",
-      fastenerSize: "",
-      fastenerQuantityPerUnit: "",
-      fastenerPlating: "",
-      machinedParts: "",
-      machinedPartsSpecs: {},
-      rollerMovementComponents: "",
-      rollerMovementComponentsSpecs: {},
-      liftingPullingMechanisms: "",
-      liftingPullingMechanismsSpecs: {},
-      electricalAutomation: "",
-      electricalAutomationSpecs: {},
-      safetyMaterials: "",
-      safetyMaterialsSpecs: {},
-      surfacePrepPainting: "",
-      surfacePrepPaintingSpecs: {},
-      fabricationConsumables: "",
-      fabricationConsumablesSpecs: {},
-      hardwareMisc: "",
-      hardwareMiscSpecs: {},
-      documentationMaterials: "",
-      documentationMaterialsSpecs: {},
-    });
+    setCurrentMaterial(materialInitialState);
     setEditingDetail(null);
   };
 
@@ -206,6 +129,7 @@ export default function Step4_MaterialRequirement() {
   const closeSpecModal = () => {
     setSpecModalOpen(false);
     setSpecModalType(null);
+    setSelectedSubCategory(null);
   };
 
   const getSpecsForType = (type) => {
@@ -224,19 +148,7 @@ export default function Step4_MaterialRequirement() {
   };
 
   const handleDetailSubmit = (type, specs) => {
-    const complexSpecTypes = [
-      "machinedParts",
-      "rollerMovementComponents",
-      "liftingPullingMechanisms",
-      "electricalAutomation",
-      "safetyMaterials",
-      "surfacePrepPainting",
-      "fabricationConsumables",
-      "hardwareMisc",
-      "documentationMaterials",
-    ];
-
-    if (complexSpecTypes.includes(type)) {
+    if (materialConstants.complexSpecTypes.includes(type)) {
       const { quantity, quality, ...specData } = specs;
       const specsKey = `${type}Specs`;
       const quantityKey = `${type}Quantity`;
@@ -251,6 +163,39 @@ export default function Step4_MaterialRequirement() {
     } else {
       setCurrentMaterial((prev) => ({ ...prev, ...specs }));
     }
+  };
+
+  const renderCommonFields = (materialType) => {
+    const quantityKey = `${materialType}Quantity`;
+    const qualityKey = `${materialType}Quality`;
+
+    return (
+      <>
+        <Input
+          label="Quantity"
+          type="number"
+          value={currentMaterial[quantityKey] || ""}
+          onChange={(e) =>
+            setCurrentMaterial((prev) => ({
+              ...prev,
+              [quantityKey]: e.target.value,
+            }))
+          }
+          placeholder={materialConstants.quantityPlaceholders[materialType] || "e.g., 10"}
+        />
+        <Input
+          label="Quality / Grade"
+          value={currentMaterial[qualityKey] || ""}
+          onChange={(e) =>
+            setCurrentMaterial((prev) => ({
+              ...prev,
+              [qualityKey]: e.target.value,
+            }))
+          }
+          placeholder={materialConstants.qualityPlaceholder}
+        />
+      </>
+    );
   };
 
   return (
@@ -394,390 +339,39 @@ export default function Step4_MaterialRequirement() {
                 Selection Options
               </h6>
               <div className="grid grid-cols-3 md:grid-cols-3 gap-4">
-                {enabledMaterials.steelSection && (
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1 text-left">
-                      Steel Sections
-                    </label>
-                    <select
-                      name="steelSection"
-                      value={currentMaterial.steelSection}
-                      onChange={(e) => {
-                        handleMaterialChange(e);
-                        if (e.target.value) {
-                          setTimeout(() => openSpecModal("steelSection"), 0);
-                        }
-                      }}
-                      className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Select Steel Section (Optional)</option>
-                      <option value="ISMB Beams (100–500 mm)">
-                        ISMB Beams (100–500 mm)
-                      </option>
-                      <option value="ISMC Channels (75–400 mm)">
-                        ISMC Channels (75–400 mm)
-                      </option>
-                      <option value="RHS / SHS box sections">
-                        RHS / SHS box sections
-                      </option>
-                      <option value="Angles (equal/unequal)">
-                        Angles (equal/unequal)
-                      </option>
-                      <option value="Flat bars">Flat bars</option>
-                      <option value="Round bars">Round bars</option>
-                    </select>
-                  </div>
-                )}
-
-                {enabledMaterials.plateType && (
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1 text-left">
-                      Plates
-                    </label>
-                    <select
-                      name="plateType"
-                      value={currentMaterial.plateType}
-                      onChange={(e) => {
-                        handleMaterialChange(e);
-                        if (e.target.value) {
-                          setTimeout(() => openSpecModal("plateType"), 0);
-                        }
-                      }}
-                      className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Select Plate Type (Optional)</option>
-                      <option value="MS plates (5mm – 40mm)">
-                        MS plates (5mm – 40mm)
-                      </option>
-                      <option value="Chequered plates (if flooring needed)">
-                        Chequered plates (if flooring needed)
-                      </option>
-                      <option value="Base plates (thick 20–50mm)">
-                        Base plates (thick 20–50mm)
-                      </option>
-                    </select>
-                  </div>
-                )}
-
-                {enabledMaterials.materialGrade && (
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1 text-left">
-                      Material Grades
-                    </label>
-                    <select
-                      name="materialGrade"
-                      value={currentMaterial.materialGrade}
-                      onChange={(e) => {
-                        handleMaterialChange(e);
-                        if (e.target.value) {
-                          setTimeout(() => openSpecModal("materialGrade"), 0);
-                        }
-                      }}
-                      className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Select Material Grade (Optional)</option>
-                      <option value="IS2062 E250/E350/E410">
-                        IS2062 E250/E350/E410
-                      </option>
-                      <option value="EN8/EN19 (for shafts)">
-                        EN8/EN19 (for shafts)
-                      </option>
-                      <option value="SS304 / SS316 (if needed)">
-                        SS304 / SS316 (if needed)
-                      </option>
-                    </select>
-                  </div>
-                )}
-
-                {enabledMaterials.fastenerType && (
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1 text-left">
-                      Fastener Type
-                    </label>
-                    <select
-                      name="fastenerType"
-                      value={currentMaterial.fastenerType}
-                      onChange={(e) => {
-                        handleMaterialChange(e);
-                        if (e.target.value) {
-                          setTimeout(() => openSpecModal("fastenerType"), 0);
-                        }
-                      }}
-                      className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Select Fastener Type (Optional)</option>
-                      <option value="High tensile bolts (8.8 / 10.9)">
-                        High tensile bolts (8.8 / 10.9)
-                      </option>
-                      <option value="Nuts, washers (spring + flat)">
-                        Nuts, washers (spring + flat)
-                      </option>
-                      <option value="Anchor bolts (for foundation)">
-                        Anchor bolts (for foundation)
-                      </option>
-                    </select>
-                  </div>
-                )}
-
-                {enabledMaterials.machinedParts && (
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1 text-left">
-                      Machined Parts
-                    </label>
-                    <select
-                      name="machinedParts"
-                      value={currentMaterial.machinedParts}
-                      onChange={(e) => {
-                        handleMaterialChange(e);
-                        if (e.target.value) {
-                          setTimeout(() => openSpecModal("machinedParts"), 0);
-                        }
-                      }}
-                      className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">
-                        Select Machined Part Type (Optional)
-                      </option>
-                      <option value="Shafts">Shafts</option>
-                      <option value="Bushes">Bushes</option>
-                      <option value="Spacers">Spacers</option>
-                      <option value="Machined brackets">
-                        Machined brackets
-                      </option>
-                      <option value="Flanges">Flanges</option>
-                      <option value="Bearing housings">Bearing housings</option>
-                    </select>
-                  </div>
-                )}
-
-                {enabledMaterials.rollerMovementComponents && (
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1 text-left">
-                      Roller & Movement Components
-                    </label>
-                    <select
-                      name="rollerMovementComponents"
-                      value={currentMaterial.rollerMovementComponents}
-                      onChange={(e) => {
-                        handleMaterialChange(e);
-                        if (e.target.value) {
-                          setTimeout(
-                            () => openSpecModal("rollerMovementComponents"),
-                            0
-                          );
-                        }
-                      }}
-                      className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Select Component Type (Optional)</option>
-                      <option value="Rollers (Nylon/PU/Steel)">
-                        Rollers (Nylon/PU/Steel)
-                      </option>
-                      <option value="Bearings (ball, tapered, spherical)">
-                        Bearings (ball, tapered, spherical)
-                      </option>
-                      <option value="Linear guide rails">
-                        Linear guide rails
-                      </option>
-                      <option value="Guide wheels">Guide wheels</option>
-                      <option value="Gear racks / pinions (if motorized movement)">
-                        Gear racks / pinions (if motorized movement)
-                      </option>
-                    </select>
-                  </div>
-                )}
-
-                {enabledMaterials.liftingPullingMechanisms && (
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1 text-left">
-                      Lifting / Pulling Mechanisms
-                    </label>
-                    <select
-                      name="liftingPullingMechanisms"
-                      value={currentMaterial.liftingPullingMechanisms}
-                      onChange={(e) => {
-                        handleMaterialChange(e);
-                        if (e.target.value) {
-                          setTimeout(
-                            () => openSpecModal("liftingPullingMechanisms"),
-                            0
-                          );
-                        }
-                      }}
-                      className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Select Mechanism Type (Optional)</option>
-                      <option value="Winch System">Winch System</option>
-                      <option value="Hydraulic System">Hydraulic System</option>
-                    </select>
-                  </div>
-                )}
-
-                {enabledMaterials.electricalAutomation && (
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1 text-left">
-                      Electrical & Automation Materials
-                    </label>
-                    <select
-                      name="electricalAutomation"
-                      value={currentMaterial.electricalAutomation}
-                      onChange={(e) => {
-                        handleMaterialChange(e);
-                        if (e.target.value) {
-                          setTimeout(
-                            () => openSpecModal("electricalAutomation"),
-                            0
-                          );
-                        }
-                      }}
-                      className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Select Type (Optional)</option>
-                      <option value="Panel Components">Panel Components</option>
-                      <option value="Sensors">Sensors</option>
-                      <option value="Wiring">Wiring</option>
-                    </select>
-                  </div>
-                )}
-
-                {enabledMaterials.safetyMaterials && (
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1 text-left">
-                      Safety Materials
-                    </label>
-                    <select
-                      name="safetyMaterials"
-                      value={currentMaterial.safetyMaterials}
-                      onChange={(e) => {
-                        handleMaterialChange(e);
-                        if (e.target.value) {
-                          setTimeout(() => openSpecModal("safetyMaterials"), 0);
-                        }
-                      }}
-                      className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Select Type (Optional)</option>
-                      <option value="Emergency Stop & Guards">
-                        Emergency Stop & Guards
-                      </option>
-                      <option value="Protective Barriers & Accessories">
-                        Protective Barriers & Accessories
-                      </option>
-                    </select>
-                  </div>
-                )}
-
-                {enabledMaterials.surfacePrepPainting && (
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1 text-left">
-                      Surface Prep & Painting Materials
-                    </label>
-                    <select
-                      name="surfacePrepPainting"
-                      value={currentMaterial.surfacePrepPainting}
-                      onChange={(e) => {
-                        handleMaterialChange(e);
-                        if (e.target.value) {
-                          setTimeout(
-                            () => openSpecModal("surfacePrepPainting"),
-                            0
-                          );
-                        }
-                      }}
-                      className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Select Type (Optional)</option>
-                      <option value="Blasting & Primer">
-                        Blasting & Primer
-                      </option>
-                      <option value="Topcoat & Finishing">
-                        Topcoat & Finishing
-                      </option>
-                    </select>
-                  </div>
-                )}
-
-                {enabledMaterials.fabricationConsumables && (
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1 text-left">
-                      Fabrication Consumables
-                    </label>
-                    <select
-                      name="fabricationConsumables"
-                      value={currentMaterial.fabricationConsumables}
-                      onChange={(e) => {
-                        handleMaterialChange(e);
-                        if (e.target.value) {
-                          setTimeout(
-                            () => openSpecModal("fabricationConsumables"),
-                            0
-                          );
-                        }
-                      }}
-                      className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Select Type (Optional)</option>
-                      <option value="Welding Materials">
-                        Welding Materials
-                      </option>
-                      <option value="Cutting & Grinding">
-                        Cutting & Grinding
-                      </option>
-                    </select>
-                  </div>
-                )}
-
-                {enabledMaterials.hardwareMisc && (
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1 text-left">
-                      Hardware & Miscellaneous Items
-                    </label>
-                    <select
-                      name="hardwareMisc"
-                      value={currentMaterial.hardwareMisc}
-                      onChange={(e) => {
-                        handleMaterialChange(e);
-                        if (e.target.value) {
-                          setTimeout(() => openSpecModal("hardwareMisc"), 0);
-                        }
-                      }}
-                      className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Select Type (Optional)</option>
-                      <option value="Hardware Items">Hardware Items</option>
-                      <option value="Fasteners & Supports">
-                        Fasteners & Supports
-                      </option>
-                    </select>
-                  </div>
-                )}
-
-                {enabledMaterials.documentationMaterials && (
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1 text-left">
-                      Documentation Materials
-                    </label>
-                    <select
-                      name="documentationMaterials"
-                      value={currentMaterial.documentationMaterials}
-                      onChange={(e) => {
-                        handleMaterialChange(e);
-                        if (e.target.value) {
-                          setTimeout(
-                            () => openSpecModal("documentationMaterials"),
-                            0
-                          );
-                        }
-                      }}
-                      className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Select Type (Optional)</option>
-                      <option value="Labeling & Tags">Labeling & Tags</option>
-                      <option value="Certificates & Documentation">
-                        Certificates & Documentation
-                      </option>
-                    </select>
-                  </div>
+                {materialSelectionConfig.materialTypes.map((materialType) =>
+                  enabledMaterials[materialType.id] ? (
+                    <div key={materialType.id}>
+                      <label className="block text-sm font-medium text-slate-300 mb-1 text-left">
+                        {materialType.label}
+                      </label>
+                      <select
+                        name={materialType.fieldName}
+                        value={currentMaterial[materialType.fieldName] || ""}
+                        onChange={(e) => {
+                          handleMaterialChange(e);
+                          if (e.target.value) {
+                            setTimeout(
+                              () => openSpecModal(materialType.fieldName),
+                              0
+                            );
+                          }
+                        }}
+                        className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">
+                          {formFieldsConfig.selectPlaceholders[
+                            materialType.fieldName
+                          ] || "Select Type (Optional)"}
+                        </option>
+                        {materialType.options.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : null
                 )}
               </div>
             </div>
@@ -855,29 +449,11 @@ export default function Step4_MaterialRequirement() {
                         <td className="p-2 text-left">
                           <span className="text-xs bg-slate-700 text-slate-300 px-2 py-1 rounded">
                             {(() => {
-                              if (material.steelSection)
-                                return "Steel Sections";
-                              if (material.plateType) return "Plates";
-                              if (material.materialGrade)
-                                return "Material Grades";
-                              if (material.fastenerType) return "Fasteners";
-                              if (material.machinedParts)
-                                return "Machined Parts";
-                              if (material.rollerMovementComponents)
-                                return "Roller/Movement";
-                              if (material.liftingPullingMechanisms)
-                                return "Lifting/Pulling";
-                              if (material.electricalAutomation)
-                                return "Electrical/Automation";
-                              if (material.safetyMaterials)
-                                return "Safety Materials";
-                              if (material.surfacePrepPainting)
-                                return "Surface Prep/Paint";
-                              if (material.fabricationConsumables)
-                                return "Fabrication Consumables";
-                              if (material.hardwareMisc) return "Hardware/Misc";
-                              if (material.documentationMaterials)
-                                return "Documentation";
+                              for (const config of materialDetailsConfig.materialTypes) {
+                                if (material[config.id]) {
+                                  return config.displayLabel;
+                                }
+                              }
                               return "-";
                             })()}
                           </span>
@@ -1973,651 +1549,1010 @@ export default function Step4_MaterialRequirement() {
       <Modal
         isOpen={specModalOpen}
         onClose={closeSpecModal}
-        title={`Edit ${
-          specModalType === "steelSection"
-            ? "Steel Section"
-            : specModalType === "plateType"
-            ? "Plate"
-            : specModalType === "materialGrade"
-            ? "Material Grade"
-            : specModalType === "fastenerType"
-            ? "Fastener"
-            : specModalType === "machinedParts"
-            ? "Machined Parts"
-            : specModalType === "rollerMovementComponents"
-            ? "Roller Movement"
-            : specModalType === "liftingPullingMechanisms"
-            ? "Lifting/Pulling"
-            : specModalType === "electricalAutomation"
-            ? "Electrical/Automation"
-            : specModalType === "safetyMaterials"
-            ? "Safety Materials"
-            : specModalType === "surfacePrepPainting"
-            ? "Surface Prep/Painting"
-            : specModalType === "fabricationConsumables"
-            ? "Fabrication Consumables"
-            : specModalType === "hardwareMisc"
-            ? "Hardware/Misc"
-            : specModalType === "documentationMaterials"
-            ? "Documentation"
-            : "Specifications"
-        } Specifications`}
+        title={`Edit ${getModalTitle(specModalType)} Specifications`}
         size="lg"
       >
         <div className="bg-slate-900 p-6 space-y-4 max-h-[70vh] overflow-y-auto">
           {specModalType === "steelSection" && (
-            <>
-              {STEEL_SECTIONS_SPECS[currentMaterial.steelSection]?.map(
-                (field) => (
-                  <Input
-                    key={field.name}
-                    label={field.label}
-                    value={currentMaterial[field.name] || ""}
-                    onChange={(e) =>
-                      setCurrentMaterial((prev) => ({
-                        ...prev,
-                        [field.name]: e.target.value,
-                      }))
-                    }
-                    placeholder={field.placeholder}
-                  />
-                )
+            <div className="space-y-6">
+              <div>
+                <h5 className="text-sm font-semibold text-slate-200 mb-3">Basic Specifications</h5>
+                <div className="grid grid-cols-2 gap-4">
+                  {STEEL_SECTIONS_SPECS[currentMaterial.steelSection]?.map(
+                    (field) => (
+                      <Input
+                        key={field.name}
+                        label={field.label}
+                        value={currentMaterial[field.name] || ""}
+                        onChange={(e) =>
+                          setCurrentMaterial((prev) => ({
+                            ...prev,
+                            [field.name]: e.target.value,
+                          }))
+                        }
+                        placeholder={field.placeholder}
+                      />
+                    )
+                  )}
+                </div>
+              </div>
+
+              {currentMaterial.steelSection && STEEL_SECTION_CATEGORY_FIELDS[currentMaterial.steelSection] && (
+                <div>
+                  <h5 className="text-sm font-semibold text-slate-200 mb-3">Category-Specific Details</h5>
+                  <div className="grid grid-cols-2 gap-4">
+                    {STEEL_SECTION_CATEGORY_FIELDS[currentMaterial.steelSection]?.map(
+                      (field) => (
+                        <Input
+                          key={field.name}
+                          label={field.label}
+                          value={currentMaterial[field.name] || ""}
+                          onChange={(e) =>
+                            setCurrentMaterial((prev) => ({
+                              ...prev,
+                              [field.name]: e.target.value,
+                            }))
+                          }
+                          placeholder={field.placeholder}
+                        />
+                      )
+                    )}
+                  </div>
+                </div>
               )}
-              <Input
-                label="Quantity"
-                type="number"
-                value={currentMaterial.steelQuantity || ""}
-                onChange={(e) =>
-                  setCurrentMaterial((prev) => ({
-                    ...prev,
-                    steelQuantity: e.target.value,
-                  }))
-                }
-                placeholder="e.g., 10"
-              />
-              <Input
-                label="Quality / Grade"
-                value={currentMaterial.steelQuality || ""}
-                onChange={(e) =>
-                  setCurrentMaterial((prev) => ({
-                    ...prev,
-                    steelQuality: e.target.value,
-                  }))
-                }
-                placeholder="e.g., A Grade, Premium"
-              />
-            </>
+
+              <div>
+                <h5 className="text-sm font-semibold text-slate-200 mb-3">Quantity & Quality</h5>
+                <div className="grid grid-cols-2 gap-4">
+                  {renderCommonFields("steelSection")}
+                </div>
+              </div>
+            </div>
           )}
 
           {specModalType === "plateType" && (
-            <>
-              {PLATE_TYPES_SPECS[currentMaterial.plateType]?.map((field) => (
-                <Input
-                  key={field.name}
-                  label={field.label}
-                  value={currentMaterial[field.name] || ""}
-                  onChange={(e) =>
-                    setCurrentMaterial((prev) => ({
-                      ...prev,
-                      [field.name]: e.target.value,
-                    }))
-                  }
-                  placeholder={field.placeholder}
-                />
-              ))}
-              <Input
-                label="Quantity"
-                type="number"
-                value={currentMaterial.plateQuantity || ""}
-                onChange={(e) =>
-                  setCurrentMaterial((prev) => ({
-                    ...prev,
-                    plateQuantity: e.target.value,
-                  }))
-                }
-                placeholder="e.g., 5"
-              />
-              <Input
-                label="Quality / Grade"
-                value={currentMaterial.plateQuality || ""}
-                onChange={(e) =>
-                  setCurrentMaterial((prev) => ({
-                    ...prev,
-                    plateQuality: e.target.value,
-                  }))
-                }
-                placeholder="e.g., A Grade, Premium"
-              />
-            </>
+            <div className="space-y-6">
+              <div>
+                <h5 className="text-sm font-semibold text-slate-200 mb-3">Basic Specifications</h5>
+                <div className="grid grid-cols-2 gap-4">
+                  {PLATE_TYPES_SPECS[currentMaterial.plateType]?.map((field) => (
+                    <Input
+                      key={field.name}
+                      label={field.label}
+                      value={currentMaterial[field.name] || ""}
+                      onChange={(e) =>
+                        setCurrentMaterial((prev) => ({
+                          ...prev,
+                          [field.name]: e.target.value,
+                        }))
+                      }
+                      placeholder={field.placeholder}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {currentMaterial.plateType && PLATE_CATEGORY_FIELDS[currentMaterial.plateType] && (
+                <div>
+                  <h5 className="text-sm font-semibold text-slate-200 mb-3">Category-Specific Details</h5>
+                  <div className="grid grid-cols-2 gap-4">
+                    {PLATE_CATEGORY_FIELDS[currentMaterial.plateType]?.map(
+                      (field) => (
+                        <Input
+                          key={field.name}
+                          label={field.label}
+                          value={currentMaterial[field.name] || ""}
+                          onChange={(e) =>
+                            setCurrentMaterial((prev) => ({
+                              ...prev,
+                              [field.name]: e.target.value,
+                            }))
+                          }
+                          placeholder={field.placeholder}
+                        />
+                      )
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <h5 className="text-sm font-semibold text-slate-200 mb-3">Quantity & Quality</h5>
+                <div className="grid grid-cols-2 gap-4">
+                  {renderCommonFields("plateType")}
+                </div>
+              </div>
+            </div>
           )}
 
           {specModalType === "materialGrade" && (
-            <>
-              {MATERIAL_GRADES_SPECS[currentMaterial.materialGrade]?.map(
-                (field) => (
-                  <Input
-                    key={field.name}
-                    label={field.label}
-                    value={currentMaterial[field.name] || ""}
-                    onChange={(e) =>
-                      setCurrentMaterial((prev) => ({
-                        ...prev,
-                        [field.name]: e.target.value,
-                      }))
-                    }
-                    placeholder={field.placeholder}
-                  />
-                )
+            <div className="space-y-6">
+              <div>
+                <h5 className="text-sm font-semibold text-slate-200 mb-3">Basic Specifications</h5>
+                <div className="grid grid-cols-2 gap-4">
+                  {MATERIAL_GRADES_SPECS[currentMaterial.materialGrade]?.map(
+                    (field) => (
+                      <Input
+                        key={field.name}
+                        label={field.label}
+                        value={currentMaterial[field.name] || ""}
+                        onChange={(e) =>
+                          setCurrentMaterial((prev) => ({
+                            ...prev,
+                            [field.name]: e.target.value,
+                          }))
+                        }
+                        placeholder={field.placeholder}
+                      />
+                    )
+                  )}
+                </div>
+              </div>
+
+              {currentMaterial.materialGrade && MATERIAL_GRADE_SPECIFIC_FIELDS[currentMaterial.materialGrade] && (
+                <div>
+                  <h5 className="text-sm font-semibold text-slate-200 mb-3">Category-Specific Details</h5>
+                  <div className="grid grid-cols-2 gap-4">
+                    {MATERIAL_GRADE_SPECIFIC_FIELDS[currentMaterial.materialGrade]?.map(
+                      (field) => (
+                        <Input
+                          key={field.name}
+                          label={field.label}
+                          value={currentMaterial[field.name] || ""}
+                          onChange={(e) =>
+                            setCurrentMaterial((prev) => ({
+                              ...prev,
+                              [field.name]: e.target.value,
+                            }))
+                          }
+                          placeholder={field.placeholder}
+                        />
+                      )
+                    )}
+                  </div>
+                </div>
               )}
-              <Input
-                label="Quantity"
-                type="number"
-                value={currentMaterial.gradeQuantity || ""}
-                onChange={(e) =>
-                  setCurrentMaterial((prev) => ({
-                    ...prev,
-                    gradeQuantity: e.target.value,
-                  }))
-                }
-                placeholder="e.g., 100"
-              />
-              <Input
-                label="Quality / Grade"
-                value={currentMaterial.gradeQuality || ""}
-                onChange={(e) =>
-                  setCurrentMaterial((prev) => ({
-                    ...prev,
-                    gradeQuality: e.target.value,
-                  }))
-                }
-                placeholder="e.g., Premium, Standard"
-              />
-            </>
+
+              <div>
+                <h5 className="text-sm font-semibold text-slate-200 mb-3">Quantity & Quality</h5>
+                <div className="grid grid-cols-2 gap-4">
+                  {renderCommonFields("materialGrade")}
+                </div>
+              </div>
+            </div>
           )}
 
           {specModalType === "fastenerType" && (
-            <>
-              {FASTENER_TYPES_SPECS[currentMaterial.fastenerType]?.map(
-                (field) => (
-                  <Input
-                    key={field.name}
-                    label={field.label}
-                    value={currentMaterial[field.name] || ""}
-                    onChange={(e) =>
-                      setCurrentMaterial((prev) => ({
-                        ...prev,
-                        [field.name]: e.target.value,
-                      }))
-                    }
-                    placeholder={field.placeholder}
-                  />
-                )
+            <div className="space-y-6">
+              <div>
+                <h5 className="text-sm font-semibold text-slate-200 mb-3">Basic Specifications</h5>
+                <div className="grid grid-cols-2 gap-4">
+                  {FASTENER_TYPES_SPECS[currentMaterial.fastenerType]?.map(
+                    (field) => (
+                      <Input
+                        key={field.name}
+                        label={field.label}
+                        value={currentMaterial[field.name] || ""}
+                        onChange={(e) =>
+                          setCurrentMaterial((prev) => ({
+                            ...prev,
+                            [field.name]: e.target.value,
+                          }))
+                        }
+                        placeholder={field.placeholder}
+                      />
+                    )
+                  )}
+                </div>
+              </div>
+
+              {currentMaterial.fastenerType && FASTENER_SPECIFIC_FIELDS[currentMaterial.fastenerType] && (
+                <div>
+                  <h5 className="text-sm font-semibold text-slate-200 mb-3">Category-Specific Details</h5>
+                  <div className="grid grid-cols-2 gap-4">
+                    {FASTENER_SPECIFIC_FIELDS[currentMaterial.fastenerType]?.map(
+                      (field) => (
+                        <Input
+                          key={field.name}
+                          label={field.label}
+                          value={currentMaterial[field.name] || ""}
+                          onChange={(e) =>
+                            setCurrentMaterial((prev) => ({
+                              ...prev,
+                              [field.name]: e.target.value,
+                            }))
+                          }
+                          placeholder={field.placeholder}
+                        />
+                      )
+                    )}
+                  </div>
+                </div>
               )}
-              <Input
-                label="Quantity"
-                type="number"
-                value={currentMaterial.fastenerQuantity || ""}
-                onChange={(e) =>
-                  setCurrentMaterial((prev) => ({
-                    ...prev,
-                    fastenerQuantity: e.target.value,
-                  }))
-                }
-                placeholder="e.g., 500"
-              />
-              <Input
-                label="Quality / Grade"
-                value={currentMaterial.fastenerQuality || ""}
-                onChange={(e) =>
-                  setCurrentMaterial((prev) => ({
-                    ...prev,
-                    fastenerQuality: e.target.value,
-                  }))
-                }
-                placeholder="e.g., Grade 8.8, Grade 10.9"
-              />
-            </>
+
+              <div>
+                <h5 className="text-sm font-semibold text-slate-200 mb-3">Quantity & Quality</h5>
+                <div className="grid grid-cols-2 gap-4">
+                  {renderCommonFields("fastenerType")}
+                </div>
+              </div>
+            </div>
           )}
 
           {specModalType === "machinedParts" && (
-            <>
-              {MACHINED_PARTS_SPECS[currentMaterial.machinedParts]?.map(
-                (field) => (
-                  <Input
-                    key={field.name}
-                    label={field.label}
-                    value={currentMaterial.machinedPartsSpecs[field.name] || ""}
-                    onChange={(e) =>
-                      setCurrentMaterial((prev) => ({
-                        ...prev,
-                        machinedPartsSpecs: {
-                          ...prev.machinedPartsSpecs,
-                          [field.name]: e.target.value,
-                        },
-                      }))
-                    }
-                    placeholder={field.placeholder}
-                  />
-                )
+            <div className="space-y-6">
+              <div>
+                <h5 className="text-sm font-semibold text-slate-200 mb-3">Basic Specifications</h5>
+                <div className="grid grid-cols-2 gap-4">
+                  {MACHINED_PARTS_SPECS[currentMaterial.machinedParts]?.map(
+                    (field) => (
+                      <Input
+                        key={field.name}
+                        label={field.label}
+                        value={currentMaterial.machinedPartsSpecs[field.name] || ""}
+                        onChange={(e) =>
+                          setCurrentMaterial((prev) => ({
+                            ...prev,
+                            machinedPartsSpecs: {
+                              ...prev.machinedPartsSpecs,
+                              [field.name]: e.target.value,
+                            },
+                          }))
+                        }
+                        placeholder={field.placeholder}
+                      />
+                    )
+                  )}
+                </div>
+              </div>
+
+              {currentMaterial.machinedParts && MACHINED_PARTS_SPECIFIC_FIELDS[currentMaterial.machinedParts] && (
+                <div>
+                  <h5 className="text-sm font-semibold text-slate-200 mb-3">Category-Specific Details</h5>
+                  <div className="grid grid-cols-2 gap-4">
+                    {MACHINED_PARTS_SPECIFIC_FIELDS[currentMaterial.machinedParts]?.map(
+                      (field) => (
+                        <Input
+                          key={field.name}
+                          label={field.label}
+                          value={currentMaterial[field.name] || ""}
+                          onChange={(e) =>
+                            setCurrentMaterial((prev) => ({
+                              ...prev,
+                              [field.name]: e.target.value,
+                            }))
+                          }
+                          placeholder={field.placeholder}
+                        />
+                      )
+                    )}
+                  </div>
+                </div>
               )}
-              <Input
-                label="Quantity"
-                type="number"
-                value={currentMaterial.machinedPartsQuantity || ""}
-                onChange={(e) =>
-                  setCurrentMaterial((prev) => ({
-                    ...prev,
-                    machinedPartsQuantity: e.target.value,
-                  }))
-                }
-                placeholder="e.g., 25"
-              />
-              <Input
-                label="Quality / Grade"
-                value={currentMaterial.machinedPartsQuality || ""}
-                onChange={(e) =>
-                  setCurrentMaterial((prev) => ({
-                    ...prev,
-                    machinedPartsQuality: e.target.value,
-                  }))
-                }
-                placeholder="e.g., Premium, Standard"
-              />
-            </>
+
+              <div>
+                <h5 className="text-sm font-semibold text-slate-200 mb-3">Quantity & Quality</h5>
+                <div className="grid grid-cols-2 gap-4">
+                  {renderCommonFields("machinedParts")}
+                </div>
+              </div>
+            </div>
           )}
 
           {specModalType === "rollerMovementComponents" && (
-            <>
-              {ROLLER_MOVEMENT_COMPONENTS_SPECS[
-                currentMaterial.rollerMovementComponents
-              ]?.map((field) => (
-                <Input
-                  key={field.name}
-                  label={field.label}
-                  value={
-                    currentMaterial.rollerMovementComponentsSpecs[field.name] ||
-                    ""
-                  }
-                  onChange={(e) =>
-                    setCurrentMaterial((prev) => ({
-                      ...prev,
-                      rollerMovementComponentsSpecs: {
-                        ...prev.rollerMovementComponentsSpecs,
-                        [field.name]: e.target.value,
-                      },
-                    }))
-                  }
-                  placeholder={field.placeholder}
-                />
-              ))}
-              <Input
-                label="Quantity"
-                type="number"
-                value={currentMaterial.rollerMovementQuantity || ""}
-                onChange={(e) =>
-                  setCurrentMaterial((prev) => ({
-                    ...prev,
-                    rollerMovementQuantity: e.target.value,
-                  }))
-                }
-                placeholder="e.g., 8"
-              />
-              <Input
-                label="Quality / Grade"
-                value={currentMaterial.rollerMovementQuality || ""}
-                onChange={(e) =>
-                  setCurrentMaterial((prev) => ({
-                    ...prev,
-                    rollerMovementQuality: e.target.value,
-                  }))
-                }
-                placeholder="e.g., Industrial, Precision"
-              />
-            </>
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2 text-left">
+                  Component Type
+                </label>
+                <select
+                  value={selectedSubCategory || ""}
+                  onChange={(e) => setSelectedSubCategory(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select Component Type</option>
+                  {getAllSubCategories("rollerMovementComponents").map((category) => (
+                    <option key={category} value={category}>
+                      {getSubCategoryLabel("rollerMovementComponents", category)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {selectedSubCategory && (
+                <div>
+                  <h5 className="text-sm font-semibold text-slate-200 mb-3">
+                    {getSubCategoryLabel("rollerMovementComponents", selectedSubCategory)} Details
+                  </h5>
+                  <div className="grid grid-cols-2 gap-4">
+                    {getSubFieldsForCategory("rollerMovementComponents", selectedSubCategory)?.fields?.map(
+                      (field) => (
+                        field.type === "select" ? (
+                          <div key={field.name}>
+                            <label className="block text-sm font-medium text-slate-300 mb-1 text-left">
+                              {field.label}
+                            </label>
+                            <select
+                              value={currentMaterial.rollerMovementComponentsSpecs[field.name] || ""}
+                              onChange={(e) =>
+                                setCurrentMaterial((prev) => ({
+                                  ...prev,
+                                  rollerMovementComponentsSpecs: {
+                                    ...prev.rollerMovementComponentsSpecs,
+                                    [field.name]: e.target.value,
+                                  },
+                                }))
+                              }
+                              className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                              <option value="">{field.placeholder}</option>
+                              {field.options?.map((opt) => (
+                                <option key={opt} value={opt}>
+                                  {opt}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        ) : (
+                          <Input
+                            key={field.name}
+                            label={field.label}
+                            type={field.type || "text"}
+                            value={currentMaterial.rollerMovementComponentsSpecs[field.name] || ""}
+                            onChange={(e) =>
+                              setCurrentMaterial((prev) => ({
+                                ...prev,
+                                rollerMovementComponentsSpecs: {
+                                  ...prev.rollerMovementComponentsSpecs,
+                                  [field.name]: e.target.value,
+                                },
+                              }))
+                            }
+                            placeholder={field.placeholder}
+                          />
+                        )
+                      )
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <h5 className="text-sm font-semibold text-slate-200 mb-3">
+                  Quantity & Quality
+                </h5>
+                <div className="grid grid-cols-2 gap-4">
+                  {renderCommonFields("rollerMovementComponents")}
+                </div>
+              </div>
+            </div>
           )}
 
           {specModalType === "liftingPullingMechanisms" && (
-            <>
-              {LIFTING_PULLING_MECHANISMS_SPECS[
-                currentMaterial.liftingPullingMechanisms
-              ]?.map((field) => (
-                <Input
-                  key={field.name}
-                  label={field.label}
-                  value={
-                    currentMaterial.liftingPullingMechanismsSpecs[field.name] ||
-                    ""
-                  }
-                  onChange={(e) =>
-                    setCurrentMaterial((prev) => ({
-                      ...prev,
-                      liftingPullingMechanismsSpecs: {
-                        ...prev.liftingPullingMechanismsSpecs,
-                        [field.name]: e.target.value,
-                      },
-                    }))
-                  }
-                  placeholder={field.placeholder}
-                />
-              ))}
-              <Input
-                label="Quantity"
-                type="number"
-                value={currentMaterial.liftingPullingQuantity || ""}
-                onChange={(e) =>
-                  setCurrentMaterial((prev) => ({
-                    ...prev,
-                    liftingPullingQuantity: e.target.value,
-                  }))
-                }
-                placeholder="e.g., 2"
-              />
-              <Input
-                label="Quality / Grade"
-                value={currentMaterial.liftingPullingQuality || ""}
-                onChange={(e) =>
-                  setCurrentMaterial((prev) => ({
-                    ...prev,
-                    liftingPullingQuality: e.target.value,
-                  }))
-                }
-                placeholder="e.g., Industrial, Heavy Duty"
-              />
-            </>
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2 text-left">
+                  Mechanism Type
+                </label>
+                <select
+                  value={selectedSubCategory || ""}
+                  onChange={(e) => setSelectedSubCategory(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select Mechanism Type</option>
+                  {getAllSubCategories("liftingPullingMechanisms").map((category) => (
+                    <option key={category} value={category}>
+                      {getSubCategoryLabel("liftingPullingMechanisms", category)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {selectedSubCategory && (
+                <div>
+                  <h5 className="text-sm font-semibold text-slate-200 mb-3">
+                    {getSubCategoryLabel("liftingPullingMechanisms", selectedSubCategory)} Specifications
+                  </h5>
+                  <div className="grid grid-cols-2 gap-4">
+                    {getSubFieldsForCategory("liftingPullingMechanisms", selectedSubCategory)?.fields?.map(
+                      (field) => (
+                        field.type === "select" ? (
+                          <div key={field.name}>
+                            <label className="block text-sm font-medium text-slate-300 mb-1 text-left">
+                              {field.label}
+                            </label>
+                            <select
+                              value={currentMaterial.liftingPullingMechanismsSpecs[field.name] || ""}
+                              onChange={(e) =>
+                                setCurrentMaterial((prev) => ({
+                                  ...prev,
+                                  liftingPullingMechanismsSpecs: {
+                                    ...prev.liftingPullingMechanismsSpecs,
+                                    [field.name]: e.target.value,
+                                  },
+                                }))
+                              }
+                              className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                              <option value="">{field.placeholder}</option>
+                              {field.options?.map((opt) => (
+                                <option key={opt} value={opt}>
+                                  {opt}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        ) : (
+                          <Input
+                            key={field.name}
+                            label={field.label}
+                            type={field.type || "text"}
+                            value={currentMaterial.liftingPullingMechanismsSpecs[field.name] || ""}
+                            onChange={(e) =>
+                              setCurrentMaterial((prev) => ({
+                                ...prev,
+                                liftingPullingMechanismsSpecs: {
+                                  ...prev.liftingPullingMechanismsSpecs,
+                                  [field.name]: e.target.value,
+                                },
+                              }))
+                            }
+                            placeholder={field.placeholder}
+                          />
+                        )
+                      )
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <h5 className="text-sm font-semibold text-slate-200 mb-3">Quantity & Quality</h5>
+                <div className="grid grid-cols-2 gap-4">
+                  {renderCommonFields("liftingPullingMechanisms")}
+                </div>
+              </div>
+            </div>
           )}
 
           {specModalType === "electricalAutomation" && (
-            <>
-              {ELECTRICAL_AUTOMATION_SPECS[
-                currentMaterial.electricalAutomation
-              ]?.map((field) => (
-                <Input
-                  key={field.name}
-                  label={field.label}
-                  value={
-                    currentMaterial.electricalAutomationSpecs[field.name] || ""
-                  }
-                  onChange={(e) =>
-                    setCurrentMaterial((prev) => ({
-                      ...prev,
-                      electricalAutomationSpecs: {
-                        ...prev.electricalAutomationSpecs,
-                        [field.name]: e.target.value,
-                      },
-                    }))
-                  }
-                  placeholder={field.placeholder}
-                />
-              ))}
-              <Input
-                label="Quantity"
-                type="number"
-                value={currentMaterial.electricalAutomationQuantity || ""}
-                onChange={(e) =>
-                  setCurrentMaterial((prev) => ({
-                    ...prev,
-                    electricalAutomationQuantity: e.target.value,
-                  }))
-                }
-                placeholder="e.g., 15"
-              />
-              <Input
-                label="Quality / Grade"
-                value={currentMaterial.electricalAutomationQuality || ""}
-                onChange={(e) =>
-                  setCurrentMaterial((prev) => ({
-                    ...prev,
-                    electricalAutomationQuality: e.target.value,
-                  }))
-                }
-                placeholder="e.g., Industrial, IEC Standard"
-              />
-            </>
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2 text-left">
+                  Component Category
+                </label>
+                <select
+                  value={selectedSubCategory || ""}
+                  onChange={(e) => setSelectedSubCategory(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select Category</option>
+                  {getAllSubCategories("electricalAutomation").map((category) => (
+                    <option key={category} value={category}>
+                      {getSubCategoryLabel("electricalAutomation", category)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {selectedSubCategory && (
+                <div>
+                  <h5 className="text-sm font-semibold text-slate-200 mb-3">
+                    {getSubCategoryLabel("electricalAutomation", selectedSubCategory)} Specifications
+                  </h5>
+                  <div className="grid grid-cols-2 gap-4">
+                    {getSubFieldsForCategory("electricalAutomation", selectedSubCategory)?.fields?.map(
+                      (field) => (
+                        field.type === "select" ? (
+                          <div key={field.name}>
+                            <label className="block text-sm font-medium text-slate-300 mb-1 text-left">
+                              {field.label}
+                            </label>
+                            <select
+                              value={currentMaterial.electricalAutomationSpecs[field.name] || ""}
+                              onChange={(e) =>
+                                setCurrentMaterial((prev) => ({
+                                  ...prev,
+                                  electricalAutomationSpecs: {
+                                    ...prev.electricalAutomationSpecs,
+                                    [field.name]: e.target.value,
+                                  },
+                                }))
+                              }
+                              className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                              <option value="">{field.placeholder}</option>
+                              {field.options?.map((opt) => (
+                                <option key={opt} value={opt}>
+                                  {opt}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        ) : (
+                          <Input
+                            key={field.name}
+                            label={field.label}
+                            type={field.type || "text"}
+                            value={currentMaterial.electricalAutomationSpecs[field.name] || ""}
+                            onChange={(e) =>
+                              setCurrentMaterial((prev) => ({
+                                ...prev,
+                                electricalAutomationSpecs: {
+                                  ...prev.electricalAutomationSpecs,
+                                  [field.name]: e.target.value,
+                                },
+                              }))
+                            }
+                            placeholder={field.placeholder}
+                          />
+                        )
+                      )
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <h5 className="text-sm font-semibold text-slate-200 mb-3">Quantity & Quality</h5>
+                <div className="grid grid-cols-2 gap-4">
+                  {renderCommonFields("electricalAutomation")}
+                </div>
+              </div>
+            </div>
           )}
 
           {specModalType === "safetyMaterials" && (
-            <>
-              {SAFETY_MATERIALS_SPECS[currentMaterial.safetyMaterials]?.map(
-                (field) => (
-                  <Input
-                    key={field.name}
-                    label={field.label}
-                    value={
-                      currentMaterial.safetyMaterialsSpecs[field.name] || ""
-                    }
-                    onChange={(e) =>
-                      setCurrentMaterial((prev) => ({
-                        ...prev,
-                        safetyMaterialsSpecs: {
-                          ...prev.safetyMaterialsSpecs,
-                          [field.name]: e.target.value,
-                        },
-                      }))
-                    }
-                    placeholder={field.placeholder}
-                  />
-                )
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2 text-left">
+                  Safety Material Type
+                </label>
+                <select
+                  value={selectedSubCategory || ""}
+                  onChange={(e) => setSelectedSubCategory(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select Type</option>
+                  {getAllSubCategories("safetyMaterials").map((category) => (
+                    <option key={category} value={category}>
+                      {getSubCategoryLabel("safetyMaterials", category)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {selectedSubCategory && (
+                <div>
+                  <h5 className="text-sm font-semibold text-slate-200 mb-3">
+                    {getSubCategoryLabel("safetyMaterials", selectedSubCategory)} Details
+                  </h5>
+                  <div className="grid grid-cols-2 gap-4">
+                    {getSubFieldsForCategory("safetyMaterials", selectedSubCategory)?.fields?.map(
+                      (field) => (
+                        field.type === "select" ? (
+                          <div key={field.name}>
+                            <label className="block text-sm font-medium text-slate-300 mb-1 text-left">
+                              {field.label}
+                            </label>
+                            <select
+                              value={currentMaterial.safetyMaterialsSpecs[field.name] || ""}
+                              onChange={(e) =>
+                                setCurrentMaterial((prev) => ({
+                                  ...prev,
+                                  safetyMaterialsSpecs: {
+                                    ...prev.safetyMaterialsSpecs,
+                                    [field.name]: e.target.value,
+                                  },
+                                }))
+                              }
+                              className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                              <option value="">{field.placeholder}</option>
+                              {field.options?.map((opt) => (
+                                <option key={opt} value={opt}>
+                                  {opt}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        ) : (
+                          <Input
+                            key={field.name}
+                            label={field.label}
+                            type={field.type || "text"}
+                            value={currentMaterial.safetyMaterialsSpecs[field.name] || ""}
+                            onChange={(e) =>
+                              setCurrentMaterial((prev) => ({
+                                ...prev,
+                                safetyMaterialsSpecs: {
+                                  ...prev.safetyMaterialsSpecs,
+                                  [field.name]: e.target.value,
+                                },
+                              }))
+                            }
+                            placeholder={field.placeholder}
+                          />
+                        )
+                      )
+                    )}
+                  </div>
+                </div>
               )}
-              <Input
-                label="Quantity"
-                type="number"
-                value={currentMaterial.safetyMaterialsQuantity || ""}
-                onChange={(e) =>
-                  setCurrentMaterial((prev) => ({
-                    ...prev,
-                    safetyMaterialsQuantity: e.target.value,
-                  }))
-                }
-                placeholder="e.g., 20"
-              />
-              <Input
-                label="Quality / Grade"
-                value={currentMaterial.safetyMaterialsQuality || ""}
-                onChange={(e) =>
-                  setCurrentMaterial((prev) => ({
-                    ...prev,
-                    safetyMaterialsQuality: e.target.value,
-                  }))
-                }
-                placeholder="e.g., ISO Certified, Premium"
-              />
-            </>
+
+              <div>
+                <h5 className="text-sm font-semibold text-slate-200 mb-3">Quantity & Quality</h5>
+                <div className="grid grid-cols-2 gap-4">
+                  {renderCommonFields("safetyMaterials")}
+                </div>
+              </div>
+            </div>
           )}
 
           {specModalType === "surfacePrepPainting" && (
-            <>
-              {SURFACE_PREP_PAINTING_SPECS[
-                currentMaterial.surfacePrepPainting
-              ]?.map((field) => (
-                <Input
-                  key={field.name}
-                  label={field.label}
-                  value={
-                    currentMaterial.surfacePrepPaintingSpecs[field.name] || ""
-                  }
-                  onChange={(e) =>
-                    setCurrentMaterial((prev) => ({
-                      ...prev,
-                      surfacePrepPaintingSpecs: {
-                        ...prev.surfacePrepPaintingSpecs,
-                        [field.name]: e.target.value,
-                      },
-                    }))
-                  }
-                  placeholder={field.placeholder}
-                />
-              ))}
-              <Input
-                label="Quantity"
-                type="number"
-                value={currentMaterial.surfacePrepPaintingQuantity || ""}
-                onChange={(e) =>
-                  setCurrentMaterial((prev) => ({
-                    ...prev,
-                    surfacePrepPaintingQuantity: e.target.value,
-                  }))
-                }
-                placeholder="e.g., 50"
-              />
-              <Input
-                label="Quality / Grade"
-                value={currentMaterial.surfacePrepPaintingQuality || ""}
-                onChange={(e) =>
-                  setCurrentMaterial((prev) => ({
-                    ...prev,
-                    surfacePrepPaintingQuality: e.target.value,
-                  }))
-                }
-                placeholder="e.g., Premium, Industrial Grade"
-              />
-            </>
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2 text-left">
+                  Painting Process
+                </label>
+                <select
+                  value={selectedSubCategory || ""}
+                  onChange={(e) => setSelectedSubCategory(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select Process</option>
+                  {getAllSubCategories("surfacePrepPainting").map((category) => (
+                    <option key={category} value={category}>
+                      {getSubCategoryLabel("surfacePrepPainting", category)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {selectedSubCategory && (
+                <div>
+                  <h5 className="text-sm font-semibold text-slate-200 mb-3">
+                    {getSubCategoryLabel("surfacePrepPainting", selectedSubCategory)} Specifications
+                  </h5>
+                  <div className="grid grid-cols-2 gap-4">
+                    {getSubFieldsForCategory("surfacePrepPainting", selectedSubCategory)?.fields?.map(
+                      (field) => (
+                        field.type === "select" ? (
+                          <div key={field.name}>
+                            <label className="block text-sm font-medium text-slate-300 mb-1 text-left">
+                              {field.label}
+                            </label>
+                            <select
+                              value={currentMaterial.surfacePrepPaintingSpecs[field.name] || ""}
+                              onChange={(e) =>
+                                setCurrentMaterial((prev) => ({
+                                  ...prev,
+                                  surfacePrepPaintingSpecs: {
+                                    ...prev.surfacePrepPaintingSpecs,
+                                    [field.name]: e.target.value,
+                                  },
+                                }))
+                              }
+                              className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                              <option value="">{field.placeholder}</option>
+                              {field.options?.map((opt) => (
+                                <option key={opt} value={opt}>
+                                  {opt}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        ) : (
+                          <Input
+                            key={field.name}
+                            label={field.label}
+                            type={field.type || "text"}
+                            value={currentMaterial.surfacePrepPaintingSpecs[field.name] || ""}
+                            onChange={(e) =>
+                              setCurrentMaterial((prev) => ({
+                                ...prev,
+                                surfacePrepPaintingSpecs: {
+                                  ...prev.surfacePrepPaintingSpecs,
+                                  [field.name]: e.target.value,
+                                },
+                              }))
+                            }
+                            placeholder={field.placeholder}
+                          />
+                        )
+                      )
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <h5 className="text-sm font-semibold text-slate-200 mb-3">Quantity & Quality</h5>
+                <div className="grid grid-cols-2 gap-4">
+                  {renderCommonFields("surfacePrepPainting")}
+                </div>
+              </div>
+            </div>
           )}
 
           {specModalType === "fabricationConsumables" && (
-            <>
-              {FABRICATION_CONSUMABLES_SPECS[
-                currentMaterial.fabricationConsumables
-              ]?.map((field) => (
-                <Input
-                  key={field.name}
-                  label={field.label}
-                  value={
-                    currentMaterial.fabricationConsumablesSpecs[field.name] ||
-                    ""
-                  }
-                  onChange={(e) =>
-                    setCurrentMaterial((prev) => ({
-                      ...prev,
-                      fabricationConsumablesSpecs: {
-                        ...prev.fabricationConsumablesSpecs,
-                        [field.name]: e.target.value,
-                      },
-                    }))
-                  }
-                  placeholder={field.placeholder}
-                />
-              ))}
-              <Input
-                label="Quantity"
-                type="number"
-                value={currentMaterial.fabricationConsumablesQuantity || ""}
-                onChange={(e) =>
-                  setCurrentMaterial((prev) => ({
-                    ...prev,
-                    fabricationConsumablesQuantity: e.target.value,
-                  }))
-                }
-                placeholder="e.g., 100"
-              />
-              <Input
-                label="Quality / Grade"
-                value={currentMaterial.fabricationConsumablesQuality || ""}
-                onChange={(e) =>
-                  setCurrentMaterial((prev) => ({
-                    ...prev,
-                    fabricationConsumablesQuality: e.target.value,
-                  }))
-                }
-                placeholder="e.g., Industrial, Premium Grade"
-              />
-            </>
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2 text-left">
+                  Consumable Type
+                </label>
+                <select
+                  value={selectedSubCategory || ""}
+                  onChange={(e) => setSelectedSubCategory(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select Type</option>
+                  {getAllSubCategories("fabricationConsumables").map((category) => (
+                    <option key={category} value={category}>
+                      {getSubCategoryLabel("fabricationConsumables", category)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {selectedSubCategory && (
+                <div>
+                  <h5 className="text-sm font-semibold text-slate-200 mb-3">
+                    {getSubCategoryLabel("fabricationConsumables", selectedSubCategory)} Details
+                  </h5>
+                  <div className="grid grid-cols-2 gap-4">
+                    {getSubFieldsForCategory("fabricationConsumables", selectedSubCategory)?.fields?.map(
+                      (field) => (
+                        field.type === "select" ? (
+                          <div key={field.name}>
+                            <label className="block text-sm font-medium text-slate-300 mb-1 text-left">
+                              {field.label}
+                            </label>
+                            <select
+                              value={currentMaterial.fabricationConsumablesSpecs[field.name] || ""}
+                              onChange={(e) =>
+                                setCurrentMaterial((prev) => ({
+                                  ...prev,
+                                  fabricationConsumablesSpecs: {
+                                    ...prev.fabricationConsumablesSpecs,
+                                    [field.name]: e.target.value,
+                                  },
+                                }))
+                              }
+                              className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                              <option value="">{field.placeholder}</option>
+                              {field.options?.map((opt) => (
+                                <option key={opt} value={opt}>
+                                  {opt}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        ) : (
+                          <Input
+                            key={field.name}
+                            label={field.label}
+                            type={field.type || "text"}
+                            value={currentMaterial.fabricationConsumablesSpecs[field.name] || ""}
+                            onChange={(e) =>
+                              setCurrentMaterial((prev) => ({
+                                ...prev,
+                                fabricationConsumablesSpecs: {
+                                  ...prev.fabricationConsumablesSpecs,
+                                  [field.name]: e.target.value,
+                                },
+                              }))
+                            }
+                            placeholder={field.placeholder}
+                          />
+                        )
+                      )
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <h5 className="text-sm font-semibold text-slate-200 mb-3">Quantity & Quality</h5>
+                <div className="grid grid-cols-2 gap-4">
+                  {renderCommonFields("fabricationConsumables")}
+                </div>
+              </div>
+            </div>
           )}
 
           {specModalType === "hardwareMisc" && (
-            <>
-              {HARDWARE_MISC_SPECS[currentMaterial.hardwareMisc]?.map(
-                (field) => (
-                  <Input
-                    key={field.name}
-                    label={field.label}
-                    value={currentMaterial.hardwareMiscSpecs[field.name] || ""}
-                    onChange={(e) =>
-                      setCurrentMaterial((prev) => ({
-                        ...prev,
-                        hardwareMiscSpecs: {
-                          ...prev.hardwareMiscSpecs,
-                          [field.name]: e.target.value,
-                        },
-                      }))
-                    }
-                    placeholder={field.placeholder}
-                  />
-                )
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2 text-left">
+                  Hardware Type
+                </label>
+                <select
+                  value={selectedSubCategory || ""}
+                  onChange={(e) => setSelectedSubCategory(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select Type</option>
+                  {getAllSubCategories("hardwareMisc").map((category) => (
+                    <option key={category} value={category}>
+                      {getSubCategoryLabel("hardwareMisc", category)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {selectedSubCategory && (
+                <div>
+                  <h5 className="text-sm font-semibold text-slate-200 mb-3">
+                    {getSubCategoryLabel("hardwareMisc", selectedSubCategory)} Details
+                  </h5>
+                  <div className="grid grid-cols-2 gap-4">
+                    {getSubFieldsForCategory("hardwareMisc", selectedSubCategory)?.fields?.map(
+                      (field) => (
+                        field.type === "select" ? (
+                          <div key={field.name}>
+                            <label className="block text-sm font-medium text-slate-300 mb-1 text-left">
+                              {field.label}
+                            </label>
+                            <select
+                              value={currentMaterial.hardwareMiscSpecs[field.name] || ""}
+                              onChange={(e) =>
+                                setCurrentMaterial((prev) => ({
+                                  ...prev,
+                                  hardwareMiscSpecs: {
+                                    ...prev.hardwareMiscSpecs,
+                                    [field.name]: e.target.value,
+                                  },
+                                }))
+                              }
+                              className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                              <option value="">{field.placeholder}</option>
+                              {field.options?.map((opt) => (
+                                <option key={opt} value={opt}>
+                                  {opt}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        ) : (
+                          <Input
+                            key={field.name}
+                            label={field.label}
+                            type={field.type || "text"}
+                            value={currentMaterial.hardwareMiscSpecs[field.name] || ""}
+                            onChange={(e) =>
+                              setCurrentMaterial((prev) => ({
+                                ...prev,
+                                hardwareMiscSpecs: {
+                                  ...prev.hardwareMiscSpecs,
+                                  [field.name]: e.target.value,
+                                },
+                              }))
+                            }
+                            placeholder={field.placeholder}
+                          />
+                        )
+                      )
+                    )}
+                  </div>
+                </div>
               )}
-              <Input
-                label="Quantity"
-                type="number"
-                value={currentMaterial.hardwareMiscQuantity || ""}
-                onChange={(e) =>
-                  setCurrentMaterial((prev) => ({
-                    ...prev,
-                    hardwareMiscQuantity: e.target.value,
-                  }))
-                }
-                placeholder="e.g., 30"
-              />
-              <Input
-                label="Quality / Grade"
-                value={currentMaterial.hardwareMiscQuality || ""}
-                onChange={(e) =>
-                  setCurrentMaterial((prev) => ({
-                    ...prev,
-                    hardwareMiscQuality: e.target.value,
-                  }))
-                }
-                placeholder="e.g., Standard, Premium"
-              />
-            </>
+
+              <div>
+                <h5 className="text-sm font-semibold text-slate-200 mb-3">Quantity & Quality</h5>
+                <div className="grid grid-cols-2 gap-4">
+                  {renderCommonFields("hardwareMisc")}
+                </div>
+              </div>
+            </div>
           )}
 
           {specModalType === "documentationMaterials" && (
-            <>
-              {DOCUMENTATION_MATERIALS_SPECS[
-                currentMaterial.documentationMaterials
-              ]?.map((field) => (
-                <Input
-                  key={field.name}
-                  label={field.label}
-                  value={
-                    currentMaterial.documentationMaterialsSpecs[field.name] ||
-                    ""
-                  }
-                  onChange={(e) =>
-                    setCurrentMaterial((prev) => ({
-                      ...prev,
-                      documentationMaterialsSpecs: {
-                        ...prev.documentationMaterialsSpecs,
-                        [field.name]: e.target.value,
-                      },
-                    }))
-                  }
-                  placeholder={field.placeholder}
-                />
-              ))}
-              <Input
-                label="Quantity"
-                type="number"
-                value={currentMaterial.documentationMaterialsQuantity || ""}
-                onChange={(e) =>
-                  setCurrentMaterial((prev) => ({
-                    ...prev,
-                    documentationMaterialsQuantity: e.target.value,
-                  }))
-                }
-                placeholder="e.g., 10"
-              />
-              <Input
-                label="Quality / Grade"
-                value={currentMaterial.documentationMaterialsQuality || ""}
-                onChange={(e) =>
-                  setCurrentMaterial((prev) => ({
-                    ...prev,
-                    documentationMaterialsQuality: e.target.value,
-                  }))
-                }
-                placeholder="e.g., Original, Certified Copy"
-              />
-              <div className="bg-slate-800 p-3 rounded border border-slate-600 space-y-3 mt-4">
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2 text-left">
+                  Documentation Type
+                </label>
+                <select
+                  value={selectedSubCategory || ""}
+                  onChange={(e) => setSelectedSubCategory(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select Type</option>
+                  {getAllSubCategories("documentationMaterials").map((category) => (
+                    <option key={category} value={category}>
+                      {getSubCategoryLabel("documentationMaterials", category)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {selectedSubCategory && (
+                <div>
+                  <h5 className="text-sm font-semibold text-slate-200 mb-3">
+                    {getSubCategoryLabel("documentationMaterials", selectedSubCategory)} Details
+                  </h5>
+                  <div className="grid grid-cols-2 gap-4">
+                    {getSubFieldsForCategory("documentationMaterials", selectedSubCategory)?.fields?.map(
+                      (field) => (
+                        field.type === "select" ? (
+                          <div key={field.name}>
+                            <label className="block text-sm font-medium text-slate-300 mb-1 text-left">
+                              {field.label}
+                            </label>
+                            <select
+                              value={currentMaterial.documentationMaterialsSpecs[field.name] || ""}
+                              onChange={(e) =>
+                                setCurrentMaterial((prev) => ({
+                                  ...prev,
+                                  documentationMaterialsSpecs: {
+                                    ...prev.documentationMaterialsSpecs,
+                                    [field.name]: e.target.value,
+                                  },
+                                }))
+                              }
+                              className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                              <option value="">{field.placeholder}</option>
+                              {field.options?.map((opt) => (
+                                <option key={opt} value={opt}>
+                                  {opt}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        ) : field.type === "date" ? (
+                          <Input
+                            key={field.name}
+                            label={field.label}
+                            type="date"
+                            value={currentMaterial.documentationMaterialsSpecs[field.name] || ""}
+                            onChange={(e) =>
+                              setCurrentMaterial((prev) => ({
+                                ...prev,
+                                documentationMaterialsSpecs: {
+                                  ...prev.documentationMaterialsSpecs,
+                                  [field.name]: e.target.value,
+                                },
+                              }))
+                            }
+                            placeholder={field.placeholder}
+                          />
+                        ) : (
+                          <Input
+                            key={field.name}
+                            label={field.label}
+                            type={field.type || "text"}
+                            value={currentMaterial.documentationMaterialsSpecs[field.name] || ""}
+                            onChange={(e) =>
+                              setCurrentMaterial((prev) => ({
+                                ...prev,
+                                documentationMaterialsSpecs: {
+                                  ...prev.documentationMaterialsSpecs,
+                                  [field.name]: e.target.value,
+                                },
+                              }))
+                            }
+                            placeholder={field.placeholder}
+                          />
+                        )
+                      )
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <h5 className="text-sm font-semibold text-slate-200 mb-3">Quantity & Quality</h5>
+                <div className="grid grid-cols-2 gap-4">
+                  {renderCommonFields("documentationMaterials")}
+                </div>
+              </div>
+
+              <div className="bg-slate-800 p-3 rounded border border-slate-600 space-y-3">
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2 text-left">
                     Upload Documents
@@ -2667,7 +2602,7 @@ export default function Step4_MaterialRequirement() {
                     </div>
                   )}
               </div>
-            </>
+            </div>
           )}
 
           <div className="flex gap-3 mt-6 pt-4 border-t border-slate-700">

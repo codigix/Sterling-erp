@@ -1,0 +1,153 @@
+{
+  "materialTypes": [
+    {
+      "id": "steelSection",
+      "label": "Steel Section",
+      "displayLabel": "Steel Section",
+      "quantityField": "steelSectionQuantity",
+      "qualityField": "steelSectionQuality",
+      "type": "simple",
+      "displayFields": [
+        { "key": "steelSize", "label": "Size", "format": "{value}" },
+        { "key": "steelLength", "label": "Length", "format": "{value}mm" },
+        { "key": "steelTolerance", "label": "Tol", "format": "{value}" }
+      ]
+    },
+    {
+      "id": "plateType",
+      "label": "Plate",
+      "displayLabel": "Plate",
+      "quantityField": "plateTypeQuantity",
+      "qualityField": "plateTypeQuality",
+      "type": "simple",
+      "displayFields": [
+        { "key": "plateThickness", "label": "Thick", "format": "{value}mm" },
+        { "key": "plateLength", "label": "Length", "format": "{value}mm" },
+        { "key": "plateWidth", "label": "Width", "format": "{value}mm" },
+        { "key": "plateSurfaceFinish", "label": "Finish", "format": "{value}" }
+      ]
+    },
+    {
+      "id": "materialGrade",
+      "label": "Material Grade",
+      "displayLabel": "Material Grade",
+      "quantityField": "materialGradeQuantity",
+      "qualityField": "materialGradeQuality",
+      "type": "simple",
+      "displayFields": [
+        { "key": "gradeCertificationRequired", "label": "Cert", "format": "{value}" },
+        { "key": "gradeTestingStandards", "label": "Testing", "format": "{value}" },
+        { "key": "gradeSpecialRequirements", "label": "Special", "format": "{value}" }
+      ]
+    },
+    {
+      "id": "fastenerType",
+      "label": "Fastener",
+      "displayLabel": "Fastener",
+      "quantityField": "fastenerTypeQuantity",
+      "qualityField": "fastenerTypeQuality",
+      "type": "simple",
+      "displayFields": [
+        { "key": "fastenerSize", "label": "Size", "format": "M{value}" },
+        { "key": "fastenerQuantityPerUnit", "label": "Per Unit", "format": "{value}pcs" },
+        { "key": "fastenerPlating", "label": "Plating", "format": "{value}" }
+      ]
+    },
+    {
+      "id": "machinedParts",
+      "label": "Machined Part",
+      "displayLabel": "Machined Part",
+      "quantityField": "machinedPartsQuantity",
+      "qualityField": "machinedPartsQuality",
+      "type": "complex",
+      "excludeFields": ["id", "selection", "machinedPartsQuantity", "machinedPartsQuality"]
+    },
+    {
+      "id": "rollerMovementComponents",
+      "label": "Roller/Movement",
+      "displayLabel": "Roller/Movement",
+      "quantityField": "rollerMovementComponentsQuantity",
+      "qualityField": "rollerMovementComponentsQuality",
+      "type": "complex",
+      "excludeFields": ["id", "selection", "rollerMovementComponentsQuantity", "rollerMovementComponentsQuality"]
+    },
+    {
+      "id": "liftingPullingMechanisms",
+      "label": "Lifting/Pulling",
+      "displayLabel": "Lifting/Pulling",
+      "quantityField": "liftingPullingMechanismsQuantity",
+      "qualityField": "liftingPullingMechanismsQuality",
+      "type": "complex",
+      "excludeFields": ["id", "selection", "liftingPullingMechanismsQuantity", "liftingPullingMechanismsQuality"]
+    },
+    {
+      "id": "electricalAutomation",
+      "label": "Electrical/Automation",
+      "displayLabel": "Electrical/Automation",
+      "quantityField": "electricalAutomationQuantity",
+      "qualityField": "electricalAutomationQuality",
+      "type": "complex",
+      "excludeFields": ["id", "selection", "electricalAutomationQuantity", "electricalAutomationQuality"]
+    },
+    {
+      "id": "safetyMaterials",
+      "label": "Safety Materials",
+      "displayLabel": "Safety Materials",
+      "quantityField": "safetyMaterialsQuantity",
+      "qualityField": "safetyMaterialsQuality",
+      "type": "complex",
+      "excludeFields": ["id", "selection", "safetyMaterialsQuantity", "safetyMaterialsQuality"]
+    },
+    {
+      "id": "surfacePrepPainting",
+      "label": "Surface Prep/Paint",
+      "displayLabel": "Surface Prep/Paint",
+      "quantityField": "surfacePrepPaintingQuantity",
+      "qualityField": "surfacePrepPaintingQuality",
+      "type": "complex",
+      "excludeFields": ["id", "selection", "surfacePrepPaintingQuantity", "surfacePrepPaintingQuality"]
+    },
+    {
+      "id": "fabricationConsumables",
+      "label": "Fabrication Consumables",
+      "displayLabel": "Fabrication Consumables",
+      "quantityField": "fabricationConsumablesQuantity",
+      "qualityField": "fabricationConsumablesQuality",
+      "type": "complex",
+      "excludeFields": ["id", "selection", "fabricationConsumablesQuantity", "fabricationConsumablesQuality"]
+    },
+    {
+      "id": "hardwareMisc",
+      "label": "Hardware/Misc",
+      "displayLabel": "Hardware/Misc",
+      "quantityField": "hardwareMiscQuantity",
+      "qualityField": "hardwareMiscQuality",
+      "type": "complex",
+      "excludeFields": ["id", "selection", "hardwareMiscQuantity", "hardwareMiscQuality"]
+    },
+    {
+      "id": "documentationMaterials",
+      "label": "Documentation",
+      "displayLabel": "Documentation",
+      "quantityField": "documentationMaterialsQuantity",
+      "qualityField": "documentationMaterialsQuality",
+      "type": "complex",
+      "excludeFields": ["id", "selection", "documentationMaterialsQuantity", "documentationMaterialsQuality"]
+    }
+  ],
+  "modalTitles": {
+    "steelSection": "Steel Section",
+    "plateType": "Plate",
+    "materialGrade": "Material Grade",
+    "fastenerType": "Fastener",
+    "machinedParts": "Machined Parts",
+    "rollerMovementComponents": "Roller Movement",
+    "liftingPullingMechanisms": "Lifting/Pulling",
+    "electricalAutomation": "Electrical/Automation",
+    "safetyMaterials": "Safety Materials",
+    "surfacePrepPainting": "Surface Prep/Painting",
+    "fabricationConsumables": "Fabrication Consumables",
+    "hardwareMisc": "Hardware/Misc",
+    "documentationMaterials": "Documentation"
+  }
+}

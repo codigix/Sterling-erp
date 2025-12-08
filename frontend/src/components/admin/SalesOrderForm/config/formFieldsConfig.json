@@ -1,0 +1,244 @@
+{
+  "commonFields": {
+    "quantity": {
+      "label": "Quantity",
+      "type": "number",
+      "placeholders": {
+        "steelSection": "e.g., 10",
+        "plateType": "e.g., 5",
+        "materialGrade": "e.g., 100",
+        "fastenerType": "e.g., 500",
+        "default": "e.g., 10"
+      }
+    },
+    "quality": {
+      "label": "Quality / Grade",
+      "type": "text",
+      "placeholder": "e.g., A Grade, Premium"
+    },
+    "unit": {
+      "label": "Unit",
+      "type": "select"
+    },
+    "source": {
+      "label": "Source",
+      "type": "select"
+    },
+    "assignee": {
+      "label": "Assignee",
+      "type": "select"
+    }
+  },
+  "steelSectionFields": {
+    "ISMB Beams (100–500 mm)": [
+      {
+        "name": "ismbBeamSize",
+        "label": "Beam Size",
+        "placeholder": "e.g., ISMB 200"
+      },
+      {
+        "name": "ismbFlangeWidth",
+        "label": "Flange Width (optional)",
+        "placeholder": "e.g., 100 mm"
+      },
+      {
+        "name": "ismbWebThickness",
+        "label": "Web Thickness (optional)",
+        "placeholder": "e.g., 8 mm"
+      },
+      {
+        "name": "ismbSectionWeight",
+        "label": "Section Weight (kg/m)",
+        "placeholder": "e.g., 26.2"
+      }
+    ],
+    "ISMC Channels (75–400 mm)": [
+      {
+        "name": "ismcChannelSize",
+        "label": "Channel Size",
+        "placeholder": "e.g., ISMC 75"
+      },
+      {
+        "name": "ismcFlangeWidth",
+        "label": "Flange Width",
+        "placeholder": "e.g., 40 mm"
+      },
+      {
+        "name": "ismcWebThickness",
+        "label": "Web Thickness",
+        "placeholder": "e.g., 6 mm"
+      }
+    ],
+    "RHS / SHS box sections": [
+      {
+        "name": "rhsSectionType",
+        "label": "Section Type",
+        "placeholder": "RHS / SHS"
+      },
+      {
+        "name": "rhsDimensions",
+        "label": "Dimensions",
+        "placeholder": "e.g., 100×50 or 50×50"
+      },
+      {
+        "name": "rhsThickness",
+        "label": "Thickness (mm)",
+        "placeholder": "e.g., 3 mm"
+      },
+      {
+        "name": "rhsLength",
+        "label": "Length (mm)",
+        "placeholder": "e.g., 6000"
+      }
+    ],
+    "Angles (equal/unequal)": [
+      {
+        "name": "angleType",
+        "label": "Type",
+        "placeholder": "Equal / Unequal"
+      },
+      {
+        "name": "angleSize",
+        "label": "Size",
+        "placeholder": "e.g., 50×50×6, 65×50×6"
+      },
+      {
+        "name": "angleThickness",
+        "label": "Thickness (mm)",
+        "placeholder": "e.g., 6"
+      }
+    ],
+    "Flat bars": [
+      {
+        "name": "flatBarWidth",
+        "label": "Width (mm)",
+        "placeholder": "e.g., 50 mm"
+      },
+      {
+        "name": "flatBarThickness",
+        "label": "Thickness (mm)",
+        "placeholder": "e.g., 10 mm"
+      }
+    ],
+    "Round bars": [
+      {
+        "name": "roundBarDiameter",
+        "label": "Diameter (mm)",
+        "placeholder": "e.g., 25 mm"
+      }
+    ]
+  },
+  "plateFields": {
+    "MS plates (5mm – 40mm)": [
+      {
+        "name": "msThickness",
+        "label": "Thickness (mm)",
+        "placeholder": "e.g., 10 mm"
+      },
+      {
+        "name": "msLength",
+        "label": "Length (mm)",
+        "placeholder": "e.g., 2000"
+      },
+      {
+        "name": "msWidth",
+        "label": "Width (mm)",
+        "placeholder": "e.g., 1000"
+      },
+      {
+        "name": "msMaterialGrade",
+        "label": "Material Grade",
+        "placeholder": "e.g., E250, E350"
+      },
+      {
+        "name": "msWeight",
+        "label": "Weight (auto)",
+        "placeholder": "Auto-calculated"
+      }
+    ],
+    "Chequered plates (if flooring needed)": [
+      {
+        "name": "chequeredThickness",
+        "label": "Thickness (mm)",
+        "placeholder": "e.g., 5 mm"
+      },
+      {
+        "name": "chequeredLength",
+        "label": "Length (mm)",
+        "placeholder": "e.g., 2000"
+      },
+      {
+        "name": "chequeredWidth",
+        "label": "Width (mm)",
+        "placeholder": "e.g., 1000"
+      },
+      {
+        "name": "chequeredPatternType",
+        "label": "Pattern Type",
+        "placeholder": "e.g., 5-bar, Diamond"
+      },
+      {
+        "name": "chequeredMaterialGrade",
+        "label": "Material Grade",
+        "placeholder": "e.g., E250, E350"
+      }
+    ],
+    "Base plates (thick 20–50mm)": [
+      {
+        "name": "baseThickness",
+        "label": "Thickness (mm)",
+        "placeholder": "e.g., 25 mm"
+      },
+      {
+        "name": "baseLength",
+        "label": "Length (mm)",
+        "placeholder": "e.g., 500"
+      },
+      {
+        "name": "baseWidth",
+        "label": "Width (mm)",
+        "placeholder": "e.g., 500"
+      },
+      {
+        "name": "baseMaterialGrade",
+        "label": "Material Grade",
+        "placeholder": "e.g., E350, E450"
+      },
+      {
+        "name": "baseMachiningRequired",
+        "label": "Machining Required?",
+        "placeholder": "Yes / No"
+      }
+    ]
+  },
+  "selectPlaceholders": {
+    "steelSection": "Select Steel Section (Optional)",
+    "plateType": "Select Plate Type (Optional)",
+    "materialGrade": "Select Material Grade (Optional)",
+    "fastenerType": "Select Fastener Type (Optional)",
+    "machinedParts": "Select Machined Part Type (Optional)",
+    "rollerMovementComponents": "Select Component Type (Optional)",
+    "liftingPullingMechanisms": "Select Mechanism Type (Optional)",
+    "electricalAutomation": "Select Type (Optional)",
+    "safetyMaterials": "Select Type (Optional)",
+    "surfacePrepPainting": "Select Type (Optional)",
+    "fabricationConsumables": "Select Type (Optional)",
+    "hardwareMisc": "Select Type (Optional)",
+    "documentationMaterials": "Select Type (Optional)"
+  },
+  "tableTypeLabels": {
+    "steelSection": "Steel Sections",
+    "plateType": "Plates",
+    "materialGrade": "Material Grades",
+    "fastenerType": "Fasteners",
+    "machinedParts": "Machined Parts",
+    "rollerMovementComponents": "Roller/Movement",
+    "liftingPullingMechanisms": "Lifting/Pulling",
+    "electricalAutomation": "Electrical/Automation",
+    "safetyMaterials": "Safety Materials",
+    "surfacePrepPainting": "Surface Prep/Paint",
+    "fabricationConsumables": "Fabrication Consumables",
+    "hardwareMisc": "Hardware/Misc",
+    "documentationMaterials": "Documentation"
+  }
+}

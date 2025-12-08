@@ -1,0 +1,347 @@
+{
+  "materialTypes": [
+    {
+      "id": "steelSection",
+      "label": "Steel Sections",
+      "fieldName": "steelSection",
+      "options": [
+        {
+          "value": "ISMB Beams (100–500 mm)",
+          "label": "ISMB Beams (100–500 mm)"
+        },
+        {
+          "value": "ISMC Channels (75–400 mm)",
+          "label": "ISMC Channels (75–400 mm)"
+        },
+        {
+          "value": "RHS / SHS box sections",
+          "label": "RHS / SHS box sections"
+        },
+        {
+          "value": "Angles (equal/unequal)",
+          "label": "Angles (equal/unequal)"
+        },
+        {
+          "value": "Flat bars",
+          "label": "Flat bars"
+        },
+        {
+          "value": "Round bars",
+          "label": "Round bars"
+        }
+      ],
+      "displayName": "Steel Sections"
+    },
+    {
+      "id": "plateType",
+      "label": "Plates",
+      "fieldName": "plateType",
+      "options": [
+        {
+          "value": "MS plates (5mm – 40mm)",
+          "label": "MS plates (5mm – 40mm)"
+        },
+        {
+          "value": "Chequered plates (if flooring needed)",
+          "label": "Chequered plates (if flooring needed)"
+        },
+        {
+          "value": "Base plates (thick 20–50mm)",
+          "label": "Base plates (thick 20–50mm)"
+        }
+      ],
+      "displayName": "Plates"
+    },
+    {
+      "id": "materialGrade",
+      "label": "Material Grades",
+      "fieldName": "materialGrade",
+      "options": [
+        {
+          "value": "IS2062 E250/E350/E410",
+          "label": "IS2062 E250/E350/E410"
+        },
+        {
+          "value": "EN8/EN19 (for shafts)",
+          "label": "EN8/EN19 (for shafts)"
+        },
+        {
+          "value": "SS304 / SS316 (if needed)",
+          "label": "SS304 / SS316 (if needed)"
+        }
+      ],
+      "displayName": "Material Grades"
+    },
+    {
+      "id": "fastenerType",
+      "label": "Fastener Type",
+      "fieldName": "fastenerType",
+      "options": [
+        {
+          "value": "High tensile bolts (8.8 / 10.9)",
+          "label": "High tensile bolts (8.8 / 10.9)"
+        },
+        {
+          "value": "Nuts, washers (spring + flat)",
+          "label": "Nuts, washers (spring + flat)"
+        },
+        {
+          "value": "Anchor bolts (for foundation)",
+          "label": "Anchor bolts (for foundation)"
+        }
+      ],
+      "displayName": "Fasteners"
+    },
+    {
+      "id": "machinedParts",
+      "label": "Machined Parts",
+      "fieldName": "machinedParts",
+      "options": [
+        {
+          "value": "Shafts",
+          "label": "Shafts"
+        },
+        {
+          "value": "Bushes",
+          "label": "Bushes"
+        },
+        {
+          "value": "Spacers",
+          "label": "Spacers"
+        },
+        {
+          "value": "Machined brackets",
+          "label": "Machined brackets"
+        },
+        {
+          "value": "Flanges",
+          "label": "Flanges"
+        },
+        {
+          "value": "Bearing housings",
+          "label": "Bearing housings"
+        }
+      ],
+      "displayName": "Machined Parts"
+    },
+    {
+      "id": "rollerMovementComponents",
+      "label": "Roller & Movement Components",
+      "fieldName": "rollerMovementComponents",
+      "options": [
+        {
+          "value": "Rollers (Nylon/PU/Steel)",
+          "label": "Rollers (Nylon/PU/Steel)"
+        },
+        {
+          "value": "Bearings (ball, tapered, spherical)",
+          "label": "Bearings (ball, tapered, spherical)"
+        },
+        {
+          "value": "Linear guide rails",
+          "label": "Linear guide rails"
+        },
+        {
+          "value": "Guide wheels",
+          "label": "Guide wheels"
+        },
+        {
+          "value": "Gear racks / pinions (if motorized movement)",
+          "label": "Gear racks / pinions (if motorized movement)"
+        }
+      ],
+      "displayName": "Roller/Movement"
+    },
+    {
+      "id": "liftingPullingMechanisms",
+      "label": "Lifting / Pulling Mechanisms",
+      "fieldName": "liftingPullingMechanisms",
+      "options": [
+        {
+          "value": "Winch System",
+          "label": "Winch System"
+        },
+        {
+          "value": "Hydraulic System",
+          "label": "Hydraulic System"
+        }
+      ],
+      "displayName": "Lifting/Pulling"
+    },
+    {
+      "id": "electricalAutomation",
+      "label": "Electrical & Automation Materials",
+      "fieldName": "electricalAutomation",
+      "options": [
+        {
+          "value": "Panel Components",
+          "label": "Panel Components"
+        },
+        {
+          "value": "Sensors",
+          "label": "Sensors"
+        },
+        {
+          "value": "Wiring",
+          "label": "Wiring"
+        }
+      ],
+      "displayName": "Electrical/Automation"
+    },
+    {
+      "id": "safetyMaterials",
+      "label": "Safety Materials",
+      "fieldName": "safetyMaterials",
+      "options": [
+        {
+          "value": "Emergency Stop & Guards",
+          "label": "Emergency Stop & Guards"
+        },
+        {
+          "value": "Protective Barriers & Accessories",
+          "label": "Protective Barriers & Accessories"
+        }
+      ],
+      "displayName": "Safety Materials"
+    },
+    {
+      "id": "surfacePrepPainting",
+      "label": "Surface Prep & Painting Materials",
+      "fieldName": "surfacePrepPainting",
+      "options": [
+        {
+          "value": "Blasting & Primer",
+          "label": "Blasting & Primer"
+        },
+        {
+          "value": "Topcoat & Finishing",
+          "label": "Topcoat & Finishing"
+        }
+      ],
+      "displayName": "Surface Prep/Paint"
+    },
+    {
+      "id": "fabricationConsumables",
+      "label": "Fabrication Consumables",
+      "fieldName": "fabricationConsumables",
+      "options": [
+        {
+          "value": "Welding Materials",
+          "label": "Welding Materials"
+        },
+        {
+          "value": "Cutting & Grinding",
+          "label": "Cutting & Grinding"
+        }
+      ],
+      "displayName": "Fabrication Consumables"
+    },
+    {
+      "id": "hardwareMisc",
+      "label": "Hardware & Miscellaneous Items",
+      "fieldName": "hardwareMisc",
+      "options": [
+        {
+          "value": "Hardware Items",
+          "label": "Hardware Items"
+        },
+        {
+          "value": "Fasteners & Supports",
+          "label": "Fasteners & Supports"
+        }
+      ],
+      "displayName": "Hardware/Misc"
+    },
+    {
+      "id": "documentationMaterials",
+      "label": "Documentation Materials",
+      "fieldName": "documentationMaterials",
+      "options": [
+        {
+          "value": "Labeling & Tags",
+          "label": "Labeling & Tags"
+        },
+        {
+          "value": "Certificates & Documentation",
+          "label": "Certificates & Documentation"
+        }
+      ],
+      "displayName": "Documentation"
+    }
+  ],
+  "commonOptions": {
+    "units": [
+      {
+        "key": "kg",
+        "value": "kg",
+        "label": "Kilogram (kg)"
+      },
+      {
+        "key": "ton",
+        "value": "ton",
+        "label": "Ton"
+      },
+      {
+        "key": "m",
+        "value": "m",
+        "label": "Meter (m)"
+      },
+      {
+        "key": "mm",
+        "value": "mm",
+        "label": "Millimeter (mm)"
+      },
+      {
+        "key": "piece",
+        "value": "piece",
+        "label": "Piece"
+      },
+      {
+        "key": "set",
+        "value": "set",
+        "label": "Set"
+      }
+    ],
+    "sources": [
+      {
+        "key": "local",
+        "value": "local",
+        "label": "Local"
+      },
+      {
+        "key": "imported",
+        "value": "imported",
+        "label": "Imported"
+      },
+      {
+        "key": "vendor",
+        "value": "vendor",
+        "label": "Vendor"
+      }
+    ]
+  },
+  "sectionHeaders": {
+    "main": "Material Requirement & Components",
+    "selection": "Material Selection",
+    "options": "Selection Options",
+    "table": "Material Requirements Table",
+    "specsSummary": "Material Specifications Summary"
+  },
+  "infoBannerText": "Select the material types required for this project. Only checked materials will appear in the form.",
+  "tablePlaceholders": {
+    "materialName": "Material Name",
+    "type": "Type",
+    "quantity": "Qty",
+    "unit": "Unit",
+    "source": "Source",
+    "assignee": "Assignee",
+    "actions": "Actions",
+    "selection": "Selection",
+    "details": "Details",
+    "quality": "Quality"
+  },
+  "commonPlaceholders": {
+    "selectQuantity": "e.g., 10",
+    "selectQuality": "e.g., A Grade, Premium"
+  }
+}
