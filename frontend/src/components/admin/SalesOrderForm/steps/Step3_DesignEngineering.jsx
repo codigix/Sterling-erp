@@ -1,9 +1,71 @@
 import React, { useState } from "react";
 import { FileText, Upload, X, File } from "lucide-react";
 import Input from "../../../ui/Input";
+import MultiSelect from "../../../ui/MultiSelect";
 import FormSection from "../shared/FormSection";
 import FormRow from "../shared/FormRow";
 import { useFormData, useSalesOrderContext } from "../hooks";
+
+const STEEL_SECTIONS_OPTIONS = [
+  "ISMB 100-500mm",
+  "ISA angles",
+  "Channels",
+  "Tubular sections",
+  "Flat bars",
+  "Round bars",
+  "Square sections",
+];
+
+const PLATES_OPTIONS = [
+  "MS plates 10mm",
+  "MS plates 12mm",
+  "Stainless steel plates",
+  "Aluminium plates",
+  "Alloy plates",
+  "Galvanized plates",
+];
+
+const FASTENERS_OPTIONS = [
+  "M16 bolts",
+  "M10 screws",
+  "Lock nuts",
+  "Washers",
+  "Rivets",
+  "Studs",
+  "Anchors",
+];
+
+const COMPONENTS_OPTIONS = [
+  "Roller wheels",
+  "Bearings",
+  "Gear boxes",
+  "Motors",
+  "Cables",
+  "Pulleys",
+  "Shafts",
+  "Chains",
+];
+
+const ELECTRICAL_OPTIONS = [
+  "Control panels",
+  "Sensors",
+  "PLC",
+  "Limit switches",
+  "VFD",
+  "Relays",
+  "Contactors",
+  "Transformers",
+];
+
+const CONSUMABLES_OPTIONS = [
+  "Welding consumables",
+  "Primer",
+  "Paint",
+  "Grease",
+  "Oil",
+  "Lubricants",
+  "Solvents",
+];
 
 export default function Step3_DesignEngineering() {
   const { formData } = useFormData();
@@ -131,70 +193,52 @@ export default function Step3_DesignEngineering() {
 
       <FormSection
         title="Materials Required for Production"
-        subtitle="Specify all material types needed to produce this design"
+        subtitle="Select all material types needed to produce this design"
         icon={FileText}
       >
         <div className="space-y-3">
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2 text-left">
-              Steel Sections Required
-            </label>
-            <Input
-              value={designEng.materialsRequired?.steelSections || ""}
-              onChange={(e) => updateDesignField("materialsRequired", "steelSections", e.target.value)}
-              placeholder="e.g., ISMB 100-500mm, ISA angles, Channels, etc."
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2 text-left">
-              Plates Required
-            </label>
-            <Input
-              value={designEng.materialsRequired?.plates || ""}
-              onChange={(e) => updateDesignField("materialsRequired", "plates", e.target.value)}
-              placeholder="e.g., MS plates 10mm, 12mm, Stainless steel plates, etc."
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2 text-left">
-              Fasteners & Hardware
-            </label>
-            <Input
-              value={designEng.materialsRequired?.fasteners || ""}
-              onChange={(e) => updateDesignField("materialsRequired", "fasteners", e.target.value)}
-              placeholder="e.g., M16 bolts, M10 screws, Lock nuts, Washers, etc."
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2 text-left">
-              Mechanical Components
-            </label>
-            <Input
-              value={designEng.materialsRequired?.components || ""}
-              onChange={(e) => updateDesignField("materialsRequired", "components", e.target.value)}
-              placeholder="e.g., Roller wheels, Bearings, Gear boxes, Motors, Cables, etc."
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2 text-left">
-              Electrical & Automation
-            </label>
-            <Input
-              value={designEng.materialsRequired?.electrical || ""}
-              onChange={(e) => updateDesignField("materialsRequired", "electrical", e.target.value)}
-              placeholder="e.g., Control panels, Sensors, PLC, Limit switches, VFD, etc."
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2 text-left">
-              Consumables & Paint
-            </label>
-            <Input
-              value={designEng.materialsRequired?.consumables || ""}
-              onChange={(e) => updateDesignField("materialsRequired", "consumables", e.target.value)}
-              placeholder="e.g., Welding consumables, Primer, Paint, Grease, etc."
-            />
-          </div>
+          <MultiSelect
+            label="Steel Sections Required"
+            options={STEEL_SECTIONS_OPTIONS}
+            value={designEng.materialsRequired?.steelSections || []}
+            onChange={(value) => updateDesignField("materialsRequired", "steelSections", value)}
+            placeholder="Select steel sections..."
+          />
+          <MultiSelect
+            label="Plates Required"
+            options={PLATES_OPTIONS}
+            value={designEng.materialsRequired?.plates || []}
+            onChange={(value) => updateDesignField("materialsRequired", "plates", value)}
+            placeholder="Select plates..."
+          />
+          <MultiSelect
+            label="Fasteners & Hardware"
+            options={FASTENERS_OPTIONS}
+            value={designEng.materialsRequired?.fasteners || []}
+            onChange={(value) => updateDesignField("materialsRequired", "fasteners", value)}
+            placeholder="Select fasteners..."
+          />
+          <MultiSelect
+            label="Mechanical Components"
+            options={COMPONENTS_OPTIONS}
+            value={designEng.materialsRequired?.components || []}
+            onChange={(value) => updateDesignField("materialsRequired", "components", value)}
+            placeholder="Select components..."
+          />
+          <MultiSelect
+            label="Electrical & Automation"
+            options={ELECTRICAL_OPTIONS}
+            value={designEng.materialsRequired?.electrical || []}
+            onChange={(value) => updateDesignField("materialsRequired", "electrical", value)}
+            placeholder="Select electrical items..."
+          />
+          <MultiSelect
+            label="Consumables & Paint"
+            options={CONSUMABLES_OPTIONS}
+            value={designEng.materialsRequired?.consumables || []}
+            onChange={(value) => updateDesignField("materialsRequired", "consumables", value)}
+            placeholder="Select consumables..."
+          />
         </div>
       </FormSection>
 
