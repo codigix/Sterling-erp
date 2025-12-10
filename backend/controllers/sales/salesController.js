@@ -89,6 +89,65 @@ exports.createSalesOrder = async (req, res) => {
   }
 };
 
+exports.updateSalesOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      clientName,
+      poNumber,
+      orderDate,
+      dueDate,
+      total,
+      currency = 'INR',
+      priority,
+      project_name,
+      items,
+      documents,
+      notes,
+      projectScope
+    } = req.body;
+
+    const order = await SalesOrder.findById(id);
+    if (!order) {
+      return res.status(404).json({ message: 'Sales order not found' });
+    }
+
+    const updates = {};
+    if (clientName) updates.customer = clientName;
+    if (poNumber) updates.po_number = poNumber;
+    if (orderDate) updates.order_date = orderDate;
+    if (dueDate) updates.due_date = dueDate;
+    if (total !== undefined) updates.total = total;
+    if (currency) updates.currency = currency;
+    if (priority) updates.priority = priority;
+    if (project_name) updates.project_name = project_name;
+    if (items) updates.items = JSON.stringify(items);
+    if (documents) updates.documents = JSON.stringify(documents);
+    if (notes) updates.notes = notes;
+    if (projectScope) updates.project_scope = JSON.stringify(projectScope);
+    updates.updated_at = new Date();
+
+    const setClause = Object.keys(updates).map(key => `${key} = ?`).join(', ');
+    const values = Object.values(updates);
+    values.push(id);
+
+    await pool.execute(
+      `UPDATE sales_orders SET ${setClause} WHERE id = ?`,
+      values
+    );
+
+    const updatedOrder = await SalesOrder.findById(id);
+
+    res.json({
+      message: 'Sales order updated successfully',
+      order: updatedOrder
+    });
+  } catch (error) {
+    console.error('Update sales order error:', error);
+    res.status(500).json({ message: 'Failed to update sales order' });
+  }
+};
+
 exports.updateSalesOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
@@ -109,5 +168,49 @@ exports.updateSalesOrderStatus = async (req, res) => {
   } catch (error) {
     console.error('Update sales order status error:', error);
     res.status(500).json({ message: 'Failed to update status' });
+  }
+};
+
+exports.deleteSalesOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const order = await SalesOrder.findById(id);
+    if (!order) {
+      return res.status(404).json({ message: 'Sales order not found' });
+    }
+
+    await pool.execute('DELETE FROM sales_orders WHERE id = ?', [id]);
+
+    res.json({ message: 'Sales order deleted successfully' });
+  } catch (error) {
+    console.error('Delete sales order error:', error);
+    res.status(500).json({ message: 'Failed to delete sales order' });
+  }
+};
+
+exports.assignSalesOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { assignedTo, assignedAt } = req.body;
+
+    if (!assignedTo) {
+      return res.status(400).json({ message: 'Assignee is required' });
+    }
+
+    const order = await SalesOrder.findById(id);
+    if (!order) {
+      return res.status(404).json({ message: 'Sales order not found' });
+    }
+
+    await pool.execute(
+      'UPDATE sales_orders SET assigned_to = ?, assigned_at = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+      [assignedTo, assignedAt || new Date(), id]
+    );
+
+    res.json({ message: 'Sales order assigned successfully' });
+  } catch (error) {
+    console.error('Assign sales order error:', error);
+    res.status(500).json({ message: 'Failed to assign sales order' });
   }
 };

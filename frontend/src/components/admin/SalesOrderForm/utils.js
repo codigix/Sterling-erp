@@ -47,6 +47,14 @@ export const validateStep2 = (formData) => {
 
 export const validateStep3 = (formData) => {
   const errors = [];
+  
+  const hasDrawings = formData.designEngineering?.attachments?.drawings?.length > 0;
+  const hasDocuments = formData.designEngineering?.attachments?.documents?.length > 0;
+  
+  if (!hasDrawings && !hasDocuments) {
+    errors.push("Please upload at least one design document or drawing");
+  }
+  
   return errors;
 };
 

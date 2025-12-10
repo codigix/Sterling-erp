@@ -1,0 +1,62 @@
+[
+  {
+    "name": "SteelCorp Industries",
+    "totalOrders": 45,
+    "onTimeDelivery": 42,
+    "qualityRating": 4.8,
+    "avgDeliveryTime": "8.5 days",
+    "totalValue": 1250000,
+    "status": "Excellent",
+    "category": "Raw Materials"
+  },
+  {
+    "name": "Precision Components Ltd",
+    "totalOrders": 38,
+    "onTimeDelivery": 35,
+    "qualityRating": 4.6,
+    "avgDeliveryTime": "6.2 days",
+    "totalValue": 890000,
+    "status": "Excellent",
+    "category": "Machined Parts"
+  },
+  {
+    "name": "ElectroTech Solutions",
+    "totalOrders": 29,
+    "onTimeDelivery": 25,
+    "qualityRating": 4.3,
+    "avgDeliveryTime": "10.1 days",
+    "totalValue": 675000,
+    "status": "Good",
+    "category": "Electronics"
+  },
+  {
+    "name": "MetalWorks Pro",
+    "totalOrders": 52,
+    "onTimeDelivery": 48,
+    "qualityRating": 4.7,
+    "avgDeliveryTime": "7.8 days",
+    "totalValue": 1450000,
+    "status": "Excellent",
+    "category": "Raw Materials"
+  },
+  {
+    "name": "FastTrack Logistics",
+    "totalOrders": 67,
+    "onTimeDelivery": 58,
+    "qualityRating": 4.2,
+    "avgDeliveryTime": "12.3 days",
+    "totalValue": 320000,
+    "status": "Average",
+    "category": "Logistics"
+  },
+  {
+    "name": "Quality Bearings Inc",
+    "totalOrders": 31,
+    "onTimeDelivery": 29,
+    "qualityRating": 4.9,
+    "avgDeliveryTime": "5.7 days",
+    "totalValue": 450000,
+    "status": "Excellent",
+    "category": "Components"
+  }
+]

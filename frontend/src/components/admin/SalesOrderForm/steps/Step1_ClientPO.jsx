@@ -6,7 +6,7 @@ import FormRow from "../shared/FormRow";
 import Tabs from "../../../ui/Tabs";
 import { useFormData, useSalesOrderContext } from "../hooks";
 
-export default function Step1_ClientPO() {
+export default function Step1_ClientPO({ readOnly = false }) {
   const { formData, updateField } = useFormData();
   const { state, setNestedField } = useSalesOrderContext();
 
@@ -35,12 +35,14 @@ export default function Step1_ClientPO() {
               value={formData.poNumber}
               onChange={(e) => updateField("poNumber", e.target.value)}
               placeholder="Enter PO number"
+              disabled={readOnly}
             />
             <Input
               label="PO Date"
               type="date"
               value={formData.poDate}
               onChange={(e) => updateField("poDate", e.target.value)}
+              disabled={readOnly}
             />
           </FormRow>
         </div>
@@ -56,6 +58,7 @@ export default function Step1_ClientPO() {
               value={formData.clientName}
               onChange={(e) => updateField("clientName", e.target.value)}
               placeholder="Enter client name"
+              disabled={readOnly}
             />
             <Input
               label="Client Email"
@@ -63,12 +66,14 @@ export default function Step1_ClientPO() {
               value={formData.clientEmail}
               onChange={(e) => updateField("clientEmail", e.target.value)}
               placeholder="Enter email address"
+              disabled={readOnly}
             />
             <Input
               label="Client Phone"
               value={formData.clientPhone}
               onChange={(e) => updateField("clientPhone", e.target.value)}
               placeholder="Enter 10-digit phone number"
+              disabled={readOnly}
             />
           </FormRow>
         </div>

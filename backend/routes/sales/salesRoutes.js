@@ -19,7 +19,10 @@ router.use(roleMiddleware('Admin', 'Management', 'Sales'));
 router.get('/orders', salesController.getSalesOrders);
 router.get('/orders/:id', salesController.getSalesOrderById);
 router.post('/orders', salesController.createSalesOrder);
+router.put('/orders/:id', salesController.updateSalesOrder);
 router.patch('/orders/:id/status', salesController.updateSalesOrderStatus);
+router.delete('/orders/:id', salesController.deleteSalesOrder);
+router.post('/orders/:id/assign', salesController.assignSalesOrder);
 
 router.get('/drafts/latest', draftController.getLatestDraft);
 router.get('/drafts/:id', draftController.getDraftById);

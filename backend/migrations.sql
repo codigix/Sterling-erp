@@ -503,9 +503,89 @@ CREATE TABLE IF NOT EXISTS inward_challan_details (
     INDEX idx_status (status)
 );
 
+-- Material Requirements Details Table
+CREATE TABLE IF NOT EXISTS material_requirements_details (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    sales_order_id INT NOT NULL UNIQUE,
+    materials JSON NOT NULL,
+    total_material_cost DECIMAL(12,2),
+    procurement_status ENUM('pending', 'ordered', 'received', 'partial') DEFAULT 'pending',
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (sales_order_id) REFERENCES sales_orders(id) ON DELETE CASCADE,
+    INDEX idx_sales_order (sales_order_id),
+    INDEX idx_procurement_status (procurement_status)
+);
+
+-- Design Engineering Details Table
+CREATE TABLE IF NOT EXISTS design_engineering_details (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    sales_order_id INT NOT NULL,
+    documents JSON NOT NULL,
+    design_status ENUM('draft', 'in_review', 'approved', 'rejected') DEFAULT 'draft',
+    bom_data JSON,
+    drawings_3d JSON,
+    specifications JSON,
+    design_notes TEXT,
+    reviewed_by INT,
+    reviewed_at TIMESTAMP NULL,
+    approval_comments TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (sales_order_id) REFERENCES sales_orders(id) ON DELETE CASCADE,
+    FOREIGN KEY (reviewed_by) REFERENCES users(id),
+    INDEX idx_sales_order (sales_order_id),
+    INDEX idx_design_status (design_status)
+);
+
+-- Production Plan Details Table
+CREATE TABLE IF NOT EXISTS production_plan_details (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    sales_order_id INT NOT NULL UNIQUE,
+    timeline JSON,
+    selected_phases JSON,
+    phase_details JSON,
+    production_notes TEXT,
+    procurement_status VARCHAR(50),
+    estimated_completion_date DATE,
+    production_start_date DATE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (sales_order_id) REFERENCES sales_orders(id) ON DELETE CASCADE,
+    INDEX idx_sales_order (sales_order_id)
+);
+
 -- Add indexes for production phase tables
 CREATE INDEX IF NOT EXISTS idx_production_phase_details_sales ON production_phase_details(sales_order_id);
 CREATE INDEX IF NOT EXISTS idx_production_phase_tracking_sales ON production_phase_tracking(sales_order_id);
 CREATE INDEX IF NOT EXISTS idx_production_phase_tracking_status ON production_phase_tracking(status);
 CREATE INDEX IF NOT EXISTS idx_outward_challan_sales ON outward_challan_details(sales_order_id);
 CREATE INDEX IF NOT EXISTS idx_inward_challan_outward ON inward_challan_details(outward_challan_id);
+
+-- Quality Check Details Table (updated to match frontend requirements)
+CREATE TABLE IF NOT EXISTS quality_check_details_new (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    sales_order_id INT NOT NULL UNIQUE,
+    quality_standards VARCHAR(255),
+    welding_standards VARCHAR(255),
+    surface_finish VARCHAR(255),
+    mechanical_load_testing VARCHAR(255),
+    electrical_compliance VARCHAR(255),
+    documents_required TEXT,
+    warranty_period VARCHAR(100),
+    service_support VARCHAR(255),
+    internal_project_owner INT,
+    qc_status ENUM('pending', 'in_progress', 'passed', 'failed', 'conditional') DEFAULT 'pending',
+    inspected_by INT,
+    inspection_date TIMESTAMP NULL,
+    qc_report TEXT,
+    remarks TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (sales_order_id) REFERENCES sales_orders(id) ON DELETE CASCADE,
+    FOREIGN KEY (internal_project_owner) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (inspected_by) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_sales_order (sales_order_id),
+    INDEX idx_qc_status (qc_status)
+);

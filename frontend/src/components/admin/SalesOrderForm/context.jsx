@@ -407,7 +407,7 @@ function reducer(state, action) {
   }
 }
 
-export function SalesOrderProvider({ children }) {
+export function SalesOrderProvider({ children, mode = 'create', initialData = null, assigneeData = null }) {
   const [state, dispatch] = useReducer(reducer, initialState);
 
   const actions = {
@@ -474,7 +474,7 @@ export function SalesOrderProvider({ children }) {
   };
 
   return (
-    <SalesOrderContext.Provider value={{ state, ...actions }}>
+    <SalesOrderContext.Provider value={{ state, ...actions, mode, initialData, assigneeData }}>
       {children}
     </SalesOrderContext.Provider>
   );

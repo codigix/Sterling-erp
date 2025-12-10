@@ -299,32 +299,17 @@ const PRODUCTION_PHASE_FORMS = {
   ],
 };
 
-export default function Step5_ProductionPlan() {
+export default function Step5_ProductionPlan({ readOnly = false }) {
   const { formData, updateField, setNestedField } = useFormData();
   const { state } = useSalesOrderContext();
 
-  const [selectedPhases, setSelectedPhases] = useState({});
+  const [selectedPhases, setSelectedPhases] = useState(formData?.selectedPhases || {});
   const [phaseDetails, setPhaseDetails] = useState({});
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedPhaseKey, setSelectedPhaseKey] = useState(null);
   const [phaseProcessType, setPhaseProcessType] = useState({});
   const [productionPhaseTracking, setProductionPhaseTracking] = useState({});
   const [activeTab, setActiveTab] = useState("timeline");
-  const [materialInfo, setMaterialInfo] = useState({
-    materialType: "",
-    grade: "",
-    thickness: "",
-    heatNo: "",
-    supplierName: "",
-    receivedQuantity: "",
-    requiredQuantity: "",
-    storageLocation: "",
-    preparedBy: "",
-    preparationDate: "",
-    qcStatus: "",
-    mtcFileName: "",
-    materialImageName: "",
-  });
 
   const handlePhaseToggle = (phase) => {
     setSelectedPhases((prev) => {
@@ -341,6 +326,7 @@ export default function Step5_ProductionPlan() {
       } else {
         newPhases[phase] = true;
       }
+      updateField("selectedPhases", newPhases);
       return newPhases;
     });
   };
@@ -452,31 +438,8 @@ export default function Step5_ProductionPlan() {
     });
   };
 
-  const handleMaterialInfoChange = (field, value) => {
-    setMaterialInfo((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  const handleMaterialFileChange = (e, fileType) => {
-    const fileName = e.target.files?.[0]?.name || "";
-    if (fileType === "mtc") {
-      setMaterialInfo((prev) => ({
-        ...prev,
-        mtcFileName: fileName,
-      }));
-    } else if (fileType === "materialImage") {
-      setMaterialInfo((prev) => ({
-        ...prev,
-        materialImageName: fileName,
-      }));
-    }
-  };
-
   const tabs = [
     { id: "timeline", label: "Timeline & Procurement" },
-    { id: "material", label: "Material Information" },
     { id: "phases", label: "Production Phases" },
   ];
 
@@ -557,218 +520,6 @@ export default function Step5_ProductionPlan() {
                       <option value="Completed">Completed</option>
                       <option value="Pending Approval">Pending Approval</option>
                     </select>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Material Information Tab */}
-            {activeTab === "material" && (
-              <div className="space-y-6">
-                <div>
-                  <h5 className="text-sm font-semibold text-slate-300 mb-3">
-                    Material Information
-                  </h5>
-                  <div className="bg-slate-800 p-4 rounded-lg border border-slate-700 space-y-3">
-                    <FormRow cols={2}>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2">
-                          Material Type
-                        </label>
-                        <select
-                          value={materialInfo.materialType}
-                          onChange={(e) =>
-                            handleMaterialInfoChange(
-                              "materialType",
-                              e.target.value
-                            )
-                          }
-                          className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                          <option value="">Select Type</option>
-                          <option value="Plate">Plate</option>
-                          <option value="Beam">Beam</option>
-                          <option value="Channel">Channel</option>
-                          <option value="Pipe">Pipe</option>
-                          <option value="Bar">Bar</option>
-                        </select>
-                      </div>
-                      <Input
-                        label="Grade"
-                        value={materialInfo.grade}
-                        onChange={(e) =>
-                          handleMaterialInfoChange("grade", e.target.value)
-                        }
-                        placeholder="e.g., E250, EN8"
-                      />
-                    </FormRow>
-
-                    <FormRow cols={2}>
-                      <Input
-                        label="Thickness / Size"
-                        value={materialInfo.thickness}
-                        onChange={(e) =>
-                          handleMaterialInfoChange("thickness", e.target.value)
-                        }
-                        placeholder="e.g., 10mm, 50x50"
-                      />
-                      <Input
-                        label="Heat No."
-                        value={materialInfo.heatNo}
-                        onChange={(e) =>
-                          handleMaterialInfoChange("heatNo", e.target.value)
-                        }
-                        placeholder="e.g., HT-2024-001"
-                      />
-                    </FormRow>
-
-                    <FormRow cols={2}>
-                      <Input
-                        label="Supplier Name"
-                        value={materialInfo.supplierName}
-                        onChange={(e) =>
-                          handleMaterialInfoChange(
-                            "supplierName",
-                            e.target.value
-                          )
-                        }
-                        placeholder="e.g., XYZ Steel Ltd"
-                      />
-                      <Input
-                        label="Heat No."
-                        value={materialInfo.heatNo}
-                        onChange={(e) =>
-                          handleMaterialInfoChange("heatNo", e.target.value)
-                        }
-                        placeholder="e.g., HT-2024-001"
-                      />
-                    </FormRow>
-
-                    <FormRow cols={2}>
-                      <Input
-                        label="Received Quantity"
-                        type="number"
-                        value={materialInfo.receivedQuantity}
-                        onChange={(e) =>
-                          handleMaterialInfoChange(
-                            "receivedQuantity",
-                            e.target.value
-                          )
-                        }
-                        placeholder="e.g., 100"
-                      />
-                      <Input
-                        label="Required Quantity"
-                        type="number"
-                        value={materialInfo.requiredQuantity}
-                        onChange={(e) =>
-                          handleMaterialInfoChange(
-                            "requiredQuantity",
-                            e.target.value
-                          )
-                        }
-                        placeholder="e.g., 100"
-                      />
-                    </FormRow>
-
-                    <FormRow cols={2}>
-                      <Input
-                        label="Storage Location"
-                        value={materialInfo.storageLocation}
-                        onChange={(e) =>
-                          handleMaterialInfoChange(
-                            "storageLocation",
-                            e.target.value
-                          )
-                        }
-                        placeholder="e.g., Rack A-10"
-                      />
-                      <Input
-                        label="Prepared By"
-                        value={materialInfo.preparedBy}
-                        onChange={(e) =>
-                          handleMaterialInfoChange("preparedBy", e.target.value)
-                        }
-                        placeholder="e.g., John Doe"
-                      />
-                    </FormRow>
-
-                    <FormRow cols={2}>
-                      <Input
-                        label="Preparation Date"
-                        type="date"
-                        value={materialInfo.preparationDate}
-                        onChange={(e) =>
-                          handleMaterialInfoChange(
-                            "preparationDate",
-                            e.target.value
-                          )
-                        }
-                      />
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2">
-                          QC Status
-                        </label>
-                        <select
-                          value={materialInfo.qcStatus}
-                          onChange={(e) =>
-                            handleMaterialInfoChange("qcStatus", e.target.value)
-                          }
-                          className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                          <option value="">Select Status</option>
-                          <option value="Approved">Approved</option>
-                          <option value="Rejected">Rejected</option>
-                          <option value="Pending">Pending</option>
-                        </select>
-                      </div>
-                    </FormRow>
-
-                    <FormRow cols={2}>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2">
-                          Upload MTC
-                        </label>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="file"
-                            accept=".pdf,.doc,.docx,.jpg,.png"
-                            onChange={(e) => handleMaterialFileChange(e, "mtc")}
-                            className="hidden"
-                            id="mtc-upload"
-                          />
-                          <label
-                            htmlFor="mtc-upload"
-                            className="flex-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded text-slate-100 cursor-pointer hover:bg-slate-600 text-center text-sm"
-                          >
-                            {materialInfo.mtcFileName || "Choose File"}
-                          </label>
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2">
-                          Upload Material Image
-                        </label>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="file"
-                            accept=".jpg,.jpeg,.png,.webp"
-                            onChange={(e) =>
-                              handleMaterialFileChange(e, "materialImage")
-                            }
-                            className="hidden"
-                            id="material-image-upload"
-                          />
-                          <label
-                            htmlFor="material-image-upload"
-                            className="flex-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded text-slate-100 cursor-pointer hover:bg-slate-600 text-center text-sm"
-                          >
-                            {materialInfo.materialImageName || "Choose File"}
-                          </label>
-                        </div>
-                      </div>
-                    </FormRow>
                   </div>
                 </div>
               </div>

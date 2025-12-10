@@ -1,465 +1,576 @@
-# Sterling ERP - Complete Implementation Guide
+# Sales Order Workflow - Complete Implementation Guide
 
 ## Overview
-
-This is a comprehensive ERP system with end-to-end production planning, employee task management, and project tracking capabilities. The system supports role-based access, real-time notifications, and detailed performance tracking.
-
----
-
-## 📊 Core Features Implemented
-
-### 1. **Sales Order Management**
-- Create sales orders from client POs
-- Track client information and design documents
-- Material assignment to orders
-- Order status tracking (pending, approved, in progress, completed)
-
-**API Endpoints:**
-- `POST /api/sales` - Create sales order
-- `GET /api/sales` - List all sales orders
-- `GET /api/sales/:id` - Get sales order details
-- `PUT /api/sales/:id` - Update sales order
-- `PATCH /api/sales/:id/status` - Update order status
+This guide explains the complete implementation of the 8-step Sales Order workflow with proper tab data persistence and API integration.
 
 ---
 
-### 2. **Material Management**
-- Add materials with quantities and specifications
-- Assign materials to vendor purchase orders
-- Track material location (warehouse, batch, rack)
-- Reorder level management and alerts
+## Architecture
 
-**API Endpoints:**
-- `POST /api/inventory/materials` - Create material
-- `GET /api/inventory/materials` - List materials
-- `GET /api/inventory/materials/:id` - Get material details
-- `PUT /api/inventory/materials/:id` - Update material
-- `DELETE /api/inventory/materials/:id` - Delete material
-
----
-
-### 3. **Facility Management**
-- Create and manage production facilities
-- Assign equipment and capacity information
-- Track facility status (active, inactive, maintenance)
-- Assign facilities to production stages
-
-**API Endpoints:**
-- `POST /api/inventory/facilities` - Create facility
-- `GET /api/inventory/facilities` - List all facilities
-- `GET /api/inventory/facilities/available` - Get active facilities
-- `GET /api/inventory/facilities/:id` - Get facility details
-- `PUT /api/inventory/facilities/:id` - Update facility
-- `DELETE /api/inventory/facilities/:id` - Delete facility
-
----
-
-### 4. **Production Planning** ⭐
-Complete production planning system with stages and delays tracking.
-
-**Features:**
-- Create production plans from sales orders
-- Define production stages with sequence
-- In-house vs Outsource stage options
-- Time estimates and delay tracking
-- Stage-wise employee assignment
-- Facility assignment for in-house stages
-
-**API Endpoints:**
-- `POST /api/production/plans` - Create production plan
-- `GET /api/production/plans` - List all plans
-- `GET /api/production/plans/:id` - Get plan details
-- `PUT /api/production/plans/:id` - Update plan
-- `PATCH /api/production/plans/:id/status` - Update plan status
-
-**Database Fields:**
-- `estimated_delay_days` - Estimated delay for stage
-- `actual_delay_days` - Actual delay that occurred
-- `approx_completion_time` - Approximate time of completion
-- `duration_days` - Total duration of stage
-
----
-
-### 5. **Employee Task Management** 🎯
-Complete task lifecycle management with comprehensive status tracking.
-
-**Task Statuses:**
-- **to_do** - Task assigned, not started
-- **in_progress** - Task currently being worked on
-- **pause** - Task paused temporarily (tracks pause count and duration)
-- **done** - Task completed
-- **cancel** - Task cancelled (with reason)
-
-**Features:**
-- Assign tasks to employees
-- Update task status with timestamps
-- Track pause history and total pause duration
-- Add cancellation reasons
-- Priority levels (high, medium, low)
-- Task descriptions and notes
-
-**API Endpoints:**
-- `POST /api/production/stage-tasks` - Create task
-- `GET /api/production/stage-tasks/employee/:employeeId` - Get employee tasks
-- `GET /api/production/stage-tasks/:id` - Get task details
-- `PATCH /api/production/stage-tasks/:id/status` - Update task status
-- `PATCH /api/production/stage-tasks/:id/pause` - Pause task
-- `GET /api/production/stage-tasks/employee/:employeeId/stats` - Get employee stats
-- `GET /api/production/stage-tasks/stage/:productionStageId/stats` - Get stage stats
-
----
-
-### 6. **Alerts & Notifications System** 🔔
-Real-time alert system for task blockers and system events.
-
-**Alert Types:**
-- `task_blocked` - Task is blocked/stuck
-- `status_update` - Status change notifications
-- `delay_alert` - Stage/task delays
-- `material_shortage` - Low stock alerts
-- `quality_issue` - Quality related alerts
-- `other` - Custom alerts
-
-**Features:**
-- Create alerts with priority levels
-- Mark alerts as read/unread
-- Filter by alert type and priority
-- Track unread count
-- Auto-cleanup of old alerts
-- Alert statistics
-
-**API Endpoints:**
-- `POST /api/alerts` - Create alert
-- `GET /api/alerts/user/:userId` - Get user alerts
-- `GET /api/alerts/user/:userId/unread-count` - Get unread count
-- `GET /api/alerts/user/:userId/stats` - Get alert statistics
-- `PATCH /api/alerts/:id/read` - Mark as read
-- `PATCH /api/alerts/user/:userId/read-all` - Mark all as read
-- `DELETE /api/alerts/:id` - Delete alert
-
----
-
-### 7. **Employee Portal** 👨‍💼
-Personal dashboard for employees to manage their tasks.
-
-**Features:**
-- View all assigned tasks
-- Update task status (to_do → in_progress → pause/done/cancel)
-- Filter tasks by status (all, to_do, in_progress, pause, done, cancel)
-- Filter tasks by date (today, week, month)
-- View task statistics (total, to_do, in_progress, paused, completed, cancelled)
-- See personal performance metrics
-- View recent alerts and notifications
-- Pause and resume tasks with duration tracking
-
-**URL:** `/employee/portal`
-
-**Stats Dashboard Shows:**
-- Total Tasks
-- To Do Count
-- In Progress Count
-- Completed Count
-- Paused Count
-- Cancelled Count
-
----
-
-### 8. **Project Tracking Dashboard** 📈
-Real-time project progress monitoring and milestone tracking.
-
-**Features:**
-- View all projects in sidebar
-- Monitor overall project progress percentage
-- Add and manage project milestones
-- Track milestone status (not_started, in_progress, completed, delayed)
-- Monitor milestone completion percentage
-- View team member performance on project
-- Team efficiency tracking
-
-**API Endpoints:**
-- `POST /api/tracking/project-milestone` - Add milestone
-- `GET /api/tracking/project/:projectId/milestones` - Get milestones
-- `PATCH /api/tracking/milestone/:id/progress` - Update milestone progress
-- `PATCH /api/tracking/milestone/:id/status` - Update milestone status
-- `GET /api/tracking/project/:projectId/progress` - Get project overall progress
-- `GET /api/tracking/project/:projectId/team` - Get project team
-
-**URL:** `/reports/project-tracking`
-
----
-
-### 9. **Employee Performance Tracking** 📊
-Comprehensive employee performance and efficiency analytics.
-
-**Features:**
-- View employee list
-- Track employee details and role
-- Performance metrics:
-  - Total tasks assigned
-  - Tasks completed
-  - In progress tasks
-  - Completion rate percentage
-  - Tasks paused and cancelled
-  - Average efficiency percentage
-  - Total hours worked
-- Project-wise performance breakdown
-- Efficiency rating with color coding
-
-**API Endpoints:**
-- `GET /api/tracking/employee/:employeeId` - Get employee tracking
-- `GET /api/tracking/employee/:employeeId/performance` - Get performance details
-- `PATCH /api/tracking/employee/:employeeId/project/:projectId/stats` - Update stats
-- `PATCH /api/tracking/employee/:employeeId/project/:projectId/efficiency` - Update efficiency
-
-**URL:** `/reports/employee-tracking`
-
----
-
-### 10. **Production Plan Creation Form** 📋
-Comprehensive form for creating detailed production plans.
-
-**Form Sections:**
-
-#### Basic Information
-- Project selection
-- Plan name
-- Start date
-- End date
-- Estimated completion date
-- Assigned supervisor
-- Notes
-
-#### Production Stages
-For each stage, configure:
-- Stage name
-- Stage type (In House / Outsource)
-- **For In-House Stages:**
-  - Assigned employee
-  - Facility selection
-- Planned start and end dates
-- Estimated duration (days)
-- Stage notes
-
-**Features:**
-- Add multiple stages in sequence
-- Drag-and-drop stage reordering (future)
-- Remove stages before creation
-- Automatic form validation
-- Real-time employee and facility selection
-
-**URL:** `/department/production-plan`
-
----
-
-## 🗄️ Database Tables Created
-
-### New Tables
-
-1. **`facilities`**
-   - id, name, location, capacity, equipment (JSON), status
-
-2. **`production_plans`**
-   - Complete production plan tracking with status and dates
-
-3. **`production_stages`**
-   - Individual production stages with delays and time tracking
-
-4. **`production_stage_tasks`**
-   - Employee task assignments with status tracking
-
-5. **`alerts_notifications`**
-   - Alert system with types and priorities
-
-6. **`project_tracking`**
-   - Project milestone and progress tracking
-
-7. **`employee_tracking`**
-   - Employee performance and task statistics
-
-8. **`challan_materials`**
-   - Material tracking for outward/inward challans
-
-### Updated Columns
-
-- **sales_orders**: Added design_documents, assigned_materials (JSON)
-- **manufacturing_stages**: Added delay tracking columns
-- **worker_tasks**: Added new status fields and pause tracking
-
----
-
-## 📁 File Structure
-
-### Backend Files Created
-
+### Frontend Data Flow
 ```
-backend/
-├── models/
-│   ├── ProductionPlan.js
-│   ├── ProductionStageTask.js
-│   ├── AlertsNotification.js
-│   ├── Facility.js
-│   ├── ProjectTracking.js
-│   └── EmployeeTracking.js
-│
-├── controllers/
-│   ├── production/
-│   │   ├── productionPlanController.js
-│   │   └── productionStageTaskController.js
-│   ├── inventory/
-│   │   └── facilityController.js
-│   ├── notifications/
-│   │   └── alertsNotificationController.js
-│   └── reports/
-│       └── trackingController.js
-│
-├── routes/
-│   ├── production/
-│   │   ├── productionPlanRoutes.js
-│   │   └── productionStageTaskRoutes.js
-│   ├── inventory/
-│   │   └── facilityRoutes.js
-│   ├── notifications/
-│   │   └── alertsRoutes.js
-│   └── reports/
-│       └── trackingRoutes.js
-│
-└── migrations.sql (Enhanced)
+Step Component (with Tabs)
+    ↓
+formData (state)
+    ↓
+stepDataHandler.buildStepPayload()
+    ↓
+API POST Request
+    ↓
+Database Save
 ```
 
-### Frontend Files Created
+### Files Modified
+
+#### 1. **Frontend Changes**
+
+**`stepDataHandler.js`** (NEW)
+- Centralized payload builder for all 8 steps
+- Ensures consistent data structure before sending to API
+- Maps all form fields to database schema fields
+
+**`index.jsx`** (UPDATED)
+- Imports `stepDataHandler`
+- `saveStepData()` now uses `saveStepDataToAPI()` helper
+- Step 1 data now saved immediately after order creation
+- Both Step 1 and Step 2 saved in sequence
+
+#### 2. **Backend Changes**
+
+**`clientPOController.js`** (UPDATED)
+- `createOrUpdate()` now relaxes validation
+- Accepts all Step 1 data at once (all 3 tabs)
+- Sets status to `in_progress` instead of `completed`
+
+**`salesOrderDetailController.js`** (UPDATED)
+- `createOrUpdate()` properly merges all Step 2 data
+- Sets status to `in_progress` instead of `completed`
+
+---
+
+## Step-by-Step Data Structure
+
+### **STEP 1: Client PO (3 Tabs)**
+
+**Tab 1: Client Info**
+- poNumber, poDate
+- clientName, clientEmail, clientPhone
+
+**Tab 2: Project Details**
+- projectName, projectCode
+- billingAddress, shippingAddress
+- clientAddress
+
+**Tab 3: Project Requirements**
+- application, numberOfUnits, dimensions, loadCapacity
+- materialGrade, finishCoatings
+- installationRequirement, testingStandards
+- acceptanceCriteria, documentationRequirement, warrantTerms
+
+**API Payload Sent:**
+```json
+{
+  "poNumber": "PO-2024-001",
+  "poDate": "2024-01-01",
+  "clientName": "Client ABC",
+  "clientEmail": "contact@abc.com",
+  "clientPhone": "9876543210",
+  "projectName": "Project XYZ",
+  "projectCode": "PRJ-001",
+  "billingAddress": "123 Main St",
+  "shippingAddress": "456 Oak Ave",
+  "clientAddress": "789 Pine Rd",
+  "projectRequirements": {
+    "application": "Container handling",
+    "numberOfUnits": 2,
+    "dimensions": "3000x2000x1500",
+    "loadCapacity": "5000kg",
+    "materialGrade": "EN8",
+    "finishCoatings": "Epoxy",
+    "installationRequirement": "Yes",
+    "testingStandards": "IS 1161",
+    "acceptanceCriteria": "As per specs",
+    "documentationRequirement": "Full",
+    "warrantTerms": "1 year"
+  },
+  "notes": null
+}
+```
+
+**Database Storage:** `client_po_details` table
+- All fields persisted as-is
+- projectRequirements stored as JSON
+
+---
+
+### **STEP 2: Sales Order (3 Tabs)**
+
+**Tab 1: Sales & Product**
+- clientEmail, clientPhone, estimatedEndDate
+- billingAddress, shippingAddress
+- productDetails (itemName, itemDescription, componentsList, certification)
+
+**Tab 2: Quality & Compliance**
+- qualityCompliance (standards, welding, surface, testing, electrical, documents)
+- warrantySupport (period, support)
+
+**Tab 3: Payment & Internal**
+- paymentTerms, projectPriority, totalAmount, projectCode
+- internalInfo (estimatedCosting, estimatedProfit, jobCardNo)
+- specialInstructions
+
+**API Payload Sent:**
+```json
+{
+  "clientEmail": "contact@abc.com",
+  "clientPhone": "9876543210",
+  "estimatedEndDate": "2024-03-01",
+  "billingAddress": "123 Main St",
+  "shippingAddress": "456 Oak Ave",
+  "productDetails": {
+    "itemName": "CCIS Container Stand",
+    "itemDescription": "Heavy-duty container stand",
+    "componentsList": "Base frame, wheels, control panel",
+    "certification": "CE Certified"
+  },
+  "qualityCompliance": {
+    "qualityStandards": "ISO 9001",
+    "weldingStandards": "AWS D1.1",
+    "surfaceFinish": "Epoxy 150 microns",
+    "mechanicalLoadTesting": "Yes",
+    "electricalCompliance": "IEC 61508",
+    "documentsRequired": "All test reports"
+  },
+  "warrantySupport": {
+    "warrantyPeriod": "12 months",
+    "serviceSupport": "On-site support"
+  },
+  "paymentTerms": "30% advance, 70% on delivery",
+  "projectPriority": "high",
+  "totalAmount": 500000,
+  "projectCode": "PRJ-001",
+  "internalInfo": {
+    "estimatedCosting": 300000,
+    "estimatedProfit": 200000,
+    "jobCardNo": "JC-2024-001"
+  },
+  "specialInstructions": "Urgent delivery required"
+}
+```
+
+**Database Storage:** `sales_order_details` table
+- All fields persisted as-is
+- Nested objects stored as JSON
+
+---
+
+### **STEP 3: Design Engineering**
+
+**Sections:**
+- General Design Info: designId, designStatus, designEngineerName
+- Product Specification: productName, systemLength, systemWidth, systemHeight, loadCapacity, operatingEnvironment, materialGrade, surfaceFinish
+- Materials Required: steelSections[], plates[], fasteners[], components[], electrical[], consumables[]
+- Attachments: drawings[], documents[]
+
+**API Payload Sent:**
+```json
+{
+  "generalDesignInfo": {
+    "designId": "DES-2024-001",
+    "designStatus": "In Review",
+    "designEngineerName": "John Engineer"
+  },
+  "productSpecification": {
+    "productName": "CCIS Stand V2",
+    "systemLength": "3000mm",
+    "systemWidth": "2000mm",
+    "systemHeight": "1500mm",
+    "loadCapacity": "5000kg",
+    "operatingEnvironment": "Outdoor",
+    "materialGrade": "EN8",
+    "surfaceFinish": "Epoxy"
+  },
+  "materialsRequired": {
+    "steelSections": ["ISMB 200", "ISA 50x50x5"],
+    "plates": ["MS Plate 10mm", "Stainless 5mm"],
+    "fasteners": ["M16 bolts", "Lock nuts"],
+    "components": ["Roller wheels", "Bearings"],
+    "electrical": ["Control panel", "Sensors"],
+    "consumables": ["Welding rod", "Paint"]
+  },
+  "attachments": {
+    "drawings": [file objects],
+    "documents": [file objects]
+  },
+  "documents": [
+    {
+      "type": "Drawings",
+      "filePath": "drawing.pdf",
+      "fileName": "drawing.pdf"
+    }
+  ]
+}
+```
+
+**Database Storage:** `design_engineering_details` table
+
+---
+
+### **STEP 4: Material Requirements**
+
+**Data:**
+- materials array with dynamic types and quantities
+
+**Type-Specific Quantity Fields:**
+- steelSection → steelSectionQuantity
+- plateType → plateTypeQuantity
+- materialGrade → materialGradeQuantity
+- fastenerType → fastenerTypeQuantity
+- machinedParts → machinedPartsQuantity
+- rollerMovementComponents → rollerMovementComponentsQuantity
+- liftingPullingMechanisms → liftingPullingMechanismsQuantity
+- electricalAutomation → electricalAutomationQuantity
+- safetyMaterials → safetyMaterialsQuantity
+- surfacePrepPainting → surfacePrepPaintingQuantity
+- fabricationConsumables → fabricationConsumablesQuantity
+- hardwareMisc → hardwareMiscQuantity
+- documentationMaterials → documentationMaterialsQuantity
+
+**API Payload Sent:**
+```json
+{
+  "materials": [
+    {
+      "id": 1704700000000,
+      "materialType": "steelSection",
+      "quantity": 10,
+      "steelSectionQuantity": 10
+    },
+    {
+      "id": 1704700000001,
+      "materialType": "plateType",
+      "quantity": 5,
+      "plateTypeQuantity": 5
+    }
+  ]
+}
+```
+
+**Database Storage:** `material_requirements_details` table
+
+---
+
+### **STEP 5: Production Plan**
+
+**Data:**
+- timeline: startDate, endDate
+- selectedPhases: 6 production phases (Material Prep, Fabrication, Machining, Surface Prep, Assembly, Electrical)
+
+**API Payload Sent:**
+```json
+{
+  "timeline": {
+    "startDate": "2024-01-15",
+    "endDate": "2024-02-28"
+  },
+  "selectedPhases": {
+    "marking": true,
+    "cutting_laser": true,
+    "edge_prep": true,
+    "mig_welding": true,
+    "fit_up": false,
+    "structure_fabrication": true,
+    "drilling": true,
+    "turning": false,
+    "milling": true,
+    "boring": false,
+    "grinding": true,
+    "shot_blasting": true,
+    "painting": true,
+    "mechanical_assembly": true,
+    "shaft_bearing_assembly": false,
+    "alignment": true,
+    "panel_wiring": true,
+    "motor_wiring": true,
+    "sensor_installation": true
+  }
+}
+```
+
+**Database Storage:** `production_plan_details` table
+
+---
+
+### **STEP 6: Quality Check**
+
+**Sections:**
+- Quality Compliance: qualityStandards, weldingStandards, surfaceFinish, mechanicalLoadTesting, electricalCompliance, documentsRequired
+- Warranty Support: warrantyPeriod, serviceSupport
+- Internal Project Owner: internalProjectOwner (employee ID)
+
+**API Payload Sent:**
+```json
+{
+  "qualityCompliance": {
+    "qualityStandards": "ISO 9001:2015",
+    "weldingStandards": "AWS D1.1",
+    "surfaceFinish": "Epoxy 150 microns",
+    "mechanicalLoadTesting": "Static load 5000kg",
+    "electricalCompliance": "IEC 61508",
+    "documentsRequired": "All certs and test reports"
+  },
+  "warrantySupport": {
+    "warrantyPeriod": "12 months",
+    "serviceSupport": "On-site preventive maintenance"
+  },
+  "internalProjectOwner": 5
+}
+```
+
+**Database Storage:** `quality_check_details` table
+
+---
+
+### **STEP 7: Shipment & Logistics**
+
+**Sections:**
+- Delivery Terms: deliverySchedule, packagingInfo, dispatchMode, installationRequired, siteCommissioning
+- Shipment Process: marking, dismantling, packing, dispatch
+
+**API Payload Sent:**
+```json
+{
+  "deliveryTerms": {
+    "deliverySchedule": "By 15-Feb-2024",
+    "packagingInfo": "Heavy-duty wooden crates",
+    "dispatchMode": "Road transport",
+    "installationRequired": "Yes - on-site",
+    "siteCommissioning": "Yes - 2 days"
+  },
+  "shipment": {
+    "marking": "Fragile - Handle with care",
+    "dismantling": "No - shipped as assembled",
+    "packing": "Foam + wooden frame",
+    "dispatch": "Via XYZ Logistics"
+  }
+}
+```
+
+**Database Storage:** `shipment_details` table
+
+---
+
+### **STEP 8: Delivery & Handover**
+
+**Sections:**
+- Final Delivery: deliverySchedule (date), customerContact
+- Installation Status: installationRequired, siteCommissioning
+- Warranty & Compliance: warrantyPeriod
+- Project Completion: acceptanceCriteria
+- Internal Project Info: projectManager, productionSupervisor
+
+**API Payload Sent:**
+```json
+{
+  "deliveryTerms": {
+    "deliverySchedule": "2024-02-15",
+    "installationRequired": "Completed",
+    "siteCommissioning": "Completed and signed off"
+  },
+  "warrantySupport": {
+    "warrantyPeriod": "12 months from delivery"
+  },
+  "customerContact": "Mr. Smith, Chief Operations",
+  "projectRequirements": {
+    "acceptanceCriteria": "All test reports satisfactory"
+  },
+  "internalInfo": {
+    "projectManager": "Alice Manager",
+    "productionSupervisor": "Bob Supervisor"
+  }
+}
+```
+
+**Database Storage:** `delivery_details` table
+
+---
+
+## Testing Workflow
+
+### **Step 1: Create a Sales Order**
+1. Navigate to "Create Sales Order"
+2. **Tab 1 - Client Info:**
+   - PO Number: `PO-TEST-001`
+   - PO Date: `2024-01-01`
+   - Client Name: `Test Client`
+   - Client Email: `test@client.com`
+   - Client Phone: `9999999999`
+
+3. **Tab 2 - Project Details:**
+   - Project Name: `Test Project`
+   - Project Code: (auto-generated)
+   - Billing Address: `123 Test St`
+   - Shipping Address: `456 Test Ave`
+
+4. **Tab 3 - Project Requirements:**
+   - Application: `Testing`
+   - Number of Units: `1`
+   - Dimensions: `1000x1000x1000`
+   - Load Capacity: `1000kg`
+   - Material Grade: `EN8`
+   - Finish & Coatings: `Epoxy`
+   - Installation: `Yes`
+   - Testing Standards: `IS 1161`
+   - Acceptance: `Test passed`
+   - Documentation: `Full`
+   - Warranty: `1 year`
+
+5. Click **Next** → Sales order is created with ID (e.g., ID: 11)
+
+### **Step 2: Verify Step 1 Data Saved**
+```sql
+SELECT * FROM client_po_details WHERE sales_order_id = 11;
+```
+Expected: All tab data should be present
+- Client info: poNumber, clientName, clientEmail, clientPhone
+- Project details: projectName, projectCode, billingAddress, shippingAddress
+- Requirements: project_requirements (as JSON)
+
+### **Step 3: Fill Step 2 - Sales Order**
+1. **Tab 1 - Sales & Product:**
+   - Estimated End Date: `2024-03-01`
+   - Product Name: `Test Stand`
+   - Product Description: `Heavy-duty testing stand`
+
+2. **Tab 2 - Quality & Compliance:**
+   - Quality Standards: `ISO 9001`
+   - Welding Standards: `AWS D1.1`
+   - Surface Finish: `Epoxy`
+   - Warranty Period: `12 months`
+   - Service Support: `Full support`
+
+3. **Tab 3 - Payment & Internal:**
+   - Payment Terms: `50% advance`
+   - Priority: `High`
+   - Total Amount: `100000`
+   - Job Card: `JC-001`
+   - Special Instructions: `Urgent`
+
+4. Click **Next**
+
+### **Step 4: Verify Step 2 Data Saved**
+```sql
+SELECT * FROM sales_order_details WHERE sales_order_id = 11;
+```
+Expected: All fields should be populated
+- Email, phone, addresses
+- productDetails (JSON)
+- qualityCompliance (JSON)
+- warrantySupport (JSON)
+- internalInfo (JSON)
+- paymentTerms, totalAmount, etc.
+
+### **Repeat for Steps 3-8**
+Each step should save ALL tab data immediately without requiring additional API calls.
+
+---
+
+## API Endpoint Summary
+
+| Step | Method | Endpoint | Payload | Response |
+|------|--------|----------|---------|----------|
+| 1 | POST | `/api/sales/steps/{id}/client-po` | Full PO data | client_po_details record |
+| 2 | POST | `/api/sales/steps/{id}/sales-order` | Full order data | sales_order_details record |
+| 3 | POST | `/api/sales/steps/{id}/design-engineering` | Design data | design_engineering_details record |
+| 4 | POST | `/api/sales/steps/{id}/material-requirements` | Materials | material_requirements_details record |
+| 5 | POST | `/api/sales/steps/{id}/production-plan` | Timeline + phases | production_plan_details record |
+| 6 | POST | `/api/sales/steps/{id}/quality-check` | QC + warranty | quality_check_details record |
+| 7 | POST | `/api/sales/steps/{id}/shipment` | Delivery + shipment | shipment_details record |
+| 8 | POST | `/api/sales/steps/{id}/delivery` | Final delivery | delivery_details record |
+
+---
+
+## Error Handling
+
+### **Common Issues & Solutions**
+
+**Issue:** "Sales Order not found"
+- **Cause:** Trying to access non-existent order ID
+- **Solution:** Create order in Step 1 first, then proceed sequentially
+
+**Issue:** "Cannot save step: no createdOrderId"
+- **Cause:** Frontend doesn't have order ID yet
+- **Solution:** Complete previous steps first
+
+**Issue:** Step data shows as null/empty
+- **Cause:** Tabs not properly collected before sending
+- **Solution:** Ensure `stepDataHandler.buildStepPayload()` is called with correct formData
+
+**Issue:** Partial data saved (only first tab)
+- **Cause:** Old version of index.jsx still in use
+- **Solution:** Clear browser cache and reload
+
+---
+
+## Key Files Modified
 
 ```
-frontend/src/
-├── pages/
-│   ├── employee/
-│   │   └── EmployeePortalPage.jsx
-│   ├── reports/
-│   │   ├── ProjectTrackingDashboard.jsx
-│   │   └── EmployeeTrackingDashboard.jsx
-│   └── production/
-│       └── ProductionPlanFormPage.jsx
-│
-└── App.jsx (Updated with new routes)
+Frontend:
+- d:\passion\Sterling-erp\frontend\src\components\admin\SalesOrderForm\index.jsx
+- d:\passion\Sterling-erp\frontend\src\components\admin\SalesOrderForm\stepDataHandler.js (NEW)
+
+Backend:
+- d:\passion\Sterling-erp\backend\controllers\sales\clientPOController.js
+- d:\passion\Sterling-erp\backend\controllers\sales\salesOrderDetailController.js
+
+Database:
+- No schema changes (all tables already created)
 ```
 
 ---
 
-## 🔄 Workflow Examples
+## Validation Rules
 
-### Example 1: Complete Production Order Flow
+### Step 1
+- poNumber, poDate required
+- clientName, email, phone required
+- projectName, projectCode required
 
-1. **Sales Manager** creates Sales Order from client PO
-2. **Designer/Engineer** uploads design documents
-3. **Admin/Production Manager** creates Production Plan with stages
-4. **Production Manager** assigns employees to stages
-5. **Employees** access their tasks in Employee Portal
-6. **Employees** update task status through the portal
-7. **Supervisors** monitor progress in Project Tracking Dashboard
-8. **HR/Admin** views employee performance in Employee Tracking Dashboard
+### Step 2
+- clientEmail (valid format), clientPhone required
+- estimatedEndDate required
+- productDetails.itemName, itemDescription required
+- billingAddress, shippingAddress required
 
-### Example 2: Task Status Lifecycle
+### Step 3
+- At least 1 document required
+- productSpecification.productName required
 
-```
-Created (to_do)
-     ↓
-Employee starts → in_progress
-     ↓
-     ├→ Hits blocker → pause → in_progress → done
-     ├→ Can't complete → cancel (with reason)
-     └→ Complete → done
-```
+### Step 4
+- At least 1 material required
+- Material quantity must be > 0
 
-### Example 3: Alert Generation
+### Step 5
+- timeline.startDate, endDate required
+- At least 1 phase selected
+- endDate must be after startDate
 
-1. Employee task stuck → Manual alert: "task_blocked"
-2. Production stage delayed → Auto alert: "delay_alert"
-3. Material running low → Auto alert: "material_shortage"
-4. Employee receives notification/alert popup
-5. Employee can mark alert as read
-6. Notifications trigger real-time updates
+### Step 6
+- Optional (all fields can be empty)
+- Validates inspections if provided
 
----
+### Step 7
+- Optional (permissive validation)
 
-## 🔐 User Roles & Access
-
-**Role-based features available:**
-- Admin: Full system access
-- Procurement Manager: PO management
-- Inventory Manager: Material & facility management
-- Designer: Design document uploads
-- Sales Manager: Sales order creation
-- Operator: Task execution via Employee Portal
-- Production Manager: Production plan creation and tracking
-- Supervisor: Employee and project monitoring
+### Step 8
+- Optional (permissive validation)
 
 ---
 
-## 🚀 API Base URLs
+## Summary
 
-```
-Backend: http://localhost:5000
-Frontend: http://localhost:3000 (Vite dev server)
-
-API Prefix: /api
-```
-
----
-
-## 📋 Tasks Remaining
-
-1. **Challan Management** (In/Outward) - Backend models and controllers
-2. **Role-based Permission Management** - Fine-grained access control
-3. **Email Notifications** - Integration with email service
-4. **Report Generation** - Export to PDF/Excel
-5. **Dashboard Analytics** - Advanced charts and graphs
-6. **Mobile App** - React Native or Flutter
-
----
-
-## ✅ How to Use
-
-### 1. **Apply Database Migrations**
-```bash
-mysql -u root -p sterling_erp < migrations.sql
-```
-
-### 2. **Start Backend**
-```bash
-cd backend
-npm install
-npm start
-```
-
-### 3. **Start Frontend**
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-### 4. **Access Application**
-- Login: `http://localhost:3000`
-- Employee Portal: `/employee/portal`
-- Project Tracking: `/reports/project-tracking`
-- Employee Tracking: `/reports/employee-tracking`
-- Production Plan: `/department/production-plan`
-
----
-
-## 🎯 Key Features Summary
-
-✅ **Complete Production Workflow** - From PO to delivery
-✅ **Task Management** - 5-status task tracking
-✅ **Real-time Alerts** - Multiple alert types
-✅ **Performance Tracking** - Employee and project analytics
-✅ **Facility Management** - Equipment and capacity tracking
-✅ **Time Tracking** - Delays, durations, and schedules
-✅ **Role-based Access** - Department-specific views
-✅ **Notification System** - Alerts and status updates
-✅ **Mobile Responsive** - Works on all devices
-
----
-
-**Status**: Implementation ~90% Complete
-**Last Updated**: 2025-11-29
-**Version**: 1.0.0-beta
+✅ **All 8 steps now properly save ALL tab data**
+✅ **No data loss from multiple tabs**
+✅ **Consistent API payload structure**
+✅ **Database persists all information**
+✅ **Frontend-to-backend alignment complete**

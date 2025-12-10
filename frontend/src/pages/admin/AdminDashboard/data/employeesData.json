@@ -1,0 +1,74 @@
+[
+  {
+    "name": "Rajesh Kumar",
+    "department": "Production",
+    "role": "Senior Machinist",
+    "tasksCompleted": 45,
+    "totalTasks": 48,
+    "efficiency": 94,
+    "avgTime": "6.2 hrs",
+    "qualityScore": 4.8,
+    "attendance": 98,
+    "status": "Excellent"
+  },
+  {
+    "name": "Priya Sharma",
+    "department": "Quality Control",
+    "role": "QC Inspector",
+    "tasksCompleted": 38,
+    "totalTasks": 40,
+    "efficiency": 95,
+    "avgTime": "4.8 hrs",
+    "qualityScore": 4.9,
+    "attendance": 100,
+    "status": "Excellent"
+  },
+  {
+    "name": "Amit Singh",
+    "department": "Engineering",
+    "role": "Design Engineer",
+    "tasksCompleted": 22,
+    "totalTasks": 25,
+    "efficiency": 88,
+    "avgTime": "8.5 hrs",
+    "qualityScore": 4.6,
+    "attendance": 95,
+    "status": "Good"
+  },
+  {
+    "name": "Sneha Patel",
+    "department": "Procurement",
+    "role": "Procurement Officer",
+    "tasksCompleted": 31,
+    "totalTasks": 35,
+    "efficiency": 89,
+    "avgTime": "5.7 hrs",
+    "qualityScore": 4.4,
+    "attendance": 97,
+    "status": "Good"
+  },
+  {
+    "name": "Vikram Rao",
+    "department": "Warehouse",
+    "role": "Inventory Manager",
+    "tasksCompleted": 28,
+    "totalTasks": 30,
+    "efficiency": 93,
+    "avgTime": "7.1 hrs",
+    "qualityScore": 4.7,
+    "attendance": 99,
+    "status": "Excellent"
+  },
+  {
+    "name": "Kavita Jain",
+    "department": "Sales",
+    "role": "Sales Executive",
+    "tasksCompleted": 15,
+    "totalTasks": 18,
+    "efficiency": 83,
+    "avgTime": "6.8 hrs",
+    "qualityScore": 4.2,
+    "attendance": 92,
+    "status": "Average"
+  }
+]

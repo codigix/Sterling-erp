@@ -1,0 +1,52 @@
+[
+  {
+    "id": "MOV001",
+    "material": "Steel Alloy A36",
+    "type": "Inbound",
+    "quantity": 500,
+    "from": "SteelCorp Industries",
+    "to": "Warehouse A",
+    "date": "2025-11-20",
+    "status": "Completed"
+  },
+  {
+    "id": "MOV002",
+    "material": "Aluminum 6061",
+    "type": "Outbound",
+    "quantity": 150,
+    "from": "Warehouse B",
+    "to": "Production Line 3",
+    "date": "2025-11-19",
+    "status": "Completed"
+  },
+  {
+    "id": "MOV003",
+    "material": "Copper Wire 14AWG",
+    "type": "Transfer",
+    "quantity": 800,
+    "from": "Warehouse A",
+    "to": "Warehouse C",
+    "date": "2025-11-19",
+    "status": "In Transit"
+  },
+  {
+    "id": "MOV004",
+    "material": "Ball Bearings 10mm",
+    "type": "Outbound",
+    "quantity": 2000,
+    "from": "Warehouse C",
+    "to": "Assembly Line 1",
+    "date": "2025-11-18",
+    "status": "Completed"
+  },
+  {
+    "id": "MOV005",
+    "material": "Titanium Grade 5",
+    "type": "Inbound",
+    "quantity": 25,
+    "from": "Precision Components Ltd",
+    "to": "Secure Vault",
+    "date": "2025-11-18",
+    "status": "Completed"
+  }
+]

@@ -1,0 +1,68 @@
+[
+  {
+    "name": "Steel Alloy A36",
+    "category": "Raw Materials",
+    "currentStock": 1250,
+    "minStock": 500,
+    "maxStock": 2000,
+    "unit": "kg",
+    "location": "Warehouse A",
+    "lastMovement": "2025-11-20",
+    "status": "Optimal"
+  },
+  {
+    "name": "Aluminum 6061",
+    "category": "Raw Materials",
+    "currentStock": 320,
+    "minStock": 400,
+    "maxStock": 1500,
+    "unit": "kg",
+    "location": "Warehouse B",
+    "lastMovement": "2025-11-19",
+    "status": "Low Stock"
+  },
+  {
+    "name": "Titanium Grade 5",
+    "category": "Special Alloys",
+    "currentStock": 85,
+    "minStock": 100,
+    "maxStock": 300,
+    "unit": "kg",
+    "location": "Secure Vault",
+    "lastMovement": "2025-11-18",
+    "status": "Critical"
+  },
+  {
+    "name": "Copper Wire 14AWG",
+    "category": "Electrical",
+    "currentStock": 2500,
+    "minStock": 800,
+    "maxStock": 5000,
+    "unit": "meters",
+    "location": "Warehouse A",
+    "lastMovement": "2025-11-20",
+    "status": "Optimal"
+  },
+  {
+    "name": "Ball Bearings 10mm",
+    "category": "Components",
+    "currentStock": 15000,
+    "minStock": 5000,
+    "maxStock": 25000,
+    "unit": "pieces",
+    "location": "Warehouse C",
+    "lastMovement": "2025-11-19",
+    "status": "Optimal"
+  },
+  {
+    "name": "Carbon Fiber Sheets",
+    "category": "Composites",
+    "currentStock": 45,
+    "minStock": 50,
+    "maxStock": 200,
+    "unit": "sheets",
+    "location": "Climate Control",
+    "lastMovement": "2025-11-17",
+    "status": "Low Stock"
+  }
+]

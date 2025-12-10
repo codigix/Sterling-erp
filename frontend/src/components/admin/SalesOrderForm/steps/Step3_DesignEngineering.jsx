@@ -67,7 +67,7 @@ const CONSUMABLES_OPTIONS = [
   "Solvents",
 ];
 
-export default function Step3_DesignEngineering() {
+export default function Step3_DesignEngineering({ readOnly = false }) {
   const { formData } = useFormData();
   const { state, updateDeepNestedField } = useSalesOrderContext();
   const designEng = state.formData.designEngineering || {};

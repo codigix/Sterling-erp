@@ -5,7 +5,7 @@ import FormSection from "../shared/FormSection";
 import FormRow from "../shared/FormRow";
 import { useFormData } from "../hooks";
 
-export default function Step8_Delivery() {
+export default function Step8_Delivery({ readOnly = false }) {
   const { formData, updateField, setNestedField } = useFormData();
 
   return (

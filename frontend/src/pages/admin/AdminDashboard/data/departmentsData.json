@@ -1,0 +1,56 @@
+[
+  {
+    "name": "Engineering",
+    "tasksCompleted": 145,
+    "totalTasks": 160,
+    "efficiency": 91,
+    "avgTime": "2.3 days",
+    "employees": 28,
+    "status": "Excellent"
+  },
+  {
+    "name": "Procurement",
+    "tasksCompleted": 89,
+    "totalTasks": 95,
+    "efficiency": 94,
+    "avgTime": "1.8 days",
+    "employees": 12,
+    "status": "Excellent"
+  },
+  {
+    "name": "Quality Control",
+    "tasksCompleted": 203,
+    "totalTasks": 210,
+    "efficiency": 97,
+    "avgTime": "0.8 days",
+    "employees": 18,
+    "status": "Excellent"
+  },
+  {
+    "name": "Production",
+    "tasksCompleted": 312,
+    "totalTasks": 340,
+    "efficiency": 92,
+    "avgTime": "3.1 days",
+    "employees": 45,
+    "status": "Good"
+  },
+  {
+    "name": "Warehouse",
+    "tasksCompleted": 178,
+    "totalTasks": 185,
+    "efficiency": 96,
+    "avgTime": "1.2 days",
+    "employees": 15,
+    "status": "Excellent"
+  },
+  {
+    "name": "Sales",
+    "tasksCompleted": 67,
+    "totalTasks": 72,
+    "efficiency": 93,
+    "avgTime": "2.8 days",
+    "employees": 8,
+    "status": "Good"
+  }
+]

@@ -7,7 +7,7 @@ import Tabs from "../../../ui/Tabs";
 import { useFormData } from "../hooks";
 import { PRIORITY_LEVELS } from "../constants";
 
-export default function Step2_SalesOrder() {
+export default function Step2_SalesOrder({ readOnly = false }) {
   const { formData, updateField, setNestedField } = useFormData();
 
   const salesAndProductContent = (

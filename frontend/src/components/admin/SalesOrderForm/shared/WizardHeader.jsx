@@ -3,13 +3,26 @@ import { ChevronRight } from "lucide-react";
 import { WIZARD_STEPS } from "../constants";
 import { useFormUI } from "../hooks";
 
-export default function WizardHeader() {
+export default function WizardHeader({ mode = 'create' }) {
   const { currentStep } = useFormUI();
+
+  const getTitleForMode = () => {
+    switch (mode) {
+      case 'view':
+        return 'View Sales Order';
+      case 'edit':
+        return 'Edit Sales Order';
+      case 'assign':
+        return 'Assign Sales Order';
+      default:
+        return 'Sales Order Wizard';
+    }
+  };
 
   return (
     <div className="bg-gradient-to-r from-slate-900 to-slate-800 border border-slate-700 p-6 rounded-lg mb-8">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-white">Sales Order Wizard</h2>
+        <h2 className="text-2xl font-bold text-white">{getTitleForMode()}</h2>
         <p className="text-sm text-slate-400 mt-1">
           Step {currentStep} of {WIZARD_STEPS.length}
         </p>

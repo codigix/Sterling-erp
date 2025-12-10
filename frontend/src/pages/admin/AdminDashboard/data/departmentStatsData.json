@@ -1,0 +1,44 @@
+[
+  {
+    "department": "Production",
+    "avgEfficiency": 91,
+    "avgQuality": 4.6,
+    "totalEmployees": 45,
+    "topPerformer": "Rajesh Kumar"
+  },
+  {
+    "department": "Quality Control",
+    "avgEfficiency": 93,
+    "avgQuality": 4.8,
+    "totalEmployees": 18,
+    "topPerformer": "Priya Sharma"
+  },
+  {
+    "department": "Engineering",
+    "avgEfficiency": 87,
+    "avgQuality": 4.5,
+    "totalEmployees": 28,
+    "topPerformer": "Amit Singh"
+  },
+  {
+    "department": "Procurement",
+    "avgEfficiency": 89,
+    "avgQuality": 4.4,
+    "totalEmployees": 12,
+    "topPerformer": "Sneha Patel"
+  },
+  {
+    "department": "Warehouse",
+    "avgEfficiency": 92,
+    "avgQuality": 4.6,
+    "totalEmployees": 15,
+    "topPerformer": "Vikram Rao"
+  },
+  {
+    "department": "Sales",
+    "avgEfficiency": 82,
+    "avgQuality": 4.1,
+    "totalEmployees": 8,
+    "topPerformer": "Kavita Jain"
+  }
+]

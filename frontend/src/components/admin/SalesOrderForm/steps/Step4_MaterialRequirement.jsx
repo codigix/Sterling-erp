@@ -51,7 +51,7 @@ const STEEL_SECTION_CATEGORY_FIELDS = formFieldsConfig.steelSectionFields;
 
 const PLATE_CATEGORY_FIELDS = formFieldsConfig.plateFields;
 
-export default function Step4_MaterialRequirement() {
+export default function Step4_MaterialRequirement({ readOnly = false }) {
   const { formData, updateField } = useFormData();
   const {
     state,
@@ -85,10 +85,44 @@ export default function Step4_MaterialRequirement() {
     }
   };
 
+  const getQuantityFieldName = () => {
+    const quantityFieldMap = {
+      steelSection: 'steelSectionQuantity',
+      plateType: 'plateTypeQuantity',
+      materialGrade: 'materialGradeQuantity',
+      fastenerType: 'fastenerTypeQuantity',
+      machinedParts: 'machinedPartsQuantity',
+      rollerMovementComponents: 'rollerMovementComponentsQuantity',
+      liftingPullingMechanisms: 'liftingPullingMechanismsQuantity',
+      electricalAutomation: 'electricalAutomationQuantity',
+      safetyMaterials: 'safetyMaterialsQuantity',
+      surfacePrepPainting: 'surfacePrepPaintingQuantity',
+      fabricationConsumables: 'fabricationConsumablesQuantity',
+      hardwareMisc: 'hardwareMiscQuantity',
+      documentationMaterials: 'documentationMaterialsQuantity',
+    };
+
+    for (const [materialType, quantityField] of Object.entries(quantityFieldMap)) {
+      if (enabledMaterials[materialType] && currentMaterial[quantityField]) {
+        return quantityField;
+      }
+    }
+    return null;
+  };
+
   const addMaterial = () => {
+    const quantityField = getQuantityFieldName();
+    const quantity = quantityField ? currentMaterial[quantityField] : null;
+
+    if (!quantity || parseFloat(quantity) <= 0) {
+      alert('Please enter a valid quantity for the selected material type');
+      return;
+    }
+
+    const normalizedMaterial = { ...currentMaterial, quantity, id: Date.now() };
     updateField("materials", [
       ...formData.materials,
-      { ...currentMaterial, id: Date.now() },
+      normalizedMaterial,
     ]);
     resetMaterial();
   };
@@ -106,10 +140,19 @@ export default function Step4_MaterialRequirement() {
   };
 
   const updateMaterial = () => {
+    const quantityField = getQuantityFieldName();
+    const quantity = quantityField ? currentMaterial[quantityField] : null;
+
+    if (!quantity || parseFloat(quantity) <= 0) {
+      alert('Please enter a valid quantity for the selected material type');
+      return;
+    }
+
+    const normalizedMaterial = { ...currentMaterial, quantity };
     updateField(
       "materials",
       formData.materials.map((m) =>
-        m.id === editingDetail ? currentMaterial : m
+        m.id === editingDetail ? normalizedMaterial : m
       )
     );
     resetMaterial();
@@ -163,6 +206,33 @@ export default function Step4_MaterialRequirement() {
     } else {
       setCurrentMaterial((prev) => ({ ...prev, ...specs }));
     }
+  };
+
+  const handleDocumentationFileUpload = (e) => {
+    const files = Array.from(e.target.files);
+    const fileObjects = files.map((file) => ({
+      name: file.name,
+      size: (file.size / 1024).toFixed(2),
+    }));
+
+    setCurrentMaterial((prev) => ({
+      ...prev,
+      documentationUploadedFiles: [
+        ...(prev.documentationUploadedFiles || []),
+        ...fileObjects,
+      ],
+    }));
+
+    e.target.value = "";
+  };
+
+  const removeDocumentationFile = (index) => {
+    setCurrentMaterial((prev) => ({
+      ...prev,
+      documentationUploadedFiles: prev.documentationUploadedFiles.filter(
+        (_, i) => i !== index
+      ),
+    }));
   };
 
   const renderCommonFields = (materialType) => {

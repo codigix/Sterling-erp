@@ -1,12 +1,14 @@
 import React from "react";
 import { Check } from "lucide-react";
 import Input from "../../../ui/Input";
+import Select from "../../../ui/Select";
 import FormSection from "../shared/FormSection";
 import FormRow from "../shared/FormRow";
-import { useFormData } from "../hooks";
+import { useFormData, useSalesOrderContext } from "../hooks";
 
-export default function Step6_QualityCheck() {
-  const { formData, setNestedField } = useFormData();
+export default function Step6_QualityCheck({ readOnly = false, isAssignMode = false }) {
+  const { formData, updateField } = useFormData();
+  const { setNestedField, employees } = useSalesOrderContext();
 
   return (
     <div className="space-y-6">
@@ -27,6 +29,7 @@ export default function Step6_QualityCheck() {
                   setNestedField("qualityCompliance", "qualityStandards", e.target.value)
                 }
                 placeholder="e.g., ISO 9001, AS9100"
+                disabled={readOnly}
               />
               <Input
                 label="Welding Standards"
@@ -35,6 +38,7 @@ export default function Step6_QualityCheck() {
                   setNestedField("qualityCompliance", "weldingStandards", e.target.value)
                 }
                 placeholder="e.g., AWS D1.1, EN 287"
+                disabled={readOnly}
               />
             </FormRow>
           </div>
@@ -50,6 +54,7 @@ export default function Step6_QualityCheck() {
                   setNestedField("qualityCompliance", "surfaceFinish", e.target.value)
                 }
                 placeholder="e.g., Ra 1.6, Polished"
+                disabled={readOnly}
               />
               <Input
                 label="Mechanical Load Testing"
@@ -58,6 +63,7 @@ export default function Step6_QualityCheck() {
                   setNestedField("qualityCompliance", "mechanicalLoadTesting", e.target.value)
                 }
                 placeholder="e.g., 1.5x load capacity"
+                disabled={readOnly}
               />
             </FormRow>
           </div>
@@ -73,6 +79,7 @@ export default function Step6_QualityCheck() {
                   setNestedField("qualityCompliance", "electricalCompliance", e.target.value)
                 }
                 placeholder="e.g., IEC 61439, IP65"
+                disabled={readOnly}
               />
               <Input
                 label="Documents Required"
@@ -81,6 +88,7 @@ export default function Step6_QualityCheck() {
                   setNestedField("qualityCompliance", "documentsRequired", e.target.value)
                 }
                 placeholder="e.g., QAP, FAT Report, CoC"
+                disabled={readOnly}
               />
             </FormRow>
           </div>
@@ -96,6 +104,7 @@ export default function Step6_QualityCheck() {
                   setNestedField("warrantySupport", "warrantyPeriod", e.target.value)
                 }
                 placeholder="e.g., 2 years, 5 years"
+                disabled={readOnly}
               />
               <Input
                 label="Service Support"
@@ -104,9 +113,30 @@ export default function Step6_QualityCheck() {
                   setNestedField("warrantySupport", "serviceSupport", e.target.value)
                 }
                 placeholder="e.g., On-site support included"
+                disabled={readOnly}
               />
             </FormRow>
           </div>
+
+          {/* Assignee (for assign mode or editing) */}
+          {(isAssignMode || !readOnly) && (
+            <div className="border-t border-slate-700 pt-4">
+              <h5 className="text-sm font-semibold text-slate-300 mb-3">Project Assignment</h5>
+              <FormRow cols={1}>
+                <Select
+                  label="Assign to Employee"
+                  options={(Array.isArray(employees) ? employees : []).map((emp) => ({
+                    label: `${emp.firstName} ${emp.lastName} (${emp.designation})`,
+                    value: emp.id.toString(),
+                  }))}
+                  value={formData.internalProjectOwner?.toString() || ""}
+                  onChange={(e) => updateField("internalProjectOwner", e.target.value)}
+                  placeholder="Select an employee..."
+                  disabled={readOnly && !isAssignMode}
+                />
+              </FormRow>
+            </div>
+          )}
         </div>
       </FormSection>
     </div>

@@ -18,11 +18,12 @@ const Input = ({
   };
 
   const inputClasses = `
-  w-full border border-slate-600 rounded-lg
-   text-slate-100
-  
+  w-full border border-slate-600 rounded-lg text-slate-100
+  bg-slate-900 focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500
+  transition-colors duration-200
     ${sizeClasses[size]}
     ${error ? "border-red-500 focus:ring-red-500" : ""}
+    ${props.disabled ? "bg-slate-800 text-slate-500 cursor-not-allowed opacity-60" : ""}
     ${className}
   `;
 
