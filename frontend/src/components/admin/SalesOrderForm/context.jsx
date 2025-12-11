@@ -220,6 +220,7 @@ const initialState = {
       packing: "",
       dispatch: "",
     },
+    deliveryAssignedTo: "",
   },
   enabledMaterials: {
     steelSection: false,

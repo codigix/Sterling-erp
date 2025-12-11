@@ -15,6 +15,7 @@ class DeliveryDetail {
         completion_remarks TEXT,
         project_manager VARCHAR(255),
         production_supervisor VARCHAR(255),
+        assigned_to INT,
         
         delivery_date DATE,
         received_by VARCHAR(255),
@@ -29,8 +30,10 @@ class DeliveryDetail {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         
         FOREIGN KEY (sales_order_id) REFERENCES sales_orders(id) ON DELETE CASCADE,
+        FOREIGN KEY (assigned_to) REFERENCES employees(id) ON DELETE SET NULL,
         INDEX idx_sales_order (sales_order_id),
-        INDEX idx_delivery_status (delivery_status)
+        INDEX idx_delivery_status (delivery_status),
+        INDEX idx_assigned_to (assigned_to)
       )
     `);
   }
@@ -48,9 +51,9 @@ class DeliveryDetail {
       `INSERT INTO delivery_details 
        (sales_order_id, actual_delivery_date, customer_contact, installation_completed,
         site_commissioning_completed, warranty_terms_acceptance, completion_remarks,
-        project_manager, production_supervisor, delivery_date, received_by, delivery_status,
+        project_manager, production_supervisor, assigned_to, delivery_date, received_by, delivery_status,
         delivered_quantity, recipient_signature_path, delivery_notes, pod_number, delivery_cost)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         data.salesOrderId,
         data.actualDeliveryDate || null,
@@ -61,6 +64,7 @@ class DeliveryDetail {
         data.completionRemarks || null,
         data.projectManager || null,
         data.productionSupervisor || null,
+        data.assignedTo || null,
         data.deliveryDate || null,
         data.receivedBy || null,
         data.deliveryStatus || 'pending',
@@ -79,7 +83,7 @@ class DeliveryDetail {
       `UPDATE delivery_details 
        SET actual_delivery_date = ?, customer_contact = ?, installation_completed = ?,
            site_commissioning_completed = ?, warranty_terms_acceptance = ?, completion_remarks = ?,
-           project_manager = ?, production_supervisor = ?, delivery_date = ?, received_by = ?,
+           project_manager = ?, production_supervisor = ?, assigned_to = ?, delivery_date = ?, received_by = ?,
            delivery_status = ?, delivered_quantity = ?, recipient_signature_path = ?,
            delivery_notes = ?, pod_number = ?, delivery_cost = ?, updated_at = CURRENT_TIMESTAMP
        WHERE sales_order_id = ?`,
@@ -92,6 +96,7 @@ class DeliveryDetail {
         data.completionRemarks || null,
         data.projectManager || null,
         data.productionSupervisor || null,
+        data.assignedTo || null,
         data.deliveryDate || null,
         data.receivedBy || null,
         data.deliveryStatus || 'pending',
@@ -228,6 +233,7 @@ class DeliveryDetail {
       completionRemarks: row.completion_remarks,
       projectManager: row.project_manager,
       productionSupervisor: row.production_supervisor,
+      assignedTo: row.assigned_to,
       deliveryDate: row.delivery_date,
       receivedBy: row.received_by,
       deliveryStatus: row.delivery_status,

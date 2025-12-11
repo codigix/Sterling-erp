@@ -1,5 +1,6 @@
 const DeliveryDetail = require('../../models/DeliveryDetail');
 const SalesOrderStep = require('../../models/SalesOrderStep');
+const EmployeeTask = require('../../models/EmployeeTask');
 const { validateDelivery } = require('../../utils/salesOrderValidators');
 const { formatSuccessResponse, formatErrorResponse } = require('../../utils/salesOrderHelpers');
 
@@ -24,11 +25,46 @@ class DeliveryController {
       }
 
       const updated = await DeliveryDetail.findBySalesOrderId(salesOrderId);
+      
+      if (data.assignedTo) {
+        await this.createOrUpdateDeliveryTask(salesOrderId, data.assignedTo);
+      }
+
       await SalesOrderStep.update(salesOrderId, 8, { status: 'in_progress', data: updated });
 
       res.json(formatSuccessResponse(updated, 'Delivery details saved'));
     } catch (error) {
       res.status(500).json(formatErrorResponse(error.message));
+    }
+  }
+
+  static async createOrUpdateDeliveryTask(salesOrderId, employeeId) {
+    try {
+      const SalesOrder = require('../../models/SalesOrder');
+      const pool = require('../../config/database');
+      
+      const salesOrder = await SalesOrder.findById(salesOrderId);
+      
+      if (!salesOrder) {
+        return;
+      }
+
+      const taskTitle = `Delivery - ${salesOrder.poNumber || `Order #${salesOrderId}`}`;
+      const taskDescription = `Deliver order to customer. PO: ${salesOrder.poNumber}, Project: ${salesOrder.projectName}`;
+
+      await pool.execute(
+        `INSERT INTO worker_tasks (worker_id, task, status, created_at)
+         VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+         ON DUPLICATE KEY UPDATE status = 'assigned', task = ?, updated_at = CURRENT_TIMESTAMP`,
+        [
+          parseInt(employeeId),
+          taskTitle,
+          'assigned',
+          taskTitle
+        ]
+      );
+    } catch (error) {
+      console.error('Error creating delivery task:', error);
     }
   }
 

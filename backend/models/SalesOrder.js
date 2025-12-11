@@ -29,42 +29,30 @@ class SalesOrder {
     const params = [];
 
     if (filters.status && filters.status !== 'all') {
-      conditions.push('so.status = ?');
+      conditions.push('status = ?');
       params.push(filters.status);
     }
 
     if (filters.search) {
-      conditions.push('(so.customer LIKE ? OR so.po_number LIKE ? OR so.notes LIKE ?)');
+      conditions.push('(customer LIKE ? OR po_number LIKE ? OR project_name LIKE ? OR notes LIKE ?)');
       const like = `%${filters.search}%`;
-      params.push(like, like, like);
+      params.push(like, like, like, like);
     }
 
-    let query = `
-      SELECT so.*, p.id AS project_id, p.name AS project_name, p.status AS project_status
-      FROM sales_orders so
-      LEFT JOIN projects p ON p.sales_order_id = so.id
-    `;
+    let query = 'SELECT * FROM sales_orders';
 
     if (conditions.length) {
       query += ` WHERE ${conditions.join(' AND ')}`;
     }
 
-    query += ' ORDER BY so.created_at DESC';
+    query += ' ORDER BY created_at DESC';
 
     const [rows] = await pool.execute(query, params);
     return rows.map(SalesOrder.formatRow);
   }
 
   static async findById(id) {
-    const [rows] = await pool.execute(
-      `
-        SELECT so.*, p.id AS project_id, p.name AS project_name, p.status AS project_status
-        FROM sales_orders so
-        LEFT JOIN projects p ON p.sales_order_id = so.id
-        WHERE so.id = ?
-      `,
-      [id]
-    );
+    const [rows] = await pool.execute('SELECT * FROM sales_orders WHERE id = ?', [id]);
     return SalesOrder.formatRow(rows[0]);
   }
 
@@ -89,8 +77,8 @@ class SalesOrder {
       const [result] = await connection.execute(
         `
           INSERT INTO sales_orders
-          (customer, po_number, order_date, due_date, total, currency, status, priority, items, documents, notes, project_scope, created_by)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          (customer, po_number, order_date, due_date, total, currency, status, priority, items, documents, notes, project_scope, project_name, created_by)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
           data.customer,
@@ -105,6 +93,7 @@ class SalesOrder {
           data.documents ? JSON.stringify(data.documents) : null,
           data.notes || null,
           data.projectScope ? JSON.stringify(data.projectScope) : null,
+          data.projectName || null,
           data.createdBy || null
         ]
       );
@@ -126,7 +115,7 @@ class SalesOrder {
     await pool.execute(
       `
         UPDATE sales_orders
-        SET customer = ?, po_number = ?, order_date = ?, due_date = ?, total = ?, currency = ?, status = ?, priority = ?, items = ?, documents = ?, notes = ?, project_scope = ?, updated_at = CURRENT_TIMESTAMP
+        SET customer = ?, po_number = ?, order_date = ?, due_date = ?, total = ?, currency = ?, status = ?, priority = ?, items = ?, documents = ?, notes = ?, project_scope = ?, project_name = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `,
       [
@@ -142,6 +131,7 @@ class SalesOrder {
         data.documents ? JSON.stringify(data.documents) : null,
         data.notes || null,
         data.projectScope ? JSON.stringify(data.projectScope) : null,
+        data.projectName || null,
         id
       ]
     );

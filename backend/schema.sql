@@ -35,6 +35,7 @@ CREATE TABLE sales_orders (
     documents JSON,
     notes TEXT,
     project_scope JSON,
+    project_name VARCHAR(255),
     created_by INT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

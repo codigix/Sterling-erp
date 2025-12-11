@@ -10,7 +10,7 @@ const Tabs = ({ tabs, defaultTab = 0, onChange }) => {
 
   return (
     <div className="w-full">
-      <div className="flex gap-0 border-b border-slate-200 overflow-x-auto">
+      <div className="flex gap-0 border-b border-slate-600 overflow-x-auto dark:border-slate-600">
         {tabs.map((tab, index) => {
           const Icon = tab.icon;
           return (
@@ -19,8 +19,8 @@ const Tabs = ({ tabs, defaultTab = 0, onChange }) => {
               onClick={() => handleTabChange(index)}
               className={`flex flex-col items-center gap-2 cursor-pointer px-6 py-4 text-sm font-medium whitespace-nowrap transition-all duration-200 focus:outline-none border-b-2 ${
                 activeTab === index
-                  ? "text-blue-500 border-b-blue font-bold"
-                  : "  text-white border-b-transparent bg-transparent"
+                  ? "text-blue-500 border-b-blue-500 font-bold dark:text-blue-400 dark:border-b-blue-400"
+                  : "text-slate-400 border-b-transparent bg-transparent hover:text-slate-300 dark:text-slate-400 dark:hover:text-slate-300"
               }`}
             >
               {Icon && (
@@ -28,8 +28,8 @@ const Tabs = ({ tabs, defaultTab = 0, onChange }) => {
                   size={24}
                   className={
                     activeTab === index
-                      ? "text-blue-500 font-bold"
-                      : "text-white"
+                      ? "text-blue-500 font-bold dark:text-blue-400"
+                      : "text-slate-500 dark:text-slate-500"
                   }
                 />
               )}

@@ -94,6 +94,7 @@ export default function Step1_ClientPO({ readOnly = false }) {
             value={formData.projectName}
             onChange={(e) => updateField("projectName", e.target.value)}
             placeholder="Enter project name"
+            disabled={readOnly}
           />
           <Input
             label="Project Code"
@@ -108,12 +109,14 @@ export default function Step1_ClientPO({ readOnly = false }) {
             value={formData.billingAddress}
             onChange={(e) => updateField("billingAddress", e.target.value)}
             placeholder="Enter billing address"
+            disabled={readOnly}
           />
           <Input
             label="Shipping Address"
             value={formData.shippingAddress}
             onChange={(e) => updateField("shippingAddress", e.target.value)}
             placeholder="Enter shipping address"
+            disabled={readOnly}
           />
         </FormRow>
       </div>
@@ -141,6 +144,7 @@ export default function Step1_ClientPO({ readOnly = false }) {
                 )
               }
               placeholder="e.g., Container handling, Material lifting"
+              disabled={readOnly}
             />
             <Input
               label="Number of Units"
@@ -154,6 +158,7 @@ export default function Step1_ClientPO({ readOnly = false }) {
                 )
               }
               placeholder="e.g., 2"
+              disabled={readOnly}
             />
           </FormRow>
           <Input
@@ -163,6 +168,7 @@ export default function Step1_ClientPO({ readOnly = false }) {
               setNestedField("projectRequirements", "dimensions", e.target.value)
             }
             placeholder="e.g., 3000mm x 2000mm x 1500mm"
+            disabled={readOnly}
           />
           <Input
             label="Load Capacity"
@@ -175,6 +181,7 @@ export default function Step1_ClientPO({ readOnly = false }) {
               )
             }
             placeholder="e.g., 5000 kg"
+            disabled={readOnly}
           />
         </div>
 
@@ -192,6 +199,7 @@ export default function Step1_ClientPO({ readOnly = false }) {
                 )
               }
               placeholder="e.g., EN8, ASTM A36"
+              disabled={readOnly}
             />
             <Input
               label="Finish & Coatings"
@@ -204,6 +212,7 @@ export default function Step1_ClientPO({ readOnly = false }) {
                 )
               }
               placeholder="e.g., Powder coated, Painted"
+              disabled={readOnly}
             />
           </FormRow>
           <Input
@@ -217,6 +226,7 @@ export default function Step1_ClientPO({ readOnly = false }) {
               )
             }
             placeholder="e.g., On-site assembly, Factory assembled"
+            disabled={readOnly}
           />
         </div>
 
@@ -234,6 +244,7 @@ export default function Step1_ClientPO({ readOnly = false }) {
                 )
               }
               placeholder="e.g., IS 1566, EN 13849"
+              disabled={readOnly}
             />
             <Input
               label="Acceptance Criteria"
@@ -246,6 +257,7 @@ export default function Step1_ClientPO({ readOnly = false }) {
                 )
               }
               placeholder="e.g., Function test, Load test 150%"
+              disabled={readOnly}
             />
           </FormRow>
         </div>
@@ -264,6 +276,7 @@ export default function Step1_ClientPO({ readOnly = false }) {
                 )
               }
               placeholder="e.g., Complete with drawings"
+              disabled={readOnly}
             />
             <Input
               label="Warranty Terms"
@@ -276,6 +289,7 @@ export default function Step1_ClientPO({ readOnly = false }) {
                 )
               }
               placeholder="e.g., 12 months"
+              disabled={readOnly}
             />
           </FormRow>
         </div>

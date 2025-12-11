@@ -4,8 +4,7 @@ import { SalesOrderProvider } from "./context";
 import { useFormUI } from "./hooks";
 import { useSalesOrderContext } from "./hooks";
 import { validateStep1, validateStep2, validateStep3, validateStep4, validateStep5, validateStep6, validateStep7, validateStep8 } from "./utils";
-import { saveAllStepData } from "./stepDataService";
-import { saveStepDataToAPI } from "./stepDataHandler";
+import { updateDraftWithStepData, saveAllStepsToSalesOrder } from "./stepDataHandler";
 import WizardHeader from "./shared/WizardHeader";
 import FormActions from "./shared/FormActions";
 import Step1_ClientPO from "./steps/Step1_ClientPO";
@@ -83,6 +82,7 @@ function SalesOrderFormContent({ onSubmit, onCancel, mode = 'create', initialDat
       setLoading(true);
       
       const clientPOResponse = await axios.get(`/api/sales/steps/${salesOrderId}/client-po`).catch(() => null);
+      const salesOrderResponse = await axios.get(`/api/sales/steps/${salesOrderId}/sales-order`).catch(() => null);
       const designResponse = await axios.get(`/api/sales/steps/${salesOrderId}/design-engineering`).catch(() => null);
       const materialsResponse = await axios.get(`/api/sales/steps/${salesOrderId}/material-requirements`).catch(() => null);
       const productionResponse = await axios.get(`/api/sales/steps/${salesOrderId}/production-plan`).catch(() => null);
@@ -102,9 +102,26 @@ function SalesOrderFormContent({ onSubmit, onCancel, mode = 'create', initialDat
         updateField('billingAddress', poData.billingAddress || '');
         updateField('shippingAddress', poData.shippingAddress || '');
         updateField('clientAddress', poData.clientAddress || '');
-        if (poData.projectRequirements) {
-          updateField('projectRequirements', poData.projectRequirements);
-        }
+        updateField('projectRequirements', poData.projectRequirements || {});
+        updateField('notes', poData.notes || null);
+      }
+
+      if (salesOrderResponse?.data?.data) {
+        const soData = salesOrderResponse.data.data;
+        updateField('estimatedEndDate', soData.estimatedEndDate || '');
+        updateField('clientEmail', soData.clientEmail || '');
+        updateField('clientPhone', soData.clientPhone || '');
+        updateField('billingAddress', soData.billingAddress || '');
+        updateField('shippingAddress', soData.shippingAddress || '');
+        updateField('productDetails', soData.productDetails || {});
+        updateField('qualityCompliance', soData.qualityCompliance || {});
+        updateField('warrantySupport', soData.warrantySupport || {});
+        updateField('paymentTerms', soData.paymentTerms || null);
+        updateField('projectPriority', soData.projectPriority || null);
+        updateField('totalAmount', soData.totalAmount || null);
+        updateField('projectCode', soData.projectCode || null);
+        updateField('internalInfo', soData.internalInfo || {});
+        updateField('specialInstructions', soData.specialInstructions || null);
       }
 
       if (designResponse?.data?.data) {
@@ -135,21 +152,14 @@ function SalesOrderFormContent({ onSubmit, onCancel, mode = 'create', initialDat
       if (deliveryResponse?.data?.data) {
         const deliveryData = deliveryResponse.data.data;
         updateField('delivery', deliveryData);
+        updateField('deliveryAssignedTo', deliveryData.assignedTo || '');
+        updateField('customerContact', deliveryData.customerContact || '');
       }
 
       setLoading(false);
     } catch (error) {
       console.error('Error loading step data:', error);
       setLoading(false);
-    }
-  };
-
-  const saveStepData = async (stepNumber) => {
-    try {
-      await saveStepDataToAPI(stepNumber, state.createdOrderId, formData);
-    } catch (err) {
-      console.error(`Error saving step ${stepNumber} data:`, err);
-      throw err;
     }
   };
 
@@ -197,113 +207,88 @@ function SalesOrderFormContent({ onSubmit, onCancel, mode = 'create', initialDat
       return;
     }
 
+    if (mode === 'edit') {
+      setLoading(true);
+      try {
+        await updateDraftWithStepData(initialData.id, formData, currentStep, state.poDocuments || []);
+        setStep(currentStep + 1);
+      } catch (err) {
+        console.error('Error saving step:', err);
+        setError(err.message || `Failed to save step ${currentStep}`);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     const errors = validateCurrentStep();
     if (errors.length > 0) {
       setError(errors[0]);
       return;
     }
 
-    if (currentStep === 1) {
-      await createDraft();
-    } else {
-      setLoading(true);
-      setError(null);
-      try {
-        await saveStepData(currentStep);
+    setLoading(true);
+    setError(null);
+    
+    try {
+      if (currentStep === 1) {
+        await createDraft();
+      } else {
+        await updateDraft();
         setStep(currentStep + 1);
-      } catch (err) {
-        console.error('Error saving step:', err);
-        setError('Failed to save step data. Please try again.');
-      } finally {
-        setLoading(false);
       }
+    } catch (err) {
+      console.error('Error:', err);
+      setError(err.message || 'An error occurred');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handlePrev = () => {
-    setStep(currentStep - 1);
+  const handlePrev = async () => {
+    if (mode === 'edit') {
+      setLoading(true);
+      try {
+        await updateDraftWithStepData(initialData.id, formData, currentStep, state.poDocuments || []);
+        setStep(currentStep - 1);
+      } catch (err) {
+        console.error('Error saving step:', err);
+        setError(err.message || `Failed to save step ${currentStep}`);
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      setStep(currentStep - 1);
+    }
     setError(null);
   };
 
   const createDraft = async () => {
-    setLoading(true);
-    setError(null);
     try {
       const response = await axios.post("/api/sales/drafts", {
         formData,
-        currentStep: currentStep,
+        currentStep: 1,
       });
 
       const draftId = response.data.id || response.data._id;
       setOrderId(draftId);
-      setSuccess("Draft created successfully!");
+      setSuccess("Step 1 saved successfully!");
       setStep(2);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to create draft");
-    } finally {
-      setLoading(false);
+      throw new Error(err.response?.data?.message || "Failed to create draft");
     }
   };
 
-  const createActualSalesOrder = async () => {
-    setLoading(true);
-    setError(null);
+  const updateDraft = async () => {
     try {
-      const orderDate = formData.poDate || formData.orderDate || new Date().toISOString().split("T")[0];
-      const estimatedDate = formData.estimatedEndDate || formData.deliveryTimeline || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
-      
-      const salesOrderData = {
-        clientName: formData.clientName || formData.customer,
-        poNumber: formData.poNumber,
-        orderDate: orderDate,
-        dueDate: estimatedDate,
-        total: parseFloat(formData.totalAmount || 0),
-        currency: "INR",
-        priority: formData.projectPriority || "medium",
-        items: [{
-          name: formData.projectName || "Project Item",
-          description: formData.projectRequirements?.specifications || "",
-          quantity: 1,
-          unitPrice: parseFloat(formData.totalAmount || 0)
-        }],
-        documents: state.poDocuments || [],
-        notes: formData.specialInstructions || "",
-        projectScope: {
-          application: formData.projectRequirements?.application || "",
-          dimensions: formData.projectRequirements?.dimensions || "",
-          specifications: formData.projectRequirements?.specifications || ""
-        }
-      };
-
-      const response = await axios.post("/api/sales/orders", salesOrderData);
-      const createdOrderId = response.data.order?.id;
-
-      if (!createdOrderId) {
-        throw new Error("Failed to get order ID from response");
+      if (!state.createdOrderId) {
+        throw new Error('Draft ID not found');
       }
 
-      setOrderId(createdOrderId);
-      
-      try {
-        await saveStepData(1);
-        console.log('Step 1 (Client PO) data saved successfully');
-      } catch (step1Err) {
-        console.warn('Warning: Could not save Step 1 data:', step1Err.message);
-      }
-      
-      try {
-        await saveStepData(2);
-        setSuccess("Sales Order created and all steps saved successfully!");
-        setStep(3);
-      } catch (saveErr) {
-        console.warn('Warning: Sales order created but step data save had issues:', saveErr.message);
-        setSuccess("Sales Order created (step data save had minor issues)");
-        setStep(3);
-      }
+      await updateDraftWithStepData(state.createdOrderId, formData, currentStep, state.poDocuments || []);
+      setSuccess(`Step ${currentStep} saved successfully!`);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to create sales order");
-    } finally {
-      setLoading(false);
+      throw new Error(err.message || `Failed to save step ${currentStep}`);
     }
   };
 
@@ -312,23 +297,18 @@ function SalesOrderFormContent({ onSubmit, onCancel, mode = 'create', initialDat
       setLoading(true);
       setError(null);
       try {
+        await updateDraftWithStepData(initialData.id, formData, currentStep, state.poDocuments || []);
+        
         await axios.put(`/api/sales/orders/${initialData.id}`, {
           clientName: formData.clientName || formData.customer,
           poNumber: formData.poNumber,
-          orderDate: formData.orderDate,
-          dueDate: formData.estimatedEndDate,
+          projectName: formData.projectName || "",
+          orderDate: formData.orderDate?.split('T')[0] || formData.orderDate,
+          dueDate: formData.estimatedEndDate?.split('T')[0] || formData.estimatedEndDate,
           total: parseFloat(formData.totalAmount || 0),
           currency: "INR",
           priority: formData.projectPriority || "medium",
-          project_name: formData.projectName,
         });
-
-        try {
-          const saveResults = await saveAllStepData(initialData.id, formData);
-          console.log('All step data updated:', saveResults);
-        } catch (err) {
-          console.warn('Could not save some step data:', err.message);
-        }
 
         setSuccess("Sales Order updated successfully!");
         setTimeout(() => {
@@ -366,33 +346,13 @@ function SalesOrderFormContent({ onSubmit, onCancel, mode = 'create', initialDat
     setLoading(true);
     setError(null);
     try {
-      let finalOrderId = null;
-
-      if (state.createdOrderId) {
-        try {
-          await axios.delete(`/api/sales/drafts/${state.createdOrderId}`);
-        } catch (err) {
-          console.warn('Could not delete draft:', err.message);
-        }
-
-        finalOrderId = state.createdOrderId;
-      } else {
-        return;
-      }
-
-      try {
-        const saveResults = await saveAllStepData(finalOrderId, formData);
-        console.log('All step data saved successfully:', saveResults);
-      } catch (err) {
-        console.warn('Could not save some step data:', err.message);
-      }
-
       const orderDate = formData.poDate || formData.orderDate || new Date().toISOString().split("T")[0];
       const estimatedDate = formData.estimatedEndDate || formData.deliveryTimeline || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
       
       const salesOrderData = {
         clientName: formData.clientName || formData.customer,
         poNumber: formData.poNumber,
+        projectName: formData.projectName || "",
         orderDate: orderDate,
         dueDate: estimatedDate,
         total: parseFloat(formData.totalAmount || 0),
@@ -413,78 +373,91 @@ function SalesOrderFormContent({ onSubmit, onCancel, mode = 'create', initialDat
         }
       };
 
-      try {
-        const response = await axios.post("/api/sales/orders", salesOrderData);
-        console.log('Sales order created successfully:', response.data);
-      } catch (orderErr) {
-        console.warn('Warning: Sales order creation had issues:', orderErr.message);
+      const response = await axios.post("/api/sales/orders", salesOrderData);
+      const createdOrderId = response.data.order?.id;
+
+      if (!createdOrderId) {
+        throw new Error('Failed to create sales order - no ID returned');
       }
-      
-      setSuccess("Sales Order created successfully! Redirecting to sales orders list...");
+
+      console.log('Sales Order created with ID:', createdOrderId);
+
+      try {
+        const mergedFormData = {
+          ...formData,
+          materialDetailsTable: state.materialDetailsTable,
+          selectedProductionPhases: state.selectedProductionPhases,
+          productionPhaseDetails: state.productionPhaseDetails
+        };
+        const summary = await saveAllStepsToSalesOrder(createdOrderId, mergedFormData);
+        console.log('All step data saved successfully:', summary);
+      } catch (err) {
+        console.warn('Could not save some step data:', err.message);
+      }
+
+      try {
+        if (state.createdOrderId) {
+          await axios.delete(`/api/sales/drafts/${state.createdOrderId}`);
+          console.log('Draft deleted successfully');
+        }
+      } catch (err) {
+        console.warn('Could not delete draft:', err.message);
+      }
+
+      setSuccess("Sales Order created and all steps saved successfully!");
       setTimeout(() => {
-        window.location.href = "/admin/salesorders";
+        if (onSubmit) onSubmit();
       }, 2000);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to submit order");
+      console.error('Error:', err);
+      setError(err.response?.data?.message || err.message || "Failed to create sales order");
+    } finally {
       setLoading(false);
     }
   };
 
   if (mode === 'view') {
     return (
-      <div className="min-h-screen bg-slate-950 p-6">
-        <SalesOrderViewOnly
-          formData={formData}
-          initialData={initialData}
-          onBack={onCancel}
-        />
-      </div>
+      <SalesOrderViewOnly 
+        formData={formData} 
+        initialData={initialData} 
+        onBack={onCancel} 
+      />
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 p-6">
-      <div className="max-w-6xl mx-auto">
-        <WizardHeader mode={mode} />
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 to-slate-900 p-6">
+      <Card className="max-w-6xl mx-auto">
+        <CardContent className="p-8">
+          {(error || successMessage) && (
+            <div className={`mb-6 p-4 rounded-lg flex items-center gap-3 ${
+              error 
+                ? 'bg-red-500/20 text-red-300 border border-red-500/50' 
+                : 'bg-green-500/20 text-green-300 border border-green-500/50'
+            }`}>
+              {error ? <AlertCircle size={20} /> : <CheckCircle2 size={20} />}
+              <span>{error || successMessage}</span>
+            </div>
+          )}
 
-        {error && (
-          <Card className="mb-6 border-red-600 bg-red-950/20">
-            <CardContent className="flex gap-3 pt-6">
-              <AlertCircle className="text-red-500 flex-shrink-0" size={20} />
-              <div className="flex-1">
-                <p className="text-red-400 font-medium">Error</p>
-                <p className="text-red-400 text-sm">{error}</p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+          <WizardHeader currentStep={currentStep} mode={mode} />
+          
+          <div className="mt-8">
+            {renderStep()}
+          </div>
 
-        {successMessage && (
-          <Card className="mb-6 border-green-600 bg-green-950/20">
-            <CardContent className="flex gap-3 pt-6">
-              <CheckCircle2 className="text-green-500 flex-shrink-0" size={20} />
-              <div className="flex-1">
-                <p className="text-green-400 font-medium">Success</p>
-                <p className="text-green-400 text-sm">{successMessage}</p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        <Card className="mb-8">
-          <CardContent className="pt-6">{renderStep()}</CardContent>
-        </Card>
-
-        <FormActions
-          mode={mode}
-          onNext={handleNext}
-          onPrev={handlePrev}
-          onSubmit={handleSubmit}
-          onCancel={onCancel}
-          canSubmit={!loading}
-          isLastStep={currentStep === 8}
-        />
-      </div>
+          <FormActions
+            currentStep={currentStep}
+            onNext={handleNext}
+            onPrev={handlePrev}
+            onSubmit={handleSubmit}
+            loading={loading}
+            onCancel={onCancel}
+            mode={mode}
+          />
+        </CardContent>
+      </Card>
     </div>
   );
 }

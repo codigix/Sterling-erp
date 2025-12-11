@@ -1,12 +1,15 @@
 import React from "react";
 import { CheckCircle } from "lucide-react";
 import Input from "../../../ui/Input";
+import Select from "../../../ui/Select";
 import FormSection from "../shared/FormSection";
 import FormRow from "../shared/FormRow";
-import { useFormData } from "../hooks";
+import { useFormData, useSalesOrderContext } from "../hooks";
 
 export default function Step8_Delivery({ readOnly = false }) {
   const { formData, updateField, setNestedField } = useFormData();
+  const { state } = useSalesOrderContext();
+  const employees = state.employees;
 
   return (
     <div className="space-y-6">
@@ -27,6 +30,7 @@ export default function Step8_Delivery({ readOnly = false }) {
                 onChange={(e) =>
                   setNestedField("deliveryTerms", "deliverySchedule", e.target.value)
                 }
+                disabled={readOnly}
               />
               <Input
                 label="Delivered To (Name)"
@@ -35,6 +39,7 @@ export default function Step8_Delivery({ readOnly = false }) {
                   updateField("customerContact", e.target.value)
                 }
                 placeholder="Enter recipient name"
+                disabled={readOnly}
               />
             </FormRow>
           </div>
@@ -50,6 +55,7 @@ export default function Step8_Delivery({ readOnly = false }) {
                   setNestedField("deliveryTerms", "installationRequired", e.target.value)
                 }
                 placeholder="e.g., Yes, completed"
+                disabled={readOnly}
               />
               <Input
                 label="Site Commissioning Completed"
@@ -58,6 +64,7 @@ export default function Step8_Delivery({ readOnly = false }) {
                   setNestedField("deliveryTerms", "siteCommissioning", e.target.value)
                 }
                 placeholder="e.g., Yes, signed off"
+                disabled={readOnly}
               />
             </FormRow>
           </div>
@@ -72,6 +79,7 @@ export default function Step8_Delivery({ readOnly = false }) {
                 setNestedField("warrantySupport", "warrantyPeriod", e.target.value)
               }
               placeholder="e.g., 2 years warranty accepted"
+              disabled={readOnly}
             />
           </div>
 
@@ -85,6 +93,7 @@ export default function Step8_Delivery({ readOnly = false }) {
                 setNestedField("projectRequirements", "acceptanceCriteria", e.target.value)
               }
               placeholder="Enter any final remarks or sign-off notes"
+              disabled={readOnly}
             />
           </div>
 
@@ -99,6 +108,7 @@ export default function Step8_Delivery({ readOnly = false }) {
                   setNestedField("internalInfo", "projectManager", e.target.value)
                 }
                 placeholder="Enter project manager name"
+                disabled={readOnly}
               />
               <Input
                 label="Production Supervisor"
@@ -107,6 +117,25 @@ export default function Step8_Delivery({ readOnly = false }) {
                   setNestedField("internalInfo", "productionSupervisor", e.target.value)
                 }
                 placeholder="Enter production supervisor name"
+                disabled={readOnly}
+              />
+            </FormRow>
+          </div>
+
+          {/* Delivery Assignment */}
+          <div className="border-t border-slate-700 pt-4">
+            <h5 className="text-sm font-semibold text-slate-300 mb-3">Delivery Assignment</h5>
+            <FormRow cols={1}>
+              <Select
+                label="Assign Delivery to Employee"
+                options={(Array.isArray(employees) ? employees : []).map((emp) => ({
+                  label: `${emp.firstName} ${emp.lastName} (${emp.designation})`,
+                  value: emp.id.toString(),
+                }))}
+                value={formData.deliveryAssignedTo?.toString() || ""}
+                onChange={(e) => updateField("deliveryAssignedTo", e.target.value)}
+                placeholder="Select an employee for delivery..."
+                disabled={readOnly}
               />
             </FormRow>
           </div>

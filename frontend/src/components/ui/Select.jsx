@@ -8,6 +8,7 @@ const Select = ({
   className = "",
   containerClassName = "",
   size = "default",
+  disabled = false,
   ...props
 }) => {
   const sizeClasses = {
@@ -22,6 +23,7 @@ const Select = ({
   focus:outline-none focus:ring-2 focus:ring-blue-500
   ${sizeClasses[size]}
   ${error ? "border-red-500 focus:ring-red-500" : ""}
+  ${disabled ? "opacity-50 cursor-not-allowed bg-slate-900" : "cursor-pointer"}
   ${className}
 `;
 
@@ -32,7 +34,7 @@ const Select = ({
           {label}
         </label>
       )}
-      <select className={selectClasses} {...props}>
+      <select className={selectClasses} disabled={disabled} {...props}>
         {props.children || (
           <>
             {props.placeholder && (

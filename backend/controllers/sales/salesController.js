@@ -33,6 +33,7 @@ exports.createSalesOrder = async (req, res) => {
   const {
     clientName,
     poNumber,
+    projectName,
     orderDate,
     dueDate,
     total,
@@ -63,6 +64,7 @@ exports.createSalesOrder = async (req, res) => {
     const salesOrderId = await SalesOrder.create({
       customer: clientName,
       poNumber,
+      project_name: projectName,
       orderDate,
       dueDate,
       total,
@@ -115,17 +117,17 @@ exports.updateSalesOrder = async (req, res) => {
     const updates = {};
     if (clientName) updates.customer = clientName;
     if (poNumber) updates.po_number = poNumber;
+    if (project_name) updates.project_name = project_name;
     if (orderDate) updates.order_date = orderDate;
     if (dueDate) updates.due_date = dueDate;
     if (total !== undefined) updates.total = total;
     if (currency) updates.currency = currency;
     if (priority) updates.priority = priority;
-    if (project_name) updates.project_name = project_name;
     if (items) updates.items = JSON.stringify(items);
     if (documents) updates.documents = JSON.stringify(documents);
     if (notes) updates.notes = notes;
     if (projectScope) updates.project_scope = JSON.stringify(projectScope);
-    updates.updated_at = new Date();
+    updates.updated_at = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
     const setClause = Object.keys(updates).map(key => `${key} = ?`).join(', ');
     const values = Object.values(updates);

@@ -77,12 +77,18 @@ export const buildStepPayload = (stepNumber, formData) => {
     },
     
     4: {
-      materials: (formData.materials || []).map(material => ({
-        id: material.id,
-        materialType: material.materialType,
-        quantity: material.quantity || 0,
-        ...material
-      }))
+      materials: [
+        ...(formData.materials || []),
+        ...Object.entries(formData.materialDetailsTable || {}).reduce((acc, [materialType, items]) => {
+          return acc.concat(items.map(material => ({
+            ...material,
+            materialType
+          })));
+        }, [])
+      ],
+      procurementStatus: formData.procurementStatus || 'pending',
+      totalMaterialCost: formData.totalMaterialCost || 0,
+      notes: formData.materialNotes || ''
     },
     
     5: {
@@ -141,7 +147,8 @@ export const buildStepPayload = (stepNumber, formData) => {
       internalInfo: {
         projectManager: formData.internalInfo?.projectManager || '',
         productionSupervisor: formData.internalInfo?.productionSupervisor || ''
-      }
+      },
+      assignedTo: formData.deliveryAssignedTo || null
     }
   };
 
@@ -163,10 +170,33 @@ export const getStepEndpoint = (stepNumber, salesOrderId) => {
   return endpoints[stepNumber];
 };
 
+export const updateDraftWithStepData = async (draftId, formData, currentStep, poDocuments = []) => {
+  try {
+    if (!draftId) {
+      throw new Error('Draft ID is required');
+    }
+
+    const response = await axios.put(`/api/sales/drafts/${draftId}`, {
+      formData,
+      currentStep,
+      poDocuments
+    });
+    console.log(`Draft updated with step ${currentStep} data:`, response.data);
+    return response.data;
+  } catch (err) {
+    console.error(`Error updating draft with step ${currentStep} data:`, err);
+    throw err;
+  }
+};
+
 export const saveStepDataToAPI = async (stepNumber, salesOrderId, formData) => {
   try {
     if (!salesOrderId) {
       throw new Error('Sales Order ID is required');
+    }
+
+    if (stepNumber === 2) {
+      return await saveStep2DataWithTabs(salesOrderId, formData);
     }
 
     const payload = buildStepPayload(stepNumber, formData);
@@ -181,6 +211,87 @@ export const saveStepDataToAPI = async (stepNumber, salesOrderId, formData) => {
     return response.data;
   } catch (err) {
     console.error(`Error saving step ${stepNumber} data:`, err);
+    throw err;
+  }
+};
+
+const saveStep2DataWithTabs = async (salesOrderId, formData) => {
+  try {
+    const results = {};
+
+    const salesProductPayload = {
+      clientEmail: formData.clientEmail,
+      clientPhone: formData.clientPhone,
+      estimatedEndDate: formData.estimatedEndDate,
+      billingAddress: formData.billingAddress,
+      shippingAddress: formData.shippingAddress,
+      productDetails: formData.productDetails || {}
+    };
+
+    const salesProductResponse = await axios.post(
+      `/api/sales/steps/${salesOrderId}/sales-order/sales-product`,
+      salesProductPayload
+    );
+    results.salesProduct = salesProductResponse.data;
+    console.log('Sales & Product tab saved successfully');
+
+    const qualityCompliancePayload = {
+      qualityCompliance: formData.qualityCompliance || {},
+      warrantySupport: formData.warrantySupport || {}
+    };
+
+    const qualityResponse = await axios.post(
+      `/api/sales/steps/${salesOrderId}/sales-order/quality-compliance`,
+      qualityCompliancePayload
+    );
+    results.qualityCompliance = qualityResponse.data;
+    console.log('Quality & Compliance tab saved successfully');
+
+    const paymentInternalPayload = {
+      paymentTerms: formData.paymentTerms,
+      projectPriority: formData.projectPriority,
+      totalAmount: formData.totalAmount,
+      projectCode: formData.projectCode,
+      internalInfo: formData.internalInfo || {},
+      specialInstructions: formData.specialInstructions
+    };
+
+    const paymentResponse = await axios.post(
+      `/api/sales/steps/${salesOrderId}/sales-order/payment-internal`,
+      paymentInternalPayload
+    );
+    results.paymentInternal = paymentResponse.data;
+    console.log('Payment & Internal tab saved successfully');
+
+    return { data: results, message: 'Step 2 all tabs saved successfully' };
+  } catch (err) {
+    console.error('Error saving Step 2 tab data:', err);
+    throw new Error(`Failed to save Step 2 data: ${err.message}`);
+  }
+};
+
+export const saveAllStepsToSalesOrder = async (salesOrderId, formData) => {
+  try {
+    if (!salesOrderId) {
+      throw new Error('Sales Order ID is required');
+    }
+
+    const stepPromises = [];
+    for (let step = 1; step <= 8; step++) {
+      stepPromises.push(saveStepDataToAPI(step, salesOrderId, formData));
+    }
+
+    const results = await Promise.allSettled(stepPromises);
+    const summary = {
+      successful: results.filter(r => r.status === 'fulfilled').length,
+      failed: results.filter(r => r.status === 'rejected').length,
+      details: results
+    };
+    
+    console.log('All steps saved to sales order:', summary);
+    return summary;
+  } catch (err) {
+    console.error('Error saving all steps to sales order:', err);
     throw err;
   }
 };

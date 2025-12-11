@@ -50,27 +50,52 @@ export default function FormActions({ mode = 'create', onNext, onPrev, onSubmit,
   if (mode === 'edit') {
     return (
       <div className="flex gap-3 justify-between mt-10 pt-6 border-t border-slate-700">
-        <Button
-          onClick={onCancel}
-          variant="secondary"
-          className="flex items-center gap-2"
-        >
-          <X size={16} />
-          Cancel
-        </Button>
+        <div className="flex gap-3">
+          <Button
+            onClick={onPrev}
+            disabled={currentStep === 1 || loading}
+            variant="secondary"
+            className="flex items-center gap-2"
+          >
+            <ChevronLeft size={16} />
+            Previous
+          </Button>
+
+          <Button
+            onClick={onCancel}
+            variant="secondary"
+            className="flex items-center gap-2"
+          >
+            <X size={16} />
+            Cancel
+          </Button>
+        </div>
 
         <span className="text-sm text-slate-400 self-center">
-          Editing Sales Order
+          Step {currentStep} of {WIZARD_STEPS.length} - Editing Sales Order
         </span>
 
-        <Button
-          onClick={onSubmit}
-          disabled={!canSubmit || loading}
-          className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
-        >
-          <Save size={16} />
-          {loading ? "Saving..." : "Save Changes"}
-        </Button>
+        <div className="flex gap-3">
+          {actualIsLastStep ? (
+            <Button
+              onClick={onSubmit}
+              disabled={!canSubmit || loading}
+              className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+            >
+              <Save size={16} />
+              {loading ? "Saving..." : "Save Changes"}
+            </Button>
+          ) : (
+            <Button
+              onClick={onNext}
+              disabled={loading}
+              className="flex items-center gap-2"
+            >
+              Next
+              <ChevronRight size={16} />
+            </Button>
+          )}
+        </div>
       </div>
     );
   }
