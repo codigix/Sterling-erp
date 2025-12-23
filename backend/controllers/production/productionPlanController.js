@@ -11,7 +11,8 @@ const productionPlanController = {
         endDate,
         estimatedCompletionDate,
         assignedSupervisor,
-        notes
+        notes,
+        finishedGoods
       } = req.body;
 
       if (!projectId || !planName) {
@@ -31,6 +32,10 @@ const productionPlanController = {
         notes
       });
 
+      if (finishedGoods && Array.isArray(finishedGoods)) {
+        await ProductionPlan.addFinishedGoods(planId, finishedGoods);
+      }
+
       res.status(201).json({
         message: 'Production plan created successfully',
         planId
@@ -49,6 +54,9 @@ const productionPlanController = {
       if (!plan) {
         return res.status(404).json({ message: 'Production plan not found' });
       }
+
+      const finishedGoods = await ProductionPlan.getFinishedGoods(id);
+      plan.finishedGoods = finishedGoods;
 
       res.json(plan);
     } catch (error) {
@@ -90,7 +98,8 @@ const productionPlanController = {
         endDate,
         estimatedCompletionDate,
         assignedSupervisor,
-        notes
+        notes,
+        finishedGoods
       } = req.body;
 
       const plan = await ProductionPlan.findById(id);
@@ -107,6 +116,10 @@ const productionPlanController = {
         assignedSupervisor: assignedSupervisor || plan.assigned_supervisor,
         notes: notes || plan.notes
       });
+
+      if (finishedGoods && Array.isArray(finishedGoods)) {
+        await ProductionPlan.addFinishedGoods(id, finishedGoods);
+      }
 
       res.json({ message: 'Production plan updated successfully' });
     } catch (error) {

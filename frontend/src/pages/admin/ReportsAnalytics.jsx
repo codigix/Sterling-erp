@@ -1,652 +1,575 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import axios from '../../utils/api';
+import React, { useState } from 'react';
+import Card, { CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
+import {
+  Download,
+  LayoutDashboard,
+  Briefcase,
+  Building2,
+  Truck,
+  Package,
+  Users,
+  TrendingUp,
+  CheckCircle2,
+  Clock,
+  AlertTriangle,
+  Star,
+} from 'lucide-react';
 
 const ReportsAnalytics = () => {
-  const [reportData, setReportData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [selectedReport, setSelectedReport] = useState('overview');
   const [dateRange, setDateRange] = useState({
     start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     end: new Date().toISOString().split('T')[0]
   });
+  const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
 
-  useEffect(() => {
-    fetchReportData();
-  }, [fetchReportData]);
-
-  const fetchReportData = useCallback(async () => {
-    try {
-      setLoading(true);
-      const response = await axios.get('/api/admin/reports', {
-        params: {
-          type: selectedReport,
-          startDate: dateRange.start,
-          endDate: dateRange.end
-        }
-      });
-      setReportData(response.data);
-    } catch (err) {
-      setError('Failed to load report data');
-      console.error('Reports error:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedReport, dateRange]);
-
-  const exportReport = async (format) => {
-    try {
-      const response = await axios.get('/api/admin/reports/export', {
-        params: {
-          type: selectedReport,
-          format: format,
-          startDate: dateRange.start,
-          endDate: dateRange.end
-        },
-        responseType: 'blob'
-      });
-
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `${selectedReport}_report.${format}`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-    } catch (err) {
-      console.error('Export error:', err);
-      alert('Failed to export report');
-    }
+  const reportData = {
+    overview: {
+      completedProjects: 24,
+      onTimeDelivery: 94,
+      totalRevenue: 2850000,
+      activeAlerts: 5
+    },
+    projects: [
+      { id: 1, name: 'ERP System Upgrade', status: 'Active', progress: 65, startDate: '2025-01-15', expectedCompletion: '2025-04-30', onTime: true },
+      { id: 2, name: 'Database Migration', status: 'Completed', progress: 100, startDate: '2024-11-01', expectedCompletion: '2024-12-15', onTime: true },
+      { id: 3, name: 'API Development', status: 'Active', progress: 45, startDate: '2025-02-01', expectedCompletion: '2025-05-15', onTime: true },
+      { id: 4, name: 'UI Redesign', status: 'Planning', progress: 15, startDate: '2025-03-01', expectedCompletion: '2025-06-30', onTime: false },
+      { id: 5, name: 'Mobile App Development', status: 'Active', progress: 35, startDate: '2025-01-20', expectedCompletion: '2025-07-15', onTime: true },
+    ],
+    departments: [
+      { name: 'Engineering', totalUsers: 15, completedTasks: 342, avgEfficiency: 92 },
+      { name: 'Production', totalUsers: 28, completedTasks: 521, avgEfficiency: 88 },
+      { name: 'Quality Control', totalUsers: 12, completedTasks: 287, avgEfficiency: 97 },
+      { name: 'Procurement', totalUsers: 8, completedTasks: 156, avgEfficiency: 85 },
+    ],
+    vendors: [
+      { name: 'ABC Supplies', totalOrders: 45, onTimeDelivery: 96, qualityRating: 4.8, totalValue: 850000, status: 'Excellent' },
+      { name: 'XYZ Industries', totalOrders: 32, onTimeDelivery: 89, qualityRating: 4.2, totalValue: 620000, status: 'Good' },
+      { name: 'Global Trade Ltd', totalOrders: 28, onTimeDelivery: 92, qualityRating: 4.6, totalValue: 750000, status: 'Excellent' },
+      { name: 'Regional Suppliers', totalOrders: 18, onTimeDelivery: 78, qualityRating: 3.9, totalValue: 380000, status: 'Good' },
+      { name: 'Tech Components Co', totalOrders: 52, onTimeDelivery: 94, qualityRating: 4.7, totalValue: 1200000, status: 'Excellent' },
+    ],
+    inventory: {
+      totalItems: 1250,
+      itemsReceived: 320,
+      itemsIssued: 285,
+      lowStockItems: 18,
+      items: [
+        { code: 'MAT-001', description: 'Steel Sheets (20mm)', currentStock: 450, minStock: 200, lastMovement: '2025-12-10', status: 'In Stock' },
+        { code: 'MAT-002', description: 'Aluminum Bars', currentStock: 85, minStock: 150, lastMovement: '2025-12-08', status: 'Low Stock' },
+        { code: 'MAT-003', description: 'Copper Wire', currentStock: 320, minStock: 100, lastMovement: '2025-12-12', status: 'In Stock' },
+        { code: 'MAT-004', description: 'Plastic Components', currentStock: 1200, minStock: 500, lastMovement: '2025-12-11', status: 'In Stock' },
+        { code: 'MAT-005', description: 'Fasteners (Bolts)', currentStock: 2500, minStock: 1000, lastMovement: '2025-12-09', status: 'In Stock' },
+        { code: 'MAT-006', description: 'Rubber Seals', currentStock: 140, minStock: 300, lastMovement: '2025-12-07', status: 'Low Stock' },
+      ]
+    },
+    employees: [
+      { id: 'EMP-001', name: 'Rajesh Kumar', department: 'Engineering', tasksCompleted: 45, efficiency: 94, qualityScore: 4.8, attendance: 98, rating: 4.8 },
+      { id: 'EMP-002', name: 'Priya Singh', department: 'Production', tasksCompleted: 52, efficiency: 91, qualityScore: 4.6, attendance: 96, rating: 4.7 },
+      { id: 'EMP-003', name: 'Amit Patel', department: 'Quality Control', tasksCompleted: 38, efficiency: 97, qualityScore: 4.9, attendance: 99, rating: 4.9 },
+      { id: 'EMP-004', name: 'Neha Sharma', department: 'Procurement', tasksCompleted: 35, efficiency: 88, qualityScore: 4.4, attendance: 94, rating: 4.5 },
+      { id: 'EMP-005', name: 'Vikram Desai', department: 'Engineering', tasksCompleted: 42, efficiency: 89, qualityScore: 4.3, attendance: 92, rating: 4.4 },
+    ]
   };
 
-  if (loading) {
-    return (
-      <div className="text-center py-5">
-        <div className="spinner-border text-primary" role="status">
-          <span className="visually-hidden">Loading...</span>
-        </div>
-        <p className="mt-3 text-muted">Loading report data...</p>
-      </div>
-    );
-  }
+  const exportReport = (format) => {
+    const data = JSON.stringify(reportData[selectedReport], null, 2);
+    const element = document.createElement('a');
+    const file = new Blob([data], {type: 'text/plain'});
+    element.href = URL.createObjectURL(file);
+    element.download = `${selectedReport}_report.${format}`;
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+    setExportDropdownOpen(false);
+  };
 
-  if (error) {
-    return (
-      <div className="text-center py-5">
-        <i className="mdi mdi-alert-circle text-danger" style={{fontSize: '3rem'}}></i>
-        <h5 className="mt-3 text-danger">Error Loading Reports</h5>
-        <p className="text-muted mb-3">{error}</p>
-        <button onClick={fetchReportData} className="btn btn-primary">
-          <i className="mdi mdi-refresh me-1"></i>Retry
-        </button>
-      </div>
-    );
-  }
+  const reportTabs = [
+    { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+    { id: 'projects', label: 'Projects', icon: Briefcase },
+    { id: 'departments', label: 'Departments', icon: Building2 },
+    { id: 'vendors', label: 'Vendors', icon: Truck },
+    { id: 'inventory', label: 'Inventory', icon: Package },
+    { id: 'employees', label: 'Employees', icon: Users },
+  ];
 
   return (
-    <div>
+    <div className="w-full min-h-screen bg-white space-y-6 p-6">
       {/* Header */}
-      <div className="row mb-4">
-        <div className="col-12">
-          <div className="d-flex justify-content-between align-items-center">
-            <div>
-              <h4 className="mb-1">Reports & Analytics</h4>
-              <p className="text-muted mb-0">
-                Comprehensive insights into Sterling ERP operations
-              </p>
-            </div>
-            <div className="d-flex gap-2">
-              <div className="input-group" style={{width: '300px'}}>
-                <span className="input-group-text">From</span>
-                <input
-                  type="date"
-                  className="form-control"
-                  value={dateRange.start}
-                  onChange={(e) => setDateRange({...dateRange, start: e.target.value})}
-                />
-                <span className="input-group-text">To</span>
-                <input
-                  type="date"
-                  className="form-control"
-                  value={dateRange.end}
-                  onChange={(e) => setDateRange({...dateRange, end: e.target.value})}
-                />
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold ">Reports & Analytics</h1>
+          <p className="text-sm text-slate-600 mt-1 text-left">
+            Comprehensive insights into Sterling ERP operations
+          </p>
+        </div>
+        <div className="flex gap-3">
+          <div className="flex gap-2 bg-slate-50 p-2 rounded-lg border border-slate-200">
+            <input
+              type="date"
+              value={dateRange.start}
+              onChange={(e) => setDateRange({...dateRange, start: e.target.value})}
+              className="px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <span className="text-slate-400 px-2 py-2">to</span>
+            <input
+              type="date"
+              value={dateRange.end}
+              onChange={(e) => setDateRange({...dateRange, end: e.target.value})}
+              className="px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div className="relative">
+            <button 
+              onClick={() => setExportDropdownOpen(!exportDropdownOpen)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center text-xs gap-2 transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              Export
+            </button>
+            {exportDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-lg shadow-lg z-50">
+                <button onClick={() => exportReport('pdf')} className="w-full text-left px-4 py-2 hover:bg-slate-50 text-slate-700 text-sm">Export as PDF</button>
+                <button onClick={() => exportReport('excel')} className="w-full text-left px-4 py-2 hover:bg-slate-50 text-slate-700 text-sm border-t border-slate-200">Export as Excel</button>
+                <button onClick={() => exportReport('csv')} className="w-full text-left px-4 py-2 hover:bg-slate-50 text-slate-700 text-sm border-t border-slate-200">Export as CSV</button>
               </div>
-              <div className="dropdown">
-                <button className="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                  <i className="mdi mdi-download me-1"></i>Export
-                </button>
-                <ul className="dropdown-menu">
-                  <li><button className="dropdown-item" onClick={() => exportReport('pdf')}>Export as PDF</button></li>
-                  <li><button className="dropdown-item" onClick={() => exportReport('excel')}>Export as Excel</button></li>
-                  <li><button className="dropdown-item" onClick={() => exportReport('csv')}>Export as CSV</button></li>
-                </ul>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Report Navigation */}
-      <div className="row mb-4">
-        <div className="col-12">
-          <div className="card">
-            <div className="card-body">
-              <nav className="nav nav-pills nav-justified">
-                <a
-                  className={`nav-link ${selectedReport === 'overview' ? 'active' : ''}`}
-                  href="#"
-                  onClick={(e) => { e.preventDefault(); setSelectedReport('overview'); }}
-                >
-                  <i className="mdi mdi-view-dashboard me-1"></i>Overview
-                </a>
-                <a
-                  className={`nav-link ${selectedReport === 'projects' ? 'active' : ''}`}
-                  href="#"
-                  onClick={(e) => { e.preventDefault(); setSelectedReport('projects'); }}
-                >
-                  <i className="mdi mdi-briefcase me-1"></i>Projects
-                </a>
-                <a
-                  className={`nav-link ${selectedReport === 'departments' ? 'active' : ''}`}
-                  href="#"
-                  onClick={(e) => { e.preventDefault(); setSelectedReport('departments'); }}
-                >
-                  <i className="mdi mdi-office-building me-1"></i>Departments
-                </a>
-                <a
-                  className={`nav-link ${selectedReport === 'vendors' ? 'active' : ''}`}
-                  href="#"
-                  onClick={(e) => { e.preventDefault(); setSelectedReport('vendors'); }}
-                >
-                  <i className="mdi mdi-truck me-1"></i>Vendors
-                </a>
-                <a
-                  className={`nav-link ${selectedReport === 'inventory' ? 'active' : ''}`}
-                  href="#"
-                  onClick={(e) => { e.preventDefault(); setSelectedReport('inventory'); }}
-                >
-                  <i className="mdi mdi-package-variant me-1"></i>Inventory
-                </a>
-                <a
-                  className={`nav-link ${selectedReport === 'employees' ? 'active' : ''}`}
-                  href="#"
-                  onClick={(e) => { e.preventDefault(); setSelectedReport('employees'); }}
-                >
-                  <i className="mdi mdi-account-group me-1"></i>Employees
-                </a>
-              </nav>
-            </div>
-          </div>
-        </div>
+      {/* Report Navigation Tabs */}
+      <div className="border-b border-slate-200 flex gap-8 overflow-x-auto">
+        {reportTabs.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = selectedReport === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setSelectedReport(tab.id)}
+              className={`pb-4 px-1 font-medium text-sm flex items-center text-xs gap-2 transition-all border-b-2 ${
+                isActive
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-slate-600 hover:'
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              {tab.label}
+            </button>
+          );
+        })}
       </div>
 
       {/* Report Content */}
       {selectedReport === 'overview' && (
-        <div className="row">
+        <div className="space-y-6">
           {/* Key Metrics */}
-          <div className="col-12 mb-4">
-            <h5 className="mb-3">Key Performance Indicators</h5>
-            <div className="row">
-              <div className="col-xl-3 col-md-6 mb-3">
-                <div className="card h-100">
-                  <div className="card-body">
-                    <div className="d-flex align-items-center">
-                      <div className="avatar-sm me-3">
-                        <div className="avatar-title bg-primary rounded">
-                          <i className="mdi mdi-briefcase-check text-white"></i>
+          <div>
+            <h2 className="text-md font-semibold  mb-4">Key Performance Indicators</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {[
+                { label: 'Projects Completed', value: reportData?.overview?.completedProjects || 0, icon: CheckCircle2, color: 'blue', change: '+15% vs last month' },
+                { label: 'On-Time Delivery', value: `${reportData?.overview?.onTimeDelivery || 0}%`, icon: Clock, color: 'emerald', change: 'Target: 95%' },
+                { label: 'Revenue Generated', value: `₹${(reportData?.overview?.totalRevenue || 0).toLocaleString()}`, icon: TrendingUp, color: 'cyan', change: 'This period' },
+                { label: 'Active Alerts', value: reportData?.overview?.activeAlerts || 0, icon: AlertTriangle, color: 'amber', change: 'Requires attention' },
+              ].map((metric, idx) => {
+                const Icon = metric.icon;
+                const colorBg = { blue: 'bg-blue-50', emerald: 'bg-emerald-50', cyan: 'bg-cyan-50', amber: 'bg-amber-50' }[metric.color];
+                const colorIcon = { blue: 'text-blue-600', emerald: 'text-emerald-600', cyan: 'text-cyan-600', amber: 'text-amber-600' }[metric.color];
+                const colorText = { blue: 'text-blue-600', emerald: 'text-emerald-600', cyan: 'text-cyan-600', amber: 'text-amber-600' }[metric.color];
+                return (
+                  <Card key={idx} className="hover:shadow-lg transition-shadow border border-slate-100">
+                    <CardContent className="p-5">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-1">{metric.label}</p>
+                          <p className="text-2xl font-bold ">{metric.value}</p>
+                          <p className={`text-xs ${colorText} mt-2 font-medium`}>{metric.change}</p>
+                        </div>
+                        <div className={`${colorBg} p-3 rounded-lg flex-shrink-0`}>
+                          <Icon className={`w-5 h-5 ${colorIcon}`} />
                         </div>
                       </div>
-                      <div className="flex-grow-1">
-                        <h4 className="mb-1">{reportData?.overview?.completedProjects || 0}</h4>
-                        <p className="text-muted mb-0">Projects Completed</p>
-                        <small className="text-success">+15% vs last month</small>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="col-xl-3 col-md-6 mb-3">
-                <div className="card h-100">
-                  <div className="card-body">
-                    <div className="d-flex align-items-center">
-                      <div className="avatar-sm me-3">
-                        <div className="avatar-title bg-success rounded">
-                          <i className="mdi mdi-clock-check text-white"></i>
-                        </div>
-                      </div>
-                      <div className="flex-grow-1">
-                        <h4 className="mb-1">{reportData?.overview?.onTimeDelivery || 0}%</h4>
-                        <p className="text-muted mb-0">On-Time Delivery</p>
-                        <small className="text-success">Target: 95%</small>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="col-xl-3 col-md-6 mb-3">
-                <div className="card h-100">
-                  <div className="card-body">
-                    <div className="d-flex align-items-center">
-                      <div className="avatar-sm me-3">
-                        <div className="avatar-title bg-info rounded">
-                          <i className="mdi mdi-currency-inr text-white"></i>
-                        </div>
-                      </div>
-                      <div className="flex-grow-1">
-                        <h4 className="mb-1">₹{(reportData?.overview?.totalRevenue || 0).toLocaleString()}</h4>
-                        <p className="text-muted mb-0">Revenue Generated</p>
-                        <small className="text-info">This period</small>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="col-xl-3 col-md-6 mb-3">
-                <div className="card h-100">
-                  <div className="card-body">
-                    <div className="d-flex align-items-center">
-                      <div className="avatar-sm me-3">
-                        <div className="avatar-title bg-warning rounded">
-                          <i className="mdi mdi-alert text-white"></i>
-                        </div>
-                      </div>
-                      <div className="flex-grow-1">
-                        <h4 className="mb-1">{reportData?.overview?.activeAlerts || 0}</h4>
-                        <p className="text-muted mb-0">Active Alerts</p>
-                        <small className="text-warning">Requires attention</small>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           </div>
 
-          {/* Charts Placeholder */}
-          <div className="col-lg-8 mb-3">
-            <div className="card h-100">
-              <div className="card-header">
-                <h6 className="card-title mb-0">Project Status Trend</h6>
-              </div>
-              <div className="card-body">
-                <div className="text-center py-5">
-                  <i className="mdi mdi-chart-line text-muted" style={{fontSize: '4rem'}}></i>
-                  <h6 className="mt-3 text-muted">Chart Visualization</h6>
-                  <p className="text-muted">Interactive charts will be displayed here showing project trends over time</p>
+          {/* Charts Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <Card className="lg:col-span-2 hover:shadow-lg transition-shadow border border-slate-100">
+              <CardHeader className="border-b border-slate-100 pb-4">
+                <CardTitle className="flex items-center text-xs gap-2 text-lg">
+                  <div className="p-2 bg-blue-50 rounded-lg">
+                    <TrendingUp className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <span>Project Status Trend</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="flex flex-col items-center justify-center py-12">
+                  <TrendingUp className="w-12 h-12 text-slate-300 mb-3" />
+                  <h6 className="text-slate-600 font-medium mb-1">Chart Visualization</h6>
+                  <p className="text-slate-500 text-sm">Interactive charts will be displayed here showing project trends over time</p>
                 </div>
-              </div>
-            </div>
-          </div>
+              </CardContent>
+            </Card>
 
-          <div className="col-lg-4 mb-3">
-            <div className="card h-100">
-              <div className="card-header">
-                <h6 className="card-title mb-0">Department Performance</h6>
-              </div>
-              <div className="card-body">
-                <div className="mb-3">
-                  <div className="d-flex justify-content-between align-items-center mb-2">
-                    <span className="small">Engineering</span>
-                    <span className="small fw-bold">95%</span>
+            <Card className="hover:shadow-lg transition-shadow border border-slate-100">
+              <CardHeader className="border-b border-slate-100 pb-4">
+                <CardTitle className="flex items-center text-xs gap-2 text-lg">
+                  <div className="p-2 bg-emerald-50 rounded-lg">
+                    <Building2 className="w-5 h-5 text-emerald-600" />
                   </div>
-                  <div className="progress" style={{height: '6px'}}>
-                    <div className="progress-bar bg-primary" style={{width: '95%'}}></div>
+                  <span>Department Performance</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6 space-y-4">
+                {[
+                  { name: 'Engineering', value: 95, color: 'bg-blue-500' },
+                  { name: 'Production', value: 88, color: 'bg-emerald-500' },
+                  { name: 'Quality Control', value: 97, color: 'bg-cyan-500' },
+                  { name: 'Procurement', value: 92, color: 'bg-amber-500' },
+                ].map((dept, idx) => (
+                  <div key={idx}>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm font-medium text-slate-700">{dept.name}</span>
+                      <span className="text-sm font-bold ">{dept.value}%</span>
+                    </div>
+                    <div className="w-full bg-slate-200 rounded-full h-2">
+                      <div className={`${dept.color} h-2 rounded-full`} style={{width: `${dept.value}%`}}></div>
+                    </div>
                   </div>
-                </div>
-                <div className="mb-3">
-                  <div className="d-flex justify-content-between align-items-center mb-2">
-                    <span className="small">Production</span>
-                    <span className="small fw-bold">88%</span>
-                  </div>
-                  <div className="progress" style={{height: '6px'}}>
-                    <div className="progress-bar bg-success" style={{width: '88%'}}></div>
-                  </div>
-                </div>
-                <div className="mb-3">
-                  <div className="d-flex justify-content-between align-items-center mb-2">
-                    <span className="small">Quality Control</span>
-                    <span className="small fw-bold">97%</span>
-                  </div>
-                  <div className="progress" style={{height: '6px'}}>
-                    <div className="progress-bar bg-info" style={{width: '97%'}}></div>
-                  </div>
-                </div>
-                <div className="mb-0">
-                  <div className="d-flex justify-content-between align-items-center mb-2">
-                    <span className="small">Procurement</span>
-                    <span className="small fw-bold">92%</span>
-                  </div>
-                  <div className="progress" style={{height: '6px'}}>
-                    <div className="progress-bar bg-warning" style={{width: '92%'}}></div>
-                  </div>
-                </div>
-              </div>
-            </div>
+                ))}
+              </CardContent>
+            </Card>
           </div>
         </div>
       )}
 
       {selectedReport === 'projects' && (
-        <div className="row">
-          <div className="col-12">
-            <div className="card">
-              <div className="card-header">
-                <h6 className="card-title mb-0">Project Performance Report</h6>
+        <Card className="hover:shadow-lg transition-shadow border border-slate-100">
+          <CardHeader className="border-b border-slate-100 pb-4">
+            <CardTitle className="flex items-center text-xs gap-2 text-lg">
+              <div className="p-2 bg-blue-50 rounded-lg">
+                <Briefcase className="w-5 h-5 text-blue-600" />
               </div>
-              <div className="card-body">
-                <div className="table-responsive">
-                  <table className="table table-hover">
-                    <thead className="table-light">
-                      <tr>
-                        <th>Project ID</th>
-                        <th>Project Name</th>
-                        <th>Status</th>
-                        <th>Progress</th>
-                        <th>Start Date</th>
-                        <th>Expected Completion</th>
-                        <th>On-Time</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(reportData?.projects || []).map((project, index) => (
-                        <tr key={index}>
-                          <td>
-                            <span className="fw-semibold">PRJ-{project.id}</span>
-                          </td>
-                          <td>{project.name}</td>
-                          <td>
-                            <span className={`badge bg-${project.status === 'Completed' ? 'success' : project.status === 'Active' ? 'primary' : 'warning'}`}>
-                              {project.status}
-                            </span>
-                          </td>
-                          <td>
-                            <div className="d-flex align-items-center">
-                              <div className="progress flex-grow-1 me-2" style={{height: '6px'}}>
-                                <div className="progress-bar" style={{width: `${project.progress}%`}}></div>
-                              </div>
-                              <small>{project.progress}%</small>
-                            </div>
-                          </td>
-                          <td>{new Date(project.startDate).toLocaleDateString()}</td>
-                          <td>{new Date(project.expectedCompletion).toLocaleDateString()}</td>
-                          <td>
-                            <i className={`mdi ${project.onTime ? 'mdi-check-circle text-success' : 'mdi-alert-circle text-danger'}`}></i>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+              <span>Project Performance Report</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 border-b border-slate-200">
+                  <tr>
+                    <th className="p-2 text-left font-semibold text-slate-700">Project ID</th>
+                    <th className="p-2 text-left font-semibold text-slate-700">Project Name</th>
+                    <th className="p-2 text-left font-semibold text-slate-700">Status</th>
+                    <th className="p-2 text-left font-semibold text-slate-700">Progress</th>
+                    <th className="p-2 text-left font-semibold text-slate-700">Start Date</th>
+                    <th className="p-2 text-left font-semibold text-slate-700">Expected Completion</th>
+                    <th className="p-2 text-left font-semibold text-slate-700">On-Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(reportData?.projects || []).map((project, index) => (
+                    <tr key={index} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                      <td className="p-2 font-semibold ">PRJ-{project.id}</td>
+                      <td className="p-2 text-slate-700">{project.name}</td>
+                      <td className="p-2">
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                          project.status === 'Completed' ? 'bg-emerald-100 text-emerald-700' :
+                          project.status === 'Active' ? 'bg-blue-100 text-blue-700' :
+                          'bg-amber-100 text-amber-700'
+                        }`}>
+                          {project.status}
+                        </span>
+                      </td>
+                      <td className="p-2">
+                        <div className="flex items-center text-xs gap-2">
+                          <div className="flex-1 bg-slate-200 rounded-full h-2">
+                            <div className="bg-blue-500 h-2 rounded-full" style={{width: `${project.progress}%`}}></div>
+                          </div>
+                          <span className="text-xs font-semibold text-slate-700 w-8">{project.progress}%</span>
+                        </div>
+                      </td>
+                      <td className="p-2 text-slate-700">{new Date(project.startDate).toLocaleDateString()}</td>
+                      <td className="p-2 text-slate-700">{new Date(project.expectedCompletion).toLocaleDateString()}</td>
+                      <td className="p-2">
+                        {project.onTime ? (
+                          <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                        ) : (
+                          <AlertTriangle className="w-5 h-5 text-red-600" />
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       )}
 
       {selectedReport === 'departments' && (
-        <div className="row">
-          <div className="col-12">
-            <div className="card">
-              <div className="card-header">
-                <h6 className="card-title mb-0">Department Productivity Report</h6>
+        <Card className="hover:shadow-lg transition-shadow border border-slate-100">
+          <CardHeader className="border-b border-slate-100 pb-4">
+            <CardTitle className="flex items-center text-xs gap-2 text-lg">
+              <div className="p-2 bg-blue-50 rounded-lg">
+                <Building2 className="w-5 h-5 text-blue-600" />
               </div>
-              <div className="card-body">
-                <div className="row">
-                  {(reportData?.departments || []).map((dept, index) => (
-                    <div key={index} className="col-lg-6 mb-4">
-                      <div className="card h-100">
-                        <div className="card-body">
-                          <h6 className="card-title">{dept.name}</h6>
-                          <div className="row text-center">
-                            <div className="col-4">
-                              <div className="avatar-md mx-auto mb-2">
-                                <div className="avatar-title bg-primary rounded-circle">
-                                  <i className="mdi mdi-account-group text-white"></i>
-                                </div>
-                              </div>
-                              <h5 className="mb-1">{dept.totalUsers}</h5>
-                              <p className="text-muted mb-0 small">Users</p>
-                            </div>
-                            <div className="col-4">
-                              <div className="avatar-md mx-auto mb-2">
-                                <div className="avatar-title bg-success rounded-circle">
-                                  <i className="mdi mdi-check-circle text-white"></i>
-                                </div>
-                              </div>
-                              <h5 className="mb-1">{dept.completedTasks}</h5>
-                              <p className="text-muted mb-0 small">Tasks Done</p>
-                            </div>
-                            <div className="col-4">
-                              <div className="avatar-md mx-auto mb-2">
-                                <div className="avatar-title bg-info rounded-circle">
-                                  <i className="mdi mdi-clock text-white"></i>
-                                </div>
-                              </div>
-                              <h5 className="mb-1">{dept.avgEfficiency}%</h5>
-                              <p className="text-muted mb-0 small">Efficiency</p>
-                            </div>
-                          </div>
-                        </div>
+              <span>Department Productivity Report</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {(reportData?.departments || []).map((dept, index) => (
+                <div key={index} className="border border-slate-200 rounded-xl p-6 hover:shadow-lg transition-shadow">
+                  <h4 className="font-semibold  mb-6">{dept.name}</h4>
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center text-xs justify-center mx-auto mb-2">
+                        <Users className="w-6 h-6 text-blue-600" />
                       </div>
+                      <p className="text-2xl font-bold ">{dept.totalUsers}</p>
+                      <p className="text-xs text-slate-600 mt-1">Users</p>
                     </div>
-                  ))}
+                    <div>
+                      <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center text-xs justify-center mx-auto mb-2">
+                        <CheckCircle2 className="w-6 h-6 text-emerald-600" />
+                      </div>
+                      <p className="text-2xl font-bold ">{dept.completedTasks}</p>
+                      <p className="text-xs text-slate-600 mt-1">Tasks Done</p>
+                    </div>
+                    <div>
+                      <div className="w-12 h-12 bg-cyan-100 rounded-full flex items-center text-xs justify-center mx-auto mb-2">
+                        <Clock className="w-6 h-6 text-cyan-600" />
+                      </div>
+                      <p className="text-2xl font-bold ">{dept.avgEfficiency}%</p>
+                      <p className="text-xs text-slate-600 mt-1">Efficiency</p>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              ))}
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       )}
 
       {selectedReport === 'vendors' && (
-        <div className="row">
-          <div className="col-12">
-            <div className="card">
-              <div className="card-header">
-                <h6 className="card-title mb-0">Vendor Performance Report</h6>
+        <Card className="hover:shadow-lg transition-shadow border border-slate-100">
+          <CardHeader className="border-b border-slate-100 pb-4">
+            <CardTitle className="flex items-center text-xs gap-2 text-lg">
+              <div className="p-2 bg-blue-50 rounded-lg">
+                <Truck className="w-5 h-5 text-blue-600" />
               </div>
-              <div className="card-body">
-                <div className="table-responsive">
-                  <table className="table table-hover">
-                    <thead className="table-light">
-                      <tr>
-                        <th>Vendor Name</th>
-                        <th>Total Orders</th>
-                        <th>On-Time Delivery</th>
-                        <th>Quality Rating</th>
-                        <th>Total Value</th>
-                        <th>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(reportData?.vendors || []).map((vendor, index) => (
-                        <tr key={index}>
-                          <td>
-                            <div className="d-flex align-items-center">
-                              <div className="avatar-sm me-2">
-                                <div className="avatar-title bg-primary rounded-circle">
-                                  {vendor.name.charAt(0)}
-                                </div>
-                              </div>
-                              <span className="fw-medium">{vendor.name}</span>
-                            </div>
-                          </td>
-                          <td>{vendor.totalOrders}</td>
-                          <td>{vendor.onTimeDelivery}%</td>
-                          <td>
-                            <div className="d-flex align-items-center">
-                              <span className="me-1">{vendor.qualityRating}/5</span>
-                              {[...Array(5)].map((_, i) => (
-                                <i key={i} className={`mdi mdi-star ${i < vendor.qualityRating ? 'text-warning' : 'text-muted'}`}></i>
-                              ))}
-                            </div>
-                          </td>
-                          <td>₹{vendor.totalValue.toLocaleString()}</td>
-                          <td>
-                            <span className={`badge bg-${vendor.status === 'Excellent' ? 'success' : vendor.status === 'Good' ? 'primary' : 'warning'}`}>
-                              {vendor.status}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+              <span>Vendor Performance Report</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 border-b border-slate-200">
+                  <tr>
+                    <th className="p-2 text-left font-semibold text-slate-700">Vendor Name</th>
+                    <th className="p-2 text-left font-semibold text-slate-700">Total Orders</th>
+                    <th className="p-2 text-left font-semibold text-slate-700">On-Time Delivery</th>
+                    <th className="p-2 text-left font-semibold text-slate-700">Quality Rating</th>
+                    <th className="p-2 text-left font-semibold text-slate-700">Total Value</th>
+                    <th className="p-2 text-left font-semibold text-slate-700">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(reportData?.vendors || []).map((vendor, index) => (
+                    <tr key={index} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                      <td className="p-2">
+                        <div className="flex items-center text-xs gap-3">
+                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center text-xs justify-center flex-shrink-0">
+                            <span className="text-xs font-bold text-blue-600">{vendor.name.charAt(0)}</span>
+                          </div>
+                          <span className="font-medium ">{vendor.name}</span>
+                        </div>
+                      </td>
+                      <td className="p-2 text-slate-700">{vendor.totalOrders}</td>
+                      <td className="p-2 text-slate-700">{vendor.onTimeDelivery}%</td>
+                      <td className="p-2">
+                        <div className="flex items-center text-xs gap-1">
+                          <span className="text-sm font-medium text-slate-700 mr-1">{vendor.qualityRating}/5</span>
+                          {[...Array(5)].map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`w-4 h-4 ${
+                                i < vendor.qualityRating
+                                  ? 'fill-amber-400 text-amber-400'
+                                  : 'text-slate-300'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      </td>
+                      <td className="p-2 font-semibold ">₹{vendor.totalValue.toLocaleString()}</td>
+                      <td className="p-2">
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                          vendor.status === 'Excellent' ? 'bg-emerald-100 text-emerald-700' :
+                          vendor.status === 'Good' ? 'bg-blue-100 text-blue-700' :
+                          'bg-amber-100 text-amber-700'
+                        }`}>
+                          {vendor.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       )}
 
       {selectedReport === 'inventory' && (
-        <div className="row">
-          <div className="col-12">
-            <div className="card">
-              <div className="card-header">
-                <h6 className="card-title mb-0">Inventory Movement Report</h6>
+        <Card className="hover:shadow-lg transition-shadow border border-slate-100">
+          <CardHeader className="border-b border-slate-100 pb-4">
+            <CardTitle className="flex items-center text-xs gap-2 text-lg">
+              <div className="p-2 bg-blue-50 rounded-lg">
+                <Package className="w-5 h-5 text-blue-600" />
               </div>
-              <div className="card-body">
-                <div className="row mb-4">
-                  <div className="col-lg-3 col-md-6">
-                    <div className="card bg-primary text-white h-100">
-                      <div className="card-body text-center">
-                        <i className="mdi mdi-package-variant-closed" style={{fontSize: '2rem'}}></i>
-                        <h4 className="mt-2 mb-1">{reportData?.inventory?.totalItems || 0}</h4>
-                        <p className="mb-0">Total Items</p>
-                      </div>
-                    </div>
+              <span>Inventory Movement Report</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {[
+                { label: 'Total Items', value: reportData?.inventory?.totalItems || 0, color: 'bg-blue-500', icon: Package },
+                { label: 'Items Received', value: reportData?.inventory?.itemsReceived || 0, color: 'bg-emerald-500', icon: TrendingUp },
+                { label: 'Items Issued', value: reportData?.inventory?.itemsIssued || 0, color: 'bg-amber-500', icon: TrendingUp },
+                { label: 'Low Stock Alerts', value: reportData?.inventory?.lowStockItems || 0, color: 'bg-red-500', icon: AlertTriangle },
+              ].map((metric, idx) => {
+                const Icon = metric.icon;
+                return (
+                  <div key={idx} className={`${metric.color} text-white rounded-xl p-6 text-center`}>
+                    <Icon className="w-6 h-6 mx-auto mb-3 opacity-80" />
+                    <p className="text-3xl font-bold mb-1">{metric.value}</p>
+                    <p className="text-sm opacity-90">{metric.label}</p>
                   </div>
-                  <div className="col-lg-3 col-md-6">
-                    <div className="card bg-success text-white h-100">
-                      <div className="card-body text-center">
-                        <i className="mdi mdi-plus-circle" style={{fontSize: '2rem'}}></i>
-                        <h4 className="mt-2 mb-1">{reportData?.inventory?.itemsReceived || 0}</h4>
-                        <p className="mb-0">Items Received</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="col-lg-3 col-md-6">
-                    <div className="card bg-warning text-white h-100">
-                      <div className="card-body text-center">
-                        <i className="mdi mdi-minus-circle" style={{fontSize: '2rem'}}></i>
-                        <h4 className="mt-2 mb-1">{reportData?.inventory?.itemsIssued || 0}</h4>
-                        <p className="mb-0">Items Issued</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="col-lg-3 col-md-6">
-                    <div className="card bg-danger text-white h-100">
-                      <div className="card-body text-center">
-                        <i className="mdi mdi-alert-circle" style={{fontSize: '2rem'}}></i>
-                        <h4 className="mt-2 mb-1">{reportData?.inventory?.lowStockItems || 0}</h4>
-                        <p className="mb-0">Low Stock Alerts</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="table-responsive">
-                  <table className="table table-hover">
-                    <thead className="table-light">
-                      <tr>
-                        <th>Item Code</th>
-                        <th>Description</th>
-                        <th>Current Stock</th>
-                        <th>Min. Stock</th>
-                        <th>Last Movement</th>
-                        <th>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(reportData?.inventory?.items || []).map((item, index) => (
-                        <tr key={index}>
-                          <td>
-                            <span className="fw-semibold">{item.code}</span>
-                          </td>
-                          <td>{item.description}</td>
-                          <td>{item.currentStock}</td>
-                          <td>{item.minStock}</td>
-                          <td>{new Date(item.lastMovement).toLocaleDateString()}</td>
-                          <td>
-                            <span className={`badge bg-${item.currentStock < item.minStock ? 'danger' : 'success'}`}>
-                              {item.currentStock < item.minStock ? 'Low Stock' : 'In Stock'}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+                );
+              })}
             </div>
-          </div>
-        </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 border-b border-slate-200">
+                  <tr>
+                    <th className="p-2 text-left font-semibold text-slate-700">Item Code</th>
+                    <th className="p-2 text-left font-semibold text-slate-700">Description</th>
+                    <th className="p-2 text-left font-semibold text-slate-700">Current Stock</th>
+                    <th className="p-2 text-left font-semibold text-slate-700">Min. Stock</th>
+                    <th className="p-2 text-left font-semibold text-slate-700">Last Movement</th>
+                    <th className="p-2 text-left font-semibold text-slate-700">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(reportData?.inventory?.items || []).map((item, index) => (
+                    <tr key={index} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                      <td className="p-2 font-semibold ">{item.code}</td>
+                      <td className="p-2 text-slate-700">{item.description}</td>
+                      <td className="p-2 text-slate-700">{item.currentStock}</td>
+                      <td className="p-2 text-slate-700">{item.minStock}</td>
+                      <td className="p-2 text-slate-700">{new Date(item.lastMovement).toLocaleDateString()}</td>
+                      <td className="p-2">
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                          item.currentStock < item.minStock
+                            ? 'bg-red-100 text-red-700'
+                            : 'bg-emerald-100 text-emerald-700'
+                        }`}>
+                          {item.currentStock < item.minStock ? 'Low Stock' : 'In Stock'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {selectedReport === 'employees' && (
-        <div className="row">
-          <div className="col-12">
-            <div className="card">
-              <div className="card-header">
-                <h6 className="card-title mb-0">Employee Performance Report</h6>
+        <Card className="hover:shadow-lg transition-shadow border border-slate-100">
+          <CardHeader className="border-b border-slate-100 pb-4">
+            <CardTitle className="flex items-center text-xs gap-2 text-lg">
+              <div className="p-2 bg-blue-50 rounded-lg">
+                <Users className="w-5 h-5 text-blue-600" />
               </div>
-              <div className="card-body">
-                <div className="table-responsive">
-                  <table className="table table-hover">
-                    <thead className="table-light">
-                      <tr>
-                        <th>Employee</th>
-                        <th>Department</th>
-                        <th>Tasks Completed</th>
-                        <th>Efficiency</th>
-                        <th>Quality Score</th>
-                        <th>Attendance</th>
-                        <th>Performance Rating</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(reportData?.employees || []).map((employee, index) => (
-                        <tr key={index}>
-                          <td>
-                            <div className="d-flex align-items-center">
-                              <div className="avatar-sm me-2">
-                                <div className="avatar-title bg-primary rounded-circle">
-                                  {employee.name.charAt(0)}
-                                </div>
-                              </div>
-                              <div>
-                                <span className="fw-medium">{employee.name}</span>
-                                <br />
-                                <small className="text-muted">ID: {employee.id}</small>
-                              </div>
-                            </div>
-                          </td>
-                          <td>{employee.department}</td>
-                          <td>{employee.tasksCompleted}</td>
-                          <td>{employee.efficiency}%</td>
-                          <td>
-                            <div className="d-flex align-items-center">
-                              <span className="me-1">{employee.qualityScore}/5</span>
-                              {[...Array(5)].map((_, i) => (
-                                <i key={i} className={`mdi mdi-star ${i < employee.qualityScore ? 'text-warning' : 'text-muted'}`}></i>
-                              ))}
-                            </div>
-                          </td>
-                          <td>{employee.attendance}%</td>
-                          <td>
-                            <span className={`badge bg-${employee.rating >= 4.5 ? 'success' : employee.rating >= 4 ? 'primary' : employee.rating >= 3 ? 'warning' : 'danger'}`}>
-                              {employee.rating}/5
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+              <span>Employee Performance Report</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 border-b border-slate-200">
+                  <tr>
+                    <th className="p-2 text-left font-semibold text-slate-700">Employee</th>
+                    <th className="p-2 text-left font-semibold text-slate-700">Department</th>
+                    <th className="p-2 text-left font-semibold text-slate-700">Tasks Completed</th>
+                    <th className="p-2 text-left font-semibold text-slate-700">Efficiency</th>
+                    <th className="p-2 text-left font-semibold text-slate-700">Quality Score</th>
+                    <th className="p-2 text-left font-semibold text-slate-700">Attendance</th>
+                    <th className="p-2 text-left font-semibold text-slate-700">Performance Rating</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(reportData?.employees || []).map((employee, index) => (
+                    <tr key={index} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                      <td className="p-2">
+                        <div className="flex items-center text-xs gap-3">
+                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center text-xs justify-center flex-shrink-0">
+                            <span className="text-xs font-bold text-blue-600">{employee.name.charAt(0)}</span>
+                          </div>
+                          <div>
+                            <p className="font-medium ">{employee.name}</p>
+                            <p className="text-xs text-slate-500">ID: {employee.id}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-2 text-slate-700">{employee.department}</td>
+                      <td className="p-2 text-slate-700">{employee.tasksCompleted}</td>
+                      <td className="p-2 text-slate-700">{employee.efficiency}%</td>
+                      <td className="p-2">
+                        <div className="flex items-center text-xs gap-1">
+                          <span className="text-sm font-medium text-slate-700 mr-1">{employee.qualityScore}/5</span>
+                          {[...Array(5)].map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`w-4 h-4 ${
+                                i < employee.qualityScore
+                                  ? 'fill-amber-400 text-amber-400'
+                                  : 'text-slate-300'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      </td>
+                      <td className="p-2 text-slate-700">{employee.attendance}%</td>
+                      <td className="p-2">
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                          employee.rating >= 4.5 ? 'bg-emerald-100 text-emerald-700' :
+                          employee.rating >= 4 ? 'bg-blue-100 text-blue-700' :
+                          employee.rating >= 3 ? 'bg-amber-100 text-amber-700' :
+                          'bg-red-100 text-red-700'
+                        }`}>
+                          {employee.rating}/5
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

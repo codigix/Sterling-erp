@@ -17,12 +17,6 @@ import {
   ChevronDown,
   BarChart3,
   ShoppingCart,
-  Target,
-  Factory,
-  Truck,
-  Package,
-  Wrench,
-  Zap,
 } from "lucide-react";
 
 const AdminLayout = () => {
@@ -54,29 +48,20 @@ const AdminLayout = () => {
       badge: null,
     },
     {
+      title: "Root Cards",
+      path: "/admin/sales-orders",
+      icon: ShoppingCart,
+      badge: null,
+    },
+    {
       title: "Analytics & Reports",
+      path: "/admin/analytics-reports",
       icon: BarChart3,
-      submenu: [
-        { title: "Overview", path: "/admin/overview", icon: BarChart3 },
-        { title: "Projects", path: "/admin/projects", icon: Target },
-        { title: "Departments", path: "/admin/departments", icon: Factory },
-        { title: "Vendors", path: "/admin/vendors", icon: Truck },
-        { title: "Materials", path: "/admin/materials", icon: Package },
-        { title: "Production", path: "/admin/production", icon: Wrench },
-        { title: "Employees", path: "/admin/employees", icon: Users },
-        { title: "Resources", path: "/admin/resources", icon: Zap },
-        { title: "Sales Orders", path: "/admin/sales-orders", icon: ShoppingCart },
-      ]
+      badge: null,
     },
     {
       title: "Employee Management",
       path: "/admin/employee-management",
-      icon: Users,
-      badge: null,
-    },
-    {
-      title: "User Management",
-      path: "/admin/users",
       icon: Users,
       badge: null,
     },
@@ -106,15 +91,6 @@ const AdminLayout = () => {
     },
   ];
 
-  const erpModules = [
-    { title: "Sales", path: "/sales", icon: "💼" },
-    { title: "Procurement", path: "/procurement", icon: "🛒" },
-    { title: "Production", path: "/production", icon: "🏭" },
-    { title: "Inventory", path: "/inventory", icon: "📦" },
-    { title: "QC", path: "/qc", icon: "✅" },
-    { title: "Engineering", path: "/engineering", icon: "⚙️" },
-  ];
-
   const isActive = (path) => {
     return location.pathname === path;
   };
@@ -125,19 +101,19 @@ const AdminLayout = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+    <div className="min-h-screen bg-slate-50 dark:">
       {/* Top Navigation */}
       <nav className="fixed top-0 left-0 right-0 h-16 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 z-40">
-        <div className="flex items-center justify-between h-full px-6">
+        <div className="flex items-center text-xs justify-between h-full px-6">
           {/* Left side - Logo and mobile menu */}
-          <div className="flex items-center">
+          <div className="flex items-center text-xs">
             <button
               className="lg:hidden mr-2 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
             >
               <Menu size={20} />
             </button>
-            <Link to="/admin/dashboard" className="flex items-center">
+            <Link to="/admin/dashboard" className="flex items-center text-xs">
               <div className="font-bold text-xl text-primary-600 dark:text-primary-400">
                 Sterling ERP
               </div>
@@ -147,24 +123,24 @@ const AdminLayout = () => {
           {/* Center - Search */}
           <div className="flex-1 max-w-md mx-6">
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center text-xs pointer-events-none">
                 <Search size={16} className="text-slate-400" />
               </div>
               <input
                 type="text"
-                className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700  dark: placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 placeholder="Search..."
               />
             </div>
           </div>
 
           {/* Right side */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center text-xs space-x-4">
             {/* Notifications */}
             <div className="relative">
               <button className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors relative">
                 <Bell size={20} />
-                <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center text-xs justify-center">
                   3
                 </span>
               </button>
@@ -173,11 +149,11 @@ const AdminLayout = () => {
             {/* User Menu */}
             <div className="relative">
               <button
-                className="flex items-center space-x-2 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                className="flex items-center text-xs space-x-2 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
                 onClick={() => setShowUserMenu(!showUserMenu)}
               >
-                <div className="w-8 h-8 bg-primary-100 dark:bg-primary-900 rounded-full flex items-center justify-center">
-                  <span className="text-primary-600 dark:text-primary-400 font-medium text-sm">
+                <div className="w-8 h-8 bg-primary-100 dark:bg-primary-900 rounded-full flex items-center text-xs justify-center">
+                  <span className="text-primary-600 dark:text-primary-400 font-medium text-xs">
                     {user?.username?.charAt(0).toUpperCase()}
                   </span>
                 </div>
@@ -190,20 +166,20 @@ const AdminLayout = () => {
               {showUserMenu && (
                 <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 py-1 z-50">
                   <div className="px-4 py-2 border-b border-slate-200 dark:border-slate-700">
-                    <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                    <p className="text-xs font-medium  dark:">
                       {user?.username}
                     </p>
                   </div>
                   <Link
                     to="/profile"
-                    className="flex items-center px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+                    className="flex items-center text-xs px-4 py-2 text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
                   >
                     <User size={16} className="mr-2" />
                     Profile
                   </Link>
                   <Link
                     to="/settings"
-                    className="flex items-center px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+                    className="flex items-center text-xs px-4 py-2 text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
                   >
                     <Settings size={16} className="mr-2" />
                     Settings
@@ -211,7 +187,7 @@ const AdminLayout = () => {
                   <div className="border-t border-slate-200 dark:border-slate-700 my-1"></div>
                   <button
                     onClick={handleLogout}
-                    className="flex items-center w-full px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+                    className="flex items-center text-xs w-full px-4 py-2 text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
                   >
                     <LogOut size={16} className="mr-2" />
                     Logout
@@ -233,7 +209,7 @@ const AdminLayout = () => {
           {/* Sidebar Header */}
           <div className="p-4 border-b border-slate-200 dark:border-slate-700">
             <button
-              className="hidden lg:flex items-center justify-center w-8 h-8 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+              className="hidden lg:flex items-center text-xs justify-center w-8 h-8 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
             >
               <Menu size={20} />
@@ -263,7 +239,7 @@ const AdminLayout = () => {
                         <>
                           <button
                             onClick={() => toggleSection(item.title)}
-                            className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                            className={`w-full flex items-center text-xs px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
                               isExpanded
                                 ? "bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300"
                                 : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
@@ -288,7 +264,7 @@ const AdminLayout = () => {
                                   <li key={subitem.path}>
                                     <Link
                                       to={subitem.path}
-                                      className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                                      className={`flex items-center text-xs px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
                                         isActive(subitem.path)
                                           ? "bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300"
                                           : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
@@ -306,7 +282,7 @@ const AdminLayout = () => {
                       ) : (
                         <Link
                           to={item.path}
-                          className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                          className={`flex items-center text-xs px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
                             isActive(item.path)
                               ? "bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300"
                               : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
@@ -331,45 +307,13 @@ const AdminLayout = () => {
               </ul>
             </div>
 
-            {/* ERP Modules Section */}
-            <div>
-              <h6
-                className={`text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3 ${
-                  sidebarCollapsed ? "text-center" : ""
-                }`}
-              >
-                {!sidebarCollapsed && "ERP Modules"}
-              </h6>
-              <ul className="space-y-1">
-                {erpModules.map((module) => (
-                  <li key={module.path}>
-                    <Link
-                      to={module.path}
-                      className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                        isActive(module.path)
-                          ? "bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300"
-                          : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
-                      }`}
-                    >
-                      <span className="text-lg flex-shrink-0">
-                        {module.icon}
-                      </span>
-                      {!sidebarCollapsed && (
-                        <span className="ml-3">{module.title}</span>
-                      )}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
             {/* Back to App */}
             <div className="border-t border-slate-200 dark:border-slate-700 pt-6">
               <ul className="space-y-1">
                 <li>
                   <Link
                     to="/dashboard"
-                    className="flex items-center px-3 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                    className="flex items-center text-xs px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
                   >
                     <Home size={18} className="flex-shrink-0" />
                     {!sidebarCollapsed && (
@@ -392,21 +336,19 @@ const AdminLayout = () => {
         <div className="p-6">
           {/* Breadcrumbs */}
           <div className="mb-6">
-            <nav className="flex items-center space-x-2 text-sm text-slate-600 dark:text-slate-400">
+            <nav className="flex items-center text-xs space-x-2 text-xs text-slate-600 dark:text-slate-400">
               <Link
                 to="/admin/dashboard"
-                className="hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
+                className="hover: dark:hover: transition-colors"
               >
                 Home
               </Link>
               <span>/</span>
-              <span className="text-slate-900 dark:text-slate-100 font-medium">
+              <span className="text-slate-900 dark:text-white font-medium">
                 {getCurrentPageTitle()}
               </span>
             </nav>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-2">
-              {getCurrentPageTitle()}
-            </h1>
+            
           </div>
 
           {/* Page Content */}

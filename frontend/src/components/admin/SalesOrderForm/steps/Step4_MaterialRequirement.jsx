@@ -289,159 +289,433 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
               </p>
             </div>
 
-            <div className="material-checkbox-grid">
-              <label className="material-checkbox-item">
-                <input
-                  type="checkbox"
-                  checked={enabledMaterials.steelSection}
-                  onChange={() => toggleEnabledMaterial("steelSection")}
-                />
-                <span>Steel Sections</span>
-              </label>
-              <label className="material-checkbox-item">
-                <input
-                  type="checkbox"
-                  checked={enabledMaterials.plateType}
-                  onChange={() => toggleEnabledMaterial("plateType")}
-                />
-                <span>Plates</span>
-              </label>
-              <label className="material-checkbox-item">
-                <input
-                  type="checkbox"
-                  checked={enabledMaterials.materialGrade}
-                  onChange={() => toggleEnabledMaterial("materialGrade")}
-                />
-                <span>Material Grades</span>
-              </label>
-              <label className="material-checkbox-item">
-                <input
-                  type="checkbox"
-                  checked={enabledMaterials.fastenerType}
-                  onChange={() => toggleEnabledMaterial("fastenerType")}
-                />
-                <span>Fasteners</span>
-              </label>
-              <label className="material-checkbox-item">
-                <input
-                  type="checkbox"
-                  checked={enabledMaterials.machinedParts}
-                  onChange={() => toggleEnabledMaterial("machinedParts")}
-                />
-                <span>Machined Parts</span>
-              </label>
-              <label className="material-checkbox-item">
-                <input
-                  type="checkbox"
-                  checked={enabledMaterials.rollerMovementComponents}
-                  onChange={() =>
-                    toggleEnabledMaterial("rollerMovementComponents")
-                  }
-                />
-                <span>Roller/Movement</span>
-              </label>
-              <label className="material-checkbox-item">
-                <input
-                  type="checkbox"
-                  checked={enabledMaterials.liftingPullingMechanisms}
-                  onChange={() =>
-                    toggleEnabledMaterial("liftingPullingMechanisms")
-                  }
-                />
-                <span>Lifting/Pulling</span>
-              </label>
-              <label className="material-checkbox-item">
-                <input
-                  type="checkbox"
-                  checked={enabledMaterials.electricalAutomation}
-                  onChange={() => toggleEnabledMaterial("electricalAutomation")}
-                />
-                <span>Electrical/Automation</span>
-              </label>
-              <label className="material-checkbox-item">
-                <input
-                  type="checkbox"
-                  checked={enabledMaterials.safetyMaterials}
-                  onChange={() => toggleEnabledMaterial("safetyMaterials")}
-                />
-                <span>Safety Materials</span>
-              </label>
-              <label className="material-checkbox-item">
-                <input
-                  type="checkbox"
-                  checked={enabledMaterials.surfacePrepPainting}
-                  onChange={() => toggleEnabledMaterial("surfacePrepPainting")}
-                />
-                <span>Surface Prep/Paint</span>
-              </label>
-              <label className="material-checkbox-item">
-                <input
-                  type="checkbox"
-                  checked={enabledMaterials.fabricationConsumables}
-                  onChange={() =>
-                    toggleEnabledMaterial("fabricationConsumables")
-                  }
-                />
-                <span>Fabrication Consumables</span>
-              </label>
-              <label className="material-checkbox-item">
-                <input
-                  type="checkbox"
-                  checked={enabledMaterials.hardwareMisc}
-                  onChange={() => toggleEnabledMaterial("hardwareMisc")}
-                />
-                <span>Hardware/Misc</span>
-              </label>
-              <label className="material-checkbox-item">
-                <input
-                  type="checkbox"
-                  checked={enabledMaterials.documentationMaterials}
-                  onChange={() =>
-                    toggleEnabledMaterial("documentationMaterials")
-                  }
-                />
-                <span>Documentation</span>
-              </label>
-            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Steel Section */}
+              <div className="border border-slate-200 rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 transition-all">
+                <label className="flex items-center gap-3 cursor-pointer mb-3">
+                  <input
+                    type="checkbox"
+                    checked={enabledMaterials.steelSection}
+                    onChange={() => toggleEnabledMaterial("steelSection")}
+                    className="w-5 h-5 mt-0.5"
+                  />
+                  <span className="text-sm font-semibold text-slate-900">Steel Sections</span>
+                </label>
+                {enabledMaterials.steelSection && (
+                  <select
+                    name="steelSection"
+                    value={currentMaterial.steelSection || ""}
+                    onChange={(e) => {
+                      handleMaterialChange(e);
+                      if (e.target.value) {
+                        setTimeout(() => openSpecModal("steelSection"), 0);
+                      }
+                    }}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select Type</option>
+                    {materialSelectionConfig.materialTypes.find(m => m.id === 'steelSection')?.options.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
 
-            <div className="">
-              <h6 className="text-xs font-semibold text-slate-300 uppercase">
-                Selection Options
-              </h6>
-              <div className="grid grid-cols-3 md:grid-cols-3 gap-4">
-                {materialSelectionConfig.materialTypes.map((materialType) =>
-                  enabledMaterials[materialType.id] ? (
-                    <div key={materialType.id}>
-                      <label className="block text-sm font-medium text-slate-300 mb-1 text-left">
-                        {materialType.label}
-                      </label>
-                      <select
-                        name={materialType.fieldName}
-                        value={currentMaterial[materialType.fieldName] || ""}
-                        onChange={(e) => {
-                          handleMaterialChange(e);
-                          if (e.target.value) {
-                            setTimeout(
-                              () => openSpecModal(materialType.fieldName),
-                              0
-                            );
-                          }
-                        }}
-                        className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="">
-                          {formFieldsConfig.selectPlaceholders[
-                            materialType.fieldName
-                          ] || "Select Type (Optional)"}
-                        </option>
-                        {materialType.options.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  ) : null
+              {/* Plate Type */}
+              <div className="border border-slate-200 rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 transition-all">
+                <label className="flex items-center gap-3 cursor-pointer mb-3">
+                  <input
+                    type="checkbox"
+                    checked={enabledMaterials.plateType}
+                    onChange={() => toggleEnabledMaterial("plateType")}
+                    className="w-5 h-5 mt-0.5"
+                  />
+                  <span className="text-sm font-semibold text-slate-900">Plates</span>
+                </label>
+                {enabledMaterials.plateType && (
+                  <select
+                    name="plateType"
+                    value={currentMaterial.plateType || ""}
+                    onChange={(e) => {
+                      handleMaterialChange(e);
+                      if (e.target.value) {
+                        setTimeout(() => openSpecModal("plateType"), 0);
+                      }
+                    }}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select Type</option>
+                    {materialSelectionConfig.materialTypes.find(m => m.id === 'plateType')?.options.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              {/* Material Grade */}
+              <div className="border border-slate-200 rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 transition-all">
+                <label className="flex items-center gap-3 cursor-pointer mb-3">
+                  <input
+                    type="checkbox"
+                    checked={enabledMaterials.materialGrade}
+                    onChange={() => toggleEnabledMaterial("materialGrade")}
+                    className="w-5 h-5 mt-0.5"
+                  />
+                  <span className="text-sm font-semibold text-slate-900">Material Grades</span>
+                </label>
+                {enabledMaterials.materialGrade && (
+                  <select
+                    name="materialGrade"
+                    value={currentMaterial.materialGrade || ""}
+                    onChange={(e) => {
+                      handleMaterialChange(e);
+                      if (e.target.value) {
+                        setTimeout(() => openSpecModal("materialGrade"), 0);
+                      }
+                    }}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select Type</option>
+                    {materialSelectionConfig.materialTypes.find(m => m.id === 'materialGrade')?.options.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              {/* Fastener Type */}
+              <div className="border border-slate-200 rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 transition-all">
+                <label className="flex items-center gap-3 cursor-pointer mb-3">
+                  <input
+                    type="checkbox"
+                    checked={enabledMaterials.fastenerType}
+                    onChange={() => toggleEnabledMaterial("fastenerType")}
+                    className="w-5 h-5 mt-0.5"
+                  />
+                  <span className="text-sm font-semibold text-slate-900">Fasteners</span>
+                </label>
+                {enabledMaterials.fastenerType && (
+                  <select
+                    name="fastenerType"
+                    value={currentMaterial.fastenerType || ""}
+                    onChange={(e) => {
+                      handleMaterialChange(e);
+                      if (e.target.value) {
+                        setTimeout(() => openSpecModal("fastenerType"), 0);
+                      }
+                    }}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select Type</option>
+                    {materialSelectionConfig.materialTypes.find(m => m.id === 'fastenerType')?.options.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              {/* Machined Parts */}
+              <div className="border border-slate-200 rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 transition-all">
+                <label className="flex items-center gap-3 cursor-pointer mb-3">
+                  <input
+                    type="checkbox"
+                    checked={enabledMaterials.machinedParts}
+                    onChange={() => toggleEnabledMaterial("machinedParts")}
+                    className="w-5 h-5 mt-0.5"
+                  />
+                  <span className="text-sm font-semibold text-slate-900">Machined Parts</span>
+                </label>
+                {enabledMaterials.machinedParts && (
+                  <select
+                    name="machinedParts"
+                    value={currentMaterial.machinedParts || ""}
+                    onChange={(e) => {
+                      handleMaterialChange(e);
+                      if (e.target.value) {
+                        setTimeout(() => openSpecModal("machinedParts"), 0);
+                      }
+                    }}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select Type</option>
+                    {materialSelectionConfig.materialTypes.find(m => m.id === 'machinedParts')?.options.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              {/* Roller Movement Components */}
+              <div className="border border-slate-200 rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 transition-all">
+                <label className="flex items-center gap-3 cursor-pointer mb-3">
+                  <input
+                    type="checkbox"
+                    checked={enabledMaterials.rollerMovementComponents}
+                    onChange={() => toggleEnabledMaterial("rollerMovementComponents")}
+                    className="w-5 h-5 mt-0.5"
+                  />
+                  <span className="text-sm font-semibold text-slate-900">Roller / Movement</span>
+                </label>
+                {enabledMaterials.rollerMovementComponents && (
+                  <select
+                    name="rollerMovementComponents"
+                    value={currentMaterial.rollerMovementComponents || ""}
+                    onChange={(e) => {
+                      handleMaterialChange(e);
+                      if (e.target.value) {
+                        setTimeout(() => openSpecModal("rollerMovementComponents"), 0);
+                      }
+                    }}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select Type</option>
+                    {materialSelectionConfig.materialTypes.find(m => m.id === 'rollerMovementComponents')?.options.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              {/* Lifting Pulling Mechanisms */}
+              <div className="border border-slate-200 rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 transition-all">
+                <label className="flex items-center gap-3 cursor-pointer mb-3">
+                  <input
+                    type="checkbox"
+                    checked={enabledMaterials.liftingPullingMechanisms}
+                    onChange={() => toggleEnabledMaterial("liftingPullingMechanisms")}
+                    className="w-5 h-5 mt-0.5"
+                  />
+                  <span className="text-sm font-semibold text-slate-900">Lifting / Pulling</span>
+                </label>
+                {enabledMaterials.liftingPullingMechanisms && (
+                  <select
+                    name="liftingPullingMechanisms"
+                    value={currentMaterial.liftingPullingMechanisms || ""}
+                    onChange={(e) => {
+                      handleMaterialChange(e);
+                      if (e.target.value) {
+                        setTimeout(() => openSpecModal("liftingPullingMechanisms"), 0);
+                      }
+                    }}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select Type</option>
+                    {materialSelectionConfig.materialTypes.find(m => m.id === 'liftingPullingMechanisms')?.options.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              {/* Electrical Automation */}
+              <div className="border border-slate-200 rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 transition-all">
+                <label className="flex items-center gap-3 cursor-pointer mb-3">
+                  <input
+                    type="checkbox"
+                    checked={enabledMaterials.electricalAutomation}
+                    onChange={() => toggleEnabledMaterial("electricalAutomation")}
+                    className="w-5 h-5 mt-0.5"
+                  />
+                  <span className="text-sm font-semibold text-slate-900">Electrical / Automation</span>
+                </label>
+                {enabledMaterials.electricalAutomation && (
+                  <select
+                    name="electricalAutomation"
+                    value={currentMaterial.electricalAutomation || ""}
+                    onChange={(e) => {
+                      handleMaterialChange(e);
+                      if (e.target.value) {
+                        setTimeout(() => openSpecModal("electricalAutomation"), 0);
+                      }
+                    }}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select Type</option>
+                    {materialSelectionConfig.materialTypes.find(m => m.id === 'electricalAutomation')?.options.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              {/* Safety Materials */}
+              <div className="border border-slate-200 rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 transition-all">
+                <label className="flex items-center gap-3 cursor-pointer mb-3">
+                  <input
+                    type="checkbox"
+                    checked={enabledMaterials.safetyMaterials}
+                    onChange={() => toggleEnabledMaterial("safetyMaterials")}
+                    className="w-5 h-5 mt-0.5"
+                  />
+                  <span className="text-sm font-semibold text-slate-900">Safety Materials</span>
+                </label>
+                {enabledMaterials.safetyMaterials && (
+                  <select
+                    name="safetyMaterials"
+                    value={currentMaterial.safetyMaterials || ""}
+                    onChange={(e) => {
+                      handleMaterialChange(e);
+                      if (e.target.value) {
+                        setTimeout(() => openSpecModal("safetyMaterials"), 0);
+                      }
+                    }}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select Type</option>
+                    {materialSelectionConfig.materialTypes.find(m => m.id === 'safetyMaterials')?.options.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              {/* Surface Prep Painting */}
+              <div className="border border-slate-200 rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 transition-all">
+                <label className="flex items-center gap-3 cursor-pointer mb-3">
+                  <input
+                    type="checkbox"
+                    checked={enabledMaterials.surfacePrepPainting}
+                    onChange={() => toggleEnabledMaterial("surfacePrepPainting")}
+                    className="w-5 h-5 mt-0.5"
+                  />
+                  <span className="text-sm font-semibold text-slate-900">Surface Prep / Paint</span>
+                </label>
+                {enabledMaterials.surfacePrepPainting && (
+                  <select
+                    name="surfacePrepPainting"
+                    value={currentMaterial.surfacePrepPainting || ""}
+                    onChange={(e) => {
+                      handleMaterialChange(e);
+                      if (e.target.value) {
+                        setTimeout(() => openSpecModal("surfacePrepPainting"), 0);
+                      }
+                    }}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select Type</option>
+                    {materialSelectionConfig.materialTypes.find(m => m.id === 'surfacePrepPainting')?.options.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              {/* Fabrication Consumables */}
+              <div className="border border-slate-200 rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 transition-all">
+                <label className="flex items-center gap-3 cursor-pointer mb-3">
+                  <input
+                    type="checkbox"
+                    checked={enabledMaterials.fabricationConsumables}
+                    onChange={() => toggleEnabledMaterial("fabricationConsumables")}
+                    className="w-5 h-5 mt-0.5"
+                  />
+                  <span className="text-sm font-semibold text-slate-900">Fabrication Consumables</span>
+                </label>
+                {enabledMaterials.fabricationConsumables && (
+                  <select
+                    name="fabricationConsumables"
+                    value={currentMaterial.fabricationConsumables || ""}
+                    onChange={(e) => {
+                      handleMaterialChange(e);
+                      if (e.target.value) {
+                        setTimeout(() => openSpecModal("fabricationConsumables"), 0);
+                      }
+                    }}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select Type</option>
+                    {materialSelectionConfig.materialTypes.find(m => m.id === 'fabricationConsumables')?.options.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              {/* Hardware Misc */}
+              <div className="border border-slate-200 rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 transition-all">
+                <label className="flex items-center gap-3 cursor-pointer mb-3">
+                  <input
+                    type="checkbox"
+                    checked={enabledMaterials.hardwareMisc}
+                    onChange={() => toggleEnabledMaterial("hardwareMisc")}
+                    className="w-5 h-5 mt-0.5"
+                  />
+                  <span className="text-sm font-semibold text-slate-900">Hardware / Misc</span>
+                </label>
+                {enabledMaterials.hardwareMisc && (
+                  <select
+                    name="hardwareMisc"
+                    value={currentMaterial.hardwareMisc || ""}
+                    onChange={(e) => {
+                      handleMaterialChange(e);
+                      if (e.target.value) {
+                        setTimeout(() => openSpecModal("hardwareMisc"), 0);
+                      }
+                    }}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select Type</option>
+                    {materialSelectionConfig.materialTypes.find(m => m.id === 'hardwareMisc')?.options.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              {/* Documentation Materials */}
+              <div className="border border-slate-200 rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 transition-all">
+                <label className="flex items-center gap-3 cursor-pointer mb-3">
+                  <input
+                    type="checkbox"
+                    checked={enabledMaterials.documentationMaterials}
+                    onChange={() => toggleEnabledMaterial("documentationMaterials")}
+                    className="w-5 h-5 mt-0.5"
+                  />
+                  <span className="text-sm font-semibold text-slate-900">Documentation</span>
+                </label>
+                {enabledMaterials.documentationMaterials && (
+                  <select
+                    name="documentationMaterials"
+                    value={currentMaterial.documentationMaterials || ""}
+                    onChange={(e) => {
+                      handleMaterialChange(e);
+                      if (e.target.value) {
+                        setTimeout(() => openSpecModal("documentationMaterials"), 0);
+                      }
+                    }}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select Type</option>
+                    {materialSelectionConfig.materialTypes.find(m => m.id === 'documentationMaterials')?.options.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
                 )}
               </div>
             </div>
@@ -449,39 +723,43 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
         </div>
 
         {formData.materials.length > 0 && (
-          <div className="mt-8">
-            <h5 className="text-lg font-semibold text-slate-200 mb-4">
-              Material Requirements Table
-            </h5>
-            <div className="overflow-x-auto bg-slate-800 rounded-lg border border-slate-700">
+          <div className="mt-8 space-y-4">
+            <div>
+              <h5 className="text-sm font-semibold text-slate-900 mb-3 text-left">
+                Material Requirements
+              </h5>
+              <p className="text-xs text-slate-600 text-left">
+                {formData.materials.length} material{formData.materials.length !== 1 ? 's' : ''} added
+              </p>
+            </div>
+            <div className="overflow-x-auto bg-white rounded-lg border border-slate-200 shadow-sm">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-slate-600 bg-slate-900">
-                    <th className="p-2 text-left text-left text-slate-300 font-medium">
+                  <tr className="border-b border-slate-200 bg-slate-50">
+                    <th className="p-2 text-left text-xs font-semibold text-slate-700 uppercase tracking-wide">
                       Material Name
                     </th>
-
-                    <th className="p-2 text-left text-left text-slate-300 font-medium">
+                    <th className="p-2 text-left text-xs font-semibold text-slate-700 uppercase tracking-wide">
                       Type
                     </th>
-                    <th className="p-2 text-left text-slate-300 font-medium">
+                    <th className="p-2 text-left text-xs font-semibold text-slate-700 uppercase tracking-wide">
                       Qty
                     </th>
-                    <th className="p-2 text-left text-left text-slate-300 font-medium">
+                    <th className="p-2 text-left text-xs font-semibold text-slate-700 uppercase tracking-wide">
                       Unit
                     </th>
-                    <th className="p-2 text-left text-left text-slate-300 font-medium">
+                    <th className="p-2 text-left text-xs font-semibold text-slate-700 uppercase tracking-wide">
                       Source
                     </th>
-                    <th className="p-2 text-left text-left text-slate-300 font-medium">
+                    <th className="p-2 text-left text-xs font-semibold text-slate-700 uppercase tracking-wide">
                       Assignee
                     </th>
-                    <th className="p-2 text-left text-slate-300 font-medium">
+                    <th className="p-2 text-center text-xs font-semibold text-slate-700 uppercase tracking-wide">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-slate-200">
                   {formData.materials.map((material) => {
                     const assigneeName = material.assignee
                       ? state.employees?.find(
@@ -511,13 +789,13 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                     return (
                       <tr
                         key={material.id}
-                        className="border-b border-slate-700 hover:bg-slate-700/50 transition-colors"
+                        className="hover:bg-blue-50 transition-colors"
                       >
-                        <td className="p-2 text-left text-slate-100 font-medium">
+                        <td className="p-2 text-sm font-medium text-slate-900 text-left">
                           {materialType}
                         </td>
-                        <td className="p-2 text-left">
-                          <span className="text-xs bg-slate-700 text-slate-300 px-2 py-1 rounded">
+                        <td className="p-2 text-sm">
+                          <span className="inline-flex items-center p-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                             {(() => {
                               for (const config of materialDetailsConfig.materialTypes) {
                                 if (material[config.id]) {
@@ -528,22 +806,22 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                             })()}
                           </span>
                         </td>
-                        <td className="p-2 text-left text-slate-100 font-medium">
+                        <td className="p-2 text-sm font-medium text-slate-900 text-left">
                           {material.quantity}
                         </td>
-                        <td className="p-2 text-left text-slate-300">
+                        <td className="p-2 text-sm text-slate-600">
                           {material.unit || "-"}
                         </td>
-                        <td className="p-2 text-left text-slate-300">
+                        <td className="p-2 text-sm">
                           {material.source ? (
-                            <span className="text-xs bg-blue-900 text-blue-200 px-2 py-1 rounded capitalize">
+                            <span className="inline-flex items-center p-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800 capitalize">
                               {material.source}
                             </span>
                           ) : (
-                            "-"
+                            <span className="text-slate-400">-</span>
                           )}
                         </td>
-                        <td className="p-2 text-left text-slate-300">
+                        <td className="p-2 text-sm">
                           <select
                             value={material.assignee || ""}
                             onChange={(e) => {
@@ -556,7 +834,7 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                                 )
                               );
                             }}
-                            className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-slate-100 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
                           >
                             <option value="">Select Assignee</option>
                             {state.employees &&
@@ -570,15 +848,15 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                               ))}
                           </select>
                         </td>
-                        <td className="p-2 text-left">
-                          <div className="flex items-center justify-center gap-2">
+                        <td className="p-2 text-sm">
+                          <div className="flex items-center justify-center gap-1">
                             <button
                               type="button"
                               onClick={() => {
                                 setViewingMaterial(material);
                                 setViewModalOpen(true);
                               }}
-                              className="w-8 h-8 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center transition-colors"
+                              className="p-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 hover:text-blue-700 transition-colors"
                               title="View Details"
                             >
                               <FileText size={16} />
@@ -586,7 +864,7 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                             <button
                               type="button"
                               onClick={() => editMaterial(material)}
-                              className="w-8 h-8 rounded-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center transition-colors"
+                              className="p-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-700 transition-colors"
                               title="Edit"
                             >
                               <Edit2 size={16} />
@@ -594,7 +872,7 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                             <button
                               type="button"
                               onClick={() => removeMaterial(material.id)}
-                              className="w-8 h-8 rounded-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center transition-colors"
+                              className="p-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 transition-colors"
                               title="Delete"
                             >
                               <Trash2 size={16} />
@@ -623,57 +901,64 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
           materialDetailsTable.fabricationConsumables.length > 0 ||
           materialDetailsTable.hardwareMisc.length > 0 ||
           materialDetailsTable.documentationMaterials.length > 0) && (
-          <div className="mt-8">
-            <h5 className="text-sm font-semibold text-slate-200 mb-4">
-              Material Specifications Summary
-            </h5>
-            <div className="overflow-x-auto bg-slate-800 rounded-lg border border-slate-700">
+          <div className="mt-8 space-y-4">
+            <div>
+              <h5 className="text-sm font-semibold text-slate-900 mb-1 text-left">
+                Material Specifications Summary
+              </h5>
+              <p className="text-xs text-slate-600 text-left">
+                Detailed specifications for all materials
+              </p>
+            </div>
+            <div className="overflow-x-auto bg-white rounded-lg border border-slate-200 shadow-sm">
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="bg-slate-700 border-b border-slate-600">
-                    <th className="p-2 text-left text-left text-slate-300">
+                  <tr className="bg-slate-50 border-b border-slate-200">
+                    <th className="p-2 text-left text-xs font-semibold text-slate-700 uppercase tracking-wide">
                       Type
                     </th>
-                    <th className="p-2 text-left text-left text-slate-300">
+                    <th className="p-2 text-left text-xs font-semibold text-slate-700 uppercase tracking-wide">
                       Selection
                     </th>
-                    <th className="p-2 text-left text-left text-slate-300">
+                    <th className="p-2 text-left text-xs font-semibold text-slate-700 uppercase tracking-wide">
                       Details
                     </th>
-                    <th className="p-2 text-left text-left text-slate-300">
+                    <th className="p-2 text-left text-xs font-semibold text-slate-700 uppercase tracking-wide">
                       Quantity
                     </th>
-                    <th className="p-2 text-left text-left text-slate-300">
+                    <th className="p-2 text-left text-xs font-semibold text-slate-700 uppercase tracking-wide">
                       Quality
                     </th>
-                    <th className="p-2 text-left text-slate-300">Action</th>
+                    <th className="p-2 text-center text-xs font-semibold text-slate-700 uppercase tracking-wide">
+                      Action
+                    </th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-slate-200">
                   {materialDetailsTable.steelSection.map((row) => (
                     <tr
                       key={row.id}
-                      className="border-b border-slate-700 hover:bg-slate-700/50"
+                      className="hover:bg-blue-50 transition-colors"
                     >
-                      <td className="p-2 text-left text-slate-300 font-medium">
+                      <td className="p-2 text-left text-sm font-medium text-slate-900 text-left">
                         Steel Section
                       </td>
-                      <td className="p-2 text-left text-slate-300">
+                      <td className="p-2 text-left text-sm text-slate-900">
                         {row.selection}
                       </td>
-                      <td className="p-2 text-left text-slate-400">
+                      <td className="p-2 text-left text-sm text-slate-600">
                         {row.steelSize && `Size: ${row.steelSize}`}
                         {row.steelLength && ` | Length: ${row.steelLength}mm`}
                         {row.steelTolerance && ` | Tol: ${row.steelTolerance}`}
                       </td>
-                      <td className="p-2 text-left text-slate-300">
+                      <td className="p-2 text-left text-sm text-slate-900">
                         {row.steelSectionQuantity || "-"}
                       </td>
-                      <td className="p-2 text-left text-slate-300">
+                      <td className="p-2 text-left text-sm text-slate-900">
                         {row.steelSectionQuality || "-"}
                       </td>
-                      <td className="p-2 text-left">
-                        <div className="flex justify-center gap-2">
+                      <td className="p-2 text-center">
+                        <div className="flex justify-center gap-1">
                           <button
                             type="button"
                             onClick={() => {
@@ -692,7 +977,7 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                               }));
                               openSpecModal("steelSection");
                             }}
-                            className="text-blue-400 hover:text-blue-300"
+                            className="p-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-700 transition-colors"
                           >
                             <Edit2 size={14} />
                           </button>
@@ -701,7 +986,7 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                             onClick={() =>
                               removeDetailRow("steelSection", row.id)
                             }
-                            className="text-red-400 hover:text-red-300"
+                            className="p-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 transition-colors"
                           >
                             <Trash2 size={14} />
                           </button>
@@ -712,28 +997,28 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                   {materialDetailsTable.plateType.map((row) => (
                     <tr
                       key={row.id}
-                      className="border-b border-slate-700 hover:bg-slate-700/50"
+                      className="hover:bg-blue-50 transition-colors"
                     >
-                      <td className="p-2 text-left text-slate-300 font-medium">
+                      <td className="p-2 text-left text-sm font-medium text-slate-900 text-left">
                         Plate
                       </td>
-                      <td className="p-2 text-left text-slate-300">
+                      <td className="p-2 text-left text-sm text-slate-900">
                         {row.selection}
                       </td>
-                      <td className="p-2 text-left text-slate-400">
+                      <td className="p-2 text-left text-sm text-slate-600">
                         {row.plateThickness && `Thick: ${row.plateThickness}mm`}
                         {row.plateLength && ` | Length: ${row.plateLength}mm`}
                         {row.plateWidth && ` | Width: ${row.plateWidth}mm`}
                         {row.plateSurfaceFinish &&
                           ` | Finish: ${row.plateSurfaceFinish}`}
                       </td>
-                      <td className="p-2 text-left text-slate-300">
+                      <td className="p-2 text-left text-sm text-slate-900">
                         {row.plateTypeQuantity || "-"}
                       </td>
-                      <td className="p-2 text-left text-slate-300">
+                      <td className="p-2 text-left text-sm text-slate-900">
                         {row.plateTypeQuality || "-"}
                       </td>
-                      <td className="p-2 text-left">
+                      <td className="p-2 text-center">
                         <div className="flex justify-center gap-2">
                           <button
                             type="button"
@@ -772,12 +1057,12 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                   {materialDetailsTable.materialGrade.map((row) => (
                     <tr
                       key={row.id}
-                      className="border-b border-slate-700 hover:bg-slate-700/50"
+                      className="border-b border-slate-200 hover:bg-purple-50"
                     >
-                      <td className="p-2 text-left text-slate-300 font-medium">
+                      <td className="p-2 text-left text-slate-900 font-medium">
                         Material Grade
                       </td>
-                      <td className="p-2 text-left text-slate-300">
+                      <td className="p-2 text-left text-slate-900">
                         {row.selection}
                       </td>
                       <td className="p-2 text-left text-slate-400">
@@ -788,10 +1073,10 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                         {row.gradeSpecialRequirements &&
                           ` | Special: ${row.gradeSpecialRequirements}`}
                       </td>
-                      <td className="p-2 text-left text-slate-300">
+                      <td className="p-2 text-left text-slate-900">
                         {row.materialGradeQuantity || "-"}
                       </td>
-                      <td className="p-2 text-left text-slate-300">
+                      <td className="p-2 text-left text-slate-900">
                         {row.materialGradeQuality || "-"}
                       </td>
                       <td className="p-2 text-left">
@@ -838,12 +1123,12 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                   {materialDetailsTable.fastenerType.map((row) => (
                     <tr
                       key={row.id}
-                      className="border-b border-slate-700 hover:bg-slate-700/50"
+                      className="border-b border-slate-200 hover:bg-purple-50"
                     >
-                      <td className="p-2 text-left text-slate-300 font-medium">
+                      <td className="p-2 text-left text-slate-900 font-medium">
                         Fastener
                       </td>
-                      <td className="p-2 text-left text-slate-300">
+                      <td className="p-2 text-left text-slate-900">
                         {row.selection}
                       </td>
                       <td className="p-2 text-left text-slate-400">
@@ -853,10 +1138,10 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                         {row.fastenerPlating &&
                           ` | Plating: ${row.fastenerPlating}`}
                       </td>
-                      <td className="p-2 text-left text-slate-300">
+                      <td className="p-2 text-left text-slate-900">
                         {row.fastenerTypeQuantity || "-"}
                       </td>
-                      <td className="p-2 text-left text-slate-300">
+                      <td className="p-2 text-left text-slate-900">
                         {row.fastenerTypeQuality || "-"}
                       </td>
                       <td className="p-2 text-left">
@@ -900,12 +1185,12 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                   {materialDetailsTable.machinedParts.map((row) => (
                     <tr
                       key={row.id}
-                      className="border-b border-slate-700 hover:bg-slate-700/50"
+                      className="border-b border-slate-200 hover:bg-purple-50"
                     >
-                      <td className="p-2 text-left text-slate-300 font-medium">
+                      <td className="p-2 text-left text-slate-900 font-medium">
                         Machined Part
                       </td>
-                      <td className="p-2 text-left text-slate-300">
+                      <td className="p-2 text-left text-slate-900">
                         {row.selection}
                       </td>
                       <td className="p-2 text-left text-slate-400">
@@ -921,10 +1206,10 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                           .filter(Boolean)
                           .join(" | ")}
                       </td>
-                      <td className="p-2 text-left text-slate-300">
+                      <td className="p-2 text-left text-slate-900">
                         {row.machinedPartsQuantity || "-"}
                       </td>
-                      <td className="p-2 text-left text-slate-300">
+                      <td className="p-2 text-left text-slate-900">
                         {row.machinedPartsQuality || "-"}
                       </td>
                       <td className="p-2 text-left">
@@ -977,12 +1262,12 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                   {materialDetailsTable.rollerMovementComponents.map((row) => (
                     <tr
                       key={row.id}
-                      className="border-b border-slate-700 hover:bg-slate-700/50"
+                      className="border-b border-slate-200 hover:bg-purple-50"
                     >
-                      <td className="p-2 text-left text-slate-300 font-medium">
+                      <td className="p-2 text-left text-slate-900 font-medium">
                         Roller/Movement
                       </td>
-                      <td className="p-2 text-left text-slate-300">
+                      <td className="p-2 text-left text-slate-900">
                         {row.selection}
                       </td>
                       <td className="p-2 text-left text-slate-400">
@@ -998,10 +1283,10 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                           .filter(Boolean)
                           .join(" | ")}
                       </td>
-                      <td className="p-2 text-left text-slate-300">
+                      <td className="p-2 text-left text-slate-900">
                         {row.rollerMovementComponentsQuantity || "-"}
                       </td>
-                      <td className="p-2 text-left text-slate-300">
+                      <td className="p-2 text-left text-slate-900">
                         {row.rollerMovementComponentsQuality || "-"}
                       </td>
                       <td className="p-2 text-left">
@@ -1061,12 +1346,12 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                   {materialDetailsTable.liftingPullingMechanisms.map((row) => (
                     <tr
                       key={row.id}
-                      className="border-b border-slate-700 hover:bg-slate-700/50"
+                      className="border-b border-slate-200 hover:bg-purple-50"
                     >
-                      <td className="p-2 text-left text-slate-300 font-medium">
+                      <td className="p-2 text-left text-slate-900 font-medium">
                         Lifting/Pulling
                       </td>
-                      <td className="p-2 text-left text-slate-300">
+                      <td className="p-2 text-left text-slate-900">
                         {row.selection}
                       </td>
                       <td className="p-2 text-left text-slate-400">
@@ -1082,10 +1367,10 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                           .filter(Boolean)
                           .join(" | ")}
                       </td>
-                      <td className="p-2 text-left text-slate-300">
+                      <td className="p-2 text-left text-slate-900">
                         {row.liftingPullingMechanismsQuantity || "-"}
                       </td>
-                      <td className="p-2 text-left text-slate-300">
+                      <td className="p-2 text-left text-slate-900">
                         {row.liftingPullingMechanismsQuality || "-"}
                       </td>
                       <td className="p-2 text-left">
@@ -1145,12 +1430,12 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                   {materialDetailsTable.electricalAutomation.map((row) => (
                     <tr
                       key={row.id}
-                      className="border-b border-slate-700 hover:bg-slate-700/50"
+                      className="border-b border-slate-200 hover:bg-purple-50"
                     >
-                      <td className="p-2 text-left text-slate-300 font-medium">
+                      <td className="p-2 text-left text-slate-900 font-medium">
                         Electrical/Automation
                       </td>
-                      <td className="p-2 text-left text-slate-300">
+                      <td className="p-2 text-left text-slate-900">
                         {row.selection}
                       </td>
                       <td className="p-2 text-left text-slate-400">
@@ -1166,10 +1451,10 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                           .filter(Boolean)
                           .join(" | ")}
                       </td>
-                      <td className="p-2 text-left text-slate-300">
+                      <td className="p-2 text-left text-slate-900">
                         {row.electricalAutomationQuantity || "-"}
                       </td>
-                      <td className="p-2 text-left text-slate-300">
+                      <td className="p-2 text-left text-slate-900">
                         {row.electricalAutomationQuality || "-"}
                       </td>
                       <td className="p-2 text-left">
@@ -1223,12 +1508,12 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                   {materialDetailsTable.safetyMaterials.map((row) => (
                     <tr
                       key={row.id}
-                      className="border-b border-slate-700 hover:bg-slate-700/50"
+                      className="border-b border-slate-200 hover:bg-purple-50"
                     >
-                      <td className="p-2 text-left text-slate-300 font-medium">
+                      <td className="p-2 text-left text-slate-900 font-medium">
                         Safety Materials
                       </td>
-                      <td className="p-2 text-left text-slate-300">
+                      <td className="p-2 text-left text-slate-900">
                         {row.selection}
                       </td>
                       <td className="p-2 text-left text-slate-400">
@@ -1244,10 +1529,10 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                           .filter(Boolean)
                           .join(" | ")}
                       </td>
-                      <td className="p-2 text-left text-slate-300">
+                      <td className="p-2 text-left text-slate-900">
                         {row.safetyMaterialsQuantity || "-"}
                       </td>
-                      <td className="p-2 text-left text-slate-300">
+                      <td className="p-2 text-left text-slate-900">
                         {row.safetyMaterialsQuality || "-"}
                       </td>
                       <td className="p-2 text-left">
@@ -1301,12 +1586,12 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                   {materialDetailsTable.surfacePrepPainting.map((row) => (
                     <tr
                       key={row.id}
-                      className="border-b border-slate-700 hover:bg-slate-700/50"
+                      className="border-b border-slate-200 hover:bg-purple-50"
                     >
-                      <td className="p-2 text-left text-slate-300 font-medium">
+                      <td className="p-2 text-left text-slate-900 font-medium">
                         Surface Prep/Paint
                       </td>
-                      <td className="p-2 text-left text-slate-300">
+                      <td className="p-2 text-left text-slate-900">
                         {row.selection}
                       </td>
                       <td className="p-2 text-left text-slate-400">
@@ -1322,10 +1607,10 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                           .filter(Boolean)
                           .join(" | ")}
                       </td>
-                      <td className="p-2 text-left text-slate-300">
+                      <td className="p-2 text-left text-slate-900">
                         {row.surfacePrepPaintingQuantity || "-"}
                       </td>
-                      <td className="p-2 text-left text-slate-300">
+                      <td className="p-2 text-left text-slate-900">
                         {row.surfacePrepPaintingQuality || "-"}
                       </td>
                       <td className="p-2 text-left">
@@ -1379,12 +1664,12 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                   {materialDetailsTable.fabricationConsumables.map((row) => (
                     <tr
                       key={row.id}
-                      className="border-b border-slate-700 hover:bg-slate-700/50"
+                      className="border-b border-slate-200 hover:bg-purple-50"
                     >
-                      <td className="p-2 text-left text-slate-300 font-medium">
+                      <td className="p-2 text-left text-slate-900 font-medium">
                         Fabrication Consumables
                       </td>
-                      <td className="p-2 text-left text-slate-300">
+                      <td className="p-2 text-left text-slate-900">
                         {row.selection}
                       </td>
                       <td className="p-2 text-left text-slate-400">
@@ -1400,10 +1685,10 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                           .filter(Boolean)
                           .join(" | ")}
                       </td>
-                      <td className="p-2 text-left text-slate-300">
+                      <td className="p-2 text-left text-slate-900">
                         {row.fabricationConsumablesQuantity || "-"}
                       </td>
-                      <td className="p-2 text-left text-slate-300">
+                      <td className="p-2 text-left text-slate-900">
                         {row.fabricationConsumablesQuality || "-"}
                       </td>
                       <td className="p-2 text-left">
@@ -1458,12 +1743,12 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                   {materialDetailsTable.hardwareMisc.map((row) => (
                     <tr
                       key={row.id}
-                      className="border-b border-slate-700 hover:bg-slate-700/50"
+                      className="border-b border-slate-200 hover:bg-purple-50"
                     >
-                      <td className="p-2 text-left text-slate-300 font-medium">
+                      <td className="p-2 text-left text-slate-900 font-medium">
                         Hardware/Misc
                       </td>
-                      <td className="p-2 text-left text-slate-300">
+                      <td className="p-2 text-left text-slate-900">
                         {row.selection}
                       </td>
                       <td className="p-2 text-left text-slate-400">
@@ -1479,10 +1764,10 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                           .filter(Boolean)
                           .join(" | ")}
                       </td>
-                      <td className="p-2 text-left text-slate-300">
+                      <td className="p-2 text-left text-slate-900">
                         {row.hardwareMiscQuantity || "-"}
                       </td>
-                      <td className="p-2 text-left text-slate-300">
+                      <td className="p-2 text-left text-slate-900">
                         {row.hardwareMiscQuality || "-"}
                       </td>
                       <td className="p-2 text-left">
@@ -1534,12 +1819,12 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                   {materialDetailsTable.documentationMaterials.map((row) => (
                     <tr
                       key={row.id}
-                      className="border-b border-slate-700 hover:bg-slate-700/50"
+                      className="border-b border-slate-200 hover:bg-purple-50"
                     >
-                      <td className="p-2 text-left text-slate-300 font-medium">
+                      <td className="p-2 text-left text-slate-900 font-medium">
                         Documentation
                       </td>
-                      <td className="p-2 text-left text-slate-300">
+                      <td className="p-2 text-left text-slate-900">
                         {row.selection}
                       </td>
                       <td className="p-2 text-left text-slate-400">
@@ -1555,10 +1840,10 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                           .filter(Boolean)
                           .join(" | ")}
                       </td>
-                      <td className="p-2 text-left text-slate-300">
+                      <td className="p-2 text-left text-slate-900">
                         {row.documentationMaterialsQuantity || "-"}
                       </td>
-                      <td className="p-2 text-left text-slate-300">
+                      <td className="p-2 text-left text-slate-900">
                         {row.documentationMaterialsQuality || "-"}
                       </td>
                       <td className="p-2 text-left">
@@ -1622,11 +1907,14 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
         title={`Edit ${getModalTitle(specModalType)} Specifications`}
         size="lg"
       >
-        <div className="bg-slate-900 p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+        <div className="p-8 space-y-6 max-h-[70vh] overflow-y-auto bg-gradient-to-b from-slate-50 to-white">
           {specModalType === "steelSection" && (
-            <div className="space-y-6">
+            <div className="space-y-7">
               <div>
-                <h5 className="text-sm font-semibold text-slate-200 mb-3">Basic Specifications</h5>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="h-1 w-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full"></div>
+                  <h5 className="text-sm font-bold text-slate-900 uppercase tracking-wide">Basic Specifications</h5>
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   {STEEL_SECTIONS_SPECS[currentMaterial.steelSection]?.map(
                     (field) => (
@@ -1648,8 +1936,11 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
               </div>
 
               {currentMaterial.steelSection && STEEL_SECTION_CATEGORY_FIELDS[currentMaterial.steelSection] && (
-                <div>
-                  <h5 className="text-sm font-semibold text-slate-200 mb-3">Category-Specific Details</h5>
+                <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="h-1 w-8 bg-gradient-to-r from-purple-500 to-purple-600 rounded-full"></div>
+                    <h5 className="text-sm font-bold text-slate-900 uppercase tracking-wide">Category Details</h5>
+                  </div>
                   <div className="grid grid-cols-2 gap-4">
                     {STEEL_SECTION_CATEGORY_FIELDS[currentMaterial.steelSection]?.map(
                       (field) => (
@@ -1671,8 +1962,11 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                 </div>
               )}
 
-              <div>
-                <h5 className="text-sm font-semibold text-slate-200 mb-3">Quantity & Quality</h5>
+              <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="h-1 w-8 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-full"></div>
+                  <h5 className="text-sm font-bold text-slate-900 uppercase tracking-wide">Quantity & Quality</h5>
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   {renderCommonFields("steelSection")}
                 </div>
@@ -1681,9 +1975,12 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
           )}
 
           {specModalType === "plateType" && (
-            <div className="space-y-6">
+            <div className="space-y-7">
               <div>
-                <h5 className="text-sm font-semibold text-slate-200 mb-3">Basic Specifications</h5>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="h-1 w-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full"></div>
+                  <h5 className="text-sm font-bold text-slate-900 uppercase tracking-wide">Basic Specifications</h5>
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   {PLATE_TYPES_SPECS[currentMaterial.plateType]?.map((field) => (
                     <Input
@@ -1703,8 +2000,11 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
               </div>
 
               {currentMaterial.plateType && PLATE_CATEGORY_FIELDS[currentMaterial.plateType] && (
-                <div>
-                  <h5 className="text-sm font-semibold text-slate-200 mb-3">Category-Specific Details</h5>
+                <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="h-1 w-8 bg-gradient-to-r from-purple-500 to-purple-600 rounded-full"></div>
+                    <h5 className="text-sm font-bold text-slate-900 uppercase tracking-wide">Category Details</h5>
+                  </div>
                   <div className="grid grid-cols-2 gap-4">
                     {PLATE_CATEGORY_FIELDS[currentMaterial.plateType]?.map(
                       (field) => (
@@ -1726,8 +2026,11 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                 </div>
               )}
 
-              <div>
-                <h5 className="text-sm font-semibold text-slate-200 mb-3">Quantity & Quality</h5>
+              <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="h-1 w-8 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-full"></div>
+                  <h5 className="text-sm font-bold text-slate-900 uppercase tracking-wide">Quantity & Quality</h5>
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   {renderCommonFields("plateType")}
                 </div>
@@ -1736,9 +2039,12 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
           )}
 
           {specModalType === "materialGrade" && (
-            <div className="space-y-6">
+            <div className="space-y-7">
               <div>
-                <h5 className="text-sm font-semibold text-slate-200 mb-3">Basic Specifications</h5>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="h-1 w-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full"></div>
+                  <h5 className="text-sm font-bold text-slate-900 uppercase tracking-wide">Basic Specifications</h5>
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   {MATERIAL_GRADES_SPECS[currentMaterial.materialGrade]?.map(
                     (field) => (
@@ -1912,13 +2218,13 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
           {specModalType === "rollerMovementComponents" && (
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2 text-left">
+                <label className="block text-sm font-medium text-slate-900 text-left mb-2 text-left">
                   Component Type
                 </label>
                 <select
                   value={selectedSubCategory || ""}
                   onChange={(e) => setSelectedSubCategory(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                 >
                   <option value="">Select Component Type</option>
                   {getAllSubCategories("rollerMovementComponents").map((category) => (
@@ -1939,7 +2245,7 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                       (field) => (
                         field.type === "select" ? (
                           <div key={field.name}>
-                            <label className="block text-sm font-medium text-slate-300 mb-1 text-left">
+                            <label className="block text-sm font-medium text-slate-900 text-left mb-1 text-left">
                               {field.label}
                             </label>
                             <select
@@ -1953,7 +2259,7 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                                   },
                                 }))
                               }
-                              className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                             >
                               <option value="">{field.placeholder}</option>
                               {field.options?.map((opt) => (
@@ -2001,13 +2307,13 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
           {specModalType === "liftingPullingMechanisms" && (
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2 text-left">
+                <label className="block text-sm font-medium text-slate-900 text-left mb-2 text-left">
                   Mechanism Type
                 </label>
                 <select
                   value={selectedSubCategory || ""}
                   onChange={(e) => setSelectedSubCategory(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                 >
                   <option value="">Select Mechanism Type</option>
                   {getAllSubCategories("liftingPullingMechanisms").map((category) => (
@@ -2028,7 +2334,7 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                       (field) => (
                         field.type === "select" ? (
                           <div key={field.name}>
-                            <label className="block text-sm font-medium text-slate-300 mb-1 text-left">
+                            <label className="block text-sm font-medium text-slate-900 text-left mb-1 text-left">
                               {field.label}
                             </label>
                             <select
@@ -2042,7 +2348,7 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                                   },
                                 }))
                               }
-                              className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                             >
                               <option value="">{field.placeholder}</option>
                               {field.options?.map((opt) => (
@@ -2088,13 +2394,13 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
           {specModalType === "electricalAutomation" && (
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2 text-left">
+                <label className="block text-sm font-medium text-slate-900 text-left mb-2 text-left">
                   Component Category
                 </label>
                 <select
                   value={selectedSubCategory || ""}
                   onChange={(e) => setSelectedSubCategory(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                 >
                   <option value="">Select Category</option>
                   {getAllSubCategories("electricalAutomation").map((category) => (
@@ -2115,7 +2421,7 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                       (field) => (
                         field.type === "select" ? (
                           <div key={field.name}>
-                            <label className="block text-sm font-medium text-slate-300 mb-1 text-left">
+                            <label className="block text-sm font-medium text-slate-900 text-left mb-1 text-left">
                               {field.label}
                             </label>
                             <select
@@ -2129,7 +2435,7 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                                   },
                                 }))
                               }
-                              className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                             >
                               <option value="">{field.placeholder}</option>
                               {field.options?.map((opt) => (
@@ -2175,13 +2481,13 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
           {specModalType === "safetyMaterials" && (
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2 text-left">
+                <label className="block text-sm font-medium text-slate-900 text-left mb-2 text-left">
                   Safety Material Type
                 </label>
                 <select
                   value={selectedSubCategory || ""}
                   onChange={(e) => setSelectedSubCategory(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                 >
                   <option value="">Select Type</option>
                   {getAllSubCategories("safetyMaterials").map((category) => (
@@ -2202,7 +2508,7 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                       (field) => (
                         field.type === "select" ? (
                           <div key={field.name}>
-                            <label className="block text-sm font-medium text-slate-300 mb-1 text-left">
+                            <label className="block text-sm font-medium text-slate-900 text-left mb-1 text-left">
                               {field.label}
                             </label>
                             <select
@@ -2216,7 +2522,7 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                                   },
                                 }))
                               }
-                              className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                             >
                               <option value="">{field.placeholder}</option>
                               {field.options?.map((opt) => (
@@ -2262,13 +2568,13 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
           {specModalType === "surfacePrepPainting" && (
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2 text-left">
+                <label className="block text-sm font-medium text-slate-900 text-left mb-2 text-left">
                   Painting Process
                 </label>
                 <select
                   value={selectedSubCategory || ""}
                   onChange={(e) => setSelectedSubCategory(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                 >
                   <option value="">Select Process</option>
                   {getAllSubCategories("surfacePrepPainting").map((category) => (
@@ -2289,7 +2595,7 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                       (field) => (
                         field.type === "select" ? (
                           <div key={field.name}>
-                            <label className="block text-sm font-medium text-slate-300 mb-1 text-left">
+                            <label className="block text-sm font-medium text-slate-900 text-left mb-1 text-left">
                               {field.label}
                             </label>
                             <select
@@ -2303,7 +2609,7 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                                   },
                                 }))
                               }
-                              className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                             >
                               <option value="">{field.placeholder}</option>
                               {field.options?.map((opt) => (
@@ -2349,13 +2655,13 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
           {specModalType === "fabricationConsumables" && (
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2 text-left">
+                <label className="block text-sm font-medium text-slate-900 text-left mb-2 text-left">
                   Consumable Type
                 </label>
                 <select
                   value={selectedSubCategory || ""}
                   onChange={(e) => setSelectedSubCategory(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                 >
                   <option value="">Select Type</option>
                   {getAllSubCategories("fabricationConsumables").map((category) => (
@@ -2376,7 +2682,7 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                       (field) => (
                         field.type === "select" ? (
                           <div key={field.name}>
-                            <label className="block text-sm font-medium text-slate-300 mb-1 text-left">
+                            <label className="block text-sm font-medium text-slate-900 text-left mb-1 text-left">
                               {field.label}
                             </label>
                             <select
@@ -2390,7 +2696,7 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                                   },
                                 }))
                               }
-                              className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                             >
                               <option value="">{field.placeholder}</option>
                               {field.options?.map((opt) => (
@@ -2436,13 +2742,13 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
           {specModalType === "hardwareMisc" && (
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2 text-left">
+                <label className="block text-sm font-medium text-slate-900 text-left mb-2 text-left">
                   Hardware Type
                 </label>
                 <select
                   value={selectedSubCategory || ""}
                   onChange={(e) => setSelectedSubCategory(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                 >
                   <option value="">Select Type</option>
                   {getAllSubCategories("hardwareMisc").map((category) => (
@@ -2463,7 +2769,7 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                       (field) => (
                         field.type === "select" ? (
                           <div key={field.name}>
-                            <label className="block text-sm font-medium text-slate-300 mb-1 text-left">
+                            <label className="block text-sm font-medium text-slate-900 text-left mb-1 text-left">
                               {field.label}
                             </label>
                             <select
@@ -2477,7 +2783,7 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                                   },
                                 }))
                               }
-                              className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                             >
                               <option value="">{field.placeholder}</option>
                               {field.options?.map((opt) => (
@@ -2523,13 +2829,13 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
           {specModalType === "documentationMaterials" && (
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2 text-left">
+                <label className="block text-sm font-medium text-slate-900 text-left mb-2 text-left">
                   Documentation Type
                 </label>
                 <select
                   value={selectedSubCategory || ""}
                   onChange={(e) => setSelectedSubCategory(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                 >
                   <option value="">Select Type</option>
                   {getAllSubCategories("documentationMaterials").map((category) => (
@@ -2550,7 +2856,7 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                       (field) => (
                         field.type === "select" ? (
                           <div key={field.name}>
-                            <label className="block text-sm font-medium text-slate-300 mb-1 text-left">
+                            <label className="block text-sm font-medium text-slate-900 text-left mb-1 text-left">
                               {field.label}
                             </label>
                             <select
@@ -2564,7 +2870,7 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                                   },
                                 }))
                               }
-                              className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                             >
                               <option value="">{field.placeholder}</option>
                               {field.options?.map((opt) => (
@@ -2622,9 +2928,9 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                 </div>
               </div>
 
-              <div className="bg-slate-800 p-3 rounded border border-slate-600 space-y-3">
+              <div className="bg-white p-3 rounded border border-slate-200 space-y-3">
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2 text-left">
+                  <label className="block text-sm font-medium text-slate-900 text-left mb-2 text-left">
                     Upload Documents
                   </label>
                   <input
@@ -2632,7 +2938,7 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                     multiple
                     accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.txt"
                     onChange={handleDocumentationFileUpload}
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 text-sm cursor-pointer hover:border-blue-500"
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm cursor-pointer hover:border-purple-500"
                   />
                   <p className="text-xs text-slate-400 mt-1">
                     Supported: PDF, DOC, DOCX, XLS, XLSX, JPG, PNG, TXT
@@ -2641,7 +2947,7 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                 {currentMaterial.documentationUploadedFiles &&
                   currentMaterial.documentationUploadedFiles.length > 0 && (
                     <div className="space-y-2">
-                      <p className="text-xs font-medium text-slate-300">
+                      <p className="text-xs font-medium text-slate-900">
                         Uploaded Files (
                         {currentMaterial.documentationUploadedFiles.length}):
                       </p>
@@ -2649,10 +2955,10 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                         (file, index) => (
                           <div
                             key={index}
-                            className="flex items-center justify-between bg-slate-700 p-2 rounded border border-slate-600"
+                            className="flex items-center text-xs justify-between bg-purple-50 p-2 rounded border border-purple-200"
                           >
                             <div className="flex-1 truncate">
-                              <p className="text-xs text-slate-300 truncate">
+                              <p className="text-xs text-slate-900 truncate">
                                 {file.name}
                               </p>
                               <p className="text-xs text-slate-500">
@@ -2675,7 +2981,7 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
             </div>
           )}
 
-          <div className="flex gap-3 mt-6 pt-4 border-t border-slate-700">
+          <div className="flex gap-3 mt-8 pt-6 border-t border-slate-200/50 sticky bottom-0 bg-gradient-to-b from-transparent to-white/95 backdrop-blur-sm -mx-8 px-8 pb-8">
             <Button
               type="button"
               onClick={() => {
@@ -2799,18 +3105,18 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                   closeSpecModal();
                 }, 100);
               }}
-              className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700"
+              className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 text-sm py-3"
             >
-              <Save size={16} />
+              <Save size={18} className="stroke-2" />
               Save & Add to Table
             </Button>
             <Button
               type="button"
               onClick={closeSpecModal}
               variant="secondary"
-              className="flex-1 flex items-center justify-center gap-2"
+              className="flex-1 flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg transition-all duration-300 text-sm py-3"
             >
-              <X size={16} />
+              <X size={18} className="stroke-2" />
               Close
             </Button>
           </div>
@@ -2818,9 +3124,9 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
       </Modal>
 
       <Modal isOpen={viewModalOpen} onClose={() => setViewModalOpen(false)}>
-        <div className="bg-slate-900 p-6 space-y-4 max-h-[80vh] overflow-y-auto">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xl font-semibold text-slate-100">
+        <div className=" p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+          <div className="flex items-center text-xs justify-between mb-4">
+            <h3 className="text-xl font-semibold ">
               Material Details - {viewingMaterial?.name}
             </h3>
             <button
@@ -2834,31 +3140,31 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
           {viewingMaterial && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <h4 className="text-sm font-semibold text-slate-300 mb-3 border-b border-slate-700 pb-2">
+                <h4 className="text-sm font-semibold text-slate-900 mb-3 text-left border-b border-slate-200 pb-2">
                   Basic Information
                 </h4>
                 <div className="space-y-2 text-sm">
                   <div>
                     <p className="text-slate-400">Material Name</p>
-                    <p className="text-slate-100 font-medium">
+                    <p className=" font-medium">
                       {viewingMaterial.name}
                     </p>
                   </div>
                   <div>
                     <p className="text-slate-400">Category</p>
-                    <p className="text-slate-100">
+                    <p className="">
                       {viewingMaterial.category || "-"}
                     </p>
                   </div>
                   <div>
                     <p className="text-slate-400">Description</p>
-                    <p className="text-slate-100">
+                    <p className="">
                       {viewingMaterial.description || "-"}
                     </p>
                   </div>
                   <div>
                     <p className="text-slate-400">Quantity</p>
-                    <p className="text-slate-100 font-medium">
+                    <p className=" font-medium">
                       {viewingMaterial.quantity} {viewingMaterial.unit}
                     </p>
                   </div>
@@ -2866,19 +3172,19 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
               </div>
 
               <div>
-                <h4 className="text-sm font-semibold text-slate-300 mb-3 border-b border-slate-700 pb-2">
+                <h4 className="text-sm font-semibold text-slate-900 mb-3 text-left border-b border-slate-200 pb-2">
                   Assignment & Source
                 </h4>
                 <div className="space-y-2 text-sm">
                   <div>
                     <p className="text-slate-400">Source</p>
-                    <p className="text-slate-100 capitalize">
+                    <p className=" capitalize">
                       {viewingMaterial.source || "-"}
                     </p>
                   </div>
                   <div>
                     <p className="text-slate-400">Assignee</p>
-                    <p className="text-slate-100">
+                    <p className="">
                       {viewingMaterial.assignee
                         ? state.employees?.find(
                             (e) => (e._id || e.id) === viewingMaterial.assignee
@@ -2892,7 +3198,7 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                   </div>
                   <div>
                     <p className="text-slate-400">Quality/Grade</p>
-                    <p className="text-slate-100">
+                    <p className="">
                       {viewingMaterial.quality || "-"}
                     </p>
                   </div>
@@ -2904,7 +3210,7 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                 viewingMaterial.materialGrade ||
                 viewingMaterial.fastenerType) && (
                 <div className="md:col-span-2">
-                  <h4 className="text-sm font-semibold text-slate-300 mb-3 border-b border-slate-700 pb-2">
+                  <h4 className="text-sm font-semibold text-slate-900 mb-3 text-left border-b border-slate-200 pb-2">
                     Material Specifications
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
@@ -2912,14 +3218,14 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                       <>
                         <div>
                           <p className="text-slate-400">Steel Section</p>
-                          <p className="text-slate-100">
+                          <p className="">
                             {viewingMaterial.steelSection}
                           </p>
                         </div>
                         {viewingMaterial.steelSize && (
                           <div>
                             <p className="text-slate-400">Size</p>
-                            <p className="text-slate-100">
+                            <p className="">
                               {viewingMaterial.steelSize}
                             </p>
                           </div>
@@ -2927,7 +3233,7 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                         {viewingMaterial.steelLength && (
                           <div>
                             <p className="text-slate-400">Length</p>
-                            <p className="text-slate-100">
+                            <p className="">
                               {viewingMaterial.steelLength} mm
                             </p>
                           </div>
@@ -2935,7 +3241,7 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                         {viewingMaterial.steelTolerance && (
                           <div>
                             <p className="text-slate-400">Tolerance</p>
-                            <p className="text-slate-100">
+                            <p className="">
                               {viewingMaterial.steelTolerance}
                             </p>
                           </div>
@@ -2946,14 +3252,14 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                       <>
                         <div>
                           <p className="text-slate-400">Plate Type</p>
-                          <p className="text-slate-100">
+                          <p className="">
                             {viewingMaterial.plateType}
                           </p>
                         </div>
                         {viewingMaterial.plateThickness && (
                           <div>
                             <p className="text-slate-400">Thickness</p>
-                            <p className="text-slate-100">
+                            <p className="">
                               {viewingMaterial.plateThickness} mm
                             </p>
                           </div>
@@ -2961,7 +3267,7 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                         {viewingMaterial.plateLength && (
                           <div>
                             <p className="text-slate-400">Length</p>
-                            <p className="text-slate-100">
+                            <p className="">
                               {viewingMaterial.plateLength} mm
                             </p>
                           </div>
@@ -2969,7 +3275,7 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                         {viewingMaterial.plateWidth && (
                           <div>
                             <p className="text-slate-400">Width</p>
-                            <p className="text-slate-100">
+                            <p className="">
                               {viewingMaterial.plateWidth} mm
                             </p>
                           </div>
@@ -2977,7 +3283,7 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                         {viewingMaterial.plateSurfaceFinish && (
                           <div>
                             <p className="text-slate-400">Surface Finish</p>
-                            <p className="text-slate-100">
+                            <p className="">
                               {viewingMaterial.plateSurfaceFinish}
                             </p>
                           </div>
@@ -2988,14 +3294,14 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                       <>
                         <div>
                           <p className="text-slate-400">Grade</p>
-                          <p className="text-slate-100">
+                          <p className="">
                             {viewingMaterial.materialGrade}
                           </p>
                         </div>
                         {viewingMaterial.grade && (
                           <div>
                             <p className="text-slate-400">Grade Spec</p>
-                            <p className="text-slate-100">
+                            <p className="">
                               {viewingMaterial.grade}
                             </p>
                           </div>
@@ -3003,7 +3309,7 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                         {viewingMaterial.gradeCertificationRequired && (
                           <div>
                             <p className="text-slate-400">Certification</p>
-                            <p className="text-slate-100">
+                            <p className="">
                               {viewingMaterial.gradeCertificationRequired}
                             </p>
                           </div>
@@ -3011,7 +3317,7 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                         {viewingMaterial.gradeTestingStandards && (
                           <div>
                             <p className="text-slate-400">Testing Standards</p>
-                            <p className="text-slate-100">
+                            <p className="">
                               {viewingMaterial.gradeTestingStandards}
                             </p>
                           </div>
@@ -3022,14 +3328,14 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                       <>
                         <div>
                           <p className="text-slate-400">Fastener Type</p>
-                          <p className="text-slate-100">
+                          <p className="">
                             {viewingMaterial.fastenerType}
                           </p>
                         </div>
                         {viewingMaterial.fastenerSize && (
                           <div>
                             <p className="text-slate-400">Size</p>
-                            <p className="text-slate-100">
+                            <p className="">
                               M{viewingMaterial.fastenerSize}
                             </p>
                           </div>
@@ -3037,7 +3343,7 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                         {viewingMaterial.fastenerQuantityPerUnit && (
                           <div>
                             <p className="text-slate-400">Qty Per Unit</p>
-                            <p className="text-slate-100">
+                            <p className="">
                               {viewingMaterial.fastenerQuantityPerUnit}
                             </p>
                           </div>
@@ -3045,7 +3351,7 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
                         {viewingMaterial.fastenerPlating && (
                           <div>
                             <p className="text-slate-400">Plating/Grade</p>
-                            <p className="text-slate-100">
+                            <p className="">
                               {viewingMaterial.fastenerPlating}
                             </p>
                           </div>
@@ -3058,14 +3364,14 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
             </div>
           )}
 
-          <div className="flex gap-3 mt-6 pt-4 border-t border-slate-700">
+          <div className="flex gap-3 mt-6 pt-4 border-t border-slate-200">
             <Button
               type="button"
               onClick={() => {
                 editMaterial(viewingMaterial);
                 setViewModalOpen(false);
               }}
-              className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700"
+              className="flex-1 flex items-center text-xs justify-center gap-2 bg-blue-600 hover:bg-blue-700"
             >
               <Edit2 size={16} />
               Edit Material
@@ -3074,7 +3380,7 @@ export default function Step4_MaterialRequirement({ readOnly = false }) {
               type="button"
               onClick={() => setViewModalOpen(false)}
               variant="secondary"
-              className="flex-1 flex items-center justify-center gap-2"
+              className="flex-1 flex items-center text-xs justify-center gap-2"
             >
               <X size={16} />
               Close

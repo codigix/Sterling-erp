@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -11,10 +11,10 @@ import LoginPage from "./pages/auth/LoginPage";
 import RegisterPage from "./pages/auth/RegisterPage";
 import AdminLayout from "./components/layout/AdminLayout";
 import DepartmentLayout from "./components/layout/DepartmentLayout";
+import DesignEngineerLayout from "./components/layout/DesignEngineerLayout";
 
 // Admin Components
 import AdminDashboard from "./pages/admin/AdminDashboard";
-import OverviewPage from "./pages/admin/OverviewPage";
 import ProjectsPage from "./pages/admin/ProjectsPage";
 import DepartmentsPage from "./pages/admin/DepartmentsPage";
 import VendorsPage from "./pages/admin/VendorsPage";
@@ -23,8 +23,10 @@ import ProductionPage from "./pages/admin/ProductionPage";
 import EmployeesPage from "./pages/admin/EmployeesPage";
 import ResourcesPage from "./pages/admin/ResourcesPage";
 import SalesOrdersPage from "./pages/admin/SalesOrdersPage";
-import UserManagement from "./pages/admin/UserManagement";
+import NewSalesOrderPage from "./pages/admin/NewSalesOrderPage";
+import SalesOrderDetailPage from "./pages/admin/SalesOrderDetailPage";
 import ReportsAnalytics from "./pages/admin/ReportsAnalytics";
+import AnalyticsReportsPage from "./pages/admin/AnalyticsReportsPage";
 import AuditLogs from "./pages/admin/AuditLogs";
 import SystemSettings from "./pages/admin/SystemSettings";
 import RoleManagement from "./pages/admin/RoleManagement";
@@ -67,6 +69,13 @@ import EmployeeTrackingDashboard from "./pages/reports/EmployeeTrackingDashboard
 // Notifications
 import NotificationsPage from "./pages/notifications/NotificationsPage";
 
+// Role-Based Dashboards
+import InventoryManagerDashboard from "./pages/roles/InventoryManagerDashboard";
+import QCManagerDashboard from "./pages/roles/QCManagerDashboard";
+import ProductionManagerDashboard from "./pages/roles/ProductionManagerDashboard";
+import AccountantDashboard from "./pages/roles/AccountantDashboard";
+import WorkerDashboard from "./pages/roles/WorkerDashboard";
+
 import "./App.css";
 
 const SessionWatcher = () => {
@@ -100,8 +109,10 @@ function App() {
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminLayout />}>
               <Route path="dashboard" element={<AdminDashboard />} />
-              <Route path="overview" element={<OverviewPage />} />
               <Route path="sales-orders" element={<SalesOrdersPage />} />
+              <Route path="sales-orders/new-order" element={<NewSalesOrderPage />} />
+              <Route path="sales-orders/:id" element={<SalesOrderDetailPage />} />
+              <Route path="sales-orders/:id/assign" element={<SalesOrderDetailPage />} />
               <Route path="projects" element={<ProjectsPage />} />
               <Route path="departments" element={<DepartmentsPage />} />
               <Route path="vendors" element={<VendorsPage />} />
@@ -109,9 +120,9 @@ function App() {
               <Route path="production" element={<ProductionPage />} />
               <Route path="employees" element={<EmployeesPage />} />
               <Route path="resources" element={<ResourcesPage />} />
-              <Route path="users" element={<UserManagement />} />
               <Route path="roles" element={<RoleManagement />} />
               <Route path="employee-management" element={<EmployeeManagement />} />
+              <Route path="analytics-reports" element={<AnalyticsReportsPage />} />
               <Route path="reports" element={<ReportsAnalytics />} />
               <Route path="audit-logs" element={<AuditLogs />} />
               <Route path="settings" element={<SystemSettings />} />
@@ -158,6 +169,14 @@ function App() {
 
             {/* Shared Pages */}
             <Route path="/notifications" element={<NotificationsPage />} />
+
+            {/* Role-Based Dashboards */}
+            <Route path="/inventory-manager/*" element={<InventoryManagerDashboard />} />
+            <Route path="/design-engineer/*" element={<DesignEngineerLayout />} />
+            <Route path="/qc-manager/*" element={<QCManagerDashboard />} />
+            <Route path="/production-manager/*" element={<ProductionManagerDashboard />} />
+            <Route path="/accountant/*" element={<AccountantDashboard />} />
+            <Route path="/worker/*" element={<WorkerDashboard />} />
 
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="*" element={<Navigate to="/login" replace />} />

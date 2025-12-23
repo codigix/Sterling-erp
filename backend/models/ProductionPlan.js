@@ -12,6 +12,48 @@ const parseJson = (value, fallback = null) => {
 };
 
 class ProductionPlan {
+  static async addFinishedGoods(planId, items, externalConnection = null) {
+    const connection = externalConnection || (await pool.getConnection());
+    try {
+      // First delete existing items if any (for update scenario)
+      await connection.execute('DELETE FROM production_plan_fg WHERE production_plan_id = ?', [planId]);
+
+      if (items && items.length > 0) {
+        const values = items.map(item => [planId, item.itemId, item.quantity || 1, item.notes || null]);
+        // Flatten the array for the query
+        const flattenedValues = values.reduce((acc, val) => acc.concat(val), []);
+        const placeholders = values.map(() => '(?, ?, ?, ?)').join(', ');
+
+        await connection.execute(
+          `INSERT INTO production_plan_fg (production_plan_id, item_id, quantity, notes) VALUES ${placeholders}`,
+          flattenedValues
+        );
+      }
+
+      if (!externalConnection) {
+        connection.release();
+      }
+    } catch (error) {
+      if (!externalConnection) {
+        connection.release();
+      }
+      throw error;
+    }
+  }
+
+  static async getFinishedGoods(planId) {
+    const [rows] = await pool.execute(
+      `
+        SELECT ppfg.*, i.item_name, i.item_code, i.unit
+        FROM production_plan_fg ppfg
+        JOIN inventory i ON i.id = ppfg.item_id
+        WHERE ppfg.production_plan_id = ?
+      `,
+      [planId]
+    );
+    return rows;
+  }
+
   static async create(data, externalConnection = null) {
     const connection = externalConnection || (await pool.getConnection());
 

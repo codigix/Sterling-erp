@@ -126,11 +126,11 @@ const NotificationsPage = () => {
     <div className="task-page-container">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+        <h1 className="text-3xl font-bold  dark: flex items-center text-xs gap-2">
           <Bell size={32} />
           Notifications
         </h1>
-        <p className="text-slate-600 dark:text-slate-400 mt-2">
+        <p className="text-slate-600 dark:text-slate-400 text-xs ">
           {unreadCount} unread notification{unreadCount !== 1 ? 's' : ''}
         </p>
       </div>
@@ -145,7 +145,7 @@ const NotificationsPage = () => {
               className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
                 filterCategory === cat
                   ? 'bg-blue-600 text-white'
-                  : 'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100 hover:bg-slate-300'
+                  : 'bg-slate-200 dark:bg-slate-700  dark: hover:'
               }`}
             >
               {cat.charAt(0).toUpperCase() + cat.slice(1)}
@@ -155,10 +155,10 @@ const NotificationsPage = () => {
         <div className="flex gap-2">
           <button
             onClick={() => setShowUnreadOnly(!showUnreadOnly)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+            className={`flex items-center text-xs gap-2 px-4 py-2 rounded-lg transition-colors ${
               showUnreadOnly
                 ? 'bg-blue-600 text-white'
-                : 'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100 hover:bg-slate-300'
+                : 'bg-slate-200 dark:bg-slate-700  dark: hover:'
             }`}
           >
             {showUnreadOnly ? <Eye size={18} /> : <EyeOff size={18} />}
@@ -167,7 +167,7 @@ const NotificationsPage = () => {
           {unreadCount > 0 && (
             <button
               onClick={handleMarkAllAsRead}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors"
+              className="flex items-center text-xs gap-2 px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors"
             >
               <Check size={18} />
               Mark All Read
@@ -187,7 +187,7 @@ const NotificationsPage = () => {
               <div className="p-6 flex items-start gap-4">
                 {/* Icon */}
                 <div className="flex-shrink-0">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                  <div className={`w-10 h-10 rounded-full flex items-center text-xs justify-center ${
                     notif.priority === 'high'
                       ? 'bg-red-100 dark:bg-red-900'
                       : notif.priority === 'medium'
@@ -211,7 +211,7 @@ const NotificationsPage = () => {
                       <h3 className={`text-base font-bold ${
                         notif.read
                           ? 'text-slate-700 dark:text-slate-300'
-                          : 'text-slate-900 dark:text-slate-100'
+                          : ' dark:'
                       }`}>
                         {notif.title}
                       </h3>
@@ -251,7 +251,7 @@ const NotificationsPage = () => {
                   )}
                   <button
                     onClick={() => handleDelete(notif.id)}
-                    className="p-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100 hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
+                    className="p-2 rounded-lg bg-slate-200 dark:bg-slate-700  dark: hover: dark:hover:bg-slate-600 transition-colors"
                     title="Delete notification"
                   >
                     <Trash2 size={16} />
@@ -277,7 +277,7 @@ const NotificationsPage = () => {
       {filteredNotifications.length > 0 && (
         <Card className="mt-8 p-4 bg-slate-50 dark:bg-slate-700">
           <p className="text-sm text-slate-600 dark:text-slate-400">
-            Showing <span className="font-bold text-slate-900 dark:text-slate-100">{filteredNotifications.length}</span> of <span className="font-bold text-slate-900 dark:text-slate-100">{notifications.length}</span> notifications
+            Showing <span className="font-bold  dark:">{filteredNotifications.length}</span> of <span className="font-bold  dark:">{notifications.length}</span> notifications
           </p>
         </Card>
       )}

@@ -51,7 +51,7 @@ const EmployeeProjects = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-2">
+        <h1 className="text-3xl font-bold  dark: mb-2">
           My Projects
         </h1>
         <p className="text-slate-600 dark:text-slate-400">
@@ -63,7 +63,7 @@ const EmployeeProjects = () => {
         <Card className="border-l-4 border-blue-500">
           <CardContent className="p-6">
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">Total Projects</p>
-            <p className="text-3xl font-bold text-slate-900 dark:text-slate-100">{projects.length}</p>
+            <p className="text-3xl font-bold  dark:">{projects.length}</p>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">Assigned to you</p>
           </CardContent>
         </Card>
@@ -71,7 +71,7 @@ const EmployeeProjects = () => {
         <Card className="border-l-4 border-blue-500">
           <CardContent className="p-6">
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">In Progress</p>
-            <p className="text-3xl font-bold text-slate-900 dark:text-slate-100">{projects.filter(p => p.status === 'in_progress').length}</p>
+            <p className="text-3xl font-bold  dark:">{projects.filter(p => p.status === 'in_progress').length}</p>
             <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">Active projects</p>
           </CardContent>
         </Card>
@@ -79,7 +79,7 @@ const EmployeeProjects = () => {
         <Card className="border-l-4 border-green-500">
           <CardContent className="p-6">
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">Completed</p>
-            <p className="text-3xl font-bold text-slate-900 dark:text-slate-100">{projects.filter(p => p.status === 'completed').length}</p>
+            <p className="text-3xl font-bold  dark:">{projects.filter(p => p.status === 'completed').length}</p>
             <p className="text-xs text-green-600 dark:text-green-400 mt-2">Finished</p>
           </CardContent>
         </Card>
@@ -91,9 +91,9 @@ const EmployeeProjects = () => {
             <CardContent className="p-6">
               <div className="flex items-start justify-between gap-4 mb-4">
                 <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-center text-xs gap-2 mb-2">
                     <Briefcase className="w-5 h-5 text-slate-400" />
-                    <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                    <h3 className="text-md font-semibold  dark:">
                       {project.name}
                     </h3>
                   </div>
@@ -112,7 +112,7 @@ const EmployeeProjects = () => {
               </div>
 
               <div className="mb-4">
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center text-xs justify-between mb-2">
                   <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Progress</p>
                   <p className="text-sm text-slate-600 dark:text-slate-400">{project.progress}%</p>
                 </div>
@@ -125,15 +125,15 @@ const EmployeeProjects = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-slate-200 dark:border-slate-700">
-                <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+                <div className="flex items-center text-xs gap-2 text-sm text-slate-600 dark:text-slate-400">
                   <Users className="w-4 h-4 flex-shrink-0" />
                   <span>{project.team} team members</span>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+                <div className="flex items-center text-xs gap-2 text-sm text-slate-600 dark:text-slate-400">
                   <Target className="w-4 h-4 flex-shrink-0" />
                   <span>{project.manager}</span>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+                <div className="flex items-center text-xs gap-2 text-sm text-slate-600 dark:text-slate-400">
                   <Calendar className="w-4 h-4 flex-shrink-0" />
                   <span>{project.endDate}</span>
                 </div>

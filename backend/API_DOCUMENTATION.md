@@ -19,7 +19,8 @@ Authorization: Bearer {token}
 ## Sales Order Steps Overview
 
 1. **Step 1**: Client PO - Initial client purchase order information
-2. **Step 2**: Sales Order - Sales order details and product specifications  
+2. **Step 2**: Sales Order - Root Card Details
+ and product specifications  
 3. **Step 3**: Design Engineering - Technical design and engineering documents
 4. **Step 4**: Material Requirements - Material procurement requirements
 5. **Step 5**: Production Plan - Manufacturing timeline and phases
@@ -498,7 +499,8 @@ Retrieve project requirements for a sales order.
 
 ## Step 2: Sales Order & Order Information Endpoints
 
-### Create/Update Complete Sales Order Details
+### Create/Update Complete Root Card Details
+
 **POST** `/:salesOrderId/sales-order`
 
 Save or update complete sales order information (all three tabs at once).
@@ -544,17 +546,21 @@ Save or update complete sales order information (all three tabs at once).
 
 ---
 
-### Get Complete Sales Order Details
+### Get Complete Root Card Details
+
 **GET** `/:salesOrderId/sales-order`
 
-Retrieve all sales order details.
+Retrieve all Root Card Details
+.
 
 ---
 
-### Delete Sales Order Details
+### Delete Root Card Details
+
 **DELETE** `/:salesOrderId/sales-order`
 
-Delete sales order details for a sales order.
+Delete Root Card Details
+ for a sales order.
 
 ---
 

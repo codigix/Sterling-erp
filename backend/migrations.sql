@@ -18,6 +18,9 @@ ALTER TABLE notifications ADD COLUMN IF NOT EXISTS priority VARCHAR(20);
 ALTER TABLE sales_orders ADD COLUMN IF NOT EXISTS design_documents JSON;
 ALTER TABLE sales_orders ADD COLUMN IF NOT EXISTS assigned_materials JSON;
 
+-- Update sales_orders status ENUM to include all workflow statuses
+ALTER TABLE sales_orders MODIFY COLUMN status ENUM('pending', 'draft', 'ready_to_start', 'assigned', 'approved', 'in_progress', 'on_hold', 'critical', 'completed', 'delivered', 'cancelled') DEFAULT 'pending';
+
 -- Add columns to manufacturing_stages for enhanced tracking
 ALTER TABLE manufacturing_stages ADD COLUMN IF NOT EXISTS estimated_delay_days INT DEFAULT 0;
 ALTER TABLE manufacturing_stages ADD COLUMN IF NOT EXISTS actual_delay_days INT DEFAULT 0;
@@ -589,3 +592,133 @@ CREATE TABLE IF NOT EXISTS quality_check_details_new (
     INDEX idx_sales_order (sales_order_id),
     INDEX idx_qc_status (qc_status)
 );
+
+-- Add is_active column to roles table for role-based access control
+ALTER TABLE roles ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;
+ALTER TABLE roles ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE roles ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
+CREATE INDEX IF NOT EXISTS idx_roles_active ON roles(is_active);
+  
+-- Create production_plan_fg table (for tracking finished goods in production plans)  
+CREATE TABLE IF NOT EXISTS production_plan_fg (  
+    id INT PRIMARY KEY AUTO_INCREMENT,  
+    production_plan_id INT NOT NULL,  
+    item_id INT NOT NULL,  
+    quantity INT NOT NULL DEFAULT 1,  
+    notes TEXT,  
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,  
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,  
+    FOREIGN KEY (production_plan_id) REFERENCES production_plans(id),  
+    FOREIGN KEY (item_id) REFERENCES inventory(id)  
+);  
+  
+-- Add index for performance  
+CREATE INDEX IF NOT EXISTS idx_production_plan_fg_plan ON production_plan_fg(production_plan_id);
+
+-- Create department task assignment tables
+CREATE TABLE IF NOT EXISTS root_card_departments (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    root_card_id INT NOT NULL,
+    role_id INT NOT NULL,
+    assignment_type ENUM('auto', 'manual') DEFAULT 'auto',
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (root_card_id) REFERENCES root_cards(id) ON DELETE CASCADE,
+    FOREIGN KEY (role_id) REFERENCES roles(id),
+    UNIQUE KEY unique_root_card_role (root_card_id, role_id)
+);
+
+CREATE TABLE IF NOT EXISTS department_tasks (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    root_card_id INT NOT NULL,
+    role_id INT NOT NULL,
+    task_title VARCHAR(500) NOT NULL,
+    task_description TEXT,
+    status ENUM('draft', 'pending', 'in_progress', 'completed', 'on_hold') DEFAULT 'draft',
+    priority ENUM('low', 'medium', 'high', 'critical') DEFAULT 'medium',
+    assigned_by INT,
+    sales_order_id INT,
+    notes JSON,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (root_card_id) REFERENCES root_cards(id) ON DELETE CASCADE,
+    FOREIGN KEY (role_id) REFERENCES roles(id),
+    FOREIGN KEY (assigned_by) REFERENCES users(id),
+    FOREIGN KEY (sales_order_id) REFERENCES sales_orders(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_root_card_departments_root_card ON root_card_departments(root_card_id);
+CREATE INDEX IF NOT EXISTS idx_root_card_departments_role ON root_card_departments(role_id);
+CREATE INDEX IF NOT EXISTS idx_department_tasks_root_card ON department_tasks(root_card_id);
+CREATE INDEX IF NOT EXISTS idx_department_tasks_role ON department_tasks(role_id);
+CREATE INDEX IF NOT EXISTS idx_department_tasks_status ON department_tasks(status);
+CREATE INDEX IF NOT EXISTS idx_department_tasks_sales_order ON department_tasks(sales_order_id);
+
+-- Design Project Details Table
+CREATE TABLE IF NOT EXISTS design_project_details (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    root_card_id INT NOT NULL,
+    design_id VARCHAR(100),
+    design_name VARCHAR(255),
+    project_name VARCHAR(255),
+    product_name VARCHAR(255),
+    design_status VARCHAR(100) DEFAULT 'draft',
+    design_engineer_name VARCHAR(255),
+    system_length DECIMAL(10,2),
+    system_width DECIMAL(10,2),
+    system_height DECIMAL(10,2),
+    load_capacity DECIMAL(10,2),
+    operating_environment TEXT,
+    material_grade VARCHAR(100),
+    surface_finish VARCHAR(100),
+    steel_sections JSON,
+    plates JSON,
+    fasteners JSON,
+    components JSON,
+    electrical JSON,
+    consumables JSON,
+    design_specifications TEXT,
+    manufacturing_instructions TEXT,
+    quality_safety TEXT,
+    additional_notes TEXT,
+    reference_documents JSON,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (root_card_id) REFERENCES root_cards(id) ON DELETE CASCADE,
+    INDEX idx_root_card_id (root_card_id),
+    INDEX idx_design_id (design_id)
+);
+
+-- Design Workflow Steps Table
+CREATE TABLE IF NOT EXISTS design_workflow_steps (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    step_name VARCHAR(255) NOT NULL,
+    step_order INT NOT NULL,
+    description TEXT,
+    task_template_title VARCHAR(255) NOT NULL,
+    task_template_description TEXT,
+    priority ENUM('low', 'medium', 'high', 'critical') DEFAULT 'medium',
+    auto_create_on_trigger VARCHAR(100),
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_step_order (step_order)
+);
+
+-- Insert default design workflow steps
+INSERT INTO design_workflow_steps (step_name, step_order, description, task_template_title, task_template_description, priority, auto_create_on_trigger) VALUES
+('Project Details Input', 1, 'Input and verify all project specifications and requirements', 'Enter Project Details', 'Input project name, dimensions, load capacity, operating environment, and other specifications', 'high', 'root_card_created'),
+('Design Document Preparation', 2, 'Create design documents including drawings and specifications', 'Prepare Design Documents', 'Create technical drawings, CAD files, and design specifications based on project requirements', 'high', 'project_details_completed'),
+('BOM Creation', 3, 'Create Bill of Materials with all components and materials', 'Create and Validate BOM', 'Create comprehensive BOM listing all materials, components, and consumables required for manufacturing', 'high', 'design_documents_created'),
+('Design Review & Approval', 4, 'Submit design for review and approval', 'Submit Design for Review', 'Submit completed design for review by supervisors and get approval before moving to production', 'medium', 'bom_created'),
+('Pending Reviews Follow-up', 5, 'Track and follow up on designs awaiting review', 'Follow up on Pending Reviews', 'Monitor designs pending review and follow up with reviewers for timely approvals', 'medium', 'design_submitted'),
+('Approved Design Documentation', 6, 'Document and archive approved designs', 'Document Approved Designs', 'Update records with approved designs and maintain design documentation for reference', 'low', 'design_approved'),
+('Technical File Management', 7, 'Manage technical files and version control', 'Manage Technical Files', 'Organize and maintain technical files, specifications, and supporting documents with proper version control', 'medium', 'design_approved');
+
+CREATE INDEX idx_design_workflow_steps_order ON design_workflow_steps(step_order);
+CREATE INDEX idx_design_workflow_steps_trigger ON design_workflow_steps(auto_create_on_trigger);
+
+-- Add sales_order_id to root_cards table
+ALTER TABLE root_cards ADD COLUMN IF NOT EXISTS sales_order_id INT;
+ALTER TABLE root_cards ADD FOREIGN KEY IF NOT EXISTS (sales_order_id) REFERENCES sales_orders(id) ON DELETE SET NULL;

@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { FileText, User, FolderOpen, FileCheck } from "lucide-react";
 import Input from "../../../ui/Input";
 import FormSection from "../shared/FormSection";
@@ -18,15 +18,24 @@ export default function Step1_ClientPO({ readOnly = false }) {
     }
   }, [formData.projectName]);
 
+  useEffect(() => {
+    if (formData.projectName && !formData.poNumber) {
+      const poPrefix = formData.projectName.substring(0, 3).toUpperCase();
+      const timestamp = Date.now().toString().slice(-6);
+      const generatedPO = `PO-${poPrefix}-${timestamp}`;
+      updateField("poNumber", generatedPO);
+    }
+  }, [formData.projectName]);
+
   const clientInfoContent = (
     <FormSection
       title="Client Information"
       subtitle="Enter the client details and PO information"
       icon={User}
     >
-      <div className="space-y-4">
+      <div className="space-y-3">
         <div>
-          <h5 className="text-sm font-semibold text-slate-300 mb-3">
+          <h5 className="text-sm font-semibold text-slate-900 mb-2 text-left">
             PO Information
           </h5>
           <FormRow cols={2}>
@@ -47,8 +56,8 @@ export default function Step1_ClientPO({ readOnly = false }) {
           </FormRow>
         </div>
 
-        <div className="border-t border-slate-700 pt-4">
-          <h5 className="text-sm font-semibold text-slate-300 mb-3">
+        <div className="border-t border-slate-200 pt-3">
+          <h5 className="text-sm font-semibold text-slate-900 mb-3 text-left">
             Client Details
           </h5>
 
@@ -131,7 +140,7 @@ export default function Step1_ClientPO({ readOnly = false }) {
     >
       <div className="space-y-4">
         <div>
-          <h5 className="text-sm font-semibold text-slate-300 mb-3">Basic Specifications</h5>
+          <h5 className="text-sm font-semibold text-slate-900 mb-3 text-left">Basic Specifications</h5>
           <FormRow cols={2}>
             <Input
               label="Application / Use Case"
@@ -185,8 +194,8 @@ export default function Step1_ClientPO({ readOnly = false }) {
           />
         </div>
 
-        <div className="border-t border-slate-700 pt-4">
-          <h5 className="text-sm font-semibold text-slate-300 mb-3">Material & Manufacturing</h5>
+        <div className="border-t border-slate-200 pt-3">
+          <h5 className="text-sm font-semibold text-slate-900 mb-3 text-left">Material & Manufacturing</h5>
           <FormRow cols={2}>
             <Input
               label="Material Grade"
@@ -230,8 +239,8 @@ export default function Step1_ClientPO({ readOnly = false }) {
           />
         </div>
 
-        <div className="border-t border-slate-700 pt-4">
-          <h5 className="text-sm font-semibold text-slate-300 mb-3">Quality & Compliance</h5>
+        <div className="border-t border-slate-200 pt-3">
+          <h5 className="text-sm font-semibold text-slate-900 mb-3 text-left">Quality & Compliance</h5>
           <FormRow cols={2}>
             <Input
               label="Testing Standards"
@@ -262,8 +271,8 @@ export default function Step1_ClientPO({ readOnly = false }) {
           </FormRow>
         </div>
 
-        <div className="border-t border-slate-700 pt-4">
-          <h5 className="text-sm font-semibold text-slate-300 mb-3">Documentation & Warranty</h5>
+        <div className="border-t border-slate-200 pt-3">
+          <h5 className="text-sm font-semibold text-slate-900 mb-3 text-left">Documentation & Warranty</h5>
           <FormRow cols={2}>
             <Input
               label="Documentation Requirement"

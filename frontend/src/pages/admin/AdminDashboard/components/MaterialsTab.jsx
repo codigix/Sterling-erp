@@ -45,8 +45,8 @@ const MaterialsTab = () => {
                 }}
               >
                 <CardHeader className="pb-3 border-b border-slate-200 dark:border-slate-700">
-                  <CardTitle className="text-base flex items-center justify-between">
-                    <span className="flex items-center space-x-2">
+                  <CardTitle className="text-base flex items-center text-xs justify-between">
+                    <span className="flex items-center text-xs space-x-2">
                       <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg group-hover:scale-110 transition-transform duration-300">
                         <Package className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                       </div>
@@ -69,7 +69,7 @@ const MaterialsTab = () => {
                       <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">
                         Current Stock
                       </p>
-                      <p className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                      <p className="text-lg font-bold  dark:">
                         {material.currentStock.toLocaleString()}
                       </p>
                       <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -99,13 +99,13 @@ const MaterialsTab = () => {
                   <div className="space-y-1 text-xs">
                     <div className="flex justify-between text-slate-600 dark:text-slate-400">
                       <span>Min/Max:</span>
-                      <span className="font-medium text-slate-900 dark:text-slate-100">
+                      <span className="font-medium  dark:">
                         {material.minStock}/{material.maxStock}
                       </span>
                     </div>
                     <div className="flex justify-between text-slate-600 dark:text-slate-400">
                       <span>Location:</span>
-                      <span className="font-medium text-slate-900 dark:text-slate-100">
+                      <span className="font-medium  dark:">
                         {material.location}
                       </span>
                     </div>
@@ -130,7 +130,7 @@ const MaterialsTab = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="hover:shadow-lg transition-shadow duration-300">
           <CardHeader className="border-b border-slate-200 dark:border-slate-700 pb-4">
-            <CardTitle className="flex items-center space-x-2">
+            <CardTitle className="flex items-center text-xs space-x-2">
               <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
                 <BarChart3 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
               </div>
@@ -173,7 +173,7 @@ const MaterialsTab = () => {
 
         <Card className="hover:shadow-lg transition-shadow duration-300">
           <CardHeader className="border-b border-slate-200 dark:border-slate-700 pb-4">
-            <CardTitle className="flex items-center space-x-2">
+            <CardTitle className="flex items-center text-xs space-x-2">
               <div className="p-2 bg-emerald-100 dark:bg-emerald-900 rounded-lg">
                 <PieChart className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
               </div>
@@ -231,7 +231,7 @@ const MaterialsTab = () => {
       {/* Recent Movement Logs */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center">
+          <CardTitle className="flex items-center text-xs">
             <FileText className="w-5 h-5 mr-2" />
             Recent Material Movements
           </CardTitle>
@@ -241,25 +241,25 @@ const MaterialsTab = () => {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-slate-200 dark:border-slate-700">
-                  <th className="text-left py-3 px-4 font-medium text-slate-900 dark:text-slate-100">
+                  <th className="text-left py-3 px-4 font-medium  dark:">
                     Movement ID
                   </th>
-                  <th className="text-left py-3 px-4 font-medium text-slate-900 dark:text-slate-100">
+                  <th className="text-left py-3 px-4 font-medium  dark:">
                     Material
                   </th>
-                  <th className="text-left py-3 px-4 font-medium text-slate-900 dark:text-slate-100">
+                  <th className="text-left py-3 px-4 font-medium  dark:">
                     Type
                   </th>
-                  <th className="text-left py-3 px-4 font-medium text-slate-900 dark:text-slate-100">
+                  <th className="text-left py-3 px-4 font-medium  dark:">
                     Quantity
                   </th>
-                  <th className="text-left py-3 px-4 font-medium text-slate-900 dark:text-slate-100">
+                  <th className="text-left py-3 px-4 font-medium  dark:">
                     From → To
                   </th>
-                  <th className="text-left py-3 px-4 font-medium text-slate-900 dark:text-slate-100">
+                  <th className="text-left py-3 px-4 font-medium  dark:">
                     Date
                   </th>
-                  <th className="text-left py-3 px-4 font-medium text-slate-900 dark:text-slate-100">
+                  <th className="text-left py-3 px-4 font-medium  dark:">
                     Status
                   </th>
                 </tr>
@@ -270,10 +270,10 @@ const MaterialsTab = () => {
                     key={index}
                     className="border-b border-slate-100 dark:border-slate-800"
                   >
-                    <td className="py-3 px-4 text-sm font-medium text-slate-900 dark:text-slate-100">
+                    <td className="py-3 px-4 text-sm font-medium  dark:">
                       {log.id}
                     </td>
-                    <td className="py-3 px-4 text-sm text-slate-900 dark:text-slate-100">
+                    <td className="py-3 px-4 text-sm  dark:">
                       {log.material}
                     </td>
                     <td className="py-3 px-4">
@@ -281,7 +281,7 @@ const MaterialsTab = () => {
                         {log.type}
                       </Badge>
                     </td>
-                    <td className="py-3 px-4 text-sm text-slate-900 dark:text-slate-100">
+                    <td className="py-3 px-4 text-sm  dark:">
                       {log.quantity}
                     </td>
                     <td className="py-3 px-4 text-sm text-slate-600 dark:text-slate-400">
@@ -314,7 +314,7 @@ const MaterialsTab = () => {
       {/* Inventory Alerts */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center">
+          <CardTitle className="flex items-center text-xs">
             <AlertTriangle className="w-5 h-5 mr-2" />
             Inventory Alerts & Recommendations
           </CardTitle>
@@ -322,11 +322,11 @@ const MaterialsTab = () => {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
-              <h4 className="font-medium text-slate-900 dark:text-slate-100">
+              <h4 className="font-medium  dark:">
                 Critical Stock Alerts
               </h4>
               <div className="space-y-3">
-                <div className="flex items-center p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <div className="flex items-center text-xs p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
                   <AlertTriangle className="w-5 h-5 text-red-600 mr-3" />
                   <div>
                     <p className="font-medium text-red-900 dark:text-red-100">
@@ -337,7 +337,7 @@ const MaterialsTab = () => {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                <div className="flex items-center text-xs p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
                   <AlertTriangle className="w-5 h-5 text-yellow-600 mr-3" />
                   <div>
                     <p className="font-medium text-yellow-900 dark:text-yellow-100">
@@ -352,7 +352,7 @@ const MaterialsTab = () => {
             </div>
 
             <div className="space-y-4">
-              <h4 className="font-medium text-slate-900 dark:text-slate-100">
+              <h4 className="font-medium  dark:">
                 Recommendations
               </h4>
               <div className="space-y-3">

@@ -93,10 +93,26 @@ class EmployeeTask {
   }
 
   static async getEmployeeTasks(employeeId, dateFilter = null) {
-    let query = `SELECT wt.*, ms.stage_name, rc.title as root_card_title, rc.priority
+    let query = `SELECT 
+                    wt.*, 
+                    ms.stage_name, 
+                    ms.root_card_id,
+                    rc.title as root_card_title, 
+                    rc.priority,
+                    rc.project_id,
+                    p.name as project_name,
+                    p.code as project_code,
+                    so.id as sales_order_id,
+                    so.po_number,
+                    so.customer,
+                    so.total,
+                    so.order_date,
+                    so.due_date
                  FROM worker_tasks wt
                  LEFT JOIN manufacturing_stages ms ON wt.stage_id = ms.id
                  LEFT JOIN root_cards rc ON ms.root_card_id = rc.id
+                 LEFT JOIN projects p ON rc.project_id = p.id
+                 LEFT JOIN sales_orders so ON p.sales_order_id = so.id
                  WHERE wt.worker_id = ?`;
     const params = [employeeId];
 

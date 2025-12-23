@@ -26,10 +26,10 @@ class RootCard {
     const params = [];
     const conditions = [];
     let query = `
-      SELECT rc.*, p.name AS project_name, p.code AS project_code, p.client_name, so.customer AS customer_name
+      SELECT rc.*, p.name AS project_name, p.code AS project_code, p.client_name, COALESCE(rc.sales_order_id, p.sales_order_id) as sales_order_id, so.customer AS customer_name
       FROM root_cards rc
-      INNER JOIN projects p ON p.id = rc.project_id
-      LEFT JOIN sales_orders so ON so.id = p.sales_order_id
+      LEFT JOIN projects p ON p.id = rc.project_id
+      LEFT JOIN sales_orders so ON so.id = COALESCE(rc.sales_order_id, p.sales_order_id)
     `;
 
     if (filters.assignedTo) {
@@ -68,13 +68,27 @@ class RootCard {
   static async findById(id) {
     const [rows] = await pool.execute(
       `
-        SELECT rc.*, p.name AS project_name, p.code AS project_code, p.client_name, so.customer AS customer_name
+        SELECT rc.*, p.name AS project_name, p.code AS project_code, p.client_name, COALESCE(rc.sales_order_id, p.sales_order_id) as sales_order_id, so.customer AS customer_name
         FROM root_cards rc
-        INNER JOIN projects p ON p.id = rc.project_id
-        LEFT JOIN sales_orders so ON so.id = p.sales_order_id
+        LEFT JOIN projects p ON p.id = rc.project_id
+        LEFT JOIN sales_orders so ON so.id = COALESCE(rc.sales_order_id, p.sales_order_id)
         WHERE rc.id = ?
       `,
       [id]
+    );
+    return RootCard.formatRow(rows[0]);
+  }
+
+  static async findBySalesOrderId(salesOrderId) {
+    const [rows] = await pool.execute(
+      `
+        SELECT rc.*, p.name AS project_name, p.code AS project_code, p.client_name, COALESCE(rc.sales_order_id, p.sales_order_id) as sales_order_id, so.customer AS customer_name
+        FROM root_cards rc
+        LEFT JOIN projects p ON p.id = rc.project_id
+        LEFT JOIN sales_orders so ON so.id = COALESCE(rc.sales_order_id, p.sales_order_id)
+        WHERE so.id = ?
+      `,
+      [salesOrderId]
     );
     return RootCard.formatRow(rows[0]);
   }
@@ -86,11 +100,12 @@ class RootCard {
       const [result] = await connection.execute(
         `
           INSERT INTO root_cards
-          (project_id, code, title, status, priority, planned_start, planned_end, created_by, assigned_supervisor, notes, stages)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          (project_id, sales_order_id, code, title, status, priority, planned_start, planned_end, created_by, assigned_supervisor, notes, stages)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
           data.projectId,
+          data.salesOrderId || null,
           data.code || null,
           data.title,
           data.status || 'planning',

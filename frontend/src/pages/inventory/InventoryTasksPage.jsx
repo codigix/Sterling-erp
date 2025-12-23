@@ -35,7 +35,7 @@ const InventoryTasksPage = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
+      <div className="flex items-center text-xs justify-center py-12">
         <p className="text-slate-600">Loading inventory data...</p>
       </div>
     );
@@ -65,13 +65,13 @@ const InventoryTasksPage = () => {
         <Card>
           <div className="p-4">
             <p className="text-sm text-slate-600 dark:text-slate-400">Total SKUs</p>
-            <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">{stats.totalSKUs}</p>
+            <p className="text-xl font-bold text-slate-900 dark:text-white mt-1">{stats.totalSKUs}</p>
           </div>
         </Card>
         <Card>
           <div className="p-4">
             <p className="text-sm text-slate-600 dark:text-slate-400">Total Quantity</p>
-            <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">{stats.totalQuantity}</p>
+            <p className="text-xl font-bold text-slate-900 dark:text-white mt-1">{stats.totalQuantity}</p>
           </div>
         </Card>
         <Card>
@@ -96,7 +96,7 @@ const InventoryTasksPage = () => {
             className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
               activeTab === 'stock'
                 ? 'bg-blue-600 text-white'
-                : 'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100 hover:bg-slate-300'
+                : 'bg-slate-200 dark:bg-slate-700  dark: hover:'
             }`}
           >
             Stock Inventory
@@ -106,18 +106,18 @@ const InventoryTasksPage = () => {
             className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
               activeTab === 'issuance'
                 ? 'bg-blue-600 text-white'
-                : 'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100 hover:bg-slate-300'
+                : 'bg-slate-200 dark:bg-slate-700  dark: hover:'
             }`}
           >
             Material Issuance
           </button>
         </div>
         <div className="flex gap-2">
-          <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100 hover:bg-slate-300 transition-colors">
+          <button className="flex items-center text-xs gap-2 px-4 py-2 rounded-lg bg-slate-200 dark:bg-slate-700  dark: hover: transition-colors">
             <Filter size={18} />
             Filter
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors">
+          <button className="flex items-center text-xs gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors">
             <Plus size={18} />
             {activeTab === 'stock' ? 'Add Stock' : 'Issue Material'}
           </button>
@@ -143,27 +143,27 @@ const InventoryTasksPage = () => {
               </thead>
               <tbody>
                 {stock.map(item => (
-                  <tr key={item.id} className="border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800">
-                    <td className="px-6 py-4 text-sm font-medium">{item.id}</td>
-                    <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">{item.name}</td>
-                    <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">{item.batch}</td>
-                    <td className="px-6 py-4 text-sm text-center font-bold">{item.quantity}</td>
-                    <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">{item.rack}</td>
-                    <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">{item.location}</td>
-                    <td className="px-6 py-4">
+                  <tr key={item.id} className="border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs">
+                    <td className="p-1 text-sm font-medium">{item.id}</td>
+                    <td className="p-1 text-sm text-slate-700 dark:text-slate-300">{item.name}</td>
+                    <td className="p-1 text-sm text-slate-700 dark:text-slate-300">{item.batch}</td>
+                    <td className="p-1 text-sm text-center font-bold">{item.quantity}</td>
+                    <td className="p-1 text-sm text-slate-700 dark:text-slate-300">{item.rack}</td>
+                    <td className="p-1 text-sm text-slate-700 dark:text-slate-300">{item.location}</td>
+                    <td className="p-1">
                       <Badge className={getStatusColor(item.status)}>
                         {item.status === 'low-stock' ? 'Low Stock' : 'Available'}
                       </Badge>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="p-1">
                       <div className="flex gap-2">
-                        <button className="p-2 rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 transition-colors">
+                        <button className="p-2 rounded-lg bg-slate-200 dark:bg-slate-700 hover: transition-colors">
                           <Eye size={16} />
                         </button>
                         <button className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 hover:bg-blue-200 transition-colors">
                           <Edit2 size={16} />
                         </button>
-                        <button className="p-2 rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 transition-colors">
+                        <button className="p-2 rounded-lg bg-slate-200 dark:bg-slate-700 hover: transition-colors">
                           <ArrowRight size={16} />
                         </button>
                       </div>
@@ -195,24 +195,24 @@ const InventoryTasksPage = () => {
               </thead>
               <tbody>
                 {issuances.map(issuance => (
-                  <tr key={issuance.id} className="border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800">
-                    <td className="px-6 py-4 text-sm font-medium">{issuance.id}</td>
-                    <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">{issuance.material}</td>
-                    <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">{issuance.sku}</td>
-                    <td className="px-6 py-4 text-sm text-center font-bold">{issuance.quantity}</td>
-                    <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">{issuance.issuedTo}</td>
-                    <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">{issuance.issuedDate}</td>
-                    <td className="px-6 py-4">
+                  <tr key={issuance.id} className="border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs">
+                    <td className="p-1 text-sm font-medium">{issuance.id}</td>
+                    <td className="p-1 text-sm text-slate-700 dark:text-slate-300">{issuance.material}</td>
+                    <td className="p-1 text-sm text-slate-700 dark:text-slate-300">{issuance.sku}</td>
+                    <td className="p-1 text-sm text-center font-bold">{issuance.quantity}</td>
+                    <td className="p-1 text-sm text-slate-700 dark:text-slate-300">{issuance.issuedTo}</td>
+                    <td className="p-1 text-sm text-slate-700 dark:text-slate-300">{issuance.issuedDate}</td>
+                    <td className="p-1">
                       <Badge className={getStatusColor(issuance.status)}>
                         {issuance.status.charAt(0).toUpperCase() + issuance.status.slice(1)}
                       </Badge>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="p-1">
                       <div className="flex gap-2">
-                        <button className="p-2 rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 transition-colors">
+                        <button className="p-2 rounded-lg bg-slate-200 dark:bg-slate-700 hover: transition-colors">
                           <Eye size={16} />
                         </button>
-                        <button className="p-2 rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 transition-colors">
+                        <button className="p-2 rounded-lg bg-slate-200 dark:bg-slate-700 hover: transition-colors">
                           <Download size={16} />
                         </button>
                       </div>

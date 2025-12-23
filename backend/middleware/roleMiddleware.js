@@ -4,7 +4,10 @@ const roleMiddleware = (...allowedRoles) => {
       return res.status(401).json({ message: 'Authentication required' });
     }
 
-    if (!allowedRoles.includes(req.user.role)) {
+    const userRole = req.user.role?.toLowerCase();
+    const normalizedAllowedRoles = allowedRoles.map(role => role.toLowerCase());
+
+    if (!normalizedAllowedRoles.includes(userRole)) {
       return res.status(403).json({ message: 'Insufficient permissions' });
     }
 

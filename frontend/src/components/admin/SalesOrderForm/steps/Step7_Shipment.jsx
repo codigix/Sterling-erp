@@ -3,22 +3,30 @@ import { Truck } from "lucide-react";
 import Input from "../../../ui/Input";
 import FormSection from "../shared/FormSection";
 import FormRow from "../shared/FormRow";
-import { useFormData } from "../hooks";
+import AssigneeField from "../shared/AssigneeField";
+import { useFormData, useSalesOrderContext } from "../hooks";
 
 export default function Step7_Shipment({ readOnly = false }) {
-  const { formData, setNestedField } = useFormData();
+  const { formData, setNestedField, updateField } = useFormData();
+  const { state } = useSalesOrderContext();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
+      <AssigneeField
+        stepType="shipment"
+        formData={state.formData}
+        updateField={updateField}
+        employees={state.employees}
+      />
       <FormSection
         title="Shipment & Logistics"
         subtitle="Configure shipment details and delivery logistics"
         icon={Truck}
       >
-        <div className="space-y-6">
+        <div className="space-y-3">
           {/* Delivery Schedule */}
           <div>
-            <h5 className="text-sm font-semibold text-slate-300 mb-3">Delivery Schedule</h5>
+            <h5 className="text-sm font-semibold text-slate-900 mb-2 text-left">Delivery Schedule</h5>
             <Input
               label="Delivery Schedule"
               value={formData.deliveryTerms?.deliverySchedule || ""}
@@ -31,7 +39,7 @@ export default function Step7_Shipment({ readOnly = false }) {
 
           {/* Packaging & Dispatch */}
           <div>
-            <h5 className="text-sm font-semibold text-slate-300 mb-3">Packaging & Dispatch</h5>
+            <h5 className="text-sm font-semibold text-slate-900 mb-2 text-left">Packaging & Dispatch</h5>
             <FormRow cols={2}>
               <Input
                 label="Packaging Information"
@@ -54,7 +62,7 @@ export default function Step7_Shipment({ readOnly = false }) {
 
           {/* Installation & Commissioning */}
           <div>
-            <h5 className="text-sm font-semibold text-slate-300 mb-3">Installation</h5>
+            <h5 className="text-sm font-semibold text-slate-900 mb-2 text-left">Installation</h5>
             <FormRow cols={2}>
               <Input
                 label="Installation Required"
@@ -77,7 +85,7 @@ export default function Step7_Shipment({ readOnly = false }) {
 
           {/* Shipment Details from old file Step 7 */}
           <div>
-            <h5 className="text-sm font-semibold text-slate-300 mb-3">Shipment Process</h5>
+            <h5 className="text-sm font-semibold text-slate-900 mb-2 text-left">Shipment Process</h5>
             <FormRow cols={2}>
               <Input
                 label="Marking"

@@ -140,7 +140,7 @@ const ResourcesTab = () => {
       case "Critical":
         return "text-red-600 bg-red-100 dark:bg-red-900 dark:text-red-400";
       default:
-        return "text-slate-600 bg-slate-100 dark:bg-slate-900 dark:text-slate-400";
+        return "text-slate-600 bg-slate-100 dark: dark:text-slate-400";
     }
   };
 
@@ -155,7 +155,7 @@ const ResourcesTab = () => {
       case "Low":
         return "text-green-600 bg-green-100 dark:bg-green-900 dark:text-green-400";
       default:
-        return "text-slate-600 bg-slate-100 dark:bg-slate-900 dark:text-slate-400";
+        return "text-slate-600 bg-slate-100 dark: dark:text-slate-400";
     }
   };
 
@@ -179,7 +179,7 @@ const ResourcesTab = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardContent className="p-6">
-            <div className="flex items-center">
+            <div className="flex items-center text-xs">
               <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
                 <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
               </div>
@@ -187,7 +187,7 @@ const ResourcesTab = () => {
                 <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
                   Optimal Resources
                 </p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                <p className="text-xl font-bold  text-left">
                   3
                 </p>
               </div>
@@ -197,7 +197,7 @@ const ResourcesTab = () => {
 
         <Card>
           <CardContent className="p-6">
-            <div className="flex items-center">
+            <div className="flex items-center text-xs">
               <div className="p-2 bg-yellow-100 dark:bg-yellow-900 rounded-lg">
                 <Clock className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
               </div>
@@ -205,7 +205,7 @@ const ResourcesTab = () => {
                 <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
                   High Utilization
                 </p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                <p className="text-xl font-bold  text-left">
                   2
                 </p>
               </div>
@@ -215,7 +215,7 @@ const ResourcesTab = () => {
 
         <Card>
           <CardContent className="p-6">
-            <div className="flex items-center">
+            <div className="flex items-center text-xs">
               <div className="p-2 bg-red-100 dark:bg-red-900 rounded-lg">
                 <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
               </div>
@@ -223,7 +223,7 @@ const ResourcesTab = () => {
                 <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
                   Bottlenecks
                 </p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                <p className="text-xl font-bold  text-left">
                   2
                 </p>
               </div>
@@ -233,7 +233,7 @@ const ResourcesTab = () => {
 
         <Card>
           <CardContent className="p-6">
-            <div className="flex items-center">
+            <div className="flex items-center text-xs">
               <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
                 <TrendingUp className="h-6 w-6 text-blue-600 dark:text-blue-400" />
               </div>
@@ -241,7 +241,7 @@ const ResourcesTab = () => {
                 <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
                   Avg Utilization
                 </p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                <p className="text-xl font-bold  text-left">
                   72%
                 </p>
               </div>
@@ -252,7 +252,7 @@ const ResourcesTab = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center">
+          <CardTitle className="flex items-center text-xs">
             <Zap className="w-5 h-5 mr-2" />
             Resource Utilization Status
           </CardTitle>
@@ -264,11 +264,11 @@ const ResourcesTab = () => {
                 key={index}
                 className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg"
               >
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-medium text-slate-900 dark:text-slate-100">
+                <div className="flex items-center text-xs justify-between mb-3">
+                  <h4 className="font-medium  dark:">
                     {resource.type}
                   </h4>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center text-xs space-x-2">
                     {resource.bottleneck && (
                       <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
                         Bottleneck
@@ -285,7 +285,7 @@ const ResourcesTab = () => {
                     <p className="text-sm text-slate-600 dark:text-slate-400">
                       Available
                     </p>
-                    <p className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                    <p className="text-lg font-bold  dark:">
                       {resource.available}/{resource.total}
                     </p>
                   </div>
@@ -330,7 +330,7 @@ const ResourcesTab = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center">
+            <CardTitle className="flex items-center text-xs">
               <Calendar className="w-5 h-5 mr-2" />
               Capacity Planning
             </CardTitle>
@@ -342,8 +342,8 @@ const ResourcesTab = () => {
                   key={index}
                   className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg"
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-medium text-slate-900 dark:text-slate-100">
+                  <div className="flex items-center text-xs justify-between mb-2">
+                    <h4 className="font-medium  dark:">
                       {resource.resource}
                     </h4>
                     <Badge
@@ -364,7 +364,7 @@ const ResourcesTab = () => {
                       <p className="text-sm text-slate-600 dark:text-slate-400">
                         Next Available
                       </p>
-                      <p className="font-medium text-slate-900 dark:text-slate-100">
+                      <p className="font-medium  dark:">
                         {resource.nextAvailable}
                       </p>
                     </div>
@@ -372,7 +372,7 @@ const ResourcesTab = () => {
                       <p className="text-sm text-slate-600 dark:text-slate-400">
                         Queued Projects
                       </p>
-                      <p className="font-medium text-slate-900 dark:text-slate-100">
+                      <p className="font-medium  dark:">
                         {resource.queuedProjects}
                       </p>
                     </div>
@@ -403,7 +403,7 @@ const ResourcesTab = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center">
+            <CardTitle className="flex items-center text-xs">
               <BarChart3 className="w-5 h-5 mr-2" />
               Resource Utilization Trends
             </CardTitle>
@@ -461,7 +461,7 @@ const ResourcesTab = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center">
+          <CardTitle className="flex items-center text-xs">
             <Target className="w-5 h-5 mr-2" />
             Optimization Insights & Recommendations
           </CardTitle>
@@ -488,8 +488,8 @@ const ResourcesTab = () => {
                     {getOptimizationIcon(insight.type)}
                   </div>
                   <div className="flex-1">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-medium text-slate-900 dark:text-slate-100">
+                    <div className="flex items-center text-xs justify-between mb-2">
+                      <h4 className="font-medium  dark:">
                         {insight.title}
                       </h4>
                       <Badge className={getImpactColor(insight.impact)}>
@@ -499,7 +499,7 @@ const ResourcesTab = () => {
                     <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
                       {insight.description}
                     </p>
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center text-xs justify-between">
                       <span className="text-sm font-medium text-green-600">
                         Potential Savings: {insight.savings}
                       </span>
@@ -517,7 +517,7 @@ const ResourcesTab = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center">
+          <CardTitle className="flex items-center text-xs">
             <FileText className="w-5 h-5 mr-2" />
             Resource Allocation Matrix
           </CardTitle>
@@ -527,22 +527,22 @@ const ResourcesTab = () => {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-slate-200 dark:border-slate-700">
-                  <th className="text-left py-3 px-4 font-medium text-slate-900 dark:text-slate-100">
+                  <th className="text-left py-3 px-4 font-medium  dark:">
                     Resource Type
                   </th>
-                  <th className="text-left py-3 px-4 font-medium text-slate-900 dark:text-slate-100">
+                  <th className="text-left py-3 px-4 font-medium  dark:">
                     Total Capacity
                   </th>
-                  <th className="text-left py-3 px-4 font-medium text-slate-900 dark:text-slate-100">
+                  <th className="text-left py-3 px-4 font-medium  dark:">
                     Current Allocation
                   </th>
-                  <th className="text-left py-3 px-4 font-medium text-slate-900 dark:text-slate-100">
+                  <th className="text-left py-3 px-4 font-medium  dark:">
                     Available
                   </th>
-                  <th className="text-left py-3 px-4 font-medium text-slate-900 dark:text-slate-100">
+                  <th className="text-left py-3 px-4 font-medium  dark:">
                     Efficiency
                   </th>
-                  <th className="text-left py-3 px-4 font-medium text-slate-900 dark:text-slate-100">
+                  <th className="text-left py-3 px-4 font-medium  dark:">
                     Status
                   </th>
                 </tr>
@@ -553,16 +553,16 @@ const ResourcesTab = () => {
                     key={index}
                     className="border-b border-slate-100 dark:border-slate-800"
                   >
-                    <td className="py-3 px-4 font-medium text-slate-900 dark:text-slate-100">
+                    <td className="py-3 px-4 font-medium  dark:">
                       {resource.type}
                     </td>
-                    <td className="py-3 px-4 text-slate-900 dark:text-slate-100">
+                    <td className="py-3 px-4  dark:">
                       {resource.total}
                     </td>
-                    <td className="py-3 px-4 text-slate-900 dark:text-slate-100">
+                    <td className="py-3 px-4  dark:">
                       {resource.total - resource.available}
                     </td>
-                    <td className="py-3 px-4 text-slate-900 dark:text-slate-100">
+                    <td className="py-3 px-4  dark:">
                       {resource.available}
                     </td>
                     <td className="py-3 px-4">

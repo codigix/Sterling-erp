@@ -33,9 +33,9 @@ class SalesOrderDetailController {
         data: updatedDetail
       });
 
-      res.json(formatSuccessResponse(updatedDetail, 'Sales Order details saved successfully'));
+      res.json(formatSuccessResponse(updatedDetail, 'Root Card Details saved successfully'));
     } catch (error) {
-      console.error('Error saving Sales Order details:', error);
+      console.error('Error saving Root Card Details:', error);
       res.status(500).json(formatErrorResponse(error.message));
     }
   }
@@ -46,12 +46,12 @@ class SalesOrderDetailController {
 
       const detail = await SalesOrderDetail.findBySalesOrderId(salesOrderId);
       if (!detail) {
-        return res.status(404).json(formatErrorResponse('Sales Order details not found'));
+        return res.status(404).json(formatErrorResponse('Root Card Details not found'));
       }
 
-      res.json(formatSuccessResponse(detail, 'Sales Order details retrieved successfully'));
+      res.json(formatSuccessResponse(detail, 'Root Card Details retrieved successfully'));
     } catch (error) {
-      console.error('Error getting Sales Order details:', error);
+      console.error('Error getting Root Card Details:', error);
       res.status(500).json(formatErrorResponse(error.message));
     }
   }
@@ -207,7 +207,7 @@ class SalesOrderDetailController {
 
       const detail = await SalesOrderDetail.findBySalesOrderId(salesOrderId);
       if (!detail) {
-        return res.status(404).json(formatErrorResponse('Sales Order details not found'));
+        return res.status(404).json(formatErrorResponse('Root Card Details not found'));
       }
 
       await SalesOrderDetail.delete(salesOrderId);
@@ -217,9 +217,9 @@ class SalesOrderDetailController {
         data: null
       });
 
-      res.json(formatSuccessResponse(null, 'Sales Order details deleted successfully'));
+      res.json(formatSuccessResponse(null, 'Root Card Details deleted successfully'));
     } catch (error) {
-      console.error('Error deleting Sales Order details:', error);
+      console.error('Error deleting Root Card Details:', error);
       res.status(500).json(formatErrorResponse(error.message));
     }
   }

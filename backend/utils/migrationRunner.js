@@ -165,6 +165,24 @@ async function runMigrations() {
       if (err.code !== 'ER_DUP_FIELDNAME') throw err;
     }
 
+    // Migration 6a: Update sales_orders status ENUM to include all workflow statuses
+    try {
+      await connection.execute(`
+        ALTER TABLE sales_orders 
+        MODIFY COLUMN status ENUM('pending', 'draft', 'ready_to_start', 'assigned', 'approved', 'in_progress', 'on_hold', 'critical', 'completed', 'delivered', 'cancelled') DEFAULT 'pending'
+      `);
+      console.log('✅ Updated status ENUM in sales_orders table');
+    } catch (err) {
+      if (err.code === 'ER_INVALID_DEFAULT') {
+        console.log('⚠️ Status ENUM might already be updated, continuing...');
+      } else if (err.message.includes('already exists')) {
+        console.log('⚠️ Column definition already exists, continuing...');
+      } else {
+        console.error('❌ Error updating status ENUM:', err.message);
+        throw err;
+      }
+    }
+
     // Migration 7: Create notifications table
     try {
       await connection.execute(`
@@ -303,6 +321,47 @@ async function runMigrations() {
         )
       `);
       console.log('✅ design_engineering_details table created/verified');
+    } catch (err) {
+      if (err.code !== 'ER_TABLE_EXISTS_ERROR') throw err;
+    }
+
+    // Migration 10.5: Create design_project_details table
+    try {
+      await connection.execute(`
+        CREATE TABLE IF NOT EXISTS design_project_details (
+          id INT PRIMARY KEY AUTO_INCREMENT,
+          root_card_id INT NOT NULL UNIQUE,
+          design_id VARCHAR(255),
+          project_name VARCHAR(255),
+          product_name VARCHAR(255),
+          design_status VARCHAR(50) DEFAULT 'draft',
+          design_engineer_name VARCHAR(255),
+          system_length DECIMAL(10, 2),
+          system_width DECIMAL(10, 2),
+          system_height DECIMAL(10, 2),
+          load_capacity DECIMAL(12, 2),
+          operating_environment TEXT,
+          material_grade VARCHAR(255),
+          surface_finish VARCHAR(255),
+          steel_sections JSON,
+          plates JSON,
+          fasteners JSON,
+          components JSON,
+          electrical JSON,
+          consumables JSON,
+          design_specifications TEXT,
+          manufacturing_instructions TEXT,
+          quality_safety TEXT,
+          additional_notes TEXT,
+          reference_documents JSON,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          FOREIGN KEY (root_card_id) REFERENCES root_cards(id) ON DELETE CASCADE,
+          INDEX idx_root_card (root_card_id),
+          INDEX idx_design_status (design_status)
+        )
+      `);
+      console.log('✅ design_project_details table created/verified');
     } catch (err) {
       if (err.code !== 'ER_TABLE_EXISTS_ERROR') throw err;
     }
@@ -479,6 +538,226 @@ async function runMigrations() {
       console.log('✅ sales_order_details table created/verified');
     } catch (err) {
       if (err.code !== 'ER_TABLE_EXISTS_ERROR') throw err;
+    }
+
+    // Migration 18: Create root_card_departments table
+    try {
+      await connection.execute(`
+        CREATE TABLE IF NOT EXISTS root_card_departments (
+          id INT PRIMARY KEY AUTO_INCREMENT,
+          root_card_id INT NOT NULL,
+          role_id INT NOT NULL,
+          assignment_type ENUM('auto', 'manual') DEFAULT 'auto',
+          notes TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          FOREIGN KEY (root_card_id) REFERENCES root_cards(id) ON DELETE CASCADE,
+          FOREIGN KEY (role_id) REFERENCES roles(id),
+          UNIQUE KEY unique_root_card_role (root_card_id, role_id)
+        )
+      `);
+      console.log('✅ root_card_departments table created/verified');
+    } catch (err) {
+      if (err.code !== 'ER_TABLE_EXISTS_ERROR') throw err;
+    }
+
+    // Migration 19: Create department_tasks table
+    try {
+      await connection.execute(`
+        CREATE TABLE IF NOT EXISTS department_tasks (
+          id INT PRIMARY KEY AUTO_INCREMENT,
+          root_card_id INT NOT NULL,
+          role_id INT NOT NULL,
+          task_title VARCHAR(500) NOT NULL,
+          task_description TEXT,
+          status ENUM('draft', 'pending', 'in_progress', 'completed', 'on_hold') DEFAULT 'draft',
+          priority ENUM('low', 'medium', 'high', 'critical') DEFAULT 'medium',
+          assigned_by INT,
+          notes JSON,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          FOREIGN KEY (root_card_id) REFERENCES root_cards(id) ON DELETE CASCADE,
+          FOREIGN KEY (role_id) REFERENCES roles(id),
+          FOREIGN KEY (assigned_by) REFERENCES users(id)
+        )
+      `);
+      console.log('✅ department_tasks table created/verified');
+    } catch (err) {
+      if (err.code !== 'ER_TABLE_EXISTS_ERROR') throw err;
+      
+      try {
+        await connection.execute(`
+          ALTER TABLE department_tasks 
+          CHANGE COLUMN status status ENUM('draft', 'pending', 'in_progress', 'completed', 'on_hold') DEFAULT 'draft'
+        `);
+        console.log('✅ Updated department_tasks status enum to include draft');
+      } catch (alterErr) {
+        if (alterErr.code !== 'ER_DUP_FIELDNAME') {
+          console.log('⚠️  Could not alter department_tasks status enum:', alterErr.message);
+        } else {
+          console.log('✅ department_tasks status enum already updated');
+        }
+      }
+    }
+
+    // Migration 20: Create indexes for department tables
+    try {
+      await connection.execute(`
+        CREATE INDEX idx_root_card_departments_root_card ON root_card_departments(root_card_id)
+      `);
+      console.log('✅ Index created on root_card_departments.root_card_id');
+    } catch (err) {
+      if (err.code !== 'ER_DUP_KEYNAME') throw err;
+      console.log('⚠️  Index already exists on root_card_departments.root_card_id');
+    }
+
+    try {
+      await connection.execute(`
+        CREATE INDEX idx_root_card_departments_role ON root_card_departments(role_id)
+      `);
+      console.log('✅ Index created on root_card_departments.role_id');
+    } catch (err) {
+      if (err.code !== 'ER_DUP_KEYNAME') throw err;
+      console.log('⚠️  Index already exists on root_card_departments.role_id');
+    }
+
+    try {
+      await connection.execute(`
+        CREATE INDEX idx_department_tasks_root_card ON department_tasks(root_card_id)
+      `);
+      console.log('✅ Index created on department_tasks.root_card_id');
+    } catch (err) {
+      if (err.code !== 'ER_DUP_KEYNAME') throw err;
+      console.log('⚠️  Index already exists on department_tasks.root_card_id');
+    }
+
+    try {
+      await connection.execute(`
+        CREATE INDEX idx_department_tasks_role ON department_tasks(role_id)
+      `);
+      console.log('✅ Index created on department_tasks.role_id');
+    } catch (err) {
+      if (err.code !== 'ER_DUP_KEYNAME') throw err;
+      console.log('⚠️  Index already exists on department_tasks.role_id');
+    }
+
+    try {
+      await connection.execute(`
+        CREATE INDEX idx_department_tasks_status ON department_tasks(status)
+      `);
+      console.log('✅ Index created on department_tasks.status');
+    } catch (err) {
+      if (err.code !== 'ER_DUP_KEYNAME') throw err;
+      console.log('⚠️  Index already exists on department_tasks.status');
+    }
+
+    // Migration: Design Workflow Steps table
+    try {
+      await connection.execute(`
+        CREATE TABLE IF NOT EXISTS design_workflow_steps (
+          id INT PRIMARY KEY AUTO_INCREMENT,
+          step_name VARCHAR(255) NOT NULL,
+          step_order INT NOT NULL,
+          description TEXT,
+          task_template_title VARCHAR(255) NOT NULL,
+          task_template_description TEXT,
+          priority ENUM('low', 'medium', 'high', 'critical') DEFAULT 'medium',
+          auto_create_on_trigger VARCHAR(100),
+          is_active BOOLEAN DEFAULT TRUE,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          UNIQUE KEY unique_step_order (step_order)
+        )
+      `);
+      console.log('✅ design_workflow_steps table created/verified');
+
+      // Insert default workflow steps if they don't exist
+      try {
+        await connection.execute(`
+          INSERT IGNORE INTO design_workflow_steps (step_name, step_order, description, task_template_title, task_template_description, priority, auto_create_on_trigger, is_active) VALUES
+          ('Project Details Input', 1, 'Input and verify all project specifications and requirements', 'Enter Project Details', 'Input project name, dimensions, load capacity, operating environment, and other specifications', 'high', 'root_card_created', TRUE),
+          ('Design Document Preparation', 2, 'Create design documents including drawings and specifications', 'Prepare Design Documents', 'Create technical drawings, CAD files, and design specifications based on project requirements', 'high', 'project_details_completed', TRUE),
+          ('BOM Creation', 3, 'Create Bill of Materials with all components and materials', 'Create and Validate BOM', 'Create comprehensive BOM listing all materials, components, and consumables required for manufacturing', 'high', 'design_documents_created', TRUE),
+          ('Design Review & Approval', 4, 'Submit design for review and approval', 'Submit Design for Review', 'Submit completed design for review by supervisors and get approval before moving to production', 'medium', 'bom_created', TRUE),
+          ('Pending Reviews Follow-up', 5, 'Track and follow up on designs awaiting review', 'Follow up on Pending Reviews', 'Monitor designs pending review and follow up with reviewers for timely approvals', 'medium', 'design_submitted', TRUE),
+          ('Approved Design Documentation', 6, 'Document and archive approved designs', 'Document Approved Designs', 'Update records with approved designs and maintain design documentation for reference', 'low', 'design_approved', TRUE),
+          ('Technical File Management', 7, 'Manage technical files and version control', 'Manage Technical Files', 'Organize and maintain technical files, specifications, and supporting documents with proper version control', 'medium', 'design_approved', TRUE)
+        `);
+        console.log('✅ Design workflow steps initialized');
+      } catch (err) {
+        if (err.code !== 'ER_DUP_ENTRY') throw err;
+        console.log('⚠️  Workflow steps already exist');
+      }
+    } catch (err) {
+      if (err.code !== 'ER_TABLE_EXISTS_ERROR') throw err;
+      console.log('⚠️  design_workflow_steps table already exists');
+    }
+
+    // Create indices for design_workflow_steps
+    try {
+      await connection.execute(`
+        CREATE INDEX idx_design_workflow_steps_order ON design_workflow_steps(step_order)
+      `);
+      console.log('✅ Index created on design_workflow_steps.step_order');
+    } catch (err) {
+      if (err.code !== 'ER_DUP_KEYNAME') throw err;
+      console.log('⚠️  Index idx_design_workflow_steps_order already exists');
+    }
+
+    try {
+      await connection.execute(`
+        CREATE INDEX idx_design_workflow_steps_trigger ON design_workflow_steps(auto_create_on_trigger)
+      `);
+      console.log('✅ Index created on design_workflow_steps.auto_create_on_trigger');
+    } catch (err) {
+      if (err.code !== 'ER_DUP_KEYNAME') throw err;
+      console.log('⚠️  Index idx_design_workflow_steps_trigger already exists');
+    }
+
+    try {
+      await connection.execute(`
+        ALTER TABLE department_tasks ADD COLUMN sales_order_id INT
+      `);
+      console.log('✅ Added sales_order_id column to department_tasks');
+    } catch (err) {
+      if (err.code !== 'ER_DUP_FIELDNAME') throw err;
+      console.log('⚠️  sales_order_id column already exists in department_tasks');
+    }
+
+    try {
+      await connection.execute(`
+        ALTER TABLE department_tasks ADD CONSTRAINT fk_dept_tasks_sales_order FOREIGN KEY (sales_order_id) REFERENCES sales_orders(id) ON DELETE SET NULL
+      `);
+      console.log('✅ Added foreign key constraint for sales_order_id');
+    } catch (err) {
+      if (err.code === 'ER_DUP_KEYNAME' || err.code === 'ER_FK_DUP_NAME' || err.message?.includes('Duplicate')) {
+        console.log('⚠️  Foreign key constraint already exists');
+      } else {
+        throw err;
+      }
+    }
+
+    try {
+      await connection.execute(`
+        CREATE INDEX idx_dept_tasks_sales_order ON department_tasks(sales_order_id)
+      `);
+      console.log('✅ Created index on department_tasks.sales_order_id');
+    } catch (err) {
+      if (err.code !== 'ER_DUP_KEYNAME') throw err;
+      console.log('⚠️  Index already exists');
+    }
+
+    try {
+      await connection.execute(`
+        UPDATE department_tasks dt
+        LEFT JOIN root_cards rc ON dt.root_card_id = rc.id
+        LEFT JOIN projects p ON rc.project_id = p.id
+        SET dt.sales_order_id = p.sales_order_id
+        WHERE dt.sales_order_id IS NULL AND p.sales_order_id IS NOT NULL
+      `);
+      console.log('✅ Backfilled sales_order_id for existing tasks');
+    } catch (err) {
+      console.log('⚠️  Could not backfill sales_order_id (might already be populated)');
     }
 
     console.log('\n✅ All migrations completed successfully!');

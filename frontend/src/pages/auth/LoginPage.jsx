@@ -1,11 +1,12 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import { Lock, User, Eye, EyeOff } from "lucide-react";
+import { Lock, User, Eye, EyeOff, Zap } from "lucide-react";
 import "./LoginPage.css";
 
 const ROLE_MAP = {
   admin: "/admin/dashboard",
+  management: "/admin/dashboard",
   sales: "/department/sales",
   engineering: "/department/engineering",
   procurement: "/department/procurement",
@@ -13,7 +14,15 @@ const ROLE_MAP = {
   inventory: "/department/inventory",
   production: "/department/production",
   mes: "/department/mes",
-  challan: "/department/challan"
+  challan: "/department/challan",
+  worker: "/worker/dashboard",
+  inventory_manager: "/inventory-manager/dashboard",
+  design_engineer: "/design-engineer/dashboard",
+  qc_manager: "/qc-manager/dashboard",
+  production_manager: "/production-manager/dashboard",
+  accountant: "/admin/dashboard",
+  employee: "/employee/dashboard",
+  supervisor: "/department/production",
 };
 
 const LoginPage = () => {
@@ -28,12 +37,21 @@ const LoginPage = () => {
   const { login, user } = useAuth();
   const navigate = useNavigate();
 
+  const normalizeRoleName = (role) => {
+    if (!role) return "";
+    return role
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "_");
+  };
+
   const getRolePath = useCallback((userData = {}) => {
     if (userData.type === 'employee') {
       return "/employee/dashboard";
     }
     const role = userData.role || "";
-    return ROLE_MAP[role.toLowerCase()] || "/department/sales";
+    const normalizedRole = normalizeRoleName(role);
+    return ROLE_MAP[normalizedRole] || "/department/sales";
   }, []);
 
   useEffect(() => {
@@ -67,28 +85,47 @@ const LoginPage = () => {
 
   return (
     <div className="login-page">
+      <div className="login-background">
+        <div className="gradient-blob blob-1"></div>
+        <div className="gradient-blob blob-2"></div>
+        <div className="gradient-blob blob-3"></div>
+      </div>
+
       <div className="login-container">
         {/* Left Side - Branding */}
         <div className="login-branding">
           <div className="branding-content">
-            <div className="branding-logo">
-              <div className="logo-icon">SE</div>
+            <div className="branding-header">
+              <div className="branding-logo">
+                <Zap className="logo-icon" size={40} />
+              </div>
+              <div>
+                <h1>Sterling</h1>
+                <p className="tagline">Enterprise Resource Planning</p>
+              </div>
             </div>
-            <h1>Sterling ERP</h1>
-            <p>Enterprise Resource Planning</p>
-            
+
             <div className="branding-features">
               <div className="feature">
-                <div className="feature-dot"></div>
-                <span>Seamless Operations</span>
+                <div className="feature-icon">📊</div>
+                <div>
+                  <div className="feature-title">Real-time Analytics</div>
+                  <div className="feature-desc">Track operations as they happen</div>
+                </div>
               </div>
               <div className="feature">
-                <div className="feature-dot"></div>
-                <span>Real-time Analytics</span>
+                <div className="feature-icon">🔒</div>
+                <div>
+                  <div className="feature-title">Secure Access</div>
+                  <div className="feature-desc">Role-based permissions & control</div>
+                </div>
               </div>
               <div className="feature">
-                <div className="feature-dot"></div>
-                <span>Role-based Access</span>
+                <div className="feature-icon">⚡</div>
+                <div>
+                  <div className="feature-title">Seamless Operations</div>
+                  <div className="feature-desc">Integrated workflows & automation</div>
+                </div>
               </div>
             </div>
           </div>
@@ -99,30 +136,59 @@ const LoginPage = () => {
           <div className="form-wrapper">
             <div className="form-header">
               <h2>Welcome Back</h2>
-              <p>Sign in to continue to your workspace</p>
+              <p>Sign in to your account</p>
             </div>
 
-            {/* Demo Credentials */}
-            <div className="demo-credentials">
-              <div className="demo-label">Demo Credentials</div>
-              <div className="demo-items">
-                <div className="demo-item">
-                  <span className="demo-key">Username:</span>
-                  <code className="demo-value">admin</code>
-                </div>
-                <div className="demo-item">
-                  <span className="demo-key">Password:</span>
-                  <code className="demo-value">password</code>
-                </div>
+            {/* Quick Access Demo */}
+            <div className="quick-access">
+              <div className="quick-label">
+                <span>Quick Access</span>
+                <code className="badge">Demo</code>
+              </div>
+              <div className="quick-buttons">
+                <button 
+                  type="button" 
+                  className="quick-btn"
+                  onClick={() => setFormData({ username: "inventory.manager", password: "password" })}
+                >
+                  Inventory
+                </button>
+                <button 
+                  type="button" 
+                  className="quick-btn"
+                  onClick={() => setFormData({ username: "design.engineer", password: "password" })}
+                >
+                  Design Eng.
+                </button>
+                <button 
+                  type="button" 
+                  className="quick-btn"
+                  onClick={() => setFormData({ username: "qc.manager", password: "password" })}
+                >
+                  QC
+                </button>
               </div>
             </div>
+
+            {error && (
+              <div className="error-message">
+                <div className="error-icon">⚠️</div>
+                <div className="error-content">
+                  <div className="error-title">Authentication Failed</div>
+                  <div className="error-text">{error}</div>
+                </div>
+              </div>
+            )}
 
             <form onSubmit={handleSubmit} className="login-form">
               {/* Username Field */}
               <div className="form-group">
-                <label htmlFor="username">Username</label>
+                <label htmlFor="username">
+                  <span>Username</span>
+                  <span className="required">*</span>
+                </label>
                 <div className="input-wrapper">
-                  <User className="input-icon" size={18} />
+                  <User className="input-icon" size={20} />
                   <input
                     type="text"
                     id="username"
@@ -130,7 +196,7 @@ const LoginPage = () => {
                     value={formData.username}
                     onChange={handleChange}
                     required
-                    placeholder="admin"
+                    placeholder="Enter your username"
                     className="form-input"
                   />
                 </div>
@@ -138,9 +204,14 @@ const LoginPage = () => {
 
               {/* Password Field */}
               <div className="form-group">
-                <label htmlFor="password">Password</label>
+                <div className="label-row">
+                  <label htmlFor="password">
+                    <span>Password</span>
+                    <span className="required">*</span>
+                  </label>
+                </div>
                 <div className="input-wrapper">
-                  <Lock className="input-icon" size={18} />
+                  <Lock className="input-icon" size={20} />
                   <input
                     type={showPassword ? "text" : "password"}
                     id="password"
@@ -148,7 +219,7 @@ const LoginPage = () => {
                     value={formData.password}
                     onChange={handleChange}
                     required
-                    placeholder="••••••••"
+                    placeholder="Enter your password"
                     className="form-input"
                   />
                   <button
@@ -156,19 +227,12 @@ const LoginPage = () => {
                     className="toggle-password"
                     onClick={() => setShowPassword(!showPassword)}
                     tabIndex="-1"
+                    title={showPassword ? "Hide password" : "Show password"}
                   >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
                 </div>
               </div>
-
-              {/* Error Message */}
-              {error && (
-                <div className="error-message">
-                  <span>⚠</span>
-                  {error}
-                </div>
-              )}
 
               {/* Submit Button */}
               <button
@@ -179,18 +243,21 @@ const LoginPage = () => {
                 {loading ? (
                   <>
                     <span className="spinner"></span>
-                    Logging in...
+                    <span>Signing in...</span>
                   </>
                 ) : (
-                  "Sign In"
+                  <>
+                    <span>Sign In</span>
+                    <span className="arrow">→</span>
+                  </>
                 )}
               </button>
             </form>
 
             {/* Footer */}
             <div className="form-footer">
-              <span>New to Sterling ERP?</span>
-              <Link to="/register">Create an account</Link>
+              <span>New user?</span>
+              <Link to="/register">Create account</Link>
             </div>
           </div>
         </div>

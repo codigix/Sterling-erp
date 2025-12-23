@@ -211,20 +211,20 @@ const EngineeringTasksPage = () => {
   return (
     <div className="task-page-container">
       {error && (
-        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-2 text-sm text-red-700">
           {error}
           <button onClick={() => setError(null)} className="ml-4 text-red-600 hover:text-red-700">×</button>
         </div>
       )}
 
       <div className="mb-6">
-        <label className="block text-sm font-medium text-slate-900 dark:text-slate-100 mb-2">
+        <label className="block text-sm font-medium  dark: mb-2">
           Select Sales Order
         </label>
         <select
           value={selectedSalesOrder || ''}
           onChange={(e) => setSelectedSalesOrder(Number(e.target.value))}
-          className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+          className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700  dark:"
         >
           {salesOrders.map(order => (
             <option key={order.id} value={order.id}>
@@ -237,20 +237,20 @@ const EngineeringTasksPage = () => {
       <div className="flex gap-2 mb-6 border-b border-slate-200 dark:border-slate-700">
         <button
           onClick={() => setActiveTab('documents')}
-          className={`px-4 py-3 font-medium border-b-2 transition-colors ${
+          className={`p-2 font-medium border-b-2 transition-colors ${
             activeTab === 'documents'
               ? 'border-blue-600 text-blue-600'
-              : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900'
+              : 'border-transparent text-slate-600 dark:text-slate-400 hover:'
           }`}
         >
           Documents
         </button>
         <button
           onClick={() => setActiveTab('bom')}
-          className={`px-4 py-3 font-medium border-b-2 transition-colors ${
+          className={`p-2 font-medium border-b-2 transition-colors ${
             activeTab === 'bom'
               ? 'border-blue-600 text-blue-600'
-              : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900'
+              : 'border-transparent text-slate-600 dark:text-slate-400 hover:'
           }`}
         >
           Bill of Materials
@@ -262,7 +262,7 @@ const EngineeringTasksPage = () => {
           {!showUploadForm && (
             <button
               onClick={() => setShowUploadForm(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+              className="flex items-center text-xs gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
             >
               <Upload size={18} />
               Upload Document
@@ -271,7 +271,7 @@ const EngineeringTasksPage = () => {
 
           {showUploadForm && (
             <Card className="mb-6 p-6">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4">Upload Engineering Document</h3>
+              <h3 className="text-lg font-bold  dark: mb-4">Upload Engineering Document</h3>
               <form onSubmit={handleUploadDocument} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -282,7 +282,7 @@ const EngineeringTasksPage = () => {
                       name="documentType"
                       value={uploadForm.documentType}
                       onChange={handleUploadChange}
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700  dark:"
                     >
                       <option value="qap">QAP/ATP</option>
                       <option value="pd">PD Document</option>
@@ -301,7 +301,7 @@ const EngineeringTasksPage = () => {
                       value={uploadForm.documentName}
                       onChange={handleUploadChange}
                       placeholder="Optional - defaults to filename"
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700  dark:"
                     />
                   </div>
                 </div>
@@ -313,7 +313,7 @@ const EngineeringTasksPage = () => {
                     type="file"
                     onChange={handleUploadChange}
                     accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700  dark:"
                   />
                 </div>
                 <div className="flex gap-2">
@@ -326,7 +326,7 @@ const EngineeringTasksPage = () => {
                   <button
                     type="button"
                     onClick={() => setShowUploadForm(false)}
-                    className="px-4 py-2 rounded-lg bg-slate-300 dark:bg-slate-600 text-slate-900 dark:text-slate-100 hover:bg-slate-400"
+                    className="px-4 py-2 rounded-lg  dark:bg-slate-600  dark: hover:bg-slate-400"
                   >
                     Cancel
                   </button>
@@ -340,11 +340,11 @@ const EngineeringTasksPage = () => {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-slate-200 dark:border-slate-700">
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900 dark:text-slate-100">Document Name</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900 dark:text-slate-100">Type</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900 dark:text-slate-100">Uploaded By</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900 dark:text-slate-100">Status</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900 dark:text-slate-100">Actions</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold  dark:">Document Name</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold  dark:">Type</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold  dark:">Uploaded By</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold  dark:">Status</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold  dark:">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -356,19 +356,19 @@ const EngineeringTasksPage = () => {
                     </tr>
                   )}
                   {documents.map(doc => (
-                    <tr key={doc.id} className="border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-                      <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-slate-100">{doc.document_name}</td>
-                      <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">{getDocumentTypeLabel(doc.document_type)}</td>
-                      <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">{doc.uploaded_by_name}</td>
-                      <td className="px-6 py-4">
-                        <Badge className={`flex items-center gap-1 w-fit ${getStatusColor(doc.status)}`}>
+                    <tr key={doc.id} className="border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs transition-colors">
+                      <td className="p-1 text-sm font-medium  dark:">{doc.document_name}</td>
+                      <td className="p-1 text-sm text-slate-700 dark:text-slate-300">{getDocumentTypeLabel(doc.document_type)}</td>
+                      <td className="p-1 text-sm text-slate-700 dark:text-slate-300">{doc.uploaded_by_name}</td>
+                      <td className="p-1">
+                        <Badge className={`flex items-center text-xs gap-1 w-fit ${getStatusColor(doc.status)}`}>
                           {getStatusIcon(doc.status)}
                           {doc.status.replace(/_/g, ' ')}
                         </Badge>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="p-1">
                         <div className="flex gap-2">
-                          <button className="p-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100 hover:bg-slate-300 transition-colors">
+                          <button className="p-2 rounded-lg bg-slate-200 dark:bg-slate-700  dark: hover: transition-colors">
                             <Download size={16} />
                           </button>
                           <button className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 hover:bg-blue-200 transition-colors">
@@ -390,7 +390,7 @@ const EngineeringTasksPage = () => {
           {!showBOMForm && (
             <button
               onClick={() => setShowBOMForm(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+              className="flex items-center text-xs gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
             >
               <Plus size={18} />
               Generate BOM
@@ -399,7 +399,7 @@ const EngineeringTasksPage = () => {
 
           {showBOMForm && (
             <Card className="mb-6 p-6">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4">Generate Bill of Materials</h3>
+              <h3 className="text-lg font-bold  dark: mb-4">Generate Bill of Materials</h3>
               <form onSubmit={handleGenerateBOM} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -411,7 +411,7 @@ const EngineeringTasksPage = () => {
                       value={bomForm.bomName}
                       onChange={(e) => setBomForm(prev => ({ ...prev, bomName: e.target.value }))}
                       placeholder="e.g., Assembly - Main Unit"
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700  dark:"
                     />
                   </div>
                 </div>
@@ -424,13 +424,13 @@ const EngineeringTasksPage = () => {
                     onChange={(e) => setBomForm(prev => ({ ...prev, description: e.target.value }))}
                     placeholder="Optional BOM description"
                     rows="3"
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700  dark:"
                   />
                 </div>
 
                 <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-md font-semibold text-slate-900 dark:text-slate-100">Line Items</h4>
+                  <div className="flex items-center text-xs justify-between mb-3">
+                    <h4 className="text-md font-semibold  dark:">Line Items</h4>
                     <button
                       type="button"
                       onClick={addLineItem}
@@ -449,7 +449,7 @@ const EngineeringTasksPage = () => {
                             value={item.itemCode}
                             onChange={(e) => handleBOMLineChange(index, 'itemCode', e.target.value)}
                             placeholder="Item code"
-                            className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm"
+                            className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700  dark: text-sm"
                           />
                         </div>
                         <div className="md:col-span-3">
@@ -459,7 +459,7 @@ const EngineeringTasksPage = () => {
                             value={item.itemDescription}
                             onChange={(e) => handleBOMLineChange(index, 'itemDescription', e.target.value)}
                             placeholder="Item description"
-                            className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm"
+                            className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700  dark: text-sm"
                           />
                         </div>
                         <div className="md:col-span-1">
@@ -469,7 +469,7 @@ const EngineeringTasksPage = () => {
                             value={item.quantity}
                             onChange={(e) => handleBOMLineChange(index, 'quantity', Number(e.target.value))}
                             min="1"
-                            className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm"
+                            className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700  dark: text-sm"
                           />
                         </div>
                         <div className="md:col-span-2">
@@ -479,7 +479,7 @@ const EngineeringTasksPage = () => {
                             value={item.unitCost}
                             onChange={(e) => handleBOMLineChange(index, 'unitCost', Number(e.target.value))}
                             step="0.01"
-                            className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm"
+                            className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700  dark: text-sm"
                           />
                         </div>
                         <div className="md:col-span-2">
@@ -487,7 +487,7 @@ const EngineeringTasksPage = () => {
                           <select
                             value={item.partType}
                             onChange={(e) => handleBOMLineChange(index, 'partType', e.target.value)}
-                            className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm"
+                            className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700  dark: text-sm"
                           >
                             <option value="raw_material">Raw Material</option>
                             <option value="component">Component</option>
@@ -519,7 +519,7 @@ const EngineeringTasksPage = () => {
                   <button
                     type="button"
                     onClick={() => setShowBOMForm(false)}
-                    className="px-4 py-2 rounded-lg bg-slate-300 dark:bg-slate-600 text-slate-900 dark:text-slate-100 hover:bg-slate-400"
+                    className="px-4 py-2 rounded-lg  dark:bg-slate-600  dark: hover:bg-slate-400"
                   >
                     Cancel
                   </button>
@@ -533,10 +533,10 @@ const EngineeringTasksPage = () => {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-slate-200 dark:border-slate-700">
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900 dark:text-slate-100">BOM Name</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900 dark:text-slate-100">Items</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900 dark:text-slate-100">Status</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900 dark:text-slate-100">Actions</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold  dark:">BOM Name</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold  dark:">Items</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold  dark:">Status</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold  dark:">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -548,17 +548,17 @@ const EngineeringTasksPage = () => {
                     </tr>
                   )}
                   {boms.map(bom => (
-                    <tr key={bom.id} className="border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-                      <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-slate-100">{bom.bom_name}</td>
-                      <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">View Details</td>
-                      <td className="px-6 py-4">
-                        <Badge className={`flex items-center gap-1 w-fit ${getStatusColor(bom.status)}`}>
+                    <tr key={bom.id} className="border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs transition-colors">
+                      <td className="p-1 text-sm font-medium  dark:">{bom.bom_name}</td>
+                      <td className="p-1 text-sm text-slate-700 dark:text-slate-300">View Details</td>
+                      <td className="p-1">
+                        <Badge className={`flex items-center text-xs gap-1 w-fit ${getStatusColor(bom.status)}`}>
                           {bom.status.replace(/_/g, ' ')}
                         </Badge>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="p-1">
                         <div className="flex gap-2">
-                          <button className="p-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100 hover:bg-slate-300 transition-colors">
+                          <button className="p-2 rounded-lg bg-slate-200 dark:bg-slate-700  dark: hover: transition-colors">
                             <Eye size={16} />
                           </button>
                           <button className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 hover:bg-blue-200 transition-colors">

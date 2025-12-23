@@ -123,7 +123,6 @@ SQL to insert admin user:
 INSERT INTO roles (name, permissions) VALUES 
 ('admin', '["*"]'),
 ('sales', '["sales.*"]'),
-('engineering', '["engineering.*"]'),
 ('procurement', '["procurement.*"]'),
 ('qc', '["qc.*"]'),
 ('inventory', '["inventory.*"]'),

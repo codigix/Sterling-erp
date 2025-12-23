@@ -8,75 +8,75 @@ import { getStatusColor, getQualityColor } from "../utils/colorHelpers";
 
 const VendorsTab = () => {
   return (
-    <div className="w-full space-y-6 overflow-x-hidden">
+    <div className="w-full space-y-3 overflow-x-hidden">
       {/* Vendor Performance Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         {vendorData.map((vendor, index) => (
           <Card key={index}>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center justify-between">
-                <span className="flex items-center">
-                  <Truck className="w-5 h-5 mr-2 text-primary-600" />
-                  {vendor.name}
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center text-xs justify-between">
+                <span className="flex items-center text-xs gap-1">
+                  <Truck className="w-3.5 h-3.5 text-primary-600" />
+                  <span className="truncate">{vendor.name}</span>
                 </span>
-                <Badge className={getStatusColor(vendor.status)}>
+                <Badge className={`${getStatusColor(vendor.status)} text-xs px-2 py-0.5`}>
                   {vendor.status}
                 </Badge>
               </CardTitle>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 {vendor.category}
               </p>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
+            <CardContent className="space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <div className="bg-slate-50 dark:bg-slate-800 p-2 rounded">
+                  <p className="text-xs text-slate-600 dark:text-slate-400 leading-tight">
                     On-Time Delivery
                   </p>
-                  <p className="text-xl font-bold text-slate-900 dark:text-slate-100">
+                  <p className="text-sm font-bold text-slate-900 dark:text-white">
                     {vendor.onTimeDelivery}/{vendor.totalOrders}
                   </p>
-                  <p className="text-sm text-green-600">
+                  <p className="text-xs text-green-600">
                     {Math.round(
                       (vendor.onTimeDelivery / vendor.totalOrders) * 100
                     )}
                     %
                   </p>
                 </div>
-                <div>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
-                    Quality Rating
+                <div className="bg-slate-50 dark:bg-slate-800 p-2 rounded">
+                  <p className="text-xs text-slate-600 dark:text-slate-400 leading-tight">
+                    Quality
                   </p>
                   <p
-                    className={`text-xl font-bold ${getQualityColor(
+                    className={`text-sm font-bold ${getQualityColor(
                       vendor.qualityRating
                     )}`}
                   >
-                    {vendor.qualityRating}/5.0
+                    {vendor.qualityRating}/5
                   </p>
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
+              <div className="space-y-1">
+                <div className="flex justify-between text-xs">
                   <span className="text-slate-600 dark:text-slate-400">
-                    Avg. Delivery Time
+                    Avg. Time
                   </span>
-                  <span className="font-medium">{vendor.avgDeliveryTime}</span>
+                  <span className="font-medium text-slate-900 dark:text-white">{vendor.avgDeliveryTime}</span>
                 </div>
-                <div className="flex justify-between text-sm">
+                <div className="flex justify-between text-xs">
                   <span className="text-slate-600 dark:text-slate-400">
                     Total Value
                   </span>
-                  <span className="font-medium">
+                  <span className="font-medium text-slate-900 dark:text-white">
                     ₹{vendor.totalValue.toLocaleString()}
                   </span>
                 </div>
               </div>
 
-              <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+              <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1">
                 <div
-                  className="bg-primary-600 h-2 rounded-full transition-all duration-300"
+                  className="bg-primary-600 h-1 rounded-full transition-all duration-300"
                   style={{
                     width: `${
                       (vendor.onTimeDelivery / vendor.totalOrders) * 100
@@ -90,27 +90,27 @@ const VendorsTab = () => {
       </div>
 
       {/* Vendor Performance Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <BarChart3 className="w-5 h-5 mr-2" />
-              Vendor Delivery Performance
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-1 text-xs">
+              <BarChart3 className="w-3.5 h-3.5" />
+              <span className="text-sm">Delivery Performance</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-64">
+            <div className="h-40">
               <Bar
                 data={{
                   labels: vendorData.map((v) => v.name.split(" ")[0]),
                   datasets: [
                     {
-                      label: "On-Time Delivery %",
+                      label: "On-Time %",
                       data: vendorData.map((v) =>
                         Math.round((v.onTimeDelivery / v.totalOrders) * 100)
                       ),
                       backgroundColor: "#475569",
-                      borderRadius: 4,
+                      borderRadius: 2,
                     },
                   ],
                 }}
@@ -125,8 +125,12 @@ const VendorsTab = () => {
                       beginAtZero: true,
                       max: 100,
                       ticks: {
+                        font: { size: 10 },
                         callback: (value) => value + "%",
                       },
+                    },
+                    x: {
+                      ticks: { font: { size: 10 } },
                     },
                   },
                 }}
@@ -136,19 +140,19 @@ const VendorsTab = () => {
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <PieChart className="w-5 h-5 mr-2" />
-              Vendor Categories Distribution
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-1 text-xs">
+              <PieChart className="w-3.5 h-3.5" />
+              <span className="text-sm">Categories</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-64">
+            <div className="h-40">
               <Doughnut
                 data={{
                   labels: [
-                    "Raw Materials",
-                    "Machined Parts",
+                    "Raw Mat",
+                    "Machined",
                     "Electronics",
                     "Logistics",
                     "Components",
@@ -162,7 +166,6 @@ const VendorsTab = () => {
                         "#f59e0b",
                         "#ef4444",
                         "#8b5cf6",
-                        "#06b6d4",
                       ],
                       borderWidth: 0,
                     },
@@ -172,7 +175,7 @@ const VendorsTab = () => {
                   responsive: true,
                   maintainAspectRatio: false,
                   plugins: {
-                    legend: { position: "bottom", labels: { boxWidth: 12 } },
+                    legend: { position: "bottom", labels: { boxWidth: 8, font: { size: 10 } } },
                   },
                 }}
               />
@@ -182,29 +185,29 @@ const VendorsTab = () => {
       </div>
 
       {/* Vendor Quality & Cost Analysis */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Target className="w-5 h-5 mr-2" />
-              Quality Ratings Trend
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-1 text-xs">
+              <Target className="w-3.5 h-3.5" />
+              <span className="text-sm">Quality Trend</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-64">
+            <div className="h-40">
               <Line
                 data={{
                   labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
                   datasets: [
                     {
-                      label: "Average Quality Rating",
+                      label: "Avg Quality",
                       data: [4.5, 4.6, 4.4, 4.7, 4.5, 4.6],
                       borderColor: "#10b981",
                       backgroundColor: "#10b98120",
                       tension: 0.4,
                     },
                     {
-                      label: "Target Rating (4.5)",
+                      label: "Target",
                       data: [4.5, 4.5, 4.5, 4.5, 4.5, 4.5],
                       borderColor: "#f59e0b",
                       borderDash: [5, 5],
@@ -217,7 +220,7 @@ const VendorsTab = () => {
                   responsive: true,
                   maintainAspectRatio: false,
                   plugins: {
-                    legend: { position: "top" },
+                    legend: { position: "top", labels: { boxWidth: 8, font: { size: 10 } } },
                   },
                   scales: {
                     y: {
@@ -225,8 +228,12 @@ const VendorsTab = () => {
                       min: 4.0,
                       max: 5.0,
                       ticks: {
+                        font: { size: 10 },
                         stepSize: 0.1,
                       },
+                    },
+                    x: {
+                      ticks: { font: { size: 10 } },
                     },
                   },
                 }}
@@ -236,58 +243,58 @@ const VendorsTab = () => {
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <DollarSign className="w-5 h-5 mr-2" />
-              Vendor Spending Analysis
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-1 text-xs">
+              <DollarSign className="w-3.5 h-3.5" />
+              <span className="text-sm">Spending Analysis</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 border border-slate-200 dark:border-slate-700 rounded-lg">
+            <div className="space-y-2">
+              <div className="flex items-start justify-between p-2 border border-slate-200 dark:border-slate-700 rounded text-xs">
                 <div>
-                  <p className="font-medium text-slate-900 dark:text-slate-100">
+                  <p className="font-medium text-slate-900 dark:text-white text-xs">
                     Top Vendor
                   </p>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
-                    MetalWorks Pro
+                  <p className="text-xs text-slate-600 dark:text-slate-400">
+                    MetalWorks
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-lg font-bold text-green-600">₹14.5L</p>
-                  <p className="text-sm text-slate-500">23% of total</p>
+                  <p className="font-bold text-green-600 text-sm">₹14.5L</p>
+                  <p className="text-xs text-slate-500">23%</p>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between p-4 border border-slate-200 dark:border-slate-700 rounded-lg">
+              <div className="flex items-start justify-between p-2 border border-slate-200 dark:border-slate-700 rounded text-xs">
                 <div>
-                  <p className="font-medium text-slate-900 dark:text-slate-100">
-                    Total Monthly Spend
+                  <p className="font-medium text-slate-900 dark:text-white text-xs">
+                    Total Spend
                   </p>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
+                  <p className="text-xs text-slate-600 dark:text-slate-400">
                     All Vendors
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                  <p className="font-bold text-slate-900 dark:text-white text-sm">
                     ₹45.2L
                   </p>
-                  <p className="text-sm text-green-600">+8% vs last month</p>
+                  <p className="text-xs text-green-600">+8%</p>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between p-4 border border-slate-200 dark:border-slate-700 rounded-lg">
+              <div className="flex items-start justify-between p-2 border border-slate-200 dark:border-slate-700 rounded text-xs">
                 <div>
-                  <p className="font-medium text-slate-900 dark:text-slate-100">
-                    Cost Savings
+                  <p className="font-medium text-slate-900 dark:text-white text-xs">
+                    Savings
                   </p>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
-                    This Quarter
+                  <p className="text-xs text-slate-600 dark:text-slate-400">
+                    This QTR
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-lg font-bold text-blue-600">₹2.8L</p>
-                  <p className="text-sm text-slate-500">12% reduction</p>
+                  <p className="font-bold text-blue-600 text-sm">₹2.8L</p>
+                  <p className="text-xs text-slate-500">12%</p>
                 </div>
               </div>
             </div>

@@ -101,7 +101,8 @@ Table 'sterling_erp.sales_order_steps' doesn't exist
 ### 1. **Frontend: Missing Step 2 Data Save** 
    - **File**: `frontend/src/components/admin/SalesOrderForm/index.jsx`
    - **Change**: Modified `createActualSalesOrder()` to call `saveStepData(2)` immediately after creating the sales order
-   - **Why**: Ensures sales order details (email, phone, addresses, etc.) are persisted before moving to Step 3
+   - **Why**: Ensures Root Card Details
+ (email, phone, addresses, etc.) are persisted before moving to Step 3
 
 ### 2. **Frontend: Wrong API Endpoint for Step 2**
    - **File**: `frontend/src/components/admin/SalesOrderForm/index.jsx`
@@ -153,7 +154,8 @@ Table 'sterling_erp.sales_order_steps' doesn't exist
    - **Change**: Added 9 new table migrations for:
      - `sales_order_steps` - Step tracking and management
      - `client_po_details` - PO information storage
-     - `sales_order_details` - Sales order details (Step 2)
+     - `sales_order_details` - Root Card Details
+ (Step 2)
      - `design_engineering_details` - Design documents storage
      - `material_requirements_details` - Material tracking
      - `production_plan_details` - Production planning

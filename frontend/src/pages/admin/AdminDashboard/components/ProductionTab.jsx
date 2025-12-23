@@ -90,7 +90,7 @@ const ProductionTab = ({ production }) => {
       case "Critical Delay":
         return "text-red-600 bg-red-100 dark:bg-red-900 dark:text-red-400";
       default:
-        return "text-slate-600 bg-slate-100 dark:bg-slate-900 dark:text-slate-400";
+        return "text-slate-600 bg-slate-100 dark: dark:text-slate-400";
     }
   };
 
@@ -105,7 +105,7 @@ const ProductionTab = ({ production }) => {
       case "Low":
         return "text-green-600 bg-green-100 dark:bg-green-900 dark:text-green-400";
       default:
-        return "text-slate-600 bg-slate-100 dark:bg-slate-900 dark:text-slate-400";
+        return "text-slate-600 bg-slate-100 dark: dark:text-slate-400";
     }
   };
 
@@ -119,7 +119,7 @@ const ProductionTab = ({ production }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardContent className="p-6">
-            <div className="flex items-center">
+            <div className="flex items-center text-xs">
               <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
                 <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
               </div>
@@ -127,7 +127,7 @@ const ProductionTab = ({ production }) => {
                 <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
                   On Track
                 </p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                <p className="text-xl font-bold  text-left">
                   12
                 </p>
               </div>
@@ -137,7 +137,7 @@ const ProductionTab = ({ production }) => {
 
         <Card>
           <CardContent className="p-6">
-            <div className="flex items-center">
+            <div className="flex items-center text-xs">
               <div className="p-2 bg-yellow-100 dark:bg-yellow-900 rounded-lg">
                 <Clock className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
               </div>
@@ -145,7 +145,7 @@ const ProductionTab = ({ production }) => {
                 <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
                   Delayed
                 </p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                <p className="text-xl font-bold  text-left">
                   8
                 </p>
               </div>
@@ -155,7 +155,7 @@ const ProductionTab = ({ production }) => {
 
         <Card>
           <CardContent className="p-6">
-            <div className="flex items-center">
+            <div className="flex items-center text-xs">
               <div className="p-2 bg-red-100 dark:bg-red-900 rounded-lg">
                 <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
               </div>
@@ -163,7 +163,7 @@ const ProductionTab = ({ production }) => {
                 <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
                   Critical
                 </p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                <p className="text-xl font-bold  text-left">
                   3
                 </p>
               </div>
@@ -173,7 +173,7 @@ const ProductionTab = ({ production }) => {
 
         <Card>
           <CardContent className="p-6">
-            <div className="flex items-center">
+            <div className="flex items-center text-xs">
               <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
                 <Timer className="h-6 w-6 text-blue-600 dark:text-blue-400" />
               </div>
@@ -181,7 +181,7 @@ const ProductionTab = ({ production }) => {
                 <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
                   Avg Delay
                 </p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                <p className="text-xl font-bold  text-left">
                   5.2 days
                 </p>
               </div>
@@ -192,7 +192,7 @@ const ProductionTab = ({ production }) => {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center">
+          <CardTitle className="flex items-center text-xs">
             <AlertTriangle className="w-5 h-5 mr-2" />
             Production Delay Details
           </CardTitle>
@@ -202,11 +202,11 @@ const ProductionTab = ({ production }) => {
             {displayData.map((item, index) => (
               <div
                 key={index}
-                className="flex items-center justify-between p-4 border border-slate-200 dark:border-slate-700 rounded-lg"
+                className="flex items-center text-xs justify-between p-4 border border-slate-200 dark:border-slate-700 rounded-lg"
               >
                 <div className="flex-1">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-medium text-slate-900 dark:text-slate-100">
+                  <div className="flex items-center text-xs justify-between mb-2">
+                    <h4 className="font-medium  dark:">
                       {item.project}
                     </h4>
                     <Badge className={getDelayStatusColor(item.status)}>
@@ -216,7 +216,7 @@ const ProductionTab = ({ production }) => {
                   <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
                     {item.stage}
                   </p>
-                  <div className="flex items-center mb-2">
+                  <div className="flex items-center text-xs mb-2">
                     <div className="flex-1 bg-slate-200 dark:bg-slate-700 rounded-full h-2 mr-4">
                       <div
                         className={`h-2 rounded-full ${
@@ -264,7 +264,7 @@ const ProductionTab = ({ production }) => {
                   <p className="text-sm text-slate-500 dark:text-slate-400">
                     Bottleneck
                   </p>
-                  <p className="font-medium text-slate-900 dark:text-slate-100">
+                  <p className="font-medium  dark:">
                     {item.bottleneck}
                   </p>
                   <p className="text-xs text-slate-500 mt-1">
@@ -280,7 +280,7 @@ const ProductionTab = ({ production }) => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center">
+            <CardTitle className="flex items-center text-xs">
               <Wrench className="w-5 h-5 mr-2" />
               Bottleneck Analysis
             </CardTitle>
@@ -290,11 +290,11 @@ const ProductionTab = ({ production }) => {
               {bottleneckData.map((bottleneck, index) => (
                 <div
                   key={index}
-                  className="flex items-center justify-between p-3 border border-slate-200 dark:border-slate-700 rounded-lg"
+                  className="flex items-center text-xs justify-between p-3 border border-slate-200 dark:border-slate-700 rounded-lg"
                 >
                   <div className="flex-1">
-                    <div className="flex items-center justify-between mb-1">
-                      <h4 className="font-medium text-slate-900 dark:text-slate-100">
+                    <div className="flex items-center text-xs justify-between mb-1">
+                      <h4 className="font-medium  dark:">
                         {bottleneck.type}
                       </h4>
                       <Badge
@@ -332,7 +332,7 @@ const ProductionTab = ({ production }) => {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center">
+            <CardTitle className="flex items-center text-xs">
               <BarChart3 className="w-5 h-5 mr-2" />
               Delay Impact by Category
             </CardTitle>
@@ -381,7 +381,7 @@ const ProductionTab = ({ production }) => {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center">
+          <CardTitle className="flex items-center text-xs">
             <AlertCircle className="w-5 h-5 mr-2" />
             Escalation Alerts & Actions Required
           </CardTitle>
@@ -399,7 +399,7 @@ const ProductionTab = ({ production }) => {
                     12-day delay due to equipment failure. Production Head
                     notified. Urgent maintenance team dispatch required.
                   </p>
-                  <div className="flex items-center mt-2">
+                  <div className="flex items-center text-xs mt-2">
                     <span className="text-xs text-red-600 dark:text-red-400">
                       Escalated to: Production Head
                     </span>
@@ -423,7 +423,7 @@ const ProductionTab = ({ production }) => {
                     5-day delay due to material shortage. Supplier contacted for
                     expedited delivery.
                   </p>
-                  <div className="flex items-center mt-2">
+                  <div className="flex items-center text-xs mt-2">
                     <span className="text-xs text-yellow-600 dark:text-yellow-400">
                       Escalated to: Procurement Manager
                     </span>
@@ -447,7 +447,7 @@ const ProductionTab = ({ production }) => {
                     Quality Control team overloaded. Consider redistributing
                     workload or hiring temporary staff.
                   </p>
-                  <div className="flex items-center mt-2">
+                  <div className="flex items-center text-xs mt-2">
                     <span className="text-xs text-blue-600 dark:text-blue-400">
                       Action Required: Resource Allocation
                     </span>

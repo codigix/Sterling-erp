@@ -1,4 +1,4 @@
-# Sales Order Wizard - Implementation Summary
+# Root Card Wizard - Implementation Summary
 
 ## Project Completion
 
@@ -511,7 +511,7 @@ console.log('Assignment:', { stepId, employeeId });
 
 ## Conclusion
 
-The Sales Order Wizard provides a complete end-to-end workflow management system for processing sales orders through 9 distinct stages. The system ensures:
+The Root Card Wizard provides a complete end-to-end workflow management system for processing sales orders through 9 distinct stages. The system ensures:
 
 - ✅ Complete workflow tracking
 - ✅ Employee accountability

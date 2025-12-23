@@ -1,4 +1,4 @@
-/* Sales Order Wizard Styles */
+/* Root Card Wizard Styles */
 
 .wizard-container {
   display: flex;
@@ -130,7 +130,7 @@
 .form-group label {
   font-size: 0.875rem;
   font-weight: 500;
-  color: #1e293b;
+  color: #1f2937;
 }
 
 .form-group input,
@@ -275,50 +275,7 @@
   color: #991b1b;
 }
 
-/* Dark mode */
-.dark {
-  --bg-light: #1e293b;
-  --text-light: #e2e8f0;
-}
 
-.dark .form-section {
-  background-color: #334155;
-  border-color: #475569;
-}
-
-.dark .form-section h3 {
-  color: #e2e8f0;
-}
-
-.dark .form-group label {
-  color: #cbd5e1;
-}
-
-.dark .form-group input,
-.dark .form-group select,
-.dark .form-group textarea {
-  background-color: #0f172a;
-  color: #e2e8f0;
-  border-color: #475569;
-}
-
-.dark .employee-item {
-  background-color: #334155;
-  border-color: #475569;
-  color: #e2e8f0;
-}
-
-.dark .employee-item:hover {
-  background-color: #475569;
-}
-
-.dark .document-upload {
-  border-color: #475569;
-}
-
-.dark .document-upload:hover {
-  background-color: #0f172a;
-}
 
 @media (max-width: 768px) {
   .step-indicator {

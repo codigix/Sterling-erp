@@ -28,7 +28,10 @@ async function initDatabase() {
       `CREATE TABLE roles (
         id INT PRIMARY KEY AUTO_INCREMENT,
         name VARCHAR(50) UNIQUE NOT NULL,
-        permissions JSON NOT NULL
+        permissions JSON NOT NULL,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       )`,
 
       `CREATE TABLE vendors (
@@ -123,6 +126,7 @@ async function initDatabase() {
       `CREATE TABLE root_cards (
         id INT PRIMARY KEY AUTO_INCREMENT,
         project_id INT NOT NULL,
+        sales_order_id INT,
         code VARCHAR(50) UNIQUE,
         title VARCHAR(255) NOT NULL,
         status ENUM('draft', 'planning', 'in_progress', 'on_hold', 'completed', 'cancelled') DEFAULT 'planning',
@@ -136,6 +140,7 @@ async function initDatabase() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         FOREIGN KEY (project_id) REFERENCES projects(id),
+        FOREIGN KEY (sales_order_id) REFERENCES sales_orders(id) ON DELETE SET NULL,
         FOREIGN KEY (created_by) REFERENCES users(id),
         FOREIGN KEY (assigned_supervisor) REFERENCES users(id)
       )`,
@@ -171,7 +176,58 @@ async function initDatabase() {
         FOREIGN KEY (worker_id) REFERENCES users(id)
       )`,
 
-      // Add more tables as needed...
+      `CREATE TABLE department_tasks (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        root_card_id INT NOT NULL,
+        role_id INT NOT NULL,
+        task_title VARCHAR(500) NOT NULL,
+        task_description TEXT,
+        status ENUM('draft', 'pending', 'in_progress', 'completed', 'on_hold') DEFAULT 'draft',
+        priority ENUM('low', 'medium', 'high', 'critical') DEFAULT 'medium',
+        assigned_by INT,
+        sales_order_id INT,
+        notes JSON,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (root_card_id) REFERENCES root_cards(id) ON DELETE CASCADE,
+        FOREIGN KEY (role_id) REFERENCES roles(id),
+        FOREIGN KEY (assigned_by) REFERENCES users(id),
+        FOREIGN KEY (sales_order_id) REFERENCES sales_orders(id) ON DELETE SET NULL,
+        INDEX idx_root_card_id (root_card_id),
+        INDEX idx_role_id (role_id),
+        INDEX idx_status (status),
+        INDEX idx_sales_order_id (sales_order_id)
+      )`,
+
+      `CREATE TABLE design_engineering_details (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        sales_order_id INT NOT NULL UNIQUE,
+        bomData JSON,
+        drawings3D JSON,
+        specifications JSON,
+        documents JSON,
+        designNotes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (sales_order_id) REFERENCES sales_orders(id) ON DELETE CASCADE,
+        INDEX idx_sales_order (sales_order_id)
+      )`,
+
+      `CREATE TABLE design_workflow_steps (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        step_name VARCHAR(255) NOT NULL,
+        step_order INT DEFAULT 0,
+        description TEXT,
+        task_template_title VARCHAR(500),
+        task_template_description TEXT,
+        auto_create_on_trigger VARCHAR(255),
+        priority VARCHAR(20) DEFAULT 'medium',
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_step_order (step_order),
+        INDEX idx_is_active (is_active)
+      )`
     ];
 
     for (const tableSchema of tableSchemas) {
@@ -190,39 +246,7 @@ async function initDatabase() {
     }
 
     console.log('Schema created successfully');
-
-    // Insert roles
-    const roles = [
-      { name: 'Admin', permissions: ['all'] },
-      { name: 'Management', permissions: ['read_all', 'reports'] },
-      { name: 'Sales', permissions: ['sales_read', 'sales_write', 'projects_read'] },
-      { name: 'Engineering', permissions: ['engineering_read', 'engineering_write', 'projects_read'] },
-      { name: 'Procurement', permissions: ['procurement_read', 'procurement_write'] },
-      { name: 'QC', permissions: ['qc_read', 'qc_write', 'inventory_read'] },
-      { name: 'Inventory', permissions: ['inventory_read', 'inventory_write'] },
-      { name: 'Production Supervisor', permissions: ['production_read', 'production_write', 'worker_assign'] },
-      { name: 'Worker', permissions: ['worker_tasks', 'production_read'] }
-    ];
-
-    for (const role of roles) {
-      await dbPool.execute(
-        'INSERT INTO roles (name, permissions) VALUES (?, ?) ON DUPLICATE KEY UPDATE permissions = VALUES(permissions)',
-        [role.name, JSON.stringify(role.permissions)]
-      );
-    }
-
-    console.log('Roles inserted successfully');
-
-    // Create default admin user
-    const adminRole = await dbPool.execute('SELECT id FROM roles WHERE name = ?', ['Admin']);
-    const adminRoleId = adminRole[0][0].id;
-
-    await dbPool.execute(
-      'INSERT INTO users (username, password, role_id, email) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE username = username',
-      ['admin', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', adminRoleId, 'admin@sterling.com'] // password: password
-    );
-
-    console.log('Default admin user created (username: admin, password: password)');
+    console.log('Note: Roles and users must be created through the application interface');
 
     await dbPool.end();
 

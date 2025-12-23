@@ -207,6 +207,15 @@ class ClientPODetail {
     } : null;
   }
 
+  static async deleteProjectDetails(salesOrderId) {
+    await pool.execute(
+      `UPDATE client_po_details 
+       SET project_name = NULL, project_code = NULL, billing_address = NULL, shipping_address = NULL, updated_at = CURRENT_TIMESTAMP
+       WHERE sales_order_id = ?`,
+      [salesOrderId]
+    );
+  }
+
   static async getProjectRequirements(salesOrderId) {
     const [rows] = await pool.execute(
       `SELECT project_requirements FROM client_po_details WHERE sales_order_id = ?`,

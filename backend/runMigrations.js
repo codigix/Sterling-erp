@@ -859,6 +859,182 @@ async function runMigrations() {
       }
     }
 
+    console.log('Running Migration: Add is_active column to roles table...');
+    try {
+      await connection.execute(`
+        ALTER TABLE roles ADD COLUMN is_active BOOLEAN DEFAULT TRUE
+      `);
+      console.log('✅ is_active column added to roles table\n');
+    } catch (err) {
+      if (err.code === 'ER_DUP_FIELDNAME') {
+        console.log('⚠️  Column already exists, skipping...\n');
+      } else {
+        throw err;
+      }
+    }
+
+    try {
+      await connection.execute(`
+        ALTER TABLE roles ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      `);
+      console.log('✅ created_at column added to roles table\n');
+    } catch (err) {
+      if (err.code === 'ER_DUP_FIELDNAME') {
+        console.log('⚠️  Column already exists, skipping...\n');
+      } else {
+        throw err;
+      }
+    }
+
+    try {
+      await connection.execute(`
+        ALTER TABLE roles ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      `);
+      console.log('✅ updated_at column added to roles table\n');
+    } catch (err) {
+      if (err.code === 'ER_DUP_FIELDNAME') {
+        console.log('⚠️  Column already exists, skipping...\n');
+      } else {
+        throw err;
+      }
+    }
+
+    try {
+      await connection.execute(`
+        CREATE INDEX idx_roles_active ON roles(is_active)
+      `);
+      console.log('✅ Index created on roles.is_active\n');
+    } catch (err) {
+      if (err.code === 'ER_DUP_KEYNAME') {
+        console.log('⚠️  Index already exists, skipping...\n');
+      } else {
+        throw err;
+      }
+    }
+
+    // Migration: Create root_card_departments table
+    console.log('Running Migration: Create root_card_departments table...');
+    try {
+      await connection.execute(`
+        CREATE TABLE IF NOT EXISTS root_card_departments (
+          id INT PRIMARY KEY AUTO_INCREMENT,
+          root_card_id INT NOT NULL,
+          role_id INT NOT NULL,
+          assignment_type ENUM('auto', 'manual') DEFAULT 'auto',
+          notes TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          FOREIGN KEY (root_card_id) REFERENCES root_cards(id) ON DELETE CASCADE,
+          FOREIGN KEY (role_id) REFERENCES roles(id),
+          UNIQUE KEY unique_root_card_role (root_card_id, role_id)
+        )
+      `);
+      console.log('✅ root_card_departments table created successfully\n');
+    } catch (err) {
+      if (err.code === 'ER_TABLE_EXISTS_ERROR') {
+        console.log('⚠️  Table already exists, skipping...\n');
+      } else {
+        throw err;
+      }
+    }
+
+    // Migration: Create department_tasks table
+    console.log('Running Migration: Create department_tasks table...');
+    try {
+      await connection.execute(`
+        CREATE TABLE IF NOT EXISTS department_tasks (
+          id INT PRIMARY KEY AUTO_INCREMENT,
+          root_card_id INT NOT NULL,
+          role_id INT NOT NULL,
+          task_title VARCHAR(500) NOT NULL,
+          task_description TEXT,
+          status ENUM('pending', 'in_progress', 'completed', 'on_hold') DEFAULT 'pending',
+          priority ENUM('low', 'medium', 'high', 'critical') DEFAULT 'medium',
+          assigned_by INT,
+          notes JSON,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          FOREIGN KEY (root_card_id) REFERENCES root_cards(id) ON DELETE CASCADE,
+          FOREIGN KEY (role_id) REFERENCES roles(id),
+          FOREIGN KEY (assigned_by) REFERENCES users(id)
+        )
+      `);
+      console.log('✅ department_tasks table created successfully\n');
+    } catch (err) {
+      if (err.code === 'ER_TABLE_EXISTS_ERROR') {
+        console.log('⚠️  Table already exists, skipping...\n');
+      } else {
+        throw err;
+      }
+    }
+
+    // Create indexes for department tables
+    console.log('Running Migration: Create indexes for department tables...');
+    try {
+      await connection.execute(`
+        CREATE INDEX IF NOT EXISTS idx_root_card_departments_root_card ON root_card_departments(root_card_id)
+      `);
+      console.log('✅ Index created on root_card_departments.root_card_id\n');
+    } catch (err) {
+      if (err.code === 'ER_DUP_KEYNAME') {
+        console.log('⚠️  Index already exists, skipping...\n');
+      } else {
+        throw err;
+      }
+    }
+
+    try {
+      await connection.execute(`
+        CREATE INDEX IF NOT EXISTS idx_root_card_departments_role ON root_card_departments(role_id)
+      `);
+      console.log('✅ Index created on root_card_departments.role_id\n');
+    } catch (err) {
+      if (err.code === 'ER_DUP_KEYNAME') {
+        console.log('⚠️  Index already exists, skipping...\n');
+      } else {
+        throw err;
+      }
+    }
+
+    try {
+      await connection.execute(`
+        CREATE INDEX IF NOT EXISTS idx_department_tasks_root_card ON department_tasks(root_card_id)
+      `);
+      console.log('✅ Index created on department_tasks.root_card_id\n');
+    } catch (err) {
+      if (err.code === 'ER_DUP_KEYNAME') {
+        console.log('⚠️  Index already exists, skipping...\n');
+      } else {
+        throw err;
+      }
+    }
+
+    try {
+      await connection.execute(`
+        CREATE INDEX IF NOT EXISTS idx_department_tasks_role ON department_tasks(role_id)
+      `);
+      console.log('✅ Index created on department_tasks.role_id\n');
+    } catch (err) {
+      if (err.code === 'ER_DUP_KEYNAME') {
+        console.log('⚠️  Index already exists, skipping...\n');
+      } else {
+        throw err;
+      }
+    }
+
+    try {
+      await connection.execute(`
+        CREATE INDEX IF NOT EXISTS idx_department_tasks_status ON department_tasks(status)
+      `);
+      console.log('✅ Index created on department_tasks.status\n');
+    } catch (err) {
+      if (err.code === 'ER_DUP_KEYNAME') {
+        console.log('⚠️  Index already exists, skipping...\n');
+      } else {
+        throw err;
+      }
+    }
+
     console.log('✅ All migrations completed successfully!');
     process.exit(0);
   } catch (error) {

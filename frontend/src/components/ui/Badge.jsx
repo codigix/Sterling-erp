@@ -7,7 +7,7 @@ const Badge = ({
   className = '',
   ...props
 }) => {
-  const baseClasses = 'inline-flex items-center font-medium';
+  const baseClasses = 'inline-flex items-center text-xs font-medium';
 
   const variants = {
     default: 'bg-slate-100 text-slate-700',

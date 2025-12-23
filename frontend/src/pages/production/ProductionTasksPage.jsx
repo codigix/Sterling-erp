@@ -39,7 +39,7 @@ const ProductionTasksPage = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
+      <div className="flex items-center text-xs justify-center py-12">
         <p className="text-slate-600">Loading production data...</p>
       </div>
     );
@@ -68,7 +68,7 @@ const ProductionTasksPage = () => {
         <Card>
           <div className="p-4">
             <p className="text-sm text-slate-600 dark:text-slate-400">Total Root Cards</p>
-            <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">{stats.totalRC}</p>
+            <p className="text-xl font-bold text-slate-900 dark:text-white mt-1">{stats.totalRC}</p>
           </div>
         </Card>
         <Card>
@@ -80,7 +80,7 @@ const ProductionTasksPage = () => {
         <Card>
           <div className="p-4">
             <p className="text-sm text-slate-600 dark:text-slate-400">Total Stages</p>
-            <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">{stats.totalStages}</p>
+            <p className="text-xl font-bold text-slate-900 dark:text-white mt-1">{stats.totalStages}</p>
           </div>
         </Card>
         <Card>
@@ -99,7 +99,7 @@ const ProductionTasksPage = () => {
             className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
               activeTab === 'plans'
                 ? 'bg-blue-600 text-white'
-                : 'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100 hover:bg-slate-300'
+                : 'bg-slate-200 dark:bg-slate-700  dark: hover:'
             }`}
           >
             Production Plans
@@ -109,7 +109,7 @@ const ProductionTasksPage = () => {
             className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
               activeTab === 'rootcards'
                 ? 'bg-blue-600 text-white'
-                : 'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100 hover:bg-slate-300'
+                : 'bg-slate-200 dark:bg-slate-700  dark: hover:'
             }`}
           >
             Root Cards
@@ -119,20 +119,20 @@ const ProductionTasksPage = () => {
             className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
               activeTab === 'stages'
                 ? 'bg-blue-600 text-white'
-                : 'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100 hover:bg-slate-300'
+                : 'bg-slate-200 dark:bg-slate-700  dark: hover:'
             }`}
           >
             Manufacturing Stages
           </button>
         </div>
         <div className="flex gap-2">
-          <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100 hover:bg-slate-300 transition-colors">
+          <button className="flex items-center text-xs gap-2 px-4 py-2 rounded-lg bg-slate-200 dark:bg-slate-700  dark: hover: transition-colors">
             <Filter size={18} />
             Filter
           </button>
           <button
             onClick={() => setShowRootCardBuilder(!showRootCardBuilder)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+            className="flex items-center text-xs gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
           >
             <Plus size={18} />
             New {activeTab === 'rootcards' ? 'Root Card' : 'Stage'}
@@ -142,11 +142,11 @@ const ProductionTasksPage = () => {
 
       {/* Root Card Builder Modal */}
       {showRootCardBuilder && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center text-xs justify-center z-50 p-4">
           <Card className="max-w-2xl w-full">
             <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Root Card Builder</h3>
+              <div className="flex items-center text-xs justify-between mb-4">
+                <h3 className="text-lg font-bold  dark:">Root Card Builder</h3>
                 <button onClick={() => setShowRootCardBuilder(false)}>
                   <X size={20} />
                 </button>
@@ -154,8 +154,8 @@ const ProductionTasksPage = () => {
 
               <div className="space-y-4 mb-6">
                 <div>
-                  <label className="block text-sm font-medium text-slate-900 dark:text-slate-100 mb-2">Project</label>
-                  <select className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100">
+                  <label className="block text-sm font-medium  dark: mb-2">Project</label>
+                  <select className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700  dark:">
                     <option>Select Project...</option>
                     <option>PROJ-001 - Motor Assembly Unit</option>
                     <option>PROJ-002 - Control Panel</option>
@@ -163,20 +163,20 @@ const ProductionTasksPage = () => {
                 </div>
 
                 <div className="mb-6">
-                  <label className="block text-sm font-medium text-slate-900 dark:text-slate-100 mb-2">Manufacturing Stages</label>
+                  <label className="block text-sm font-medium  dark: mb-2">Manufacturing Stages</label>
                   <div className="space-y-2 max-h-64 overflow-y-auto">
                     {['In-house Assembly Stage 1', 'Outsourced - Painting', 'In-house Assembly Stage 2', 'Testing & QC', 'Packing & Dispatch'].map((stage, idx) => (
-                      <div key={idx} className="flex items-center gap-2 p-2 border border-slate-200 dark:border-slate-600 rounded-lg">
+                      <div key={idx} className="flex items-center text-xs gap-2 p-2 border border-slate-200 dark:border-slate-600 rounded-lg">
                         <input type="checkbox" className="w-4 h-4" />
-                        <span className="text-sm text-slate-900 dark:text-slate-100">{stage}</span>
+                        <span className="text-sm  dark:">{stage}</span>
                       </div>
                     ))}
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-900 dark:text-slate-100 mb-2">Notes</label>
-                  <textarea className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100" rows="3" />
+                  <label className="block text-sm font-medium  dark: mb-2">Notes</label>
+                  <textarea className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700  dark:" rows="3" />
                 </div>
               </div>
 
@@ -184,7 +184,7 @@ const ProductionTasksPage = () => {
                 <button className="flex-1 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors font-medium">
                   Create Root Card
                 </button>
-                <button onClick={() => setShowRootCardBuilder(false)} className="flex-1 px-4 py-2 rounded-lg bg-slate-300 dark:bg-slate-600 text-slate-900 dark:text-slate-100 hover:bg-slate-400 transition-colors font-medium">
+                <button onClick={() => setShowRootCardBuilder(false)} className="flex-1 px-4 py-2 rounded-lg  dark:bg-slate-600  dark: hover:bg-slate-400 transition-colors font-medium">
                   Cancel
                 </button>
               </div>
@@ -206,7 +206,7 @@ const ProductionTasksPage = () => {
               <div className="p-6">
                 <div className="flex items-start justify-between mb-4">
                   <div>
-                    <h4 className="text-lg font-bold text-slate-900 dark:text-slate-100">{rc.id}</h4>
+                    <h4 className="text-lg font-bold  dark:">{rc.id}</h4>
                     <p className="text-sm text-slate-600 dark:text-slate-400">{rc.projectName}</p>
                   </div>
                   <Badge className={getStatusColor(rc.status)}>
@@ -222,7 +222,7 @@ const ProductionTasksPage = () => {
                       style={{ width: `${(rc.completedStages / rc.stages) * 100}%` }}
                     />
                   </div>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">
+                  <p className="text-xs text-slate-600 dark:text-slate-400 text-xs ">
                     {rc.completedStages} of {rc.stages} stages completed
                   </p>
                 </div>
@@ -232,11 +232,11 @@ const ProductionTasksPage = () => {
                 </div>
 
                 <div className="flex gap-2 pt-4 border-t border-slate-200 dark:border-slate-700">
-                  <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors text-sm font-medium">
+                  <button className="flex-1 flex items-center text-xs justify-center gap-2 px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors text-sm font-medium">
                     <Settings size={16} />
                     Manage
                   </button>
-                  <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100 hover:bg-slate-300 transition-colors text-sm font-medium">
+                  <button className="flex-1 flex items-center text-xs justify-center gap-2 px-3 py-2 rounded-lg bg-slate-200 dark:bg-slate-700  dark: hover: transition-colors text-sm font-medium">
                     <Eye size={16} />
                     View
                   </button>
@@ -265,17 +265,17 @@ const ProductionTasksPage = () => {
               </thead>
               <tbody>
                 {stages.map(stage => (
-                  <tr key={stage.id} className="border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800">
-                    <td className="px-6 py-4 text-sm font-medium">{stage.id}</td>
-                    <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">{stage.rootCard}</td>
-                    <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">{stage.stageName}</td>
-                    <td className="px-6 py-4 text-sm">
+                  <tr key={stage.id} className="border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs">
+                    <td className="p-1 text-sm font-medium">{stage.id}</td>
+                    <td className="p-1 text-sm text-slate-700 dark:text-slate-300">{stage.rootCard}</td>
+                    <td className="p-1 text-sm text-slate-700 dark:text-slate-300">{stage.stageName}</td>
+                    <td className="p-1 text-sm">
                       <Badge className={stage.type === 'in-house' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'}>
                         {stage.type === 'in-house' ? 'In-House' : 'Outsourced'}
                       </Badge>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
+                    <td className="p-1">
+                      <div className="flex items-center text-xs gap-2">
                         <div className="w-16 bg-slate-200 dark:bg-slate-600 rounded-full h-2">
                           <div
                             className="bg-blue-600 h-2 rounded-full"
@@ -285,17 +285,17 @@ const ProductionTasksPage = () => {
                         <span className="text-sm font-medium">{stage.progress}%</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="p-1">
                       <Badge className={getStatusColor(stage.status)}>
                         {stage.status.charAt(0).toUpperCase() + stage.status.slice(1)}
                       </Badge>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="p-1">
                       <div className="flex gap-2">
                         <button className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors">
                           <ArrowRight size={16} />
                         </button>
-                        <button className="p-2 rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 transition-colors">
+                        <button className="p-2 rounded-lg bg-slate-200 dark:bg-slate-700 hover: transition-colors">
                           <Eye size={16} />
                         </button>
                       </div>

@@ -10,7 +10,8 @@ const SALES_ORDER_STEPS = {
     id: 2,
     name: 'Sales Order',
     type: 'sales_order',
-    displayName: 'Sales Order Details',
+    displayName: 'Root Card Details
+',
     description: 'Sales order specifics and quotation details'
   },
   DESIGN_ENGINEERING: {

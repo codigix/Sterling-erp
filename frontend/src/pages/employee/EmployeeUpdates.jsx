@@ -48,7 +48,7 @@ const EmployeeUpdates = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-2">
+        <h1 className="text-3xl font-bold  dark: mb-2">
           Company Updates & Announcements
         </h1>
         <p className="text-slate-600 dark:text-slate-400">
@@ -61,12 +61,12 @@ const EmployeeUpdates = () => {
           <Card key={update.id} className="hover:shadow-md transition group border-l-4 border-primary-500">
             <CardContent className="p-6">
               <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-primary-100 to-primary-50 dark:from-primary-900/30 dark:to-primary-800/30 rounded-lg flex items-center justify-center flex-shrink-0">
+                <div className="w-12 h-12 bg-gradient-to-br from-primary-100 to-primary-50 dark:from-primary-900/30 dark:to-primary-800/30 rounded-lg flex items-center text-xs justify-center flex-shrink-0">
                   <Megaphone className="w-6 h-6 text-primary-600 dark:text-primary-400" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-2 flex-wrap">
-                    <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                  <div className="flex items-center text-xs gap-2 mb-2 flex-wrap">
+                    <h3 className="text-md font-semibold  dark:">
                       {update.title}
                     </h3>
                     <Badge className={getCategoryColor(update.category)}>
@@ -80,11 +80,11 @@ const EmployeeUpdates = () => {
                     {update.description}
                   </p>
                   <div className="flex flex-wrap gap-4 text-sm text-slate-600 dark:text-slate-400 pt-3 border-t border-slate-200 dark:border-slate-700">
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center text-xs gap-1">
                       <User className="w-4 h-4 flex-shrink-0" />
                       <span>{update.author}</span>
                     </div>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center text-xs gap-1">
                       <Calendar className="w-4 h-4 flex-shrink-0" />
                       <span>{update.date}</span>
                     </div>

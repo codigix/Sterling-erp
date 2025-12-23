@@ -1,4 +1,4 @@
-# Sales Order Wizard Implementation Guide
+# Root Card Wizard Implementation Guide
 
 ## Overview
 

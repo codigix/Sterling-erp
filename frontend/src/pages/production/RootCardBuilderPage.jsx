@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Plus, Trash2, Play, AlertCircle, CheckCircle, Clock } from 'lucide-react';
 import axios from '../../utils/api';
 import Card from '../../components/ui/Card';
@@ -6,6 +7,7 @@ import Badge from '../../components/ui/Badge';
 import '../../styles/TaskPage.css';
 
 const RootCardBuilderPage = () => {
+  const [searchParams] = useSearchParams();
   const [salesOrders, setSalesOrders] = useState([]);
   const [selectedSalesOrder, setSelectedSalesOrder] = useState(null);
   const [boms, setBoms] = useState([]);
@@ -222,20 +224,20 @@ const RootCardBuilderPage = () => {
   return (
     <div className="task-page-container">
       {error && (
-        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-2 text-sm text-red-700">
           {error}
           <button onClick={() => setError(null)} className="ml-4 text-red-600 hover:text-red-700">×</button>
         </div>
       )}
 
       <div className="mb-6">
-        <label className="block text-sm font-medium text-slate-900 dark:text-slate-100 mb-2">
+        <label className="block text-sm font-medium  dark: mb-2">
           Select Sales Order
         </label>
         <select
           value={selectedSalesOrder || ''}
           onChange={(e) => setSelectedSalesOrder(Number(e.target.value))}
-          className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+          className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700  dark:"
         >
           <option value="">Select an order...</option>
           {salesOrders.map(order => (
@@ -249,13 +251,13 @@ const RootCardBuilderPage = () => {
       {selectedSalesOrder && (
         <>
           <div className="mb-6">
-            <label className="block text-sm font-medium text-slate-900 dark:text-slate-100 mb-2">
+            <label className="block text-sm font-medium  dark: mb-2">
               Select BOM (Bill of Materials)
             </label>
             <select
               value={selectedBOM || ''}
               onChange={(e) => setSelectedBOM(Number(e.target.value))}
-              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700  dark:"
             >
               <option value="">Select a BOM...</option>
               {boms.map(bom => (
@@ -269,7 +271,7 @@ const RootCardBuilderPage = () => {
           {!showForm && (
             <button
               onClick={() => setShowForm(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors mb-6"
+              className="flex items-center text-xs gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors mb-6"
             >
               <Plus size={18} />
               Create Production Plan
@@ -278,7 +280,7 @@ const RootCardBuilderPage = () => {
 
           {showForm && (
             <Card className="mb-6 p-6">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4">Create Root Card Production Plan</h3>
+              <h3 className="text-lg font-bold  dark: mb-4">Create Root Card Production Plan</h3>
               <form onSubmit={handleCreatePlan} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -290,7 +292,7 @@ const RootCardBuilderPage = () => {
                       value={formData.planName}
                       onChange={(e) => setFormData(prev => ({ ...prev, planName: e.target.value }))}
                       placeholder="e.g., Production Plan Q1 2025"
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700  dark:"
                       required
                     />
                   </div>
@@ -301,7 +303,7 @@ const RootCardBuilderPage = () => {
                     <select
                       value={formData.assignedSupervisor}
                       onChange={(e) => setFormData(prev => ({ ...prev, assignedSupervisor: e.target.value }))}
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700  dark:"
                     >
                       <option value="">Select supervisor...</option>
                       {employees.map(emp => (
@@ -317,7 +319,7 @@ const RootCardBuilderPage = () => {
                       type="date"
                       value={formData.startDate}
                       onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700  dark:"
                     />
                   </div>
                   <div>
@@ -328,7 +330,7 @@ const RootCardBuilderPage = () => {
                       type="date"
                       value={formData.endDate}
                       onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700  dark:"
                     />
                   </div>
                   <div>
@@ -339,7 +341,7 @@ const RootCardBuilderPage = () => {
                       type="date"
                       value={formData.estimatedCompletionDate}
                       onChange={(e) => setFormData(prev => ({ ...prev, estimatedCompletionDate: e.target.value }))}
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700  dark:"
                     />
                   </div>
                 </div>
@@ -353,13 +355,13 @@ const RootCardBuilderPage = () => {
                     onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
                     placeholder="Additional notes about this production plan"
                     rows="3"
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700  dark:"
                   />
                 </div>
 
                 <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h4 className="text-md font-semibold text-slate-900 dark:text-slate-100">Production Stages</h4>
+                  <div className="flex items-center text-xs justify-between mb-4">
+                    <h4 className="text-md font-semibold  dark:">Production Stages</h4>
                     <button
                       type="button"
                       onClick={addStage}
@@ -373,7 +375,7 @@ const RootCardBuilderPage = () => {
                     {formData.stages.map((stage, idx) => (
                       <div key={idx} className="border border-slate-200 dark:border-slate-600 rounded-lg p-4">
                         <div className="flex justify-between items-start mb-4">
-                          <h5 className="font-medium text-slate-900 dark:text-slate-100">Stage {idx + 1}</h5>
+                          <h5 className="font-medium  dark:">Stage {idx + 1}</h5>
                           {formData.stages.length > 1 && (
                             <button
                               type="button"
@@ -395,7 +397,7 @@ const RootCardBuilderPage = () => {
                               value={stage.stageName}
                               onChange={(e) => handleStageChange(idx, 'stageName', e.target.value)}
                               placeholder="e.g., Machining"
-                              className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                              className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-700  dark:"
                               required
                             />
                           </div>
@@ -406,7 +408,7 @@ const RootCardBuilderPage = () => {
                             <select
                               value={stage.stageType}
                               onChange={(e) => handleStageChange(idx, 'stageType', e.target.value)}
-                              className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                              className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-700  dark:"
                             >
                               <option value="in_house">In-House</option>
                               <option value="outsource">Outsource</option>
@@ -421,7 +423,7 @@ const RootCardBuilderPage = () => {
                               value={stage.estimatedDurationDays}
                               onChange={(e) => handleStageChange(idx, 'estimatedDurationDays', Number(e.target.value))}
                               min="1"
-                              className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                              className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-700  dark:"
                             />
                           </div>
                           <div>
@@ -433,7 +435,7 @@ const RootCardBuilderPage = () => {
                               value={stage.estimatedDelayDays}
                               onChange={(e) => handleStageChange(idx, 'estimatedDelayDays', Number(e.target.value))}
                               min="0"
-                              className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                              className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-700  dark:"
                             />
                           </div>
                           <div>
@@ -444,7 +446,7 @@ const RootCardBuilderPage = () => {
                               type="date"
                               value={stage.plannedStartDate}
                               onChange={(e) => handleStageChange(idx, 'plannedStartDate', e.target.value)}
-                              className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                              className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-700  dark:"
                             />
                           </div>
                           <div>
@@ -455,7 +457,7 @@ const RootCardBuilderPage = () => {
                               type="date"
                               value={stage.plannedEndDate}
                               onChange={(e) => handleStageChange(idx, 'plannedEndDate', e.target.value)}
-                              className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                              className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-700  dark:"
                             />
                           </div>
 
@@ -468,7 +470,7 @@ const RootCardBuilderPage = () => {
                                 <select
                                   value={stage.assignedEmployeeId || ''}
                                   onChange={(e) => handleStageChange(idx, 'assignedEmployeeId', e.target.value ? Number(e.target.value) : null)}
-                                  className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                                  className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-700  dark:"
                                 >
                                   <option value="">Select employee...</option>
                                   {employees.map(emp => (
@@ -483,7 +485,7 @@ const RootCardBuilderPage = () => {
                                 <select
                                   value={stage.facilityId || ''}
                                   onChange={(e) => handleStageChange(idx, 'facilityId', e.target.value ? Number(e.target.value) : null)}
-                                  className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                                  className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-700  dark:"
                                 >
                                   <option value="">Select facility...</option>
                                   {facilities.map(fac => (
@@ -500,7 +502,7 @@ const RootCardBuilderPage = () => {
                               <select
                                 value={stage.vendorId || ''}
                                 onChange={(e) => handleStageChange(idx, 'vendorId', e.target.value ? Number(e.target.value) : null)}
-                                className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                                className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-700  dark:"
                               >
                                 <option value="">Select vendor...</option>
                                 {/* Would filter for vendor role users */}
@@ -523,7 +525,7 @@ const RootCardBuilderPage = () => {
                   <button
                     type="button"
                     onClick={resetForm}
-                    className="px-4 py-2 rounded-lg bg-slate-300 dark:bg-slate-600 text-slate-900 dark:text-slate-100 hover:bg-slate-400"
+                    className="px-4 py-2 rounded-lg  dark:bg-slate-600  dark: hover:bg-slate-400"
                   >
                     Cancel
                   </button>
@@ -533,16 +535,16 @@ const RootCardBuilderPage = () => {
           )}
 
           <Card>
-            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4 px-6 pt-4">Production Plans</h3>
+            <h3 className="text-lg font-bold  dark: mb-4 px-6 pt-4">Production Plans</h3>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-slate-200 dark:border-slate-700">
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900 dark:text-slate-100">Plan Name</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900 dark:text-slate-100">Start Date</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900 dark:text-slate-100">End Date</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900 dark:text-slate-100">Status</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900 dark:text-slate-100">Actions</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold  dark:">Plan Name</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold  dark:">Start Date</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold  dark:">End Date</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold  dark:">Status</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold  dark:">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -554,27 +556,27 @@ const RootCardBuilderPage = () => {
                     </tr>
                   )}
                   {productions.map(prod => (
-                    <tr key={prod.id} className="border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-                      <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-slate-100">{prod.plan_name}</td>
-                      <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">{prod.start_date ? new Date(prod.start_date).toLocaleDateString() : '-'}</td>
-                      <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">{prod.end_date ? new Date(prod.end_date).toLocaleDateString() : '-'}</td>
-                      <td className="px-6 py-4">
-                        <Badge className={`flex items-center gap-1 w-fit ${getStatusColor(prod.status)}`}>
+                    <tr key={prod.id} className="border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs transition-colors">
+                      <td className="p-1 text-sm font-medium  dark:">{prod.plan_name}</td>
+                      <td className="p-1 text-sm text-slate-700 dark:text-slate-300">{prod.start_date ? new Date(prod.start_date).toLocaleDateString() : '-'}</td>
+                      <td className="p-1 text-sm text-slate-700 dark:text-slate-300">{prod.end_date ? new Date(prod.end_date).toLocaleDateString() : '-'}</td>
+                      <td className="p-1">
+                        <Badge className={`flex items-center text-xs gap-1 w-fit ${getStatusColor(prod.status)}`}>
                           {prod.status.replace(/_/g, ' ')}
                         </Badge>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="p-1">
                         {prod.status === 'draft' && (
                           <button
                             onClick={() => handleStartProduction(prod.id)}
-                            className="flex items-center gap-2 px-3 py-1 rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors text-sm"
+                            className="flex items-center text-xs gap-2 px-3 py-1 rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors text-sm"
                           >
                             <Play size={14} />
                             START PRODUCTION
                           </button>
                         )}
                         {prod.status === 'in_progress' && (
-                          <span className="flex items-center gap-2 text-sm text-purple-600 dark:text-purple-400">
+                          <span className="flex items-center text-xs gap-2 text-sm text-purple-600 dark:text-purple-400">
                             <Clock size={14} />
                             Running...
                           </span>

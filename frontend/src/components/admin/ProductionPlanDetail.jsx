@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from '../../utils/api';
-import Card, { CardHeader, CardTitle, CardContent } from '../ui/Card';
+import Card, { div, CardTitle, div } from '../ui/Card';
 import Button from '../ui/Button';
 import Badge from '../ui/Badge';
 import {
@@ -118,16 +118,16 @@ const ProductionPlanDetail = ({ rootCard, onRefresh }) => {
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
+      <div>
+        <div>
+          <div className="flex items-center text-xs justify-between">
             <div>
               <CardTitle className="text-2xl">{rootCard.title}</CardTitle>
-              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+              <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
                 {rootCard.project} {rootCard.projectCode && `(${rootCard.projectCode})`}
               </p>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center text-xs space-x-2">
               <Badge className={getPriorityColor(rootCard.priority)}>
                 {rootCard.priority.toUpperCase()}
               </Badge>
@@ -136,31 +136,31 @@ const ProductionPlanDetail = ({ rootCard, onRefresh }) => {
               </Badge>
             </div>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
+        </div>
+        <div className="space-y-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
               <p className="text-sm text-slate-600 dark:text-slate-400">Production Code</p>
-              <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">{rootCard.code || 'N/A'}</p>
+              <p className="text-md font-semibold  dark:">{rootCard.code || 'N/A'}</p>
             </div>
             <div>
               <p className="text-sm text-slate-600 dark:text-slate-400">Total Stages</p>
-              <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">{rootCard.totalStages}</p>
+              <p className="text-md font-semibold  dark:">{rootCard.totalStages}</p>
             </div>
             <div>
               <p className="text-sm text-slate-600 dark:text-slate-400">Completed Stages</p>
-              <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">{rootCard.completedStages}</p>
+              <p className="text-md font-semibold  dark:">{rootCard.completedStages}</p>
             </div>
             <div>
               <p className="text-sm text-slate-600 dark:text-slate-400">Overall Progress</p>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center text-xs space-x-2">
                 <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                   <div
                     className="bg-blue-600 h-2 rounded-full"
                     style={{ width: `${rootCard.progress || 0}%` }}
                   ></div>
                 </div>
-                <span className="text-lg font-semibold text-slate-900 dark:text-slate-100">{rootCard.progress || 0}%</span>
+                <span className="text-md font-semibold  dark:">{rootCard.progress || 0}%</span>
               </div>
             </div>
           </div>
@@ -170,22 +170,22 @@ const ProductionPlanDetail = ({ rootCard, onRefresh }) => {
               {rootCard.plannedStart && (
                 <div>
                   <p className="text-sm text-slate-600 dark:text-slate-400">Planned Start</p>
-                  <p className="text-slate-900 dark:text-slate-100">{new Date(rootCard.plannedStart).toLocaleDateString()}</p>
+                  <p className=" dark:">{new Date(rootCard.plannedStart).toLocaleDateString()}</p>
                 </div>
               )}
               {rootCard.plannedEnd && (
                 <div>
                   <p className="text-sm text-slate-600 dark:text-slate-400">Planned End</p>
-                  <p className="text-slate-900 dark:text-slate-100">{new Date(rootCard.plannedEnd).toLocaleDateString()}</p>
+                  <p className=" dark:">{new Date(rootCard.plannedEnd).toLocaleDateString()}</p>
                 </div>
               )}
             </div>
           ) : null}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      <Card>
-        <CardHeader className="flex items-center justify-between">
+      <div>
+        <div className="flex items-center text-xs justify-between">
           <CardTitle>Manufacturing Stages</CardTitle>
           <Button
             size="sm"
@@ -194,22 +194,22 @@ const ProductionPlanDetail = ({ rootCard, onRefresh }) => {
             <Plus className="w-4 h-4 mr-2" />
             Add Stage
           </Button>
-        </CardHeader>
-        <CardContent>
+        </div>
+        <div>
           {showNewStageForm && (
-            <div className="mb-6 p-4 bg-slate-50 dark:bg-slate-900 rounded-lg space-y-4">
+            <div className="mb-6 p-4 bg-slate-50 dark: rounded-lg space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <input
                   type="text"
                   placeholder="Stage Name"
                   value={newStageData.stageName}
                   onChange={(e) => setNewStageData({ ...newStageData, stageName: e.target.value })}
-                  className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                  className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800  dark:"
                 />
                 <select
                   value={newStageData.stageType}
                   onChange={(e) => setNewStageData({ ...newStageData, stageType: e.target.value })}
-                  className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                  className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800  dark:"
                 >
                   <option value="in_house">In-House</option>
                   <option value="outsourced">Outsourced</option>
@@ -220,13 +220,13 @@ const ProductionPlanDetail = ({ rootCard, onRefresh }) => {
                   type="date"
                   value={newStageData.plannedStart}
                   onChange={(e) => setNewStageData({ ...newStageData, plannedStart: e.target.value })}
-                  className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                  className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800  dark:"
                 />
                 <input
                   type="date"
                   value={newStageData.plannedEnd}
                   onChange={(e) => setNewStageData({ ...newStageData, plannedEnd: e.target.value })}
-                  className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                  className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800  dark:"
                 />
               </div>
               <div className="flex space-x-2">
@@ -258,14 +258,14 @@ const ProductionPlanDetail = ({ rootCard, onRefresh }) => {
                 <div key={stage.id} className="border border-slate-200 dark:border-slate-700 rounded-lg">
                   <button
                     onClick={() => toggleStageExpand(stage.id)}
-                    className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                    className="w-full p-2 flex items-center text-xs justify-between hover:bg-slate-50 dark:hover:bg-slate-800 text-xs transition-colors"
                   >
-                    <div className="flex items-center space-x-3 flex-1">
+                    <div className="flex items-center text-xs space-x-3 flex-1">
                       <span className="text-sm font-medium text-slate-500 dark:text-slate-400">
                         Stage {index + 1}
                       </span>
                       {getStatusIcon(stage.status)}
-                      <span className="font-medium text-slate-900 dark:text-slate-100">
+                      <span className="font-medium  dark:">
                         {stage.stage_name}
                       </span>
                       <Badge className={getStatusColor(stage.status)}>
@@ -280,22 +280,22 @@ const ProductionPlanDetail = ({ rootCard, onRefresh }) => {
                   </button>
 
                   {expandedStages[stage.id] && (
-                    <div className="px-4 py-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 space-y-3">
+                    <div className="px-4 py-4 bg-slate-50 dark: border-t border-slate-200 dark:border-slate-700 space-y-3">
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <p className="text-sm text-slate-600 dark:text-slate-400">Type</p>
-                          <p className="text-slate-900 dark:text-slate-100">
+                          <p className=" dark:">
                             {stage.stage_type?.replace('_', ' ') || 'N/A'}
                           </p>
                         </div>
                         <div>
                           <p className="text-sm text-slate-600 dark:text-slate-400">Progress</p>
-                          <p className="text-slate-900 dark:text-slate-100">{stage.progress || 0}%</p>
+                          <p className=" dark:">{stage.progress || 0}%</p>
                         </div>
                         {stage.planned_start && (
                           <div>
                             <p className="text-sm text-slate-600 dark:text-slate-400">Planned Start</p>
-                            <p className="text-slate-900 dark:text-slate-100">
+                            <p className=" dark:">
                               {new Date(stage.planned_start).toLocaleDateString()}
                             </p>
                           </div>
@@ -303,7 +303,7 @@ const ProductionPlanDetail = ({ rootCard, onRefresh }) => {
                         {stage.planned_end && (
                           <div>
                             <p className="text-sm text-slate-600 dark:text-slate-400">Planned End</p>
-                            <p className="text-slate-900 dark:text-slate-100">
+                            <p className=" dark:">
                               {new Date(stage.planned_end).toLocaleDateString()}
                             </p>
                           </div>
@@ -340,8 +340,8 @@ const ProductionPlanDetail = ({ rootCard, onRefresh }) => {
               ))}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 };

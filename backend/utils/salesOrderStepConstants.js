@@ -11,7 +11,7 @@ const SALES_ORDER_STEPS = {
     id: 2,
     name: 'Sales Order',
     key: 'salesOrder',
-    displayName: 'Sales Order Details',
+    displayName: 'Root Card Details',
     status: 'sales_order_pending',
     completedStatus: 'sales_order_completed'
   },

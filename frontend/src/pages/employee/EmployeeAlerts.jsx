@@ -68,9 +68,9 @@ const EmployeeAlerts = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center text-xs justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-2">
+          <h1 className="text-3xl font-bold  dark: mb-2">
             Alerts & Notifications
           </h1>
           <p className="text-slate-600 dark:text-slate-400">
@@ -105,13 +105,13 @@ const EmployeeAlerts = () => {
             >
               <CardContent className="p-4">
                 <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-start gap-3 flex-1">
+                  <div className="flex items-center gap-3 flex-1">
                     <div className="mt-1 flex-shrink-0">
                       {getAlertIcon(alert.type)}
                     </div>
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h4 className="font-semibold text-slate-900 dark:text-slate-100">{alert.title}</h4>
+                      <div className="flex items-center text-xs gap-2 mb-1">
+                        <h4 className="font-semibold  dark:">{alert.title}</h4>
                         <Badge className={getAlertBadgeColor(alert.type)}>
                           {alert.type}
                         </Badge>

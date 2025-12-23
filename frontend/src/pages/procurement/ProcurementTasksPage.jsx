@@ -40,7 +40,7 @@ const ProcurementTasksPage = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
+      <div className="flex items-center text-xs justify-center py-12">
         <p className="text-slate-600">Loading procurement data...</p>
       </div>
     );
@@ -71,19 +71,19 @@ const ProcurementTasksPage = () => {
         <Card>
           <div className="p-4">
             <p className="text-sm text-slate-600 dark:text-slate-400">Purchase Requests</p>
-            <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">{stats.totalPR}</p>
+            <p className="text-xl font-bold text-slate-900 dark:text-white mt-1">{stats.totalPR}</p>
           </div>
         </Card>
         <Card>
           <div className="p-4">
             <p className="text-sm text-slate-600 dark:text-slate-400">Purchase Orders</p>
-            <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">{stats.totalPO}</p>
+            <p className="text-xl font-bold text-slate-900 dark:text-white mt-1">{stats.totalPO}</p>
           </div>
         </Card>
         <Card>
           <div className="p-4">
             <p className="text-sm text-slate-600 dark:text-slate-400">Vendor Quotes</p>
-            <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">{stats.totalQuotes}</p>
+            <p className="text-xl font-bold text-slate-900 dark:text-white mt-1">{stats.totalQuotes}</p>
           </div>
         </Card>
         <Card>
@@ -102,7 +102,7 @@ const ProcurementTasksPage = () => {
             className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
               activeTab === 'material-requests'
                 ? 'bg-blue-600 text-white'
-                : 'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100 hover:bg-slate-300'
+                : 'bg-slate-200 dark:bg-slate-700  dark: hover:'
             }`}
           >
             Material Requests
@@ -112,7 +112,7 @@ const ProcurementTasksPage = () => {
             className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
               activeTab === 'pr'
                 ? 'bg-blue-600 text-white'
-                : 'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100 hover:bg-slate-300'
+                : 'bg-slate-200 dark:bg-slate-700  dark: hover:'
             }`}
           >
             Purchase Requests
@@ -122,7 +122,7 @@ const ProcurementTasksPage = () => {
             className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
               activeTab === 'po'
                 ? 'bg-blue-600 text-white'
-                : 'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100 hover:bg-slate-300'
+                : 'bg-slate-200 dark:bg-slate-700  dark: hover:'
             }`}
           >
             Purchase Orders
@@ -132,20 +132,20 @@ const ProcurementTasksPage = () => {
             className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
               activeTab === 'quotes'
                 ? 'bg-blue-600 text-white'
-                : 'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100 hover:bg-slate-300'
+                : 'bg-slate-200 dark:bg-slate-700  dark: hover:'
             }`}
           >
             Vendor Quotes
           </button>
         </div>
         <div className="flex gap-2">
-          <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100 hover:bg-slate-300 transition-colors">
+          <button className="flex items-center text-xs gap-2 px-4 py-2 rounded-lg bg-slate-200 dark:bg-slate-700  dark: hover: transition-colors">
             <Filter size={18} />
             Filter
           </button>
           <button
             onClick={() => setShowNewForm(!showNewForm)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+            className="flex items-center text-xs gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
           >
             <Plus size={18} />
             New {activeTab === 'pr' ? 'PR' : activeTab === 'po' ? 'PO' : 'Quote'}
@@ -176,20 +176,20 @@ const ProcurementTasksPage = () => {
               </thead>
               <tbody>
                 {purchaseRequests.map(pr => (
-                  <tr key={pr.id} className="border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800">
-                    <td className="px-6 py-4 text-sm font-medium">{pr.id}</td>
-                    <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">{pr.project}</td>
-                    <td className="px-6 py-4 text-sm text-center font-medium">{pr.items}</td>
-                    <td className="px-6 py-4 text-sm font-medium">{pr.totalAmount}</td>
-                    <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">{pr.requiredDate}</td>
-                    <td className="px-6 py-4">
+                  <tr key={pr.id} className="border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs">
+                    <td className="p-1 text-sm font-medium">{pr.id}</td>
+                    <td className="p-1 text-sm text-slate-700 dark:text-slate-300">{pr.project}</td>
+                    <td className="p-1 text-sm text-center font-medium">{pr.items}</td>
+                    <td className="p-1 text-sm font-medium">{pr.totalAmount}</td>
+                    <td className="p-1 text-sm text-slate-700 dark:text-slate-300">{pr.requiredDate}</td>
+                    <td className="p-1">
                       <Badge className={getStatusColor(pr.status)}>
                         {pr.status.charAt(0).toUpperCase() + pr.status.slice(1)}
                       </Badge>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="p-1">
                       <div className="flex gap-2">
-                        <button className="p-2 rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 transition-colors">
+                        <button className="p-2 rounded-lg bg-slate-200 dark:bg-slate-700 hover: transition-colors">
                           <Eye size={16} />
                         </button>
                         <button className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 hover:bg-blue-200 transition-colors">
@@ -223,23 +223,23 @@ const ProcurementTasksPage = () => {
               </thead>
               <tbody>
                 {purchaseOrders.map(po => (
-                  <tr key={po.id} className="border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800">
-                    <td className="px-6 py-4 text-sm font-medium">{po.id}</td>
-                    <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">{po.vendor}</td>
-                    <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">{po.poNumber}</td>
-                    <td className="px-6 py-4 text-sm font-medium">{po.amount}</td>
-                    <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">{po.expectedDelivery}</td>
-                    <td className="px-6 py-4">
+                  <tr key={po.id} className="border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs">
+                    <td className="p-1 text-sm font-medium">{po.id}</td>
+                    <td className="p-1 text-sm text-slate-700 dark:text-slate-300">{po.vendor}</td>
+                    <td className="p-1 text-sm text-slate-700 dark:text-slate-300">{po.poNumber}</td>
+                    <td className="p-1 text-sm font-medium">{po.amount}</td>
+                    <td className="p-1 text-sm text-slate-700 dark:text-slate-300">{po.expectedDelivery}</td>
+                    <td className="p-1">
                       <Badge className={getStatusColor(po.status)}>
                         {po.status.charAt(0).toUpperCase() + po.status.slice(1)}
                       </Badge>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="p-1">
                       <div className="flex gap-2">
-                        <button className="p-2 rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 transition-colors">
+                        <button className="p-2 rounded-lg bg-slate-200 dark:bg-slate-700 hover: transition-colors">
                           <Eye size={16} />
                         </button>
-                        <button className="p-2 rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 transition-colors">
+                        <button className="p-2 rounded-lg bg-slate-200 dark:bg-slate-700 hover: transition-colors">
                           <Download size={16} />
                         </button>
                       </div>
@@ -260,7 +260,7 @@ const ProcurementTasksPage = () => {
               <div className="p-6">
                 <div className="flex items-start justify-between mb-4">
                   <div>
-                    <h4 className="text-lg font-bold text-slate-900 dark:text-slate-100">{quote.vendor}</h4>
+                    <h4 className="text-lg font-bold  dark:">{quote.vendor}</h4>
                     <p className="text-sm text-slate-600 dark:text-slate-400">Quote: {quote.id}</p>
                   </div>
                   <Badge className={getStatusColor(quote.status)}>
@@ -271,15 +271,15 @@ const ProcurementTasksPage = () => {
                 <div className="space-y-2 mb-4 p-3 bg-slate-50 dark:bg-slate-700 rounded-lg">
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-600 dark:text-slate-400">Amount:</span>
-                    <span className="font-bold text-slate-900 dark:text-slate-100">{quote.amount}</span>
+                    <span className="font-bold  dark:">{quote.amount}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-600 dark:text-slate-400">Items:</span>
-                    <span className="font-bold text-slate-900 dark:text-slate-100">{quote.items}</span>
+                    <span className="font-bold  dark:">{quote.items}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-600 dark:text-slate-400">Expires:</span>
-                    <span className="font-bold text-slate-900 dark:text-slate-100">{quote.expiryDate}</span>
+                    <span className="font-bold  dark:">{quote.expiryDate}</span>
                   </div>
                 </div>
 
@@ -287,7 +287,7 @@ const ProcurementTasksPage = () => {
                   <button className="flex-1 px-3 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors text-sm font-medium">
                     Accept
                   </button>
-                  <button className="flex-1 px-3 py-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100 hover:bg-slate-300 transition-colors text-sm font-medium">
+                  <button className="flex-1 px-3 py-2 rounded-lg bg-slate-200 dark:bg-slate-700  dark: hover: transition-colors text-sm font-medium">
                     View Details
                   </button>
                 </div>

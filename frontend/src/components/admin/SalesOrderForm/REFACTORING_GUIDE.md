@@ -137,7 +137,7 @@ export default function SpecModal({ isOpen, onClose, type, children }) {
       title={`Edit ${getTitleForSpecType(type)} Specifications`}
       size="lg"
     >
-      <div className="bg-slate-900 p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+      <div className=" p-6 space-y-4 max-h-[70vh] overflow-y-auto">
         {children}
       </div>
     </Modal>

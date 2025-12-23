@@ -221,6 +221,12 @@ const initialState = {
       dispatch: "",
     },
     deliveryAssignedTo: "",
+    design_engineeringAssignedTo: "",
+    material_requirementAssignedTo: "",
+    production_planAssignedTo: "",
+    quality_checkAssignedTo: "",
+    shipmentAssignedTo: "",
+    deliveryAssignedToManager: "",
   },
   enabledMaterials: {
     steelSection: false,

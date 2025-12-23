@@ -1,0 +1,118 @@
+/* RoleDashboardLayout Styles */
+
+.role-dashboard-sidebar {
+  transition: width 0.3s ease;
+}
+
+.role-dashboard-sidebar.collapsed {
+  width: 4rem;
+}
+
+.role-dashboard-sidebar.expanded {
+  width: 16rem;
+}
+
+.role-sidebar-section {
+  margin-bottom: 1.5rem;
+}
+
+.role-sidebar-section h6 {
+  margin-bottom: 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+}
+
+.role-sidebar-section ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  space-y: 0.25rem;
+}
+
+.role-sidebar-section li {
+  margin-bottom: 0.25rem;
+}
+
+.role-sidebar-link {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 0.5rem;
+  transition: all 0.2s;
+  text-decoration: none;
+  color: #475569;
+}
+
+.role-sidebar-link:hover {
+  background-color: #f1f5f9;
+  color: #1e293b;
+}
+
+.role-sidebar-link.active {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  .role-sidebar-section h6 {
+    color: #94a3b8;
+  }
+
+  .role-sidebar-link {
+    color: #cbd5e1;
+  }
+
+  .role-sidebar-link:hover {
+    background-color: #334155;
+    color: #e2e8f0;
+  }
+
+  .role-sidebar-link.active {
+    background-color: #1e3a8a;
+    color: #93c5fd;
+  }
+}
+
+/* Main content area */
+.role-dashboard-main {
+  transition: margin-left 0.3s ease;
+}
+
+.role-dashboard-main.sidebar-collapsed {
+  margin-left: 4rem;
+}
+
+.role-dashboard-main.sidebar-expanded {
+  margin-left: 16rem;
+}
+
+/* Stats card styling */
+.role-stat-card {
+  background: white;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  border: 1px solid #e2e8f0;
+  transition: all 0.3s ease;
+}
+
+.role-stat-card:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  border-color: #cbd5e1;
+}
+
+@media (prefers-color-scheme: dark) {
+  .role-stat-card {
+    background: #1e293b;
+    border-color: #334155;
+  }
+
+  .role-stat-card:hover {
+    border-color: #475569;
+  }
+}

@@ -19,7 +19,7 @@ export function ProductionPhaseSection({
         ) : (
           productionPhaseDetails.map((phase, idx) => (
             <div key={idx} className="p-3 bg-slate-700 rounded border border-slate-600">
-              <p className="text-sm font-medium text-slate-100">{phase.name || `Phase ${idx + 1}`}</p>
+              <p className="text-sm font-medium ">{phase.name || `Phase ${idx + 1}`}</p>
             </div>
           ))
         )}

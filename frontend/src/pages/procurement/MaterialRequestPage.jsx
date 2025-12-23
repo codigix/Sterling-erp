@@ -186,7 +186,7 @@ const MaterialRequestPage = () => {
   return (
     <div className="task-page-container">
       {error && (
-        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-2 text-sm text-red-700">
           {error}
         </div>
       )}
@@ -195,7 +195,7 @@ const MaterialRequestPage = () => {
         <Card>
           <div className="p-4">
             <p className="text-sm text-slate-600 dark:text-slate-400">Total Requests</p>
-            <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">{stats.total || 0}</p>
+            <p className="text-xl font-bold text-slate-900 dark:text-white mt-1">{stats.total || 0}</p>
           </div>
         </Card>
         <Card>
@@ -239,7 +239,7 @@ const MaterialRequestPage = () => {
               className={`px-4 py-2 rounded-lg transition-colors capitalize ${
                 activeTab === tab
                   ? 'bg-blue-600 text-white'
-                  : 'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100 hover:bg-slate-300'
+                  : 'bg-slate-200 dark:bg-slate-700  dark: hover:'
               }`}
             >
               {tab}
@@ -248,7 +248,7 @@ const MaterialRequestPage = () => {
         </div>
         <button
           onClick={() => setShowNewForm(!showNewForm)}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+          className="flex items-center text-xs gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
         >
           <Plus size={18} />
           New Request
@@ -258,7 +258,7 @@ const MaterialRequestPage = () => {
       {showNewForm && (
         <Card className="mb-6">
           <div className="p-6 border-b">
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Create Material Request</h3>
+            <h3 className="text-md font-semibold  dark:">Create Material Request</h3>
           </div>
           <form onSubmit={handleCreateRequest} className="p-6 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -383,7 +383,7 @@ const MaterialRequestPage = () => {
               <button
                 type="button"
                 onClick={() => setShowNewForm(false)}
-                className="px-4 py-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100 hover:bg-slate-300 transition-colors"
+                className="px-4 py-2 rounded-lg bg-slate-200 dark:bg-slate-700  dark: hover: transition-colors"
               >
                 Cancel
               </button>
@@ -418,23 +418,23 @@ const MaterialRequestPage = () => {
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
               {filteredRequests.map((request) => (
-                <tr key={request.id} className="hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors">
-                  <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">{request.material_name}</td>
-                  <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">{request.material_code || '-'}</td>
-                  <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">
+                <tr key={request.id} className="hover:bg-slate-50 dark:hover: transition-colors">
+                  <td className="p-1 text-sm text-slate-700 dark:text-slate-300">{request.material_name}</td>
+                  <td className="p-1 text-sm text-slate-700 dark:text-slate-300">{request.material_code || '-'}</td>
+                  <td className="p-1 text-sm text-slate-700 dark:text-slate-300">
                     {request.quantity} {request.unit}
                   </td>
-                  <td className="px-6 py-4 text-sm">
+                  <td className="p-1 text-sm">
                     <Badge className={request.priority === 'urgent' ? 'bg-red-100 text-red-800' : request.priority === 'high' ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'}>
                       {request.priority}
                     </Badge>
                   </td>
-                  <td className="px-6 py-4 text-sm">
+                  <td className="p-1 text-sm">
                     <Badge className={getStatusColor(request.status)}>
                       {request.status}
                     </Badge>
                   </td>
-                  <td className="px-6 py-4 text-sm flex gap-2">
+                  <td className="p-1 text-sm flex gap-2">
                     <button
                       onClick={() => {
                         setSelectedRequest(request);
@@ -467,10 +467,10 @@ const MaterialRequestPage = () => {
       )}
 
       {showVendorModal && selectedRequest && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center text-xs justify-center z-50 p-4">
           <Card className="w-full max-w-md">
             <div className="p-6 border-b">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+              <h3 className="text-md font-semibold  dark:">
                 Add Vendor Quote - {selectedRequest.material_name}
               </h3>
             </div>
@@ -527,7 +527,7 @@ const MaterialRequestPage = () => {
                     setSelectedRequest(null);
                     setVendorData({ vendorId: '', quotedPrice: '', deliveryDays: '', notes: '' });
                   }}
-                  className="px-4 py-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                  className="px-4 py-2 rounded-lg bg-slate-200 dark:bg-slate-700  dark:"
                 >
                   Cancel
                 </button>

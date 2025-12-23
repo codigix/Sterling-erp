@@ -46,13 +46,34 @@ exports.getEmployeeTasks = async (req, res) => {
 
     const formatted = tasks.map(task => ({
       id: task.id,
+      taskId: task.id,
       title: task.task,
       description: task.root_card_title || 'No description',
       status: task.status,
       priority: task.priority || 'medium',
-      dueDate: task.due_date || '2025-12-15',
+      dueDate: task.due_date || task.due_date,
       assignedBy: 'Manager',
-      project: task.stage_name || 'Project'
+      stageName: task.stage_name,
+      stageId: task.stage_id,
+      rootCard: {
+        id: task.root_card_id,
+        title: task.root_card_title,
+        priority: task.priority
+      },
+      project: {
+        id: task.project_id,
+        name: task.project_name,
+        code: task.project_code
+      },
+      salesOrder: task.sales_order_id ? {
+        id: task.sales_order_id,
+        poNumber: task.po_number,
+        customer: task.customer,
+        total: task.total,
+        orderDate: task.order_date,
+        dueDate: task.due_date
+      } : null,
+      createdAt: task.created_at
     }));
 
     res.json(formatted);

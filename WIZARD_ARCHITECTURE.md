@@ -1,4 +1,4 @@
-# Sales Order Wizard - Architecture Overview
+# Root Card Wizard - Architecture Overview
 
 ## System Architecture Diagram
 
@@ -465,7 +465,7 @@ DATABASE
 
 ## Summary
 
-The Sales Order Wizard architecture is designed for:
+The Root Card Wizard architecture is designed for:
 
 ✅ **Scalability** - Handles thousands of concurrent workflows
 ✅ **Reliability** - Transaction management ensures data consistency

@@ -29,7 +29,7 @@ CREATE TABLE sales_orders (
     due_date DATE,
     total DECIMAL(12,2) NOT NULL,
     currency VARCHAR(10) DEFAULT 'INR',
-    status ENUM('pending', 'approved', 'in_progress', 'completed', 'delivered', 'cancelled') DEFAULT 'pending',
+    status ENUM('pending', 'draft', 'ready_to_start', 'assigned', 'approved', 'in_progress', 'on_hold', 'critical', 'completed', 'delivered', 'cancelled') DEFAULT 'pending',
     priority ENUM('low', 'medium', 'high', 'critical') DEFAULT 'medium',
     items JSON NOT NULL,
     documents JSON,
@@ -211,6 +211,36 @@ CREATE TABLE worker_tasks (
     FOREIGN KEY (worker_id) REFERENCES users(id)
 );
 
+CREATE TABLE root_card_departments (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    root_card_id INT NOT NULL,
+    role_id INT NOT NULL,
+    assignment_type ENUM('auto', 'manual') DEFAULT 'auto',
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (root_card_id) REFERENCES root_cards(id) ON DELETE CASCADE,
+    FOREIGN KEY (role_id) REFERENCES roles(id),
+    UNIQUE KEY unique_root_card_role (root_card_id, role_id)
+);
+
+CREATE TABLE department_tasks (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    root_card_id INT NOT NULL,
+    role_id INT NOT NULL,
+    task_title VARCHAR(500) NOT NULL,
+    task_description TEXT,
+    status ENUM('pending', 'in_progress', 'completed', 'on_hold') DEFAULT 'pending',
+    priority ENUM('low', 'medium', 'high', 'critical') DEFAULT 'medium',
+    assigned_by INT,
+    notes JSON,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (root_card_id) REFERENCES root_cards(id) ON DELETE CASCADE,
+    FOREIGN KEY (role_id) REFERENCES roles(id),
+    FOREIGN KEY (assigned_by) REFERENCES users(id)
+);
+
 -- Challans
 CREATE TABLE outward_challans (
     id INT PRIMARY KEY AUTO_INCREMENT,
@@ -272,4 +302,38 @@ CREATE INDEX idx_root_cards_status ON root_cards(status);
 CREATE INDEX idx_root_cards_project ON root_cards(project_id);
 CREATE INDEX idx_manufacturing_stages_assigned ON manufacturing_stages(assigned_worker);
 CREATE INDEX idx_worker_tasks_status ON worker_tasks(status);
+CREATE INDEX idx_root_card_departments_root_card ON root_card_departments(root_card_id);
+CREATE INDEX idx_root_card_departments_role ON root_card_departments(role_id);
+CREATE INDEX idx_department_tasks_root_card ON department_tasks(root_card_id);
+CREATE INDEX idx_department_tasks_role ON department_tasks(role_id);
+CREATE INDEX idx_department_tasks_status ON department_tasks(status);
 CREATE INDEX idx_notifications_user_read ON notifications(user_id, read_status);
+
+-- Design Workflow Steps Table
+CREATE TABLE design_workflow_steps (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    step_name VARCHAR(255) NOT NULL,
+    step_order INT NOT NULL,
+    description TEXT,
+    task_template_title VARCHAR(255) NOT NULL,
+    task_template_description TEXT,
+    priority ENUM('low', 'medium', 'high', 'critical') DEFAULT 'medium',
+    auto_create_on_trigger VARCHAR(100),
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_step_order (step_order)
+);
+
+-- Insert default design workflow steps
+INSERT INTO design_workflow_steps (step_name, step_order, description, task_template_title, task_template_description, priority, auto_create_on_trigger) VALUES
+('Project Details Input', 1, 'Input and verify all project specifications and requirements', 'Enter Project Details', 'Input project name, dimensions, load capacity, operating environment, and other specifications', 'high', 'root_card_created'),
+('Design Document Preparation', 2, 'Create design documents including drawings and specifications', 'Prepare Design Documents', 'Create technical drawings, CAD files, and design specifications based on project requirements', 'high', 'project_details_completed'),
+('BOM Creation', 3, 'Create Bill of Materials with all components and materials', 'Create and Validate BOM', 'Create comprehensive BOM listing all materials, components, and consumables required for manufacturing', 'high', 'design_documents_created'),
+('Design Review & Approval', 4, 'Submit design for review and approval', 'Submit Design for Review', 'Submit completed design for review by supervisors and get approval before moving to production', 'medium', 'bom_created'),
+('Pending Reviews Follow-up', 5, 'Track and follow up on designs awaiting review', 'Follow up on Pending Reviews', 'Monitor designs pending review and follow up with reviewers for timely approvals', 'medium', 'design_submitted'),
+('Approved Design Documentation', 6, 'Document and archive approved designs', 'Document Approved Designs', 'Update records with approved designs and maintain design documentation for reference', 'low', 'design_approved'),
+('Technical File Management', 7, 'Manage technical files and version control', 'Manage Technical Files', 'Organize and maintain technical files, specifications, and supporting documents with proper version control', 'medium', 'design_approved');
+
+CREATE INDEX idx_design_workflow_steps_order ON design_workflow_steps(step_order);
+CREATE INDEX idx_design_workflow_steps_trigger ON design_workflow_steps(auto_create_on_trigger);

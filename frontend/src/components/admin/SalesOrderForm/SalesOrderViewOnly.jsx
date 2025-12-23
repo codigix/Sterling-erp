@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
-import { Download, ArrowLeft } from 'lucide-react';
+import { Download, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
-import Card, { CardContent } from '../../ui/Card';
-import './SalesOrderView.css';
 
 export default function SalesOrderViewOnly({ formData, initialData, onBack }) {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -19,7 +17,7 @@ export default function SalesOrderViewOnly({ formData, initialData, onBack }) {
       const contentWidth = pageWidth - 2 * margin;
 
       doc.setFontSize(16);
-      doc.text('Sales Order Details', margin, yPosition);
+      doc.text('Root Card Details', margin, yPosition);
       yPosition += 15;
 
       doc.setFontSize(10);
@@ -83,7 +81,7 @@ export default function SalesOrderViewOnly({ formData, initialData, onBack }) {
       }
 
       if (initialData?.order_date || formData?.orderDate) {
-        addSection('Step 2: Sales Order Details', {
+        addSection('Step 2: Root Card Details', {
           'Order Date': initialData?.order_date || formData?.orderDate,
           'Total Amount': initialData?.total || formData?.totalAmount,
           'Priority': initialData?.priority || formData?.projectPriority,
@@ -198,397 +196,506 @@ export default function SalesOrderViewOnly({ formData, initialData, onBack }) {
   };
 
   const DetailField = ({ label, value }) => {
-    if (!value) return null;
+    if (!value && value !== 0) return null;
     return (
-      <div className="detail-field">
-        <span className="detail-label">{label}</span>
-        <span className="detail-value">{typeof value === 'object' ? JSON.stringify(value) : String(value)}</span>
+      <div className="space-y-1">
+        <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">{label}</label>
+        <p className="text-sm text-slate-700">{typeof value === 'object' ? JSON.stringify(value) : String(value)}</p>
       </div>
     );
   };
 
-  const DetailSection = ({ title, children }) => (
-    <Card className="detail-section">
-      <div className="section-title">{title}</div>
-      <CardContent>
-        <div className="detail-fields">
-          {children}
-        </div>
-      </CardContent>
-    </Card>
+  const SectionHeader = ({ number, title }) => (
+    <div className="flex items-center gap-3 mb-2 border-b border-slate-200 pb-2">
+      <span className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 font-bold text-sm">
+        {number}
+      </span>
+      <h2 className="text-lg font-bold">{title}</h2>
+    </div>
   );
 
   return (
-    <div className="sales-order-view">
-      <div className="view-header">
-        <div className="view-title-section">
-          <button className="back-button" onClick={onBack} title="Back">
-            <ArrowLeft size={20} />
-          </button>
-          <h2 className="view-title">Sales Order Details</h2>
+    <div className="w-full bg-white min-h-screen">
+      {/* Header */}
+      <div className="border-b border-slate-200 bg-slate-50 sticky top-0 z-20">
+        <div className="max-w-7xl mx-auto p-1">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={onBack}
+                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                title="Back"
+              >
+                <ArrowLeft size={20} className="text-slate-600" />
+              </button>
+              <div>
+                <h1 className="text-2xl font-bold text-slate-900">Root Card Details
+</h1>
+                <p className="text-sm text-slate-600">
+                  {initialData?.po_number || formData?.poNumber || 'New Sales Order'}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={generatePDF}
+              disabled={isGenerating}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white rounded-lg font-medium transition-colors"
+              title="Download as PDF"
+            >
+              <Download size={18} />
+              {isGenerating ? 'Generating...' : 'PDF'}
+            </button>
+          </div>
         </div>
-        <button
-          className="download-button"
-          onClick={generatePDF}
-          disabled={isGenerating}
-          title="Download as PDF"
-        >
-          <Download size={20} />
-          <span>{isGenerating ? 'Generating...' : 'Download PDF'}</span>
-        </button>
       </div>
 
-      <div className="view-content">
+      {/* Content */}
+      <div className="max-w-7xl mx-auto  p-2 space-y-2">
+        {!formData?.poNumber && !initialData?.po_number && (
+          <div className="text-center py-12">
+            <p className="text-slate-600">No data filled in this sales order yet.</p>
+          </div>
+        )}
+
+        {/* Step 1: PO Details */}
         {(initialData?.po_number || formData?.poNumber) && (
-          <DetailSection title="Step 1: Client PO Details">
-            <div className="mb-4">
-              <h4 className="text-sm font-semibold text-slate-200 mb-2">PO Information</h4>
-              <DetailField label="PO Number" value={initialData?.po_number || formData?.poNumber} />
-              <DetailField label="PO Date" value={formData?.poDate} />
-              <DetailField label="PO Value" value={formData?.poValue} />
-              <DetailField label="Currency" value={formData?.currency} />
-            </div>
+          <section>
+            <SectionHeader number="1" title="PO Details" />
+            <div className="space-y-6">
+              <div className="bg-white border-b border-slate-200  p-2 mb-0">
+                <h3 className="text-md font-semibold text-slate-900 mb-2">PO Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <DetailField label="PO Number" value={initialData?.po_number || formData?.poNumber} />
+                  <DetailField label="PO Date" value={formData?.poDate} />
+                  <DetailField label="PO Value" value={formData?.poValue} />
+                  <DetailField label="Currency" value={formData?.currency} />
+                </div>
+              </div>
 
-            <div className="mb-4">
-              <h4 className="text-sm font-semibold text-slate-200 mb-2">Client Details</h4>
-              <DetailField label="Client Name" value={initialData?.customer || formData?.clientName} />
-              <DetailField label="Client Email" value={formData?.clientEmail} />
-              <DetailField label="Client Phone" value={formData?.clientPhone} />
-              <DetailField label="Client Address" value={formData?.clientAddress} />
-            </div>
+              <div className="bg-white border-b border-slate-200  p-2 mb-0">
+                <h3 className="text-md font-semibold text-slate-900 mb-2">Client Details</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <DetailField label="Client Name" value={initialData?.customer || formData?.clientName} />
+                  <DetailField label="Client Email" value={formData?.clientEmail} />
+                  <DetailField label="Client Phone" value={formData?.clientPhone} />
+                  <DetailField label="Client Address" value={formData?.clientAddress} />
+                </div>
+              </div>
 
-            <div className="mb-4">
-              <h4 className="text-sm font-semibold text-slate-200 mb-2">Project Details</h4>
-              <DetailField label="Project Name" value={initialData?.project_name || formData?.projectName} />
-              <DetailField label="Project Code" value={formData?.projectCode} />
-              <DetailField label="Billing Address" value={formData?.billingAddress} />
-              <DetailField label="Shipping Address" value={formData?.shippingAddress} />
-              {formData?.projectRequirements && Object.keys(formData.projectRequirements).length > 0 && (
-                <div className="mt-2">
-                  <p className="text-sm text-slate-400 font-medium">Project Requirements:</p>
-                  <div className="text-sm text-slate-300 ml-2">
-                    {Object.entries(formData.projectRequirements).map(([key, value]) => 
-                      value ? <p key={key}><strong>{key}:</strong> {String(value)}</p> : null
+              <div className="bg-white border-b border-slate-200  p-2 mb-0">
+                <h3 className="text-md font-semibold text-slate-900 mb-2">Project Details</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <DetailField label="Project Name" value={initialData?.project_name || formData?.projectName} />
+                  <DetailField label="Project Code" value={formData?.projectCode} />
+                  <DetailField label="Billing Address" value={formData?.billingAddress} />
+                  <DetailField label="Shipping Address" value={formData?.shippingAddress} />
+                </div>
+                {formData?.projectRequirements && Object.keys(formData.projectRequirements).length > 0 && (
+                  <div className="mt-6 pt-6 border-t border-slate-200">
+                    <h4 className="text-sm font-semibold text-slate-700 mb-3">Project Requirements</h4>
+                    <div className="space-y-2">
+                      {Object.entries(formData.projectRequirements).map(([key, value]) =>
+                        value ? (
+                          <p key={key} className="text-sm text-slate-600">
+                            <span className="text-slate-700 font-medium">{key}:</span> {String(value)}
+                          </p>
+                        ) : null
+                      )}
+                    </div>
+                  </div>
+                )}
+                <DetailField label="Notes" value={formData?.notes} />
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Step 2: Sales Order */}
+        {(initialData?.order_date || formData?.orderDate) && (
+          <section>
+            <SectionHeader number="2" title="Sales Order" />
+            <div className="space-y-6">
+              <div className="bg-white border-b border-slate-200  p-2 mb-0">
+                <h3 className="text-md font-semibold text-slate-900 mb-2">Order Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <DetailField label="Order Date" value={initialData?.order_date || formData?.orderDate} />
+                  <DetailField label="Total Amount" value={initialData?.total || formData?.totalAmount} />
+                  <DetailField label="Priority" value={initialData?.priority || formData?.projectPriority} />
+                  <DetailField label="Estimated End Date" value={initialData?.due_date || formData?.estimatedEndDate} />
+                </div>
+              </div>
+
+              <div className="bg-white border-b border-slate-200  p-2 mb-0">
+                <h3 className="text-md font-semibold text-slate-900 mb-2">Order Description</h3>
+                <p className="text-slate-700 whitespace-pre-wrap">{formData?.orderDescription}</p>
+              </div>
+
+              {formData?.warrantySupport && Object.keys(formData.warrantySupport).length > 0 && (
+                <div className="bg-white border-b border-slate-200  p-2 mb-0">
+                  <h3 className="text-md font-semibold text-slate-900 mb-2">Warranty & Support</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <DetailField label="Warranty Period" value={formData.warrantySupport?.warrantyPeriod} />
+                    <DetailField label="Warranty Coverage" value={formData.warrantySupport?.warrantyCoverage} />
+                    <DetailField label="Service Support" value={formData.warrantySupport?.serviceSupport} />
+                  </div>
+                </div>
+              )}
+
+              {formData?.paymentTerms && (
+                <div className="bg-white border-b border-slate-200  p-2 mb-0">
+                  <DetailField label="Payment Terms" value={formData?.paymentTerms} />
+                </div>
+              )}
+
+              {formData?.specialInstructions && (
+                <div className="bg-white border-b border-slate-200  p-2 mb-0">
+                  <DetailField label="Special Instructions" value={formData?.specialInstructions} />
+                </div>
+              )}
+
+              {formData?.internalInfo && Object.keys(formData.internalInfo).length > 0 && (
+                <div className="bg-white border-b border-slate-200  p-2 mb-0">
+                  <h3 className="text-md font-semibold text-slate-900 mb-2">Internal Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <DetailField label="Internal Project Owner" value={formData.internalInfo?.internalProjectOwner} />
+                    <DetailField label="Internal Notes" value={formData.internalInfo?.internalNotes} />
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* Step 3: Design */}
+        {formData?.designEngineering && (
+          <section>
+            <SectionHeader number="3" title="Design Engineering" />
+            <div className="space-y-6">
+              <div className="bg-white border-b border-slate-200  p-2 mb-0">
+                <h3 className="text-md font-semibold text-slate-900 mb-2">Design Overview</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <DetailField label="Design ID" value={formData.designEngineering.generalDesignInfo?.designId} />
+                  <DetailField label="Product Name" value={formData.designEngineering.productSpecification?.productName} />
+                  <DetailField label="Design Status" value={formData.designEngineering.generalDesignInfo?.designStatus} />
+                  <DetailField label="Design Engineer Name" value={formData.designEngineering.generalDesignInfo?.designEngineerName} />
+                </div>
+              </div>
+
+              <div className="bg-white border-b border-slate-200  p-2 mb-0">
+                <h3 className="text-md font-semibold text-slate-900 mb-2">Product Dimensions & Specifications</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <DetailField label="Length (mm)" value={formData.designEngineering.productSpecification?.systemLength} />
+                  <DetailField label="Width (mm)" value={formData.designEngineering.productSpecification?.systemWidth} />
+                  <DetailField label="Height (mm)" value={formData.designEngineering.productSpecification?.systemHeight} />
+                  <DetailField label="Load Capacity (kg)" value={formData.designEngineering.productSpecification?.loadCapacity} />
+                  <DetailField label="Operating Environment" value={formData.designEngineering.productSpecification?.operatingEnvironment} />
+                  <DetailField label="Material Grade" value={formData.designEngineering.productSpecification?.materialGrade} />
+                  <DetailField label="Surface Finish" value={formData.designEngineering.productSpecification?.surfaceFinish} />
+                </div>
+              </div>
+
+              <div className="bg-white border-b border-slate-200  p-2 mb-0">
+                <h3 className="text-md font-semibold text-slate-900 mb-2">Materials Required for Production</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <DetailField label="Steel Sections" value={formData.designEngineering.materialsRequired?.steelSections?.length > 0 ? formData.designEngineering.materialsRequired.steelSections.join(', ') : 'None selected'} />
+                  <DetailField label="Plates" value={formData.designEngineering.materialsRequired?.plates?.length > 0 ? formData.designEngineering.materialsRequired.plates.join(', ') : 'None selected'} />
+                  <DetailField label="Fasteners & Hardware" value={formData.designEngineering.materialsRequired?.fasteners?.length > 0 ? formData.designEngineering.materialsRequired.fasteners.join(', ') : 'None selected'} />
+                  <DetailField label="Mechanical Components" value={formData.designEngineering.materialsRequired?.components?.length > 0 ? formData.designEngineering.materialsRequired.components.join(', ') : 'None selected'} />
+                  <DetailField label="Electrical & Automation" value={formData.designEngineering.materialsRequired?.electrical?.length > 0 ? formData.designEngineering.materialsRequired.electrical.join(', ') : 'None selected'} />
+                  <DetailField label="Consumables & Paint" value={formData.designEngineering.materialsRequired?.consumables?.length > 0 ? formData.designEngineering.materialsRequired.consumables.join(', ') : 'None selected'} />
+                </div>
+              </div>
+
+              {formData.designEngineering.attachments?.drawings?.length > 0 && (
+                <div className="bg-white border-b border-slate-200  p-2 mb-0">
+                  <h3 className="text-md font-semibold text-slate-900 mb-2">Design Drawings</h3>
+                  <ul className="space-y-2">
+                    {formData.designEngineering.attachments.drawings.map((file, idx) => (
+                      <li key={idx} className="text-sm text-slate-700 flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
+                        {typeof file === 'string' ? file : file.name}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {formData.designEngineering.attachments?.documents?.length > 0 && (
+                <div className="bg-white border-b border-slate-200  p-2 mb-0">
+                  <h3 className="text-md font-semibold text-slate-900 mb-2">Supporting Documents</h3>
+                  <ul className="space-y-2">
+                    {formData.designEngineering.attachments.documents.map((file, idx) => (
+                      <li key={idx} className="text-sm text-slate-700 flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
+                        {typeof file === 'string' ? file : file.name}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <div className="bg-white border-b border-slate-200  p-2 mb-0">
+                <h3 className="text-md font-semibold text-slate-900 mb-2">Design Notes & Special Requirements</h3>
+                <div className="space-y-4">
+                  <DetailField label="Design Specifications Summary" value={formData.designEngineering.commentsNotes?.designSpecifications} />
+                  <DetailField label="Manufacturing Instructions" value={formData.designEngineering.commentsNotes?.manufacturingInstructions} />
+                  <DetailField label="Quality & Safety Requirements" value={formData.designEngineering.commentsNotes?.qualitySafety} />
+                  <DetailField label="Additional Notes" value={formData.designEngineering.commentsNotes?.additionalNotes} />
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Step 4: Materials */}
+        {formData?.materialProcurement && (
+          <section>
+            <SectionHeader number="4" title="Material Requirements" />
+            <div className="space-y-6">
+              <div className="bg-white border-b border-slate-200  p-2 mb-0">
+                <h3 className="text-md font-semibold text-slate-900 mb-2">Procurement Overview</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <DetailField label="Procurement Status" value={formData.materialProcurement.procurementStatus || 'Not specified'} />
+                  <DetailField label="Total Material Cost" value={formData.materialProcurement.totalMaterialCost || '0'} />
+                  <DetailField label="Materials Count" value={Array.isArray(formData.materialProcurement.materials) ? formData.materialProcurement.materials.length : 0} />
+                </div>
+              </div>
+
+              {formData.materialProcurement.notes && (
+                <div className="bg-white border-b border-slate-200  p-2 mb-0">
+                  <DetailField label="Notes" value={formData.materialProcurement.notes} />
+                </div>
+              )}
+
+              {Array.isArray(formData.materialProcurement.materials) && formData.materialProcurement.materials.length > 0 && (
+                <div className="bg-white border-b border-slate-200  p-2 mb-0">
+                  <h3 className="text-md font-semibold text-slate-900 mb-2">Materials List</h3>
+                  <div className="flex flex-wrap gap-4">
+                    {formData.materialProcurement.materials.map((material, idx) => (
+                      <div key={idx} className="bg-slate-50 rounded p-4 border border-slate-200 w-fit">
+                        <p className="text-sm text-slate-900 font-medium mb-2 w-fit">{material.name || material.type || 'Material ' + (idx + 1)}</p>
+                        <div className="flex flex-wrap gap-3 text-xs">
+                          {material.quantity && <p className="text-slate-600"><span className="text-slate-700">Qty:</span> {material.quantity} {material.unit || ''}</p>}
+                          {material.cost && <p className="text-slate-600"><span className="text-slate-700">Cost:</span> {material.cost}</p>}
+                          {material.source && <p className="text-slate-600"><span className="text-slate-700">Source:</span> {material.source}</p>}
+                          {material.status && <p className="text-slate-600"><span className="text-slate-700">Status:</span> {material.status}</p>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* Step 5: Production */}
+        {formData?.productionPlan && (
+          <section>
+            <SectionHeader number="5" title="Production Plan" />
+            <div className="space-y-6">
+              <div className="bg-white border-b border-slate-200  p-2 mb-0">
+                <h3 className="text-md font-semibold text-slate-900 mb-2">Production Timeline</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <DetailField label="Production Start Date" value={formData.productionPlan.timeline?.startDate} />
+                  <DetailField label="Production End Date" value={formData.productionPlan.timeline?.endDate} />
+                  <DetailField label="Estimated Completion Date" value={formData.productionPlan.estimatedCompletionDate} />
+                </div>
+              </div>
+
+              {formData.productionPlan.productionNotes && (
+                <div className="bg-white border-b border-slate-200  p-2 mb-0">
+                  <h3 className="text-md font-semibold text-slate-900 mb-2">Production Notes</h3>
+                  <p className="text-slate-700 text-sm">{formData.productionPlan.productionNotes}</p>
+                </div>
+              )}
+
+              {formData.productionPlan.selectedPhases && Object.keys(formData.productionPlan.selectedPhases).length > 0 && (
+                <div className="bg-white border-b border-slate-200  p-2 mb-0">
+                  <h3 className="text-md font-semibold text-slate-900 mb-2">Production Phases</h3>
+                  <div className="space-y-2">
+                    {Object.entries(formData.productionPlan.selectedPhases).map(([phase, selected]) =>
+                      selected ? (
+                        <div key={phase} className="flex items-center gap-2 text-slate-700 text-sm">
+                          <CheckCircle2 size={16} className="text-green-500" />
+                          {phase}
+                        </div>
+                      ) : null
                     )}
                   </div>
                 </div>
               )}
-              <DetailField label="Notes" value={formData?.notes} />
             </div>
-          </DetailSection>
+          </section>
         )}
 
-        {(initialData?.order_date || formData?.orderDate) && (
-          <DetailSection title="Step 2: Sales Order Details">
-            <div className="mb-4">
-              <h4 className="text-sm font-semibold text-slate-200 mb-2">Order Information</h4>
-              <DetailField label="Order Date" value={initialData?.order_date || formData?.orderDate} />
-              <DetailField label="Total Amount" value={initialData?.total || formData?.totalAmount} />
-              <DetailField label="Priority" value={initialData?.priority || formData?.projectPriority} />
-              <DetailField label="Estimated End Date" value={initialData?.due_date || formData?.estimatedEndDate} />
-              <DetailField label="Project Code" value={formData?.projectCode} />
-            </div>
-
-            <div className="mb-4">
-              <h4 className="text-sm font-semibold text-slate-200 mb-2">Sales & Contact Details</h4>
-              <DetailField label="Client Email" value={formData?.clientEmail} />
-              <DetailField label="Client Phone" value={formData?.clientPhone} />
-              <DetailField label="Billing Address" value={formData?.billingAddress} />
-              <DetailField label="Shipping Address" value={formData?.shippingAddress} />
-            </div>
-
-            {formData?.productDetails && Object.keys(formData.productDetails).length > 0 && (
-              <div className="mb-4">
-                <h4 className="text-sm font-semibold text-slate-200 mb-2">Product/Item Details</h4>
-                <DetailField label="Item Name" value={formData.productDetails?.itemName} />
-                <DetailField label="Item Description" value={formData.productDetails?.itemDescription} />
-                <DetailField label="Components Included" value={formData.productDetails?.componentsList} />
-              </div>
-            )}
-
-            {formData?.qualityCompliance && Object.keys(formData.qualityCompliance).length > 0 && (
-              <div className="mb-4">
-                <h4 className="text-sm font-semibold text-slate-200 mb-2">Quality Compliance</h4>
-                <DetailField label="Quality Standards" value={formData.qualityCompliance?.qualityStandards} />
-                <DetailField label="Welding Standards" value={formData.qualityCompliance?.weldingStandards} />
-                <DetailField label="Surface Finish" value={formData.qualityCompliance?.surfaceFinish} />
-                <DetailField label="Mechanical Load Testing" value={formData.qualityCompliance?.mechanicalLoadTesting} />
-                <DetailField label="Electrical Compliance" value={formData.qualityCompliance?.electricalCompliance} />
-                <DetailField label="Documents Required" value={formData.qualityCompliance?.documentsRequired} />
-              </div>
-            )}
-
-            {formData?.warrantySupport && Object.keys(formData.warrantySupport).length > 0 && (
-              <div className="mb-4">
-                <h4 className="text-sm font-semibold text-slate-200 mb-2">Warranty & Support</h4>
-                <DetailField label="Warranty Period" value={formData.warrantySupport?.warrantyPeriod} />
-                <DetailField label="Warranty Coverage" value={formData.warrantySupport?.warrantyCoverage} />
-                <DetailField label="Service Support" value={formData.warrantySupport?.serviceSupport} />
-              </div>
-            )}
-
-            {formData?.paymentTerms && (
-              <div className="mb-4">
-                <h4 className="text-sm font-semibold text-slate-200 mb-2">Payment Terms</h4>
-                <DetailField label="Payment Terms" value={formData?.paymentTerms} />
-              </div>
-            )}
-
-            {formData?.specialInstructions && (
-              <div className="mb-4">
-                <h4 className="text-sm font-semibold text-slate-200 mb-2">Special Instructions</h4>
-                <DetailField label="Special Instructions" value={formData?.specialInstructions} />
-              </div>
-            )}
-
-            {formData?.internalInfo && Object.keys(formData.internalInfo).length > 0 && (
-              <div className="mb-4">
-                <h4 className="text-sm font-semibold text-slate-200 mb-2">Internal Information</h4>
-                <DetailField label="Internal Project Owner" value={formData.internalInfo?.internalProjectOwner} />
-                <DetailField label="Internal Notes" value={formData.internalInfo?.internalNotes} />
-              </div>
-            )}
-          </DetailSection>
-        )}
-
-        {formData?.designEngineering && (
-          <DetailSection title="Step 3: Design Engineering">
-            <div className="mb-4">
-              <h4 className="text-sm font-semibold text-slate-200 mb-2">Design Overview</h4>
-              <DetailField label="Design ID" value={formData.designEngineering.generalDesignInfo?.designId} />
-              <DetailField label="Product Name" value={formData.designEngineering.productSpecification?.productName} />
-              <DetailField label="Design Status" value={formData.designEngineering.generalDesignInfo?.designStatus} />
-              <DetailField label="Design Engineer Name" value={formData.designEngineering.generalDesignInfo?.designEngineerName} />
-            </div>
-
-            <div className="mb-4">
-              <h4 className="text-sm font-semibold text-slate-200 mb-2">Product Dimensions & Specifications</h4>
-              <DetailField label="Length (mm)" value={formData.designEngineering.productSpecification?.systemLength} />
-              <DetailField label="Width (mm)" value={formData.designEngineering.productSpecification?.systemWidth} />
-              <DetailField label="Height (mm)" value={formData.designEngineering.productSpecification?.systemHeight} />
-              <DetailField label="Load Capacity (kg)" value={formData.designEngineering.productSpecification?.loadCapacity} />
-              <DetailField label="Operating Environment" value={formData.designEngineering.productSpecification?.operatingEnvironment} />
-              <DetailField label="Material Grade" value={formData.designEngineering.productSpecification?.materialGrade} />
-              <DetailField label="Surface Finish" value={formData.designEngineering.productSpecification?.surfaceFinish} />
-            </div>
-
-            <div className="mb-4">
-              <h4 className="text-sm font-semibold text-slate-200 mb-2">Materials Required for Production</h4>
-              <DetailField label="Steel Sections" value={formData.designEngineering.materialsRequired?.steelSections?.length > 0 ? formData.designEngineering.materialsRequired.steelSections.join(', ') : 'None selected'} />
-              <DetailField label="Plates" value={formData.designEngineering.materialsRequired?.plates?.length > 0 ? formData.designEngineering.materialsRequired.plates.join(', ') : 'None selected'} />
-              <DetailField label="Fasteners & Hardware" value={formData.designEngineering.materialsRequired?.fasteners?.length > 0 ? formData.designEngineering.materialsRequired.fasteners.join(', ') : 'None selected'} />
-              <DetailField label="Mechanical Components" value={formData.designEngineering.materialsRequired?.components?.length > 0 ? formData.designEngineering.materialsRequired.components.join(', ') : 'None selected'} />
-              <DetailField label="Electrical & Automation" value={formData.designEngineering.materialsRequired?.electrical?.length > 0 ? formData.designEngineering.materialsRequired.electrical.join(', ') : 'None selected'} />
-              <DetailField label="Consumables & Paint" value={formData.designEngineering.materialsRequired?.consumables?.length > 0 ? formData.designEngineering.materialsRequired.consumables.join(', ') : 'None selected'} />
-            </div>
-
-            <div className="mb-4">
-              <h4 className="text-sm font-semibold text-slate-200 mb-2">Design Specifications & Documentation</h4>
-              {formData.designEngineering.attachments?.drawings?.length > 0 && (
-                <div className="mb-3">
-                  <p className="text-sm text-slate-400 font-medium">Design Drawings:</p>
-                  <ul className="list-disc list-inside text-slate-300 text-sm">
-                    {formData.designEngineering.attachments.drawings.map((file, idx) => (
-                      <li key={idx}>{typeof file === 'string' ? file : file.name}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {formData.designEngineering.attachments?.documents?.length > 0 && (
-                <div className="mb-3">
-                  <p className="text-sm text-slate-400 font-medium">Supporting Documents:</p>
-                  <ul className="list-disc list-inside text-slate-300 text-sm">
-                    {formData.designEngineering.attachments.documents.map((file, idx) => (
-                      <li key={idx}>{typeof file === 'string' ? file : file.name}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-
-            <div className="mb-4">
-              <h4 className="text-sm font-semibold text-slate-200 mb-2">Design Notes & Special Requirements</h4>
-              <DetailField label="Design Specifications Summary" value={formData.designEngineering.commentsNotes?.designSpecifications} />
-              <DetailField label="Manufacturing Instructions" value={formData.designEngineering.commentsNotes?.manufacturingInstructions} />
-              <DetailField label="Quality & Safety Requirements" value={formData.designEngineering.commentsNotes?.qualitySafety} />
-              <DetailField label="Additional Notes" value={formData.designEngineering.commentsNotes?.additionalNotes} />
-            </div>
-          </DetailSection>
-        )}
-
-        {formData?.materialProcurement && (
-          <DetailSection title="Step 4: Material Requirements">
-            <DetailField label="Procurement Status" value={formData.materialProcurement.procurementStatus || 'Not specified'} />
-            <DetailField label="Total Material Cost" value={formData.materialProcurement.totalMaterialCost || '0'} />
-            <DetailField label="Materials Count" value={Array.isArray(formData.materialProcurement.materials) ? formData.materialProcurement.materials.length : 0} />
-            <DetailField label="Notes" value={formData.materialProcurement.notes || 'No notes'} />
-            
-            {Array.isArray(formData.materialProcurement.materials) && formData.materialProcurement.materials.length > 0 && (
-              <div className="mt-4">
-                <h4 className="text-sm font-semibold text-slate-200 mb-2">Materials List</h4>
-                <div className="bg-slate-800 rounded p-3 text-sm text-slate-300">
-                  {formData.materialProcurement.materials.map((material, idx) => (
-                    <div key={idx} className="mb-2 pb-2 border-b border-slate-700 last:border-0">
-                      <p><strong>{material.name || material.type || 'Material ' + (idx + 1)}</strong></p>
-                      {material.quantity && <p>Quantity: {material.quantity} {material.unit || ''}</p>}
-                      {material.cost && <p>Cost: {material.cost}</p>}
-                      {material.source && <p>Source: {material.source}</p>}
-                      {material.status && <p>Status: {material.status}</p>}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </DetailSection>
-        )}
-
-        {formData?.productionPlan && (
-          <DetailSection title="Step 5: Production Plan">
-            <div className="mb-4">
-              <h4 className="text-sm font-semibold text-slate-200 mb-2">Production Timeline</h4>
-              <DetailField label="Production Start Date" value={formData.productionPlan.timeline?.startDate} />
-              <DetailField label="Production End Date" value={formData.productionPlan.timeline?.endDate} />
-              <DetailField label="Estimated Completion Date" value={formData.productionPlan.estimatedCompletionDate} />
-            </div>
-
-            <div className="mb-4">
-              <h4 className="text-sm font-semibold text-slate-200 mb-2">Production Notes</h4>
-              <DetailField label="Notes" value={formData.productionPlan.productionNotes} />
-            </div>
-            
-            {formData.productionPlan.selectedPhases && Object.keys(formData.productionPlan.selectedPhases).length > 0 && (
-              <div className="mb-4">
-                <h4 className="text-sm font-semibold text-slate-200 mb-2">Production Phases</h4>
-                <div className="space-y-2">
-                  {Object.entries(formData.productionPlan.selectedPhases).map(([phase, selected]) => (
-                    selected && <p key={phase} className="text-slate-300 text-sm">✓ {phase}</p>
-                  ))}
-                </div>
-              </div>
-            )}
-          </DetailSection>
-        )}
-
+        {/* Step 6: Quality Check */}
         {formData?.qualityCheck && (
-          <DetailSection title="Step 6: Quality Check">
-            {formData.qualityCheck?.qualityCompliance && Object.keys(formData.qualityCheck.qualityCompliance).length > 0 && (
-              <div className="mb-4">
-                <h4 className="text-sm font-semibold text-slate-200 mb-2">Quality Standards</h4>
-                <DetailField label="Quality Standards" value={formData.qualityCheck.qualityCompliance?.qualityStandards} />
-                <DetailField label="Welding Standards" value={formData.qualityCheck.qualityCompliance?.weldingStandards} />
-                <DetailField label="Surface Finish" value={formData.qualityCheck.qualityCompliance?.surfaceFinish} />
-                <DetailField label="Mechanical Load Testing" value={formData.qualityCheck.qualityCompliance?.mechanicalLoadTesting} />
-                <DetailField label="Electrical Compliance" value={formData.qualityCheck.qualityCompliance?.electricalCompliance} />
-                <DetailField label="Documents Required" value={formData.qualityCheck.qualityCompliance?.documentsRequired} />
-              </div>
-            )}
+          <section>
+            <SectionHeader number="6" title="Quality Check" />
+            <div className="space-y-6">
+              {formData.qualityCheck?.qualityCompliance && Object.keys(formData.qualityCheck.qualityCompliance).length > 0 && (
+                <div className="bg-white border-b border-slate-200  p-2 mb-0">
+                  <h3 className="text-md font-semibold text-slate-900 mb-2">Quality Standards</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <DetailField label="Quality Standards" value={formData.qualityCheck.qualityCompliance?.qualityStandards} />
+                    <DetailField label="Welding Standards" value={formData.qualityCheck.qualityCompliance?.weldingStandards} />
+                    <DetailField label="Surface Finish" value={formData.qualityCheck.qualityCompliance?.surfaceFinish} />
+                    <DetailField label="Mechanical Load Testing" value={formData.qualityCheck.qualityCompliance?.mechanicalLoadTesting} />
+                    <DetailField label="Electrical Compliance" value={formData.qualityCheck.qualityCompliance?.electricalCompliance} />
+                    <DetailField label="Documents Required" value={formData.qualityCheck.qualityCompliance?.documentsRequired} />
+                  </div>
+                </div>
+              )}
 
-            {formData.qualityCheck?.warrantySupport && Object.keys(formData.qualityCheck.warrantySupport).length > 0 && (
-              <div className="mb-4">
-                <h4 className="text-sm font-semibold text-slate-200 mb-2">Warranty & Support</h4>
-                <DetailField label="Warranty Period" value={formData.qualityCheck.warrantySupport?.warrantyPeriod} />
-                <DetailField label="Service Support" value={formData.qualityCheck.warrantySupport?.serviceSupport} />
-              </div>
-            )}
+              {formData.qualityCheck?.warrantySupport && Object.keys(formData.qualityCheck.warrantySupport).length > 0 && (
+                <div className="bg-white border-b border-slate-200  p-2 mb-0">
+                  <h3 className="text-md font-semibold text-slate-900 mb-2">Warranty & Support</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <DetailField label="Warranty Period" value={formData.qualityCheck.warrantySupport?.warrantyPeriod} />
+                    <DetailField label="Service Support" value={formData.qualityCheck.warrantySupport?.serviceSupport} />
+                  </div>
+                </div>
+              )}
 
-            {formData.qualityCheck?.internalProjectOwner && (
-              <div className="mb-4">
-                <h4 className="text-sm font-semibold text-slate-200 mb-2">Internal Assignment</h4>
-                <DetailField label="Internal Project Owner" value={formData.qualityCheck?.internalProjectOwner} />
-              </div>
-            )}
+              {formData.qualityCheck?.internalProjectOwner && (
+                <div className="bg-white border-b border-slate-200  p-2 mb-0">
+                  <DetailField label="Internal Project Owner" value={formData.qualityCheck?.internalProjectOwner} />
+                </div>
+              )}
 
-            <div className="mb-4">
-              <h4 className="text-sm font-semibold text-slate-200 mb-2">QC Status & Inspections</h4>
-              <DetailField label="Inspection Type" value={formData.qualityCheck.inspectionType} />
-              <DetailField label="QC Status" value={formData.qualityCheck.qcStatus} />
-              <DetailField label="Remarks" value={formData.qualityCheck.remarks} />
-              <DetailField label="Inspection Count" value={Array.isArray(formData.qualityCheck.inspections) ? formData.qualityCheck.inspections.length : 0} />
-            </div>
-            
-            {Array.isArray(formData.qualityCheck.inspections) && formData.qualityCheck.inspections.length > 0 && (
-              <div className="mb-4">
-                <h4 className="text-sm font-semibold text-slate-200 mb-2">Inspection Details</h4>
-                <div className="bg-slate-800 rounded p-3 text-sm text-slate-300">
-                  {formData.qualityCheck.inspections.map((inspection, idx) => (
-                    <div key={idx} className="mb-2 pb-2 border-b border-slate-700 last:border-0">
-                      <p><strong>{inspection.type || 'Inspection ' + (idx + 1)}</strong></p>
-                      {inspection.result && <p>Result: {inspection.result}</p>}
-                      {inspection.notes && <p>Notes: {inspection.notes}</p>}
-                      {inspection.status && <p>Status: {inspection.status}</p>}
+              <div className="bg-white border-b border-slate-200  p-2 mb-0">
+                <h3 className="text-md font-semibold text-slate-900 mb-2">QC Status & Inspections</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  <DetailField label="Inspection Type" value={formData.qualityCheck.inspectionType} />
+                  <DetailField label="QC Status" value={formData.qualityCheck.qcStatus} />
+                  <DetailField label="Remarks" value={formData.qualityCheck.remarks} />
+                  <DetailField label="Inspection Count" value={Array.isArray(formData.qualityCheck.inspections) ? formData.qualityCheck.inspections.length : 0} />
+                </div>
+
+                {Array.isArray(formData.qualityCheck.inspections) && formData.qualityCheck.inspections.length > 0 && (
+                  <div className="border-t border-slate-200 pt-6">
+                    <h4 className="text-sm font-semibold text-slate-700 mb-4">Inspection Details</h4>
+                    <div className="space-y-3">
+                      {formData.qualityCheck.inspections.map((inspection, idx) => (
+                        <div key={idx} className="bg-slate-50 rounded p-4 border border-slate-200">
+                          <p className="font-medium text-slate-900 mb-2">{inspection.type || 'Inspection ' + (idx + 1)}</p>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                            {inspection.date && <p className="text-slate-600"><span className="text-slate-700">Date:</span> {inspection.date}</p>}
+                            {inspection.inspector && <p className="text-slate-600"><span className="text-slate-700">Inspector:</span> {inspection.inspector}</p>}
+                            {inspection.result && <p className="text-slate-600"><span className="text-slate-700">Result:</span> {inspection.result}</p>}
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Step 7: Shipment */}
+        {formData?.shipment && (
+          <section>
+            <SectionHeader number="7" title="Shipment" />
+            <div className="space-y-6">
+              <div className="bg-white border-b border-slate-200  p-2 mb-0">
+                <h3 className="text-md font-semibold text-slate-900 mb-2">Shipment Details</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <DetailField label="Shipment Method" value={formData.shipment.shipmentMethod} />
+                  <DetailField label="Carrier Name" value={formData.shipment.carrierName} />
+                  <DetailField label="Tracking Number" value={formData.shipment.trackingNumber} />
+                  <DetailField label="Shipment Status" value={formData.shipment.shipmentStatus} />
+                  <DetailField label="Estimated Delivery Date" value={formData.shipment.estimatedDeliveryDate} />
+                  <DetailField label="Shipping Address" value={formData.shipment.shippingAddress} />
+                  <DetailField label="Shipping Date" value={formData.shipment.shippingDate} />
                 </div>
               </div>
-            )}
-          </DetailSection>
-        )}
 
-        {formData?.shipment && (
-          <DetailSection title="Step 7: Shipment & Logistics">
-            {formData.deliveryTerms && Object.keys(formData.deliveryTerms).length > 0 && (
-              <div className="mb-4">
-                <h4 className="text-sm font-semibold text-slate-200 mb-2">Delivery Schedule & Setup</h4>
-                <DetailField label="Delivery Schedule" value={formData.deliveryTerms?.deliverySchedule} />
-                <DetailField label="Packaging Information" value={formData.deliveryTerms?.packagingInfo} />
-                <DetailField label="Dispatch Mode" value={formData.deliveryTerms?.dispatchMode} />
-                <DetailField label="Installation Required" value={formData.deliveryTerms?.installationRequired} />
-                <DetailField label="Site Commissioning" value={formData.deliveryTerms?.siteCommissioning} />
+              <div className="bg-white border-b border-slate-200  p-2 mb-0">
+                <h3 className="text-md font-semibold text-slate-900 mb-2">Packaging & Handling</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <DetailField label="Packaging Details" value={formData.shipment.packagingDetails} />
+                  <DetailField label="Insurance" value={formData.shipment.insurance} />
+                  <DetailField label="Special Handling Instructions" value={formData.shipment.specialHandling} />
+                </div>
               </div>
-            )}
 
-            <div className="mb-4">
-              <h4 className="text-sm font-semibold text-slate-200 mb-2">Shipment Details</h4>
-              <DetailField label="Marking" value={formData.shipment?.marking} />
-              <DetailField label="Dismantling" value={formData.shipment?.dismantling} />
-              <DetailField label="Packing" value={formData.shipment?.packing} />
-              <DetailField label="Dispatch" value={formData.shipment?.dispatch} />
+              {formData.shipment.attachments?.length > 0 && (
+                <div className="bg-white border-b border-slate-200  p-2 mb-0">
+                  <h3 className="text-md font-semibold text-slate-900 mb-2">Shipment Documents</h3>
+                  <ul className="space-y-2">
+                    {formData.shipment.attachments.map((file, idx) => (
+                      <li key={idx} className="text-sm text-slate-700 flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
+                        {typeof file === 'string' ? file : file.name}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
-
-            <div className="mb-4">
-              <h4 className="text-sm font-semibold text-slate-200 mb-2">Shipping Information</h4>
-              <DetailField label="Shipment Method" value={formData.shipment.shipmentMethod} />
-              <DetailField label="Carrier" value={formData.shipment.carrierName} />
-              <DetailField label="Tracking Number" value={formData.shipment.trackingNumber} />
-              <DetailField label="Shipment Status" value={formData.shipment.shipmentStatus} />
-              <DetailField label="Estimated Delivery" value={formData.shipment.estimatedDeliveryDate} />
-            </div>
-
-            <div className="mb-4">
-              <h4 className="text-sm font-semibold text-slate-200 mb-2">Packaging & Handling</h4>
-              <DetailField label="Shipping Address" value={formData.shipment.shippingAddress} />
-              <DetailField label="Shipping Date" value={formData.shipment.shippingDate} />
-              <DetailField label="Packaging Details" value={formData.shipment.packagingDetails} />
-              <DetailField label="Insurance" value={formData.shipment.insurance} />
-              <DetailField label="Special Handling Instructions" value={formData.shipment.specialHandling} />
-            </div>
-          </DetailSection>
+          </section>
         )}
 
+        {/* Step 8: Delivery */}
         {formData?.delivery && (
-          <DetailSection title="Step 8: Delivery & Assignment">
-            <DetailField label="Actual Delivery Date" value={formData.delivery.actualDeliveryDate} />
-            <DetailField label="Delivered To" value={formData.delivery.deliveredTo} />
-            <DetailField label="Installation Completed" value={formData.delivery.installationCompleted} />
-            <DetailField label="Site Commissioning Completed" value={formData.delivery.siteCommunissioningCompleted} />
-            <DetailField label="Warranty Terms Acceptance" value={formData.delivery.warrantyTermsAcceptance} />
-            <DetailField label="Completion Remarks" value={formData.delivery.completionRemarks} />
-            <DetailField label="Project Manager" value={formData.delivery.projectManager} />
-            <DetailField label="Production Supervisor" value={formData.delivery.productionSupervisor} />
-            <DetailField label="Delivery Status" value={formData.delivery.deliveryStatus} />
-            <DetailField label="Received By" value={formData.delivery.receivedBy} />
-            <DetailField label="POD Number" value={formData.delivery.podNumber} />
-            <DetailField label="Assigned To" value={formData.delivery.assignedTo} />
-            <DetailField label="Customer Contact" value={formData.delivery.customerContact} />
-          </DetailSection>
-        )}
+          <section>
+            <SectionHeader number="8" title="Delivery & Assignment" />
+            <div className="space-y-6">
+              <div className="bg-white border-b border-slate-200  p-2 mb-0">
+                <h3 className="text-md font-semibold text-slate-900 mb-2">Delivery Confirmation</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <DetailField label="Actual Delivery Date" value={formData.delivery.actualDeliveryDate} />
+                  <DetailField label="Delivered To" value={formData.delivery.deliveredTo} />
+                  <DetailField label="Received By" value={formData.delivery.receivedBy} />
+                  <DetailField label="POD Number" value={formData.delivery.podNumber} />
+                  <DetailField label="Delivery Status" value={formData.delivery.deliveryStatus} />
+                </div>
+              </div>
 
-        {!formData?.poNumber && !initialData?.po_number && (
-          <Card className="empty-state">
-            <CardContent>
-              <p>No data filled in this sales order yet.</p>
-            </CardContent>
-          </Card>
+              <div className="bg-white border-b border-slate-200  p-2 mb-0">
+                <h3 className="text-md font-semibold text-slate-900 mb-2">Installation & Commissioning</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <DetailField label="Installation Completed" value={formData.delivery.installationCompleted} />
+                  <DetailField label="Site Commissioning Completed" value={formData.delivery.siteCommunissioningCompleted} />
+                  <DetailField label="Warranty Terms Acceptance" value={formData.delivery.warrantyTermsAcceptance} />
+                </div>
+              </div>
+
+              <div className="bg-white border-b border-slate-200  p-2 mb-0">
+                <h3 className="text-md font-semibold text-slate-900 mb-2">Project Assignment</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <DetailField label="Project Manager" value={formData.delivery.projectManager} />
+                  <DetailField label="Production Supervisor" value={formData.delivery.productionSupervisor} />
+                  <DetailField label="Assigned To" value={formData.delivery.assignedTo} />
+                  <DetailField label="Customer Contact" value={formData.delivery.customerContact} />
+                </div>
+              </div>
+
+              {formData.delivery.completionRemarks && (
+                <div className="bg-white border-b border-slate-200  p-2 mb-0">
+                  <h3 className="text-md font-semibold text-slate-900 mb-2">Completion Remarks</h3>
+                  <p className="text-slate-700 text-sm">{formData.delivery.completionRemarks}</p>
+                </div>
+              )}
+
+              {formData.delivery.attachments?.length > 0 && (
+                <div className="bg-white border-b border-slate-200  p-2 mb-0">
+                  <h3 className="text-md font-semibold text-slate-900 mb-2">Delivery Documents</h3>
+                  <ul className="space-y-2">
+                    {formData.delivery.attachments.map((file, idx) => (
+                      <li key={idx} className="text-sm text-slate-700 flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
+                        {typeof file === 'string' ? file : file.name}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </section>
         )}
       </div>
     </div>

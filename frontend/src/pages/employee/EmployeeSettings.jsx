@@ -24,7 +24,7 @@ const EmployeeSettings = () => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">
+        <h1 className="text-3xl font-bold  dark:">
           Settings
         </h1>
         <p className="text-slate-600 dark:text-slate-400 mt-1">
@@ -35,7 +35,7 @@ const EmployeeSettings = () => {
       {/* Notifications Settings */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
+          <CardTitle className="flex items-center text-xs space-x-2">
             <Bell className="w-5 h-5" />
             <span>Notification Preferences</span>
           </CardTitle>
@@ -65,24 +65,24 @@ const EmployeeSettings = () => {
           ].map((setting) => (
             <div
               key={setting.key}
-              className="flex items-center justify-between p-4 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 transition"
+              className="flex items-center text-xs justify-between p-4 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 transition"
             >
               <div>
-                <h3 className="font-medium text-slate-900 dark:text-slate-100">
+                <h3 className="font-medium  dark:">
                   {setting.label}
                 </h3>
                 <p className="text-sm text-slate-600 dark:text-slate-400">
                   {setting.description}
                 </p>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer">
+              <label className="relative inline-flex items-center text-xs cursor-pointer">
                 <input
                   type="checkbox"
                   checked={settings[setting.key]}
                   onChange={() => handleToggle(setting.key)}
                   className="sr-only peer"
                 />
-                <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 dark:peer-focus:ring-primary-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:bg-slate-600 peer-checked:bg-primary-600"></div>
+                <div className="w-11 h-6  peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 dark:peer-focus:ring-primary-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:bg-slate-600 peer-checked:bg-primary-600"></div>
               </label>
             </div>
           ))}
@@ -92,30 +92,30 @@ const EmployeeSettings = () => {
       {/* Privacy & Security */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
+          <CardTitle className="flex items-center text-xs space-x-2">
             <Lock className="w-5 h-5" />
             <span>Privacy & Security</span>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 transition">
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center text-xs justify-between mb-2">
               <div>
-                <h3 className="font-medium text-slate-900 dark:text-slate-100">
+                <h3 className="font-medium  dark:">
                   Two-Factor Authentication
                 </h3>
                 <p className="text-sm text-slate-600 dark:text-slate-400">
                   Add an extra layer of security to your account
                 </p>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer">
+              <label className="relative inline-flex items-center text-xs cursor-pointer">
                 <input
                   type="checkbox"
                   checked={settings.twoFactorAuth}
                   onChange={() => handleToggle("twoFactorAuth")}
                   className="sr-only peer"
                 />
-                <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 dark:peer-focus:ring-primary-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:bg-slate-600 peer-checked:bg-primary-600"></div>
+                <div className="w-11 h-6  peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 dark:peer-focus:ring-primary-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:bg-slate-600 peer-checked:bg-primary-600"></div>
               </label>
             </div>
             {settings.twoFactorAuth && (
@@ -128,7 +128,7 @@ const EmployeeSettings = () => {
           </div>
 
           <div className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg">
-            <h3 className="font-medium text-slate-900 dark:text-slate-100 mb-3">
+            <h3 className="font-medium  dark: mb-3">
               Change Password
             </h3>
             <div className="space-y-3">
@@ -138,7 +138,7 @@ const EmployeeSettings = () => {
                 </label>
                 <input
                   type="password"
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700  dark:"
                 />
               </div>
               <div>
@@ -147,7 +147,7 @@ const EmployeeSettings = () => {
                 </label>
                 <input
                   type="password"
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700  dark:"
                 />
               </div>
               <div>
@@ -156,7 +156,7 @@ const EmployeeSettings = () => {
                 </label>
                 <input
                   type="password"
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700  dark:"
                 />
               </div>
               <Button className="w-full">Update Password</Button>
@@ -168,29 +168,29 @@ const EmployeeSettings = () => {
       {/* Display Settings */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
+          <CardTitle className="flex items-center text-xs space-x-2">
             <Eye className="w-5 h-5" />
             <span>Display Settings</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 transition flex items-center justify-between">
+          <div className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 transition flex items-center text-xs justify-between">
             <div>
-              <h3 className="font-medium text-slate-900 dark:text-slate-100">
+              <h3 className="font-medium  dark:">
                 Dark Mode
               </h3>
               <p className="text-sm text-slate-600 dark:text-slate-400">
                 Toggle dark mode for the application
               </p>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
+            <label className="relative inline-flex items-center text-xs cursor-pointer">
               <input
                 type="checkbox"
                 checked={settings.darkMode}
                 onChange={() => handleToggle("darkMode")}
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 dark:peer-focus:ring-primary-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:bg-slate-600 peer-checked:bg-primary-600"></div>
+              <div className="w-11 h-6  peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 dark:peer-focus:ring-primary-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:bg-slate-600 peer-checked:bg-primary-600"></div>
             </label>
           </div>
         </CardContent>

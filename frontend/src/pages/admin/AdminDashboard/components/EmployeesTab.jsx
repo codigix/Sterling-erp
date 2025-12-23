@@ -146,7 +146,7 @@ const EmployeesTab = () => {
       case "Poor":
         return "text-red-600 bg-red-100 dark:bg-red-900 dark:text-red-400";
       default:
-        return "text-slate-600 bg-slate-100 dark:bg-slate-900 dark:text-slate-400";
+        return "text-slate-600 bg-slate-100 dark: dark:text-slate-400";
     }
   };
 
@@ -162,7 +162,7 @@ const EmployeesTab = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardContent className="p-6">
-            <div className="flex items-center">
+            <div className="flex items-center text-xs">
               <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
                 <UserCheck className="h-6 w-6 text-green-600 dark:text-green-400" />
               </div>
@@ -170,7 +170,7 @@ const EmployeesTab = () => {
                 <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
                   Top Performers
                 </p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                <p className="text-xl font-bold  text-left">
                   18
                 </p>
               </div>
@@ -180,7 +180,7 @@ const EmployeesTab = () => {
 
         <Card>
           <CardContent className="p-6">
-            <div className="flex items-center">
+            <div className="flex items-center text-xs">
               <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
                 <TrendingUp className="h-6 w-6 text-blue-600 dark:text-blue-400" />
               </div>
@@ -188,7 +188,7 @@ const EmployeesTab = () => {
                 <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
                   Avg Efficiency
                 </p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                <p className="text-xl font-bold  text-left">
                   89%
                 </p>
               </div>
@@ -198,7 +198,7 @@ const EmployeesTab = () => {
 
         <Card>
           <CardContent className="p-6">
-            <div className="flex items-center">
+            <div className="flex items-center text-xs">
               <div className="p-2 bg-yellow-100 dark:bg-yellow-900 rounded-lg">
                 <Target className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
               </div>
@@ -206,7 +206,7 @@ const EmployeesTab = () => {
                 <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
                   Avg Quality
                 </p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                <p className="text-xl font-bold  text-left">
                   4.5/5.0
                 </p>
               </div>
@@ -216,7 +216,7 @@ const EmployeesTab = () => {
 
         <Card>
           <CardContent className="p-6">
-            <div className="flex items-center">
+            <div className="flex items-center text-xs">
               <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
                 <Calendar className="h-6 w-6 text-purple-600 dark:text-purple-400" />
               </div>
@@ -224,7 +224,7 @@ const EmployeesTab = () => {
                 <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
                   Avg Attendance
                 </p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                <p className="text-xl font-bold  text-left">
                   97%
                 </p>
               </div>
@@ -235,7 +235,7 @@ const EmployeesTab = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center">
+          <CardTitle className="flex items-center text-xs">
             <UserCheck className="w-5 h-5 mr-2" />
             Top Performing Employees
           </CardTitle>
@@ -245,10 +245,10 @@ const EmployeesTab = () => {
             {employeeData.slice(0, 4).map((employee, index) => (
               <div
                 key={index}
-                className="flex items-center p-4 border border-slate-200 dark:border-slate-700 rounded-lg"
+                className="flex items-center text-xs p-4 border border-slate-200 dark:border-slate-700 rounded-lg"
               >
                 <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900 rounded-full flex items-center justify-center">
+                  <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900 rounded-full flex items-center text-xs justify-center">
                     <span className="text-lg font-semibold text-primary-600 dark:text-primary-400">
                       {employee.name
                         .split(" ")
@@ -258,8 +258,8 @@ const EmployeesTab = () => {
                   </div>
                 </div>
                 <div className="ml-4 flex-1">
-                  <div className="flex items-center justify-between mb-1">
-                    <h4 className="font-medium text-slate-900 dark:text-slate-100">
+                  <div className="flex items-center text-xs justify-between mb-1">
+                    <h4 className="font-medium  dark:">
                       {employee.name}
                     </h4>
                     <Badge className={getPerformanceColor(employee.status)}>
@@ -309,7 +309,7 @@ const EmployeesTab = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center">
+            <CardTitle className="flex items-center text-xs">
               <BarChart3 className="w-5 h-5 mr-2" />
               Department Efficiency Comparison
             </CardTitle>
@@ -351,7 +351,7 @@ const EmployeesTab = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center">
+            <CardTitle className="flex items-center text-xs">
               <PieChart className="w-5 h-5 mr-2" />
               Performance Distribution
             </CardTitle>
@@ -389,7 +389,7 @@ const EmployeesTab = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center">
+          <CardTitle className="flex items-center text-xs">
             <Factory className="w-5 h-5 mr-2" />
             Department Performance Summary
           </CardTitle>
@@ -399,19 +399,19 @@ const EmployeesTab = () => {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-slate-200 dark:border-slate-700">
-                  <th className="text-left py-3 px-4 font-medium text-slate-900 dark:text-slate-100">
+                  <th className="text-left py-3 px-4 font-medium  dark:">
                     Department
                   </th>
-                  <th className="text-left py-3 px-4 font-medium text-slate-900 dark:text-slate-100">
+                  <th className="text-left py-3 px-4 font-medium  dark:">
                     Employees
                   </th>
-                  <th className="text-left py-3 px-4 font-medium text-slate-900 dark:text-slate-100">
+                  <th className="text-left py-3 px-4 font-medium  dark:">
                     Avg Efficiency
                   </th>
-                  <th className="text-left py-3 px-4 font-medium text-slate-900 dark:text-slate-100">
+                  <th className="text-left py-3 px-4 font-medium  dark:">
                     Avg Quality
                   </th>
-                  <th className="text-left py-3 px-4 font-medium text-slate-900 dark:text-slate-100">
+                  <th className="text-left py-3 px-4 font-medium  dark:">
                     Top Performer
                   </th>
                 </tr>
@@ -422,10 +422,10 @@ const EmployeesTab = () => {
                     key={index}
                     className="border-b border-slate-100 dark:border-slate-800"
                   >
-                    <td className="py-3 px-4 font-medium text-slate-900 dark:text-slate-100">
+                    <td className="py-3 px-4 font-medium  dark:">
                       {dept.department}
                     </td>
-                    <td className="py-3 px-4 text-slate-900 dark:text-slate-100">
+                    <td className="py-3 px-4  dark:">
                       {dept.totalEmployees}
                     </td>
                     <td className="py-3 px-4">
@@ -452,7 +452,7 @@ const EmployeesTab = () => {
                         {dept.avgQuality}/5.0
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-slate-900 dark:text-slate-100">
+                    <td className="py-3 px-4  dark:">
                       {dept.topPerformer}
                     </td>
                   </tr>
@@ -465,7 +465,7 @@ const EmployeesTab = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center">
+          <CardTitle className="flex items-center text-xs">
             <TrendingUp className="w-5 h-5 mr-2" />
             Performance Insights & Recommendations
           </CardTitle>
@@ -473,11 +473,11 @@ const EmployeesTab = () => {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
-              <h4 className="font-medium text-slate-900 dark:text-slate-100">
+              <h4 className="font-medium  dark:">
                 Strengths
               </h4>
               <div className="space-y-3">
-                <div className="flex items-center p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                <div className="flex items-center text-xs p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
                   <CheckCircle className="w-5 h-5 text-green-600 mr-3" />
                   <div>
                     <p className="font-medium text-green-900 dark:text-green-100">
@@ -488,7 +488,7 @@ const EmployeesTab = () => {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <div className="flex items-center text-xs p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                   <TrendingUp className="w-5 h-5 text-blue-600 mr-3" />
                   <div>
                     <p className="font-medium text-blue-900 dark:text-blue-100">
@@ -503,11 +503,11 @@ const EmployeesTab = () => {
             </div>
 
             <div className="space-y-4">
-              <h4 className="font-medium text-slate-900 dark:text-slate-100">
+              <h4 className="font-medium  dark:">
                 Areas for Improvement
               </h4>
               <div className="space-y-3">
-                <div className="flex items-center p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                <div className="flex items-center text-xs p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
                   <AlertTriangle className="w-5 h-5 text-yellow-600 mr-3" />
                   <div>
                     <p className="font-medium text-yellow-900 dark:text-yellow-100">
@@ -519,7 +519,7 @@ const EmployeesTab = () => {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+                <div className="flex items-center text-xs p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
                   <Target className="w-5 h-5 text-orange-600 mr-3" />
                   <div>
                     <p className="font-medium text-orange-900 dark:text-orange-100">

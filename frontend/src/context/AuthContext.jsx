@@ -1,19 +1,24 @@
-import React, { createContext, useState, useContext, useEffect, useCallback } from "react";
+import { createContext, useState, useContext, useEffect, useCallback } from "react";
 import axios from "../utils/api";
 
 const DEMO_USERS = {
-  admin: { password: "password", role: "admin", name: "System Admin" },
-  sales: { password: "password", role: "sales", name: "Sales Manager" },
-  engineering: { password: "password", role: "engineering", name: "Design Lead" },
-  procurement: { password: "password", role: "procurement", name: "Procurement Lead" },
-  qc: { password: "password", role: "qc", name: "Quality Head" },
-  inventory: { password: "password", role: "inventory", name: "Stores Supervisor" },
-  production: { password: "password", role: "production", name: "Production Planner" },
-  mes: { password: "password", role: "mes", name: "MES Controller" },
-  challan: { password: "password", role: "challan", name: "Logistics Coordinator" },
-  "john.doe": { password: "password", role: "employee", name: "John Doe", designation: "Senior Engineer", department: "Engineering" },
-  "jane.smith": { password: "password", role: "supervisor", name: "Jane Smith", designation: "Project Supervisor", department: "Production" },
-  "rajesh.kumar": { password: "password", role: "employee", name: "Rajesh Kumar", designation: "Engineer", department: "Engineering" },
+  admin: { password: "password", role: "Admin", name: "System Admin" },
+  sales: { password: "password", role: "Sales", name: "Sales Manager" },
+  engineering: { password: "password", role: "Engineering", name: "Design Lead" },
+  procurement: { password: "password", role: "Procurement", name: "Procurement Lead" },
+  qc: { password: "password", role: "QC", name: "Quality Head" },
+  inventory: { password: "password", role: "Inventory", name: "Stores Supervisor" },
+  production: { password: "password", role: "Production", name: "Production Planner" },
+  mes: { password: "password", role: "MES", name: "MES Controller" },
+  challan: { password: "password", role: "Challan", name: "Logistics Coordinator" },
+  "john.doe": { password: "password", role: "Employee", name: "John Doe", designation: "Senior Engineer", department: "Engineering" },
+  "jane.smith": { password: "password", role: "Supervisor", name: "Jane Smith", designation: "Project Supervisor", department: "Production" },
+  "rajesh.kumar": { password: "password", role: "Employee", name: "Rajesh Kumar", designation: "Engineer", department: "Engineering" },
+  "inventory.manager": { password: "password", role: "Inventory Manager", name: "Inventory Manager", department: "Inventory" },
+  "design.engineer": { password: "password", role: "Design Engineer", name: "Design Engineer", designation: "Design Engineer", department: "Engineering" },
+  "qc.manager": { password: "password", role: "QC Manager", name: "QC Manager", department: "Quality Control" },
+  "production.manager": { password: "password", role: "Production Manager", name: "Production Manager", department: "Production" },
+  "accountant": { password: "password", role: "Admin", name: "Accountant", department: "Finance" },
 };
 
 const AuthContext = createContext();

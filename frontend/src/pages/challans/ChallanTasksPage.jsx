@@ -85,7 +85,7 @@ const ChallanTasksPage = () => {
         <Card>
           <div className="p-4">
             <p className="text-sm text-slate-600 dark:text-slate-400">Total Challans</p>
-            <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">{stats.total}</p>
+            <p className="text-xl font-bold text-slate-900 dark:text-white mt-1">{stats.total}</p>
           </div>
         </Card>
         <Card>
@@ -116,7 +116,7 @@ const ChallanTasksPage = () => {
             className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
               activeTab === 'all'
                 ? 'bg-blue-600 text-white'
-                : 'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100 hover:bg-slate-300'
+                : 'bg-slate-200 dark:bg-slate-700  dark: hover:'
             }`}
           >
             All Challans
@@ -126,7 +126,7 @@ const ChallanTasksPage = () => {
             className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
               activeTab === 'outward'
                 ? 'bg-purple-600 text-white'
-                : 'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100 hover:bg-slate-300'
+                : 'bg-slate-200 dark:bg-slate-700  dark: hover:'
             }`}
           >
             Outward
@@ -136,20 +136,20 @@ const ChallanTasksPage = () => {
             className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
               activeTab === 'inward'
                 ? 'bg-green-600 text-white'
-                : 'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100 hover:bg-slate-300'
+                : 'bg-slate-200 dark:bg-slate-700  dark: hover:'
             }`}
           >
             Inward
           </button>
         </div>
         <div className="flex gap-2">
-          <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100 hover:bg-slate-300 transition-colors">
+          <button className="flex items-center text-xs gap-2 px-4 py-2 rounded-lg bg-slate-200 dark:bg-slate-700  dark: hover: transition-colors">
             <Filter size={18} />
             Filter
           </button>
           <button
             onClick={() => setShowNewChallan(!showNewChallan)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+            className="flex items-center text-xs gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
           >
             <Plus size={18} />
             New Challan
@@ -160,24 +160,24 @@ const ChallanTasksPage = () => {
       {/* New Challan Form */}
       {showNewChallan && (
         <Card className="mb-6 p-6">
-          <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4">Create New Challan</h3>
+          <h3 className="text-lg font-bold  dark: mb-4">Create New Challan</h3>
           <div className="task-form mb-4">
-            <select className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100">
+            <select className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700  dark:">
               <option>Select Challan Type...</option>
               <option>Outward (Material sent out)</option>
               <option>Inward (Material received)</option>
             </select>
-            <input type="text" placeholder="Stage/Process" className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100" />
-            <input type="text" placeholder="Vendor Name" className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100" />
-            <input type="date" className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100" />
-            <input type="number" placeholder="Number of Items" className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100" />
-            <textarea placeholder="Items Description" className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100" rows="3" />
+            <input type="text" placeholder="Stage/Process" className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700  dark:" />
+            <input type="text" placeholder="Vendor Name" className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700  dark:" />
+            <input type="date" className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700  dark:" />
+            <input type="number" placeholder="Number of Items" className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700  dark:" />
+            <textarea placeholder="Items Description" className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700  dark:" rows="3" />
           </div>
           <div className="flex gap-2">
             <button className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors">
               Create Challan
             </button>
-            <button onClick={() => setShowNewChallan(false)} className="px-4 py-2 rounded-lg bg-slate-300 dark:bg-slate-600 text-slate-900 dark:text-slate-100 hover:bg-slate-400 transition-colors">
+            <button onClick={() => setShowNewChallan(false)} className="px-4 py-2 rounded-lg  dark:bg-slate-600  dark: hover:bg-slate-400 transition-colors">
               Cancel
             </button>
           </div>
@@ -202,9 +202,9 @@ const ChallanTasksPage = () => {
             </thead>
             <tbody>
               {filteredChallans.map(challan => (
-                <tr key={challan.id} className="border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-                  <td className="px-6 py-4 text-sm font-medium">{challan.id}</td>
-                  <td className="px-6 py-4">
+                <tr key={challan.id} className="border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs transition-colors">
+                  <td className="p-1 text-sm font-medium">{challan.id}</td>
+                  <td className="p-1">
                     <Badge className={getTypeColor(challan.type)}>
                       {challan.type === 'outward' ? (
                         <ArrowUp size={14} className="inline mr-1" />
@@ -214,28 +214,28 @@ const ChallanTasksPage = () => {
                       {challan.type.charAt(0).toUpperCase() + challan.type.slice(1)}
                     </Badge>
                   </td>
-                  <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">{challan.stage}</td>
-                  <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">{challan.vendor}</td>
-                  <td className="px-6 py-4 text-sm text-center font-medium">{challan.items}</td>
-                  <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">
+                  <td className="p-1 text-sm text-slate-700 dark:text-slate-300">{challan.stage}</td>
+                  <td className="p-1 text-sm text-slate-700 dark:text-slate-300">{challan.vendor}</td>
+                  <td className="p-1 text-sm text-center font-medium">{challan.items}</td>
+                  <td className="p-1 text-sm text-slate-700 dark:text-slate-300">
                     {challan.challanDate}
                     {challan.type === 'outward' && ` (Return: ${challan.expectedReturn})`}
                     {challan.type === 'inward' && ` (Received: ${challan.receivedDate})`}
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="p-1">
                     <Badge className={getStatusColor(challan.status)}>
                       {challan.status.charAt(0).toUpperCase() + challan.status.slice(1)}
                     </Badge>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="p-1">
                     <div className="flex gap-2">
-                      <button className="p-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100 hover:bg-slate-300 transition-colors">
+                      <button className="p-2 rounded-lg bg-slate-200 dark:bg-slate-700  dark: hover: transition-colors">
                         <Eye size={16} />
                       </button>
                       <button className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 hover:bg-blue-200 transition-colors">
                         <Edit2 size={16} />
                       </button>
-                      <button className="p-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100 hover:bg-slate-300 transition-colors">
+                      <button className="p-2 rounded-lg bg-slate-200 dark:bg-slate-700  dark: hover: transition-colors">
                         <Download size={16} />
                       </button>
                     </div>

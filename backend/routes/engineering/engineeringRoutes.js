@@ -30,7 +30,7 @@ const upload = multer({
 });
 
 router.use(authMiddleware);
-router.use(roleMiddleware('Admin', 'Engineering', 'Management'));
+router.use(roleMiddleware('Admin', 'Engineering', 'Management', 'Design Engineer'));
 
 router.post('/documents/upload', upload.single('document'), engineeringController.uploadDocument);
 router.get('/documents', engineeringController.getDocuments);

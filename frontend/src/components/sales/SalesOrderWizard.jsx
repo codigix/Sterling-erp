@@ -83,11 +83,9 @@ const SalesOrderWizard = ({ salesOrderId, onComplete, onCancel }) => {
         [stepId]: employeeId,
       }));
 
-      // Show success message
       setError(null);
       alert('Employee assigned successfully and task added to their dashboard!');
       
-      // Refresh workflow steps
       await fetchWorkflowSteps();
     } catch (err) {
       setError('Failed to assign employee');
@@ -166,321 +164,323 @@ const SalesOrderWizard = ({ salesOrderId, onComplete, onCancel }) => {
   const StepIcon = WORKFLOW_STEPS[currentStep - 1]?.icon || FileText;
 
   return (
-    <div className="w-full max-w-6xl mx-auto p-4">
-      {/* Step Tracker */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-            Sales Order Workflow
-          </h2>
-          <div className="text-sm text-slate-600 dark:text-slate-400">
-            Step {currentStep} of {WORKFLOW_STEPS.length}
+    <div className="w-full bg-white min-h-screen p-6">
+      <div className="max-w-6xl mx-auto space-y-8">
+        {/* Header Section */}
+        <div className="border-b border-slate-200 pb-8">
+          <div className="flex items-center text-xs justify-between mb-4">
+            <div>
+              <h1 className="text-4xl font-bold text-slate-900 mb-2">Sales Order Workflow</h1>
+              <p className="text-slate-600">
+                Managing order: <span className="font-semibold text-slate-900">Step {currentStep} of {WORKFLOW_STEPS.length}</span>
+              </p>
+            </div>
+            <div className="text-right">
+              <div className="text-3xl font-bold text-purple-600">{Math.round((currentStep / WORKFLOW_STEPS.length) * 100)}%</div>
+              <p className="text-sm text-slate-600">Progress</p>
+            </div>
+          </div>
+
+          {/* Progress Bar */}
+          <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden">
+            <div
+              className="bg-gradient-to-r from-purple-500 to-purple-600 h-3 rounded-full transition-all duration-500 ease-out"
+              style={{ width: `${(currentStep / WORKFLOW_STEPS.length) * 100}%` }}
+            />
           </div>
         </div>
 
-        {/* Progress Bar */}
-        <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 mb-6">
-          <div
-            className="bg-blue-600 dark:bg-blue-400 h-2 rounded-full transition-all duration-300"
-            style={{ width: `${(currentStep / WORKFLOW_STEPS.length) * 100}%` }}
-          />
-        </div>
+        {/* Step Tracker Cards */}
+        <div className="bg-gradient-to-b from-slate-50 to-white rounded-xl  border border-slate-200 shadow-sm">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-9 gap-3">
+            {WORKFLOW_STEPS.map((step) => {
+              const stepStatus = getStepStatus(step.number);
+              const isActive = currentStep === step.number;
+              const isCompleted = stepStatus === 'completed';
 
-        {/* Step Icons */}
-        <div className="grid grid-cols-1 md:grid-cols-9 gap-2 mb-6">
-          {WORKFLOW_STEPS.map((step, idx) => {
-            const stepStatus = getStepStatus(step.number);
-            const isActive = currentStep === step.number;
-            const isCompleted = stepStatus === 'completed';
-            const isPending = stepStatus === 'pending';
-
-            return (
-              <button
-                key={step.number}
-                onClick={() => setCurrentStep(step.number)}
-                className={`flex flex-col items-center p-2 rounded-lg transition-all ${
-                  isActive
-                    ? 'bg-blue-100 dark:bg-blue-900 ring-2 ring-blue-600'
-                    : isCompleted
-                    ? 'bg-green-100 dark:bg-green-900'
-                    : 'bg-slate-100 dark:bg-slate-800'
-                }`}
-              >
-                <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 ${
+              return (
+                <button
+                  key={step.number}
+                  onClick={() => setCurrentStep(step.number)}
+                  className={`group relative p-4 rounded-lg font-medium text-sm transition-all duration-200 ${
                     isActive
-                      ? 'bg-blue-600 text-white'
+                      ? 'bg-purple-600 text-white shadow-lg ring-2 ring-purple-300'
                       : isCompleted
-                      ? 'bg-green-600 text-white'
-                      : isPending
-                      ? 'bg-slate-400 text-white'
-                      : 'bg-slate-300 text-slate-600'
+                      ? 'bg-emerald-50 text-emerald-900 border border-emerald-200 hover:border-emerald-300'
+                      : 'bg-white text-slate-700 border border-slate-300 hover:border-slate-400'
                   }`}
                 >
-                  {isCompleted ? (
-                    <Check className="w-4 h-4" />
-                  ) : (
-                    <span className="text-xs font-bold">{step.number}</span>
-                  )}
-                </div>
-                <span
-                  className={`text-xs font-medium text-center line-clamp-2 ${
-                    isActive
-                      ? 'text-blue-600 dark:text-blue-400'
-                      : isCompleted
-                      ? 'text-green-600 dark:text-green-400'
-                      : 'text-slate-600 dark:text-slate-400'
-                  }`}
-                >
-                  {step.name}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Error Message */}
-      {error && (
-        <div className="mb-6 p-4 bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700 rounded-lg flex items-center gap-3">
-          <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
-          <span className="text-red-700 dark:text-red-300">{error}</span>
-        </div>
-      )}
-
-      {/* Current Step Content */}
-      <Card className="mb-6">
-        <CardHeader className="border-b border-slate-200 dark:border-slate-700">
-          <CardTitle className="flex items-center gap-3">
-            <div className="p-3 bg-blue-100 dark:bg-blue-900 rounded-lg">
-              <StepIcon className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-            </div>
-            <div>
-              <h3 className="text-xl font-bold">
-                {WORKFLOW_STEPS[currentStep - 1].name}
-              </h3>
-              <p className="text-sm text-slate-600 dark:text-slate-400 font-normal">
-                Step {currentStep} of {WORKFLOW_STEPS.length}
-              </p>
-            </div>
-          </CardTitle>
-        </CardHeader>
-
-        <CardContent className="p-6 space-y-6">
-          {loading ? (
-            <div className="flex justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            </div>
-          ) : currentStepData ? (
-            <>
-              {/* Step Status */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
-                  <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">
-                    Current Status
-                  </p>
-                  <div className="flex items-center gap-2">
-                    {currentStepData.status === 'completed' ? (
-                      <CheckCircle2 className="w-5 h-5 text-green-600" />
-                    ) : currentStepData.status === 'in_progress' ? (
-                      <Clock className="w-5 h-5 text-yellow-600" />
-                    ) : (
-                      <Clock className="w-5 h-5 text-slate-400" />
-                    )}
-                    <span className="font-semibold text-slate-900 dark:text-slate-100">
-                      {currentStepData.status || 'Pending'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
-                  <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">
-                    Assigned To
-                  </p>
-                  <p className="font-semibold text-slate-900 dark:text-slate-100">
-                    {currentStepData.assignedEmployee?.username || 'Unassigned'}
-                  </p>
-                </div>
-
-                <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
-                  <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">
-                    Assigned Date
-                  </p>
-                  <p className="font-semibold text-slate-900 dark:text-slate-100">
-                    {currentStepData.assigned_at
-                      ? new Date(currentStepData.assigned_at).toLocaleDateString()
-                      : 'Not assigned'}
-                  </p>
-                </div>
-              </div>
-
-              {/* Assign Employee */}
-              {!currentStepData.assigned_employee_id && (
-                <div className="border-2 border-dashed border-blue-300 dark:border-blue-700 rounded-lg p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <User className="w-5 h-5 text-blue-600" />
-                    <h4 className="font-semibold text-slate-900 dark:text-slate-100">
-                      Assign Employee to this Step
-                    </h4>
-                  </div>
-                  <select
-                    onChange={(e) => {
-                      if (e.target.value) {
-                        handleAssignEmployee(
-                          currentStepData.id,
-                          parseInt(e.target.value)
-                        );
-                        e.target.value = '';
-                      }
-                    }}
-                    className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
-                  >
-                    <option value="">Select Employee</option>
-                    {employees.map((emp) => (
-                      <option key={emp.id} value={emp.id}>
-                        {emp.firstName} {emp.lastName} ({emp.email})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {/* Document Upload */}
-              {(currentStep === 3 || currentStep === 4) && (
-                <div className="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <Upload className="w-5 h-5 text-slate-600 dark:text-slate-400" />
-                    <h4 className="font-semibold text-slate-900 dark:text-slate-100">
-                      Upload Documents
-                    </h4>
-                  </div>
-                  <input
-                    type="file"
-                    multiple
-                    onChange={(e) => handleFileUpload(e, currentStepData.id)}
-                    className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg"
-                  />
-
-                  {/* Uploaded Documents */}
-                  {currentStepData.documents && currentStepData.documents.length > 0 && (
-                    <div className="mt-4">
-                      <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-2">
-                        Uploaded Documents:
-                      </p>
-                      <ul className="space-y-2">
-                        {(Array.isArray(currentStepData.documents)
-                          ? currentStepData.documents
-                          : []
-                        ).map((doc, idx) => (
-                          <li
-                            key={idx}
-                            className="flex items-center gap-2 p-2 bg-slate-50 dark:bg-slate-800 rounded"
-                          >
-                            <FileText className="w-4 h-4 text-slate-600" />
-                            <span className="text-sm text-slate-700 dark:text-slate-300">
-                              {typeof doc === 'string' ? doc : doc.name}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
+                  <div className="flex flex-col items-center gap-2">
+                    <div
+                      className={`w-10 h-10 rounded-full flex items-center text-xs justify-center font-bold transition-all ${
+                        isActive
+                          ? 'bg-white text-purple-600'
+                          : isCompleted
+                          ? 'bg-emerald-600 text-white'
+                          : ' text-slate-600'
+                      }`}
+                    >
+                      {isCompleted ? <Check className="w-5 h-5" /> : <span>{step.number}</span>}
                     </div>
-                  )}
-                </div>
-              )}
-
-              {/* Notes */}
-              <div>
-                <label className="block text-sm font-semibold text-slate-900 dark:text-slate-100 mb-2">
-                  Step Notes
-                </label>
-                <textarea
-                  value={stepData[currentStep]?.notes || ''}
-                  onChange={(e) =>
-                    setStepData((prev) => ({
-                      ...prev,
-                      [currentStep]: {
-                        ...prev[currentStep],
-                        notes: e.target.value,
-                      },
-                    }))
-                  }
-                  rows="4"
-                  className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
-                  placeholder="Add any notes for this step..."
-                />
-              </div>
-
-              {/* Step Actions */}
-              {currentStepData.status !== 'completed' && (
-                <div className="flex gap-3">
-                  <Button
-                    onClick={() => handleUpdateStepStatus(currentStepData.id, 'in_progress')}
-                    disabled={currentStepData.status === 'in_progress'}
-                    className="flex-1"
-                  >
-                    {currentStepData.status === 'in_progress'
-                      ? 'In Progress'
-                      : 'Start Step'}
-                  </Button>
-                  <Button
-                    onClick={() => handleUpdateStepStatus(currentStepData.id, 'completed')}
-                    variant="success"
-                    className="flex-1"
-                  >
-                    Complete Step
-                  </Button>
-                </div>
-              )}
-
-              {currentStepData.status === 'completed' && (
-                <div className="p-4 bg-green-50 dark:bg-green-900 border border-green-200 dark:border-green-700 rounded-lg flex items-center gap-3">
-                  <CheckCircle2 className="w-5 h-5 text-green-600" />
-                  <span className="text-green-700 dark:text-green-300">
-                    This step has been completed on{' '}
-                    {new Date(currentStepData.completed_at).toLocaleString()}
-                  </span>
-                </div>
-              )}
-            </>
-          ) : (
-            <p className="text-slate-600 dark:text-slate-400">
-              Loading step information...
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Navigation Buttons */}
-      <div className="flex items-center justify-between">
-        <Button
-          onClick={handlePrevious}
-          disabled={currentStep === 1}
-          variant="outline"
-          className="flex items-center gap-2"
-        >
-          <ChevronLeft className="w-4 h-4" />
-          Previous
-        </Button>
-
-        <div className="flex gap-3">
-          <Button onClick={onCancel} variant="outline">
-            Cancel
-          </Button>
-          {currentStep === WORKFLOW_STEPS.length && getStepStatus(9) === 'completed' && (
-            <Button onClick={onComplete} variant="success">
-              Complete Workflow
-            </Button>
-          )}
+                    <span className="text-xs text-center line-clamp-2 leading-tight">{step.name}</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        <Button
-          onClick={handleNext}
-          disabled={currentStep === WORKFLOW_STEPS.length}
-          className="flex items-center gap-2"
-        >
-          Next
-          <ChevronRight className="w-4 h-4" />
-        </Button>
+        {/* Error Message */}
+        {error && (
+          <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-center text-xs gap-3 animate-pulse">
+            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+            <span className="text-red-700 font-medium">{error}</span>
+          </div>
+        )}
+
+        {/* Main Content Card */}
+        <Card className="border border-slate-200 shadow-lg rounded-xl overflow-hidden">
+          <CardHeader className="bg-gradient-to-r from-purple-50 to-indigo-50 border-b border-slate-200">
+            <CardTitle className="flex items-center text-xs gap-4">
+              <div className="p-4 bg-purple-600 text-white rounded-lg">
+                <StepIcon className="w-6 h-6" />
+              </div>
+              <div className="flex-1">
+                <h2 className="text-2xl font-bold text-slate-900 text-black">
+                  {WORKFLOW_STEPS[currentStep - 1]?.name}
+                </h2>
+                <p className="text-sm text-slate-600 font-normal mt-1">
+                  Step {currentStep} of {WORKFLOW_STEPS.length}
+                </p>
+              </div>
+            </CardTitle>
+          </CardHeader>
+
+          <CardContent className="p-8 space-y-8">
+            {loading ? (
+              <div className="flex flex-col items-center justify-center py-16">
+                <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600 mb-4"></div>
+                <p className="text-slate-600 font-medium">Loading workflow data...</p>
+              </div>
+            ) : currentStepData ? (
+              <>
+                {/* Step Status Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="p-5 bg-slate-50 rounded-lg border border-slate-200 hover:shadow-md transition-shadow">
+                    <div className="flex items-center text-xs justify-between mb-3">
+                      <p className="text-sm font-semibold text-slate-700">Current Status</p>
+                      {currentStepData.status === 'completed' ? (
+                        <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                      ) : currentStepData.status === 'in_progress' ? (
+                        <Clock className="w-5 h-5 text-amber-500 animate-pulse" />
+                      ) : (
+                        <Clock className="w-5 h-5 text-slate-400" />
+                      )}
+                    </div>
+                    <p className="font-bold text-slate-900 capitalize">
+                      {currentStepData.status || 'Pending'}
+                    </p>
+                  </div>
+
+                  <div className="p-5 bg-slate-50 rounded-lg border border-slate-200 hover:shadow-md transition-shadow">
+                    <p className="text-sm font-semibold text-slate-700 mb-3">Assigned To</p>
+                    <p className="font-bold text-slate-900">
+                      {currentStepData.assignedEmployee?.username || (
+                        <span className="text-slate-500">Not assigned</span>
+                      )}
+                    </p>
+                  </div>
+
+                  <div className="p-5 bg-slate-50 rounded-lg border border-slate-200 hover:shadow-md transition-shadow">
+                    <p className="text-sm font-semibold text-slate-700 mb-3">Assigned Date</p>
+                    <p className="font-bold text-slate-900">
+                      {currentStepData.assigned_at
+                        ? new Date(currentStepData.assigned_at).toLocaleDateString()
+                        : <span className="text-slate-500">Not assigned</span>}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Assign Employee Section */}
+                {!currentStepData.assigned_employee_id && (
+                  <div className="border-2 border-dashed border-purple-300 rounded-lg p-8 bg-purple-50">
+                    <div className="flex items-center text-xs gap-3 mb-5">
+                      <div className="p-3 bg-purple-600 text-white rounded-lg">
+                        <User className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-slate-900">Assign Employee</h4>
+                        <p className="text-sm text-slate-600">Assign this step to a team member</p>
+                      </div>
+                    </div>
+                    <select
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          handleAssignEmployee(
+                            currentStepData.id,
+                            parseInt(e.target.value)
+                          );
+                          e.target.value = '';
+                        }
+                      }}
+                      className="w-full p-2 border border-purple-300 rounded-lg bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent font-medium"
+                    >
+                      <option value="">Select an employee...</option>
+                      {employees.map((emp) => (
+                        <option key={emp.id} value={emp.id}>
+                          {emp.firstName} {emp.lastName} ({emp.email})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Document Upload Section */}
+                {(currentStep === 3 || currentStep === 4) && (
+                  <div className="border-2 border-dashed border-slate-300 rounded-lg p-8 bg-slate-50">
+                    <div className="flex items-center text-xs gap-3 mb-5">
+                      <div className="p-3 bg-slate-600 text-white rounded-lg">
+                        <Upload className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-slate-900">Upload Documents</h4>
+                        <p className="text-sm text-slate-600">Drag and drop or select files</p>
+                      </div>
+                    </div>
+                    <input
+                      type="file"
+                      multiple
+                      onChange={(e) => handleFileUpload(e, currentStepData.id)}
+                      className="w-full p-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    />
+
+                    {/* Uploaded Documents List */}
+                    {currentStepData.documents && currentStepData.documents.length > 0 && (
+                      <div className="mt-6 pt-6 border-t border-slate-200">
+                        <p className="text-sm font-semibold text-slate-900 mb-4">
+                          📁 Uploaded Documents ({currentStepData.documents.length})
+                        </p>
+                        <ul className="space-y-2">
+                          {(Array.isArray(currentStepData.documents)
+                            ? currentStepData.documents
+                            : []
+                          ).map((doc, idx) => (
+                            <li
+                              key={idx}
+                              className="flex items-center text-xs gap-3 p-3 bg-white border border-slate-200 rounded-lg hover:shadow-md transition-shadow"
+                            >
+                              <FileText className="w-5 h-5 text-purple-600 flex-shrink-0" />
+                              <span className="text-sm text-slate-700 font-medium">
+                                {typeof doc === 'string' ? doc : doc.name}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Notes Section */}
+                <div className="space-y-3">
+                  <label className="block text-sm font-semibold text-slate-900">
+                    Step Notes & Comments
+                  </label>
+                  <textarea
+                    value={stepData[currentStep]?.notes || ''}
+                    onChange={(e) =>
+                      setStepData((prev) => ({
+                        ...prev,
+                        [currentStep]: {
+                          ...prev[currentStep],
+                          notes: e.target.value,
+                        },
+                      }))
+                    }
+                    rows="5"
+                    className="w-full p-2 border border-slate-300 rounded-lg bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+                    placeholder="Add any relevant notes for this workflow step..."
+                  />
+                </div>
+
+                {/* Step Actions */}
+                {currentStepData.status !== 'completed' && (
+                  <div className="flex gap-3 pt-4 border-t border-slate-200">
+                    <button
+                      onClick={() => handleUpdateStepStatus(currentStepData.id, 'in_progress')}
+                      disabled={currentStepData.status === 'in_progress'}
+                      className="flex-1 px-6 py-3 bg-slate-100 text-slate-900 rounded-lg hover:bg-slate-200 disabled:opacity-50 transition-colors font-semibold border border-slate-300"
+                    >
+                      {currentStepData.status === 'in_progress'
+                        ? '⏱️ In Progress'
+                        : '▶️ Start Step'}
+                    </button>
+                    <button
+                      onClick={() => handleUpdateStepStatus(currentStepData.id, 'completed')}
+                      className="flex-1 px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-semibold shadow-md hover:shadow-lg"
+                    >
+                      ✓ Complete Step
+                    </button>
+                  </div>
+                )}
+
+                {currentStepData.status === 'completed' && (
+                  <div className="p-5 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center text-xs gap-3">
+                    <CheckCircle2 className="w-6 h-6 text-emerald-600 flex-shrink-0" />
+                    <div>
+                      <p className="font-semibold text-emerald-900">Step Completed</p>
+                      <p className="text-sm text-emerald-700">
+                        on {new Date(currentStepData.completed_at).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-slate-600 font-medium">Loading step information...</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Navigation Footer */}
+        <div className="flex items-center text-xs justify-between gap-4 pt-8 border-t border-slate-200">
+          <button
+            onClick={handlePrevious}
+            disabled={currentStep === 1}
+            className="px-6 py-3 border border-slate-300 text-slate-900 rounded-lg hover:bg-slate-50 disabled:opacity-50 transition-colors flex items-center text-xs gap-2 font-semibold"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            Previous
+          </button>
+
+          <div className="flex gap-3">
+            <button
+              onClick={onCancel}
+              className="px-6 py-3 border border-slate-300 text-slate-900 rounded-lg hover:bg-slate-50 transition-colors font-semibold"
+            >
+              Cancel
+            </button>
+            {currentStep === WORKFLOW_STEPS.length && getStepStatus(9) === 'completed' && (
+              <button
+                onClick={onComplete}
+                className="px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-semibold shadow-md hover:shadow-lg"
+              >
+                ✓ Complete Workflow
+              </button>
+            )}
+          </div>
+
+          <button
+            onClick={handleNext}
+            disabled={currentStep === WORKFLOW_STEPS.length}
+            className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors flex items-center text-xs gap-2 font-semibold shadow-md hover:shadow-lg"
+          >
+            Next
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
       </div>
     </div>
   );

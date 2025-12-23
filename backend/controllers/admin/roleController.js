@@ -1,9 +1,16 @@
 const Role = require('../../models/Role');
+const pool = require('../../config/database');
 
 // Get all roles
 exports.getRoles = async (req, res) => {
   try {
     const roles = await Role.findAll();
+    
+    for (const role of roles) {
+      const [users] = await pool.execute('SELECT COUNT(*) as count FROM users WHERE role_id = ?', [role.id]);
+      role.userCount = users[0]?.count || 0;
+    }
+    
     res.json({ roles });
   } catch (error) {
     console.error('Get roles error:', error);
@@ -118,21 +125,58 @@ exports.deleteRole = async (req, res) => {
     }
 
     // Check if role is being used by users
-    // This would require a query to check user table
+    try {
+      const [users] = await pool.execute('SELECT COUNT(*) as count FROM users WHERE role_id = ?', [id]);
+      if (users && users.length > 0 && users[0].count > 0) {
+        return res.status(400).json({ message: `Cannot delete role that is assigned to ${users[0].count} users` });
+      }
+    } catch (err) {
+      console.error('Error checking user count:', err);
+    }
 
     await Role.delete(id);
-
-    // Log the action
-    // await AuditLog.create({
-    //   user_id: req.user.id,
-    //   action: 'DELETE_ROLE',
-    //   table_name: 'roles',
-    //   record_id: id
-    // });
 
     res.json({ message: 'Role deleted successfully' });
   } catch (error) {
     console.error('Delete role error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+// Set role active/inactive status
+exports.setRoleStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { is_active } = req.body;
+
+    if (typeof is_active !== 'boolean') {
+      return res.status(400).json({ message: 'is_active must be a boolean' });
+    }
+
+    // Check if role exists
+    const role = await Role.findById(id);
+    if (!role) {
+      return res.status(404).json({ message: 'Role not found' });
+    }
+
+    // Prevent deactivating system roles
+    const systemRoles = ['Admin', 'Management'];
+    if (!is_active && systemRoles.includes(role.name)) {
+      return res.status(400).json({ message: 'Cannot deactivate system roles' });
+    }
+
+    await Role.setActive(id, is_active);
+
+    res.json({ 
+      message: `Role ${is_active ? 'activated' : 'deactivated'} successfully`,
+      role: {
+        id: role.id,
+        name: role.name,
+        is_active: is_active
+      }
+    });
+  } catch (error) {
+    console.error('Set role status error:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 };

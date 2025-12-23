@@ -54,7 +54,7 @@ const Table = ({
                 {columns.map((column, colIndex) => (
                   <td
                     key={column.key || colIndex}
-                    className="px-6 py-4 whitespace-nowrap text-sm text-slate-900"
+                    className="p-1 whitespace-nowrap text-sm "
                   >
                     {column.render ? column.render(row[column.key], row, rowIndex) : row[column.key]}
                   </td>

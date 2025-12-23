@@ -9,7 +9,7 @@ export const getStatusColor = (status) => {
     case "Poor":
       return "text-red-600 bg-red-100 dark:bg-red-900 dark:text-red-400";
     default:
-      return "text-slate-600 bg-slate-100 dark:bg-slate-900 dark:text-slate-400";
+      return "text-slate-600 bg-slate-100 dark: dark:text-slate-400";
   }
 };
 
@@ -29,7 +29,7 @@ export const getDelayStatusColor = (status) => {
     case "Critical Delay":
       return "text-red-600 bg-red-100 dark:bg-red-900 dark:text-red-400";
     default:
-      return "text-slate-600 bg-slate-100 dark:bg-slate-900 dark:text-slate-400";
+      return "text-slate-600 bg-slate-100 dark: dark:text-slate-400";
   }
 };
 
@@ -44,7 +44,7 @@ export const getBottleneckImpactColor = (impact) => {
     case "Low":
       return "text-green-600 bg-green-100 dark:bg-green-900 dark:text-green-400";
     default:
-      return "text-slate-600 bg-slate-100 dark:bg-slate-900 dark:text-slate-400";
+      return "text-slate-600 bg-slate-100 dark: dark:text-slate-400";
   }
 };
 
@@ -59,7 +59,7 @@ export const getMaterialStatusColor = (status) => {
     case "Overstock":
       return "text-blue-600 bg-blue-100 dark:bg-blue-900 dark:text-blue-400";
     default:
-      return "text-slate-600 bg-slate-100 dark:bg-slate-900 dark:text-slate-400";
+      return "text-slate-600 bg-slate-100 dark: dark:text-slate-400";
   }
 };
 
@@ -72,7 +72,7 @@ export const getMovementTypeColor = (type) => {
     case "Transfer":
       return "text-blue-600 bg-blue-100 dark:bg-blue-900 dark:text-blue-400";
     default:
-      return "text-slate-600 bg-slate-100 dark:bg-slate-900 dark:text-slate-400";
+      return "text-slate-600 bg-slate-100 dark: dark:text-slate-400";
   }
 };
 
@@ -85,7 +85,7 @@ export const getResourceStatusColor = (status) => {
     case "Critical":
       return "text-red-600 bg-red-100 dark:bg-red-900 dark:text-red-400";
     default:
-      return "text-slate-600 bg-slate-100 dark:bg-slate-900 dark:text-slate-400";
+      return "text-slate-600 bg-slate-100 dark: dark:text-slate-400";
   }
 };
 
@@ -100,7 +100,7 @@ export const getImpactColor = (impact) => {
     case "Low":
       return "text-green-600 bg-green-100 dark:bg-green-900 dark:text-green-400";
     default:
-      return "text-slate-600 bg-slate-100 dark:bg-slate-900 dark:text-slate-400";
+      return "text-slate-600 bg-slate-100 dark: dark:text-slate-400";
   }
 };
 
@@ -115,7 +115,7 @@ export const getPerformanceColor = (status) => {
     case "Poor":
       return "text-red-600 bg-red-100 dark:bg-red-900 dark:text-red-400";
     default:
-      return "text-slate-600 bg-slate-100 dark:bg-slate-900 dark:text-slate-400";
+      return "text-slate-600 bg-slate-100 dark: dark:text-slate-400";
   }
 };
 

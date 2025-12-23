@@ -89,6 +89,16 @@ export const PRIORITY_LEVELS = [
   { value: "urgent", label: "Urgent" },
 ];
 
+export const STATUS_LEVELS = [
+  { value: "pending", label: "Pending" },
+  { value: "ready_to_start", label: "Ready to Start" },
+  { value: "assigned", label: "Assigned" },
+  { value: "in_progress", label: "In Progress" },
+  { value: "on_hold", label: "On Hold" },
+  { value: "critical", label: "Critical" },
+  { value: "completed", label: "Completed" },
+];
+
 export const DELIVERY_MODES = [
   { value: "air", label: "Air" },
   { value: "road", label: "Road" },

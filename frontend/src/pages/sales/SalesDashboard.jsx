@@ -51,7 +51,7 @@ const SalesDashboard = () => {
       approved: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
       in_progress: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
       completed: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-      delivered: 'bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-300'
+      delivered: 'bg-slate-100 text-slate-800 dark:/30 dark:text-slate-300'
     };
     return colors[status] || colors.pending;
   };
@@ -77,7 +77,7 @@ const SalesDashboard = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Sales Orders</h2>
+        <h2 className="text-xl font-bold  text-lefttext-white">Sales Orders</h2>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">

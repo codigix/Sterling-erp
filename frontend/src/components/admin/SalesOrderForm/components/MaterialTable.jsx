@@ -65,7 +65,7 @@ export default function MaterialTable({
       <div className="overflow-x-auto bg-slate-800 rounded-lg border border-slate-700">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-slate-600 bg-slate-900">
+            <tr className="border-b border-slate-600 ">
               <th className="p-2 text-left text-slate-300 font-medium">
                 Material Name
               </th>
@@ -95,7 +95,7 @@ export default function MaterialTable({
                 key={material.id}
                 className="border-b border-slate-700 hover:bg-slate-700/50 transition-colors"
               >
-                <td className="p-2 text-left text-slate-100 font-medium">
+                <td className="p-2 text-left  font-medium">
                   {getMaterialName(material)}
                 </td>
                 <td className="p-2 text-left">
@@ -103,7 +103,7 @@ export default function MaterialTable({
                     {getMaterialType(material)}
                   </span>
                 </td>
-                <td className="p-2 text-left text-slate-100 font-medium">
+                <td className="p-2 text-left  font-medium">
                   {material.quantity}
                 </td>
                 <td className="p-2 text-left text-slate-300">
@@ -124,7 +124,7 @@ export default function MaterialTable({
                     onChange={(e) =>
                       onAssigneeChange(material.id, e.target.value)
                     }
-                    className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-slate-100 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded  text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">Select Assignee</option>
                     {employees.map((emp) => (
@@ -135,11 +135,11 @@ export default function MaterialTable({
                   </select>
                 </td>
                 <td className="p-2 text-left">
-                  <div className="flex items-center justify-center gap-2">
+                  <div className="flex items-center text-xs justify-center gap-2">
                     <button
                       type="button"
                       onClick={() => onView(material)}
-                      className="w-8 h-8 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center transition-colors"
+                      className="w-8 h-8 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white flex items-center text-xs justify-center transition-colors"
                       title="View Details"
                     >
                       <FileText size={16} />
@@ -147,7 +147,7 @@ export default function MaterialTable({
                     <button
                       type="button"
                       onClick={() => onEdit(material)}
-                      className="w-8 h-8 rounded-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center transition-colors"
+                      className="w-8 h-8 rounded-full bg-blue-600 hover:bg-blue-700 text-white flex items-center text-xs justify-center transition-colors"
                       title="Edit"
                     >
                       <Edit2 size={16} />
@@ -155,7 +155,7 @@ export default function MaterialTable({
                     <button
                       type="button"
                       onClick={() => onDelete(material.id)}
-                      className="w-8 h-8 rounded-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center transition-colors"
+                      className="w-8 h-8 rounded-full bg-red-600 hover:bg-red-700 text-white flex items-center text-xs justify-center transition-colors"
                       title="Delete"
                     >
                       <Trash2 size={16} />

@@ -28,6 +28,7 @@ router.get('/roles', roleController.getRoles);
 router.get('/roles/:id', roleController.getRoleById);
 router.post('/roles', roleController.createRole);
 router.put('/roles/:id', roleController.updateRole);
+router.patch('/roles/:id/status', roleController.setRoleStatus);
 router.delete('/roles/:id', roleController.deleteRole);
 
 // Reports routes
@@ -55,5 +56,9 @@ router.get('/employee-list/:id', employeeController.getEmployee);
 router.post('/employee-list', employeeController.createEmployee);
 router.put('/employee-list/:id', employeeController.updateEmployee);
 router.delete('/employee-list/:id', employeeController.deleteEmployee);
+
+// Workflow task generation routes
+const productionController = require('../../controllers/production/productionController');
+router.post('/generate-workflow-tasks/:rootCardId', productionController.createWorkflowBasedTasks);
 
 module.exports = router;

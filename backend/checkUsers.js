@@ -5,7 +5,7 @@
     const pool = mysql.createPool({
       host: 'localhost',
       user: 'root',
-      password: 'Kale@1234',
+      password: 'root',
       database: 'sterling_erp'
     });
 

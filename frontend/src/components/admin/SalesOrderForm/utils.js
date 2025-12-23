@@ -30,6 +30,15 @@ export const formatDate = (dateString) => {
 
 export const validateStep1 = (formData) => {
   const errors = [];
+  if (!validateRequired(formData.clientName)) {
+    errors.push("Client name is required");
+  }
+  if (!validateRequired(formData.poNumber)) {
+    errors.push("PO number is required");
+  }
+  if (!validateRequired(formData.projectName)) {
+    errors.push("Project name is required");
+  }
   if (formData.clientEmail && !validateEmail(formData.clientEmail)) {
     errors.push("Valid email is required");
   }
@@ -41,6 +50,9 @@ export const validateStep1 = (formData) => {
 
 export const validateStep2 = (formData) => {
   const errors = [];
+  if (!formData.totalAmount || parseFloat(formData.totalAmount) <= 0) {
+    errors.push("Total amount must be greater than 0");
+  }
   return errors;
 };
 

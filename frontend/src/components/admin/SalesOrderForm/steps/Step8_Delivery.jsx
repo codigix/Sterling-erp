@@ -4,24 +4,30 @@ import Input from "../../../ui/Input";
 import Select from "../../../ui/Select";
 import FormSection from "../shared/FormSection";
 import FormRow from "../shared/FormRow";
+import AssigneeField from "../shared/AssigneeField";
 import { useFormData, useSalesOrderContext } from "../hooks";
 
 export default function Step8_Delivery({ readOnly = false }) {
   const { formData, updateField, setNestedField } = useFormData();
   const { state } = useSalesOrderContext();
-  const employees = state.employees;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
+      <AssigneeField
+        stepType="delivery"
+        formData={state.formData}
+        updateField={updateField}
+        employees={state.employees}
+      />
       <FormSection
         title="Delivery & Handover"
         subtitle="Finalize delivery and project completion"
         icon={CheckCircle}
       >
-        <div className="space-y-6">
+        <div className="space-y-3">
           {/* Final Delivery Info */}
           <div>
-            <h5 className="text-sm font-semibold text-slate-300 mb-3">Final Delivery</h5>
+            <h5 className="text-sm font-semibold text-slate-900 mb-2 text-left">Final Delivery</h5>
             <FormRow cols={2}>
               <Input
                 label="Actual Delivery Date"
@@ -46,7 +52,7 @@ export default function Step8_Delivery({ readOnly = false }) {
 
           {/* Installation Status */}
           <div>
-            <h5 className="text-sm font-semibold text-slate-300 mb-3">Installation Status</h5>
+            <h5 className="text-sm font-semibold text-slate-900 mb-2 text-left">Installation Status</h5>
             <FormRow cols={2}>
               <Input
                 label="Installation Completed"
@@ -71,7 +77,7 @@ export default function Step8_Delivery({ readOnly = false }) {
 
           {/* Warranty & Compliance */}
           <div>
-            <h5 className="text-sm font-semibold text-slate-300 mb-3">Warranty & Compliance</h5>
+            <h5 className="text-sm font-semibold text-slate-900 mb-2 text-left">Warranty & Compliance</h5>
             <Input
               label="Warranty Terms Acceptance"
               value={formData.warrantySupport?.warrantyPeriod || ""}
@@ -85,7 +91,7 @@ export default function Step8_Delivery({ readOnly = false }) {
 
           {/* Project Completion */}
           <div>
-            <h5 className="text-sm font-semibold text-slate-300 mb-3">Project Completion</h5>
+            <h5 className="text-sm font-semibold text-slate-900 mb-2 text-left">Project Completion</h5>
             <Input
               label="Completion Remarks"
               value={formData.projectRequirements?.acceptanceCriteria || ""}
@@ -99,7 +105,7 @@ export default function Step8_Delivery({ readOnly = false }) {
 
           {/* Internal Info */}
           <div>
-            <h5 className="text-sm font-semibold text-slate-300 mb-3">Internal Project Info</h5>
+            <h5 className="text-sm font-semibold text-slate-900 mb-2 text-left">Internal Project Info</h5>
             <FormRow cols={2}>
               <Input
                 label="Project Manager"
@@ -123,12 +129,12 @@ export default function Step8_Delivery({ readOnly = false }) {
           </div>
 
           {/* Delivery Assignment */}
-          <div className="border-t border-slate-700 pt-4">
-            <h5 className="text-sm font-semibold text-slate-300 mb-3">Delivery Assignment</h5>
+          <div className="border-t border-slate-200 pt-4">
+            <h5 className="text-sm font-semibold text-slate-900 mb-2 text-left">Delivery Assignment</h5>
             <FormRow cols={1}>
               <Select
                 label="Assign Delivery to Employee"
-                options={(Array.isArray(employees) ? employees : []).map((emp) => ({
+                options={(Array.isArray(state.employees) ? state.employees : []).map((emp) => ({
                   label: `${emp.firstName} ${emp.lastName} (${emp.designation})`,
                   value: emp.id.toString(),
                 }))}

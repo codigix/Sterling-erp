@@ -128,3 +128,56 @@ exports.getProfile = async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 };
+
+exports.getRoles = async (req, res) => {
+  try {
+    const roles = await Role.findAll();
+    res.json({
+      roles: roles.map(role => {
+        let permissions = [];
+        if (role.permissions) {
+          try {
+            permissions = typeof role.permissions === 'string' ? JSON.parse(role.permissions) : role.permissions;
+          } catch (err) {
+            console.warn(`Failed to parse permissions for role ${role.id}:`, err.message);
+          }
+        }
+        return {
+          id: role.id,
+          name: role.name,
+          permissions: permissions,
+          is_active: role.is_active
+        };
+      })
+    });
+  } catch (error) {
+    console.error('Get roles error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+exports.getActiveRoles = async (req, res) => {
+  try {
+    const roles = await Role.findAllActive();
+    res.json({
+      roles: roles.map(role => {
+        let permissions = [];
+        if (role.permissions) {
+          try {
+            permissions = typeof role.permissions === 'string' ? JSON.parse(role.permissions) : role.permissions;
+          } catch (err) {
+            console.warn(`Failed to parse permissions for role ${role.id}:`, err.message);
+          }
+        }
+        return {
+          id: role.id,
+          name: role.name,
+          permissions: permissions
+        };
+      })
+    });
+  } catch (error) {
+    console.error('Get active roles error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};

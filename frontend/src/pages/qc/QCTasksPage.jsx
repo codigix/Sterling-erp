@@ -37,7 +37,7 @@ const QCTasksPage = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
+      <div className="flex items-center text-xs justify-center py-12">
         <p className="text-slate-600">Loading QC data...</p>
       </div>
     );
@@ -66,7 +66,7 @@ const QCTasksPage = () => {
         <Card>
           <div className="p-4">
             <p className="text-sm text-slate-600 dark:text-slate-400">Total GRN</p>
-            <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">{stats.totalGRN}</p>
+            <p className="text-xl font-bold text-slate-900 dark:text-white mt-1">{stats.totalGRN}</p>
           </div>
         </Card>
         <Card>
@@ -78,7 +78,7 @@ const QCTasksPage = () => {
         <Card>
           <div className="p-4">
             <p className="text-sm text-slate-600 dark:text-slate-400">Stage QC Tasks</p>
-            <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">{stats.totalStageQC}</p>
+            <p className="text-xl font-bold text-slate-900 dark:text-white mt-1">{stats.totalStageQC}</p>
           </div>
         </Card>
         <Card>
@@ -97,7 +97,7 @@ const QCTasksPage = () => {
             className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
               activeTab === 'grn'
                 ? 'bg-blue-600 text-white'
-                : 'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100 hover:bg-slate-300'
+                : 'bg-slate-200 dark:bg-slate-700  dark: hover:'
             }`}
           >
             GRN Inspections
@@ -107,14 +107,14 @@ const QCTasksPage = () => {
             className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
               activeTab === 'stage'
                 ? 'bg-blue-600 text-white'
-                : 'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100 hover:bg-slate-300'
+                : 'bg-slate-200 dark:bg-slate-700  dark: hover:'
             }`}
           >
             Stage-wise QC
           </button>
         </div>
         <div className="flex gap-2">
-          <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100 hover:bg-slate-300 transition-colors">
+          <button className="flex items-center text-xs gap-2 px-4 py-2 rounded-lg bg-slate-200 dark:bg-slate-700  dark: hover: transition-colors">
             <Filter size={18} />
             Filter
           </button>
@@ -129,7 +129,7 @@ const QCTasksPage = () => {
               <div className="p-6">
                 <div className="flex items-start justify-between mb-4">
                   <div>
-                    <h4 className="text-lg font-bold text-slate-900 dark:text-slate-100">{grn.id}</h4>
+                    <h4 className="text-lg font-bold  dark:">{grn.id}</h4>
                     <p className="text-sm text-slate-600 dark:text-slate-400">PO: {grn.poNumber}</p>
                   </div>
                   <Badge className={getStatusColor(grn.qcStatus)}>
@@ -140,15 +140,15 @@ const QCTasksPage = () => {
                 <div className="space-y-3 mb-4 p-3 bg-slate-50 dark:bg-slate-700 rounded-lg">
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-600 dark:text-slate-400">Vendor:</span>
-                    <span className="font-medium text-slate-900 dark:text-slate-100">{grn.vendor}</span>
+                    <span className="font-medium  dark:">{grn.vendor}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-600 dark:text-slate-400">Received:</span>
-                    <span className="font-medium text-slate-900 dark:text-slate-100">{grn.receivedDate}</span>
+                    <span className="font-medium  dark:">{grn.receivedDate}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-600 dark:text-slate-400">Total Items:</span>
-                    <span className="font-bold text-slate-900 dark:text-slate-100">{grn.items}</span>
+                    <span className="font-bold  dark:">{grn.items}</span>
                   </div>
                 </div>
 
@@ -167,7 +167,7 @@ const QCTasksPage = () => {
                   <button className="flex-1 px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors text-sm font-medium">
                     Start Inspection
                   </button>
-                  <button className="flex-1 px-3 py-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100 hover:bg-slate-300 transition-colors text-sm font-medium">
+                  <button className="flex-1 px-3 py-2 rounded-lg bg-slate-200 dark:bg-slate-700  dark: hover: transition-colors text-sm font-medium">
                     View Details
                   </button>
                 </div>
@@ -194,22 +194,22 @@ const QCTasksPage = () => {
               </thead>
               <tbody>
                 {stageQC.map(qc => (
-                  <tr key={qc.id} className="border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800">
-                    <td className="px-6 py-4 text-sm font-medium">{qc.id}</td>
-                    <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">{qc.stage}</td>
-                    <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">{qc.projectId}</td>
-                    <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">{qc.dueDate}</td>
-                    <td className="px-6 py-4">
+                  <tr key={qc.id} className="border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs">
+                    <td className="p-1 text-sm font-medium">{qc.id}</td>
+                    <td className="p-1 text-sm text-slate-700 dark:text-slate-300">{qc.stage}</td>
+                    <td className="p-1 text-sm text-slate-700 dark:text-slate-300">{qc.projectId}</td>
+                    <td className="p-1 text-sm text-slate-700 dark:text-slate-300">{qc.dueDate}</td>
+                    <td className="p-1">
                       <Badge className={getStatusColor(qc.status)}>
                         {qc.status.charAt(0).toUpperCase() + qc.status.slice(1)}
                       </Badge>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="p-1">
                       <div className="flex gap-2">
                         <button className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors">
                           <CheckCircle size={16} />
                         </button>
-                        <button className="p-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100 hover:bg-slate-300 transition-colors">
+                        <button className="p-2 rounded-lg bg-slate-200 dark:bg-slate-700  dark: hover: transition-colors">
                           <Eye size={16} />
                         </button>
                       </div>

@@ -10,18 +10,18 @@ export default function FormActions({ mode = 'create', onNext, onPrev, onSubmit,
 
   if (mode === 'view') {
     return (
-      <div className="flex gap-3 justify-between mt-10 pt-6 border-t border-slate-700">
+      <div className="flex gap-2 justify-between mt-8 pt-4 border-t border-slate-200">
         <Button
           onClick={onPrev}
           disabled={currentStep === 1}
           variant="secondary"
-          className="flex items-center gap-2"
+          className="flex items-center text-xs gap-1 text-xs"
         >
-          <ChevronLeft size={16} />
+          <ChevronLeft size={14} />
           Previous
         </Button>
 
-        <span className="text-sm text-slate-400 self-center">
+        <span className="text-xs text-slate-500 self-center">
           Step {currentStep} of {WIZARD_STEPS.length}
         </span>
 
@@ -29,18 +29,18 @@ export default function FormActions({ mode = 'create', onNext, onPrev, onSubmit,
           <Button
             onClick={onCancel}
             variant="secondary"
-            className="flex items-center gap-2"
+            className="flex items-center text-xs gap-1 text-xs"
           >
-            <X size={16} />
+            <X size={14} />
             Close
           </Button>
         ) : (
           <Button
             onClick={onNext}
-            className="flex items-center gap-2"
+            className="flex items-center text-xs gap-1 text-xs"
           >
             Next
-            <ChevronRight size={16} />
+            <ChevronRight size={14} />
           </Button>
         )}
       </div>
@@ -49,50 +49,50 @@ export default function FormActions({ mode = 'create', onNext, onPrev, onSubmit,
 
   if (mode === 'edit') {
     return (
-      <div className="flex gap-3 justify-between mt-10 pt-6 border-t border-slate-700">
-        <div className="flex gap-3">
+      <div className="flex gap-2 justify-between mt-8 pt-4 border-t border-slate-200">
+        <div className="flex gap-2">
           <Button
             onClick={onPrev}
             disabled={currentStep === 1 || loading}
             variant="secondary"
-            className="flex items-center gap-2"
+            className="flex items-center text-xs gap-1 text-xs"
           >
-            <ChevronLeft size={16} />
+            <ChevronLeft size={14} />
             Previous
           </Button>
 
           <Button
             onClick={onCancel}
             variant="secondary"
-            className="flex items-center gap-2"
+            className="flex items-center text-xs gap-1 text-xs"
           >
-            <X size={16} />
+            <X size={14} />
             Cancel
           </Button>
         </div>
 
-        <span className="text-sm text-slate-400 self-center">
-          Step {currentStep} of {WIZARD_STEPS.length} - Editing Sales Order
+        <span className="text-xs text-slate-500 self-center">
+          Step {currentStep} of {WIZARD_STEPS.length}
         </span>
 
-        <div className="flex gap-3">
+        <div className="flex gap-2">
           {actualIsLastStep ? (
             <Button
               onClick={onSubmit}
               disabled={!canSubmit || loading}
-              className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+              className="flex items-center text-xs gap-1 text-xs bg-emerald-600 hover:bg-emerald-700"
             >
-              <Save size={16} />
+              <Save size={14} />
               {loading ? "Saving..." : "Save Changes"}
             </Button>
           ) : (
             <Button
               onClick={onNext}
               disabled={loading}
-              className="flex items-center gap-2"
+              className="flex items-center text-xs gap-1 text-xs"
             >
               Next
-              <ChevronRight size={16} />
+              <ChevronRight size={14} />
             </Button>
           )}
         </div>
@@ -102,26 +102,26 @@ export default function FormActions({ mode = 'create', onNext, onPrev, onSubmit,
 
   if (mode === 'assign') {
     return (
-      <div className="flex gap-3 justify-between mt-10 pt-6 border-t border-slate-700">
+      <div className="flex gap-2 justify-between mt-8 pt-4 border-t border-slate-200">
         <Button
           onClick={onCancel}
           variant="secondary"
-          className="flex items-center gap-2"
+          className="flex items-center text-xs gap-1 text-xs"
         >
-          <X size={16} />
+          <X size={14} />
           Cancel
         </Button>
 
-        <span className="text-sm text-slate-400 self-center">
+        <span className="text-xs text-slate-500 self-center">
           Assigning Sales Order
         </span>
 
         <Button
           onClick={onSubmit}
           disabled={!canSubmit || loading}
-          className="flex items-center gap-2 bg-orange-600 hover:bg-orange-700"
+          className="flex items-center text-xs gap-1 text-xs bg-amber-600 hover:bg-amber-700"
         >
-          <Save size={16} />
+          <Save size={14} />
           {loading ? "Assigning..." : "Assign"}
         </Button>
       </div>
@@ -129,18 +129,18 @@ export default function FormActions({ mode = 'create', onNext, onPrev, onSubmit,
   }
 
   return (
-    <div className="flex gap-3 justify-between mt-10 pt-6 border-t border-slate-700">
+    <div className="flex gap-2 justify-between mt-8 pt-4 border-t border-slate-200">
       <Button
         onClick={onPrev}
         disabled={currentStep === 1 || loading}
         variant="secondary"
-        className="flex items-center gap-2"
+        className="flex items-center text-xs gap-1 text-xs"
       >
-        <ChevronLeft size={16} />
+        <ChevronLeft size={14} />
         Previous
       </Button>
 
-      <span className="text-sm text-slate-400 self-center">
+      <span className="text-xs text-slate-500 self-center">
         Step {currentStep} of {WIZARD_STEPS.length}
       </span>
 
@@ -148,19 +148,19 @@ export default function FormActions({ mode = 'create', onNext, onPrev, onSubmit,
         <Button
           onClick={onSubmit}
           disabled={!canSubmit || loading}
-          className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+          className="flex items-center text-xs gap-1 text-xs bg-purple-600 hover:bg-purple-700"
         >
-          <Save size={16} />
+          <Save size={14} />
           {loading ? "Submitting..." : "Submit Order"}
         </Button>
       ) : (
         <Button
           onClick={onNext}
           disabled={loading}
-          className="flex items-center gap-2"
+          className="flex items-center text-xs gap-1 text-xs"
         >
           Next
-          <ChevronRight size={16} />
+          <ChevronRight size={14} />
         </Button>
       )}
     </div>

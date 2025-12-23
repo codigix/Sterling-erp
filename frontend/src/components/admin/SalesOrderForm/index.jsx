@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import axios from "../../../utils/api";
+import { sendAssignmentNotifications, sendOrderCreatedNotification } from "../../../utils/notificationService";
 import { SalesOrderProvider } from "./context";
 import { useFormUI } from "./hooks";
 import { useSalesOrderContext } from "./hooks";
@@ -10,13 +11,12 @@ import FormActions from "./shared/FormActions";
 import Step1_ClientPO from "./steps/Step1_ClientPO";
 import Step2_SalesOrder from "./steps/Step2_SalesOrder";
 import Step3_DesignEngineering from "./steps/Step3_DesignEngineering";
-import Step4_MaterialRequirement from "./steps/Step4_MaterialRequirement";
+import Step4_MaterialRequirement from "./steps/Step4_MaterialRequirement_Simplified";
 import Step5_ProductionPlan from "./steps/Step5_ProductionPlan";
 import Step6_QualityCheck from "./steps/Step6_QualityCheck";
 import Step7_Shipment from "./steps/Step7_Shipment";
 import Step8_Delivery from "./steps/Step8_Delivery";
 import SalesOrderViewOnly from "./SalesOrderViewOnly";
-import Card, { CardContent } from "../../ui/Card";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 import "./SalesOrderForm.css";
 
@@ -71,6 +71,7 @@ function SalesOrderFormContent({ onSubmit, onCancel, mode = 'create', initialDat
       updateField('orderDate', initialData.order_date || '');
       updateField('estimatedEndDate', initialData.due_date || '');
       updateField('projectPriority', initialData.priority || 'medium');
+      updateField('status', initialData.status || 'pending');
       updateField('totalAmount', initialData.total?.toString() || '');
       
       loadAllStepData(initialData.id);
@@ -308,6 +309,7 @@ function SalesOrderFormContent({ onSubmit, onCancel, mode = 'create', initialDat
           total: parseFloat(formData.totalAmount || 0),
           currency: "INR",
           priority: formData.projectPriority || "medium",
+          status: formData.status || "pending",
         });
 
         setSuccess("Sales Order updated successfully!");
@@ -358,6 +360,7 @@ function SalesOrderFormContent({ onSubmit, onCancel, mode = 'create', initialDat
         total: parseFloat(formData.totalAmount || 0),
         currency: "INR",
         priority: formData.projectPriority || "medium",
+        status: formData.status || "pending",
         items: [{
           name: formData.projectName || "Project Item",
           description: formData.projectRequirements?.specifications || "",
@@ -396,6 +399,15 @@ function SalesOrderFormContent({ onSubmit, onCancel, mode = 'create', initialDat
       }
 
       try {
+        const ordersData = { ...salesOrderData, id: createdOrderId };
+        const notifications = await sendAssignmentNotifications(ordersData, formData);
+        await sendOrderCreatedNotification(ordersData, formData);
+        console.log('Notifications sent successfully:', notifications.length, 'notifications');
+      } catch (err) {
+        console.warn('Could not send notifications:', err.message);
+      }
+
+      try {
         if (state.createdOrderId) {
           await axios.delete(`/api/sales/drafts/${state.createdOrderId}`);
           console.log('Draft deleted successfully');
@@ -427,37 +439,35 @@ function SalesOrderFormContent({ onSubmit, onCancel, mode = 'create', initialDat
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 to-slate-900 p-6">
-      <Card className="max-w-6xl mx-auto">
-        <CardContent className="p-8">
-          {(error || successMessage) && (
-            <div className={`mb-6 p-4 rounded-lg flex items-center gap-3 ${
-              error 
-                ? 'bg-red-500/20 text-red-300 border border-red-500/50' 
-                : 'bg-green-500/20 text-green-300 border border-green-500/50'
-            }`}>
-              {error ? <AlertCircle size={20} /> : <CheckCircle2 size={20} />}
-              <span>{error || successMessage}</span>
-            </div>
-          )}
-
-          <WizardHeader currentStep={currentStep} mode={mode} />
-          
-          <div className="mt-8">
-            {renderStep()}
+    <div className="w-full min-h-screen bg-gradient-to-br from-slate-50 via-purple-50/30 to-slate-50">
+      <div className="max-w-5xl mx-auto">
+        {(error || successMessage) && (
+          <div className={`mb-4 p-3 rounded-lg flex items-center text-xs gap-2 text-sm animate-in ${
+            error 
+              ? 'bg-red-50 text-red-700 border border-red-200' 
+              : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+          }`}>
+            {error ? <AlertCircle size={18} className="flex-shrink-0" /> : <CheckCircle2 size={18} className="flex-shrink-0" />}
+            <span className="font-medium">{error || successMessage}</span>
           </div>
+        )}
 
-          <FormActions
-            currentStep={currentStep}
-            onNext={handleNext}
-            onPrev={handlePrev}
-            onSubmit={handleSubmit}
-            loading={loading}
-            onCancel={onCancel}
-            mode={mode}
-          />
-        </CardContent>
-      </Card>
+        <WizardHeader currentStep={currentStep} mode={mode} />
+        
+        <div className="mt-6">
+          {renderStep()}
+        </div>
+
+        <FormActions
+          currentStep={currentStep}
+          onNext={handleNext}
+          onPrev={handlePrev}
+          onSubmit={handleSubmit}
+          loading={loading}
+          onCancel={onCancel}
+          mode={mode}
+        />
+      </div>
     </div>
   );
 }

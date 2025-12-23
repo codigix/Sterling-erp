@@ -4,23 +4,30 @@ import Input from "../../../ui/Input";
 import Select from "../../../ui/Select";
 import FormSection from "../shared/FormSection";
 import FormRow from "../shared/FormRow";
+import AssigneeField from "../shared/AssigneeField";
 import { useFormData, useSalesOrderContext } from "../hooks";
 
 export default function Step6_QualityCheck({ readOnly = false, isAssignMode = false }) {
   const { formData, updateField } = useFormData();
-  const { setNestedField, employees } = useSalesOrderContext();
+  const { state, setNestedField } = useSalesOrderContext();
 
   return (
     <div className="space-y-6">
+      <AssigneeField
+        stepType="quality_check"
+        formData={state.formData}
+        updateField={updateField}
+        employees={state.employees}
+      />
       <FormSection
         title="Quality Check & Compliance"
         subtitle="Define quality standards and compliance requirements"
         icon={Check}
       >
-        <div className="space-y-6">
+        <div className="space-y-3">
           {/* Quality Standards */}
           <div>
-            <h5 className="text-sm font-semibold text-slate-300 mb-3">Quality Standards</h5>
+            <h5 className="text-sm font-semibold text-slate-900 mb-2 text-left">Quality Standards</h5>
             <FormRow cols={2}>
               <Input
                 label="Quality Standards"
@@ -45,7 +52,7 @@ export default function Step6_QualityCheck({ readOnly = false, isAssignMode = fa
 
           {/* Surface & Material Compliance */}
           <div>
-            <h5 className="text-sm font-semibold text-slate-300 mb-3">Material & Surface</h5>
+            <h5 className="text-sm font-semibold text-slate-900 mb-2 text-left">Material & Surface</h5>
             <FormRow cols={2}>
               <Input
                 label="Surface Finish"
@@ -70,7 +77,7 @@ export default function Step6_QualityCheck({ readOnly = false, isAssignMode = fa
 
           {/* Electrical & Documentation */}
           <div>
-            <h5 className="text-sm font-semibold text-slate-300 mb-3">Compliance</h5>
+            <h5 className="text-sm font-semibold text-slate-900 mb-2 text-left">Compliance</h5>
             <FormRow cols={2}>
               <Input
                 label="Electrical Compliance"
@@ -95,7 +102,7 @@ export default function Step6_QualityCheck({ readOnly = false, isAssignMode = fa
 
           {/* Warranty & Support */}
           <div>
-            <h5 className="text-sm font-semibold text-slate-300 mb-3">Warranty & Support</h5>
+            <h5 className="text-sm font-semibold text-slate-900 mb-2 text-left">Warranty & Support</h5>
             <FormRow cols={2}>
               <Input
                 label="Warranty Period"
@@ -120,12 +127,12 @@ export default function Step6_QualityCheck({ readOnly = false, isAssignMode = fa
 
           {/* Assignee (for assign mode or editing) */}
           {(isAssignMode || !readOnly) && (
-            <div className="border-t border-slate-700 pt-4">
-              <h5 className="text-sm font-semibold text-slate-300 mb-3">Project Assignment</h5>
+            <div className="border-t border-slate-200 pt-4">
+              <h5 className="text-sm font-semibold text-slate-900 mb-2 text-left">Project Assignment</h5>
               <FormRow cols={1}>
                 <Select
                   label="Assign to Employee"
-                  options={(Array.isArray(employees) ? employees : []).map((emp) => ({
+                  options={(Array.isArray(state.employees) ? state.employees : []).map((emp) => ({
                     label: `${emp.firstName} ${emp.lastName} (${emp.designation})`,
                     value: emp.id.toString(),
                   }))}

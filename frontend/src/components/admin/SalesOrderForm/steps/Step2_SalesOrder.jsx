@@ -5,7 +5,7 @@ import FormSection from "../shared/FormSection";
 import FormRow from "../shared/FormRow";
 import Tabs from "../../../ui/Tabs";
 import { useFormData } from "../hooks";
-import { PRIORITY_LEVELS } from "../constants";
+import { PRIORITY_LEVELS, STATUS_LEVELS } from "../constants";
 
 export default function Step2_SalesOrder({ readOnly = false }) {
   const { formData, updateField, setNestedField } = useFormData();
@@ -16,10 +16,10 @@ export default function Step2_SalesOrder({ readOnly = false }) {
       subtitle="Contact information and product specifications"
       icon={User}
     >
-      <div className="space-y-4">
+      <div className="space-y-3">
         {/* Sales & Contact Details */}
         <div>
-          <h5 className="text-sm font-semibold text-slate-300 mb-3">
+          <h5 className="text-sm font-semibold text-slate-900 mb-2 text-left">
             Sales & Contact Details
           </h5>
           <Input
@@ -60,8 +60,8 @@ export default function Step2_SalesOrder({ readOnly = false }) {
         </div>
 
         {/* Product/Item Details */}
-        <div className="border-t border-slate-700 pt-4">
-          <h5 className="text-sm font-semibold text-slate-300 mb-3">
+        <div className="border-t border-slate-200 pt-3">
+          <h5 className="text-sm font-semibold text-slate-900 mb-2 text-left">
             Product / Item Details
           </h5>
           <FormRow cols={2}>
@@ -121,10 +121,10 @@ export default function Step2_SalesOrder({ readOnly = false }) {
       subtitle="Standards, testing, and warranty information"
       icon={Shield}
     >
-      <div className="space-y-4">
+      <div className="space-y-3">
         {/* Quality & Compliance */}
         <div>
-          <h5 className="text-sm font-semibold text-slate-300 mb-3">
+          <h5 className="text-sm font-semibold text-slate-900 mb-2 text-left">
             Quality & Compliance
           </h5>
           <Input
@@ -206,8 +206,8 @@ export default function Step2_SalesOrder({ readOnly = false }) {
         </div>
 
         {/* Warranty & Support */}
-        <div className="border-t border-slate-700 pt-4">
-          <h5 className="text-sm font-semibold text-slate-300 mb-3">
+        <div className="border-t border-slate-200 pt-3">
+          <h5 className="text-sm font-semibold text-slate-900 mb-2 text-left">
             Warranty & Support
           </h5>
           <FormRow cols={2}>
@@ -247,10 +247,10 @@ export default function Step2_SalesOrder({ readOnly = false }) {
       subtitle="Payment terms, costing, and special instructions"
       icon={DollarSign}
     >
-      <div className="space-y-4">
+      <div className="space-y-3">
         {/* Payment & Priority */}
         <div>
-          <h5 className="text-sm font-semibold text-slate-300 mb-3">
+          <h5 className="text-sm font-semibold text-slate-900 mb-2 text-left">
             Payment & Priority
           </h5>
           <FormRow cols={2}>
@@ -261,15 +261,33 @@ export default function Step2_SalesOrder({ readOnly = false }) {
               placeholder="e.g., 40% advance, 40% before dispatch, 20% after installation"
             />
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
+              <label className="block text-sm font-medium text-slate-900 text-left mb-2">
                 Project Priority
               </label>
               <select
                 value={formData.projectPriority}
                 onChange={(e) => updateField("projectPriority", e.target.value)}
-                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
+                className="w-full p-2 text-xs bg-white border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
               >
                 {PRIORITY_LEVELS.map((level) => (
+                  <option key={level.value} value={level.value}>
+                    {level.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </FormRow>
+          <FormRow cols={2}>
+            <div>
+              <label className="block text-sm font-medium text-slate-900 text-left mb-2">
+                Order Status
+              </label>
+              <select
+                value={formData.status || "pending"}
+                onChange={(e) => updateField("status", e.target.value)}
+                className="w-full p-2 text-xs bg-white border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                {STATUS_LEVELS.map((level) => (
                   <option key={level.value} value={level.value}>
                     {level.label}
                   </option>
@@ -280,8 +298,8 @@ export default function Step2_SalesOrder({ readOnly = false }) {
         </div>
 
         {/* Internal Information */}
-        <div className="border-t border-slate-700 pt-4">
-          <h5 className="text-sm font-semibold text-slate-300 mb-3">
+        <div className="border-t border-slate-200 pt-3">
+          <h5 className="text-sm font-semibold text-slate-900 mb-2 text-left">
             Internal Information (For ERP)
           </h5>
           <FormRow cols={2}>
@@ -341,15 +359,15 @@ export default function Step2_SalesOrder({ readOnly = false }) {
         </div>
 
         {/* Special Instructions */}
-        <div className="border-t border-slate-700 pt-4">
-          <h5 className="text-sm font-semibold text-slate-300 mb-3">
+        <div className="border-t border-slate-200 pt-3">
+          <h5 className="text-sm font-semibold text-slate-900 mb-2 text-left">
             Special Instructions
           </h5>
           <textarea
             value={formData.specialInstructions}
             onChange={(e) => updateField("specialInstructions", e.target.value)}
             rows="4"
-            className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
             placeholder="Enter any special instructions or notes"
           />
         </div>

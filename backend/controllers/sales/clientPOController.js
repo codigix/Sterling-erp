@@ -205,6 +205,29 @@ class ClientPOController {
     }
   }
 
+  static async deleteProjectDetails(req, res) {
+    try {
+      const { salesOrderId } = req.params;
+
+      const salesOrder = await SalesOrder.findById(salesOrderId);
+      if (!salesOrder) {
+        return res.status(404).json(formatErrorResponse('Sales Order not found'));
+      }
+
+      const projectDetails = await ClientPODetail.getProjectDetails(salesOrderId);
+      if (!projectDetails) {
+        return res.status(404).json(formatErrorResponse('Project details not found'));
+      }
+
+      await ClientPODetail.deleteProjectDetails(salesOrderId);
+
+      res.json(formatSuccessResponse(null, 'Project details deleted successfully'));
+    } catch (error) {
+      console.error('Error deleting Project Details:', error);
+      res.status(500).json(formatErrorResponse(error.message));
+    }
+  }
+
   static async createOrUpdateProjectRequirements(req, res) {
     try {
       const { salesOrderId } = req.params;

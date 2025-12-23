@@ -1,4 +1,4 @@
-# Sales Order Wizard - Quick Start Guide
+# Root Card Wizard - Quick Start Guide
 
 ## Accessing the Wizard
 

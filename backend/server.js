@@ -33,6 +33,8 @@ const procurementPortalRoutes = require('./routes/procurement/procurementPortalR
 const inventoryPortalRoutes = require('./routes/inventory/inventoryPortalRoutes');
 const qcPortalRoutes = require('./routes/qc/qcPortalRoutes');
 const productionPortalRoutes = require('./routes/production/productionPortalRoutes');
+const departmentPortalRoutes = require('./routes/department/departmentPortalRoutes');
+const designProjectRoutes = require('./routes/design/designProjectRoutes');
 
 const app = express();
 
@@ -80,6 +82,8 @@ app.use('/api/procurement/purchase-orders', purchaseOrderRoutes);
 app.use('/api/procurement/material-requests', materialRequestRoutes);
 app.use('/api/procurement/portal', procurementPortalRoutes);
 app.use('/api/qc/portal', qcPortalRoutes);
+app.use('/api/department/portal', departmentPortalRoutes);
+app.use('/api/design/projects', designProjectRoutes);
 app.use('/api/tracking', trackingRoutes);
 
 app.get('/api/health', (req, res) => {

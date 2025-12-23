@@ -59,6 +59,7 @@ router.get('/:salesOrderId/client-po/client-info', clientPOController.getClientI
 
 router.post('/:salesOrderId/client-po/project-details', clientPOController.createOrUpdateProjectDetails);
 router.get('/:salesOrderId/client-po/project-details', clientPOController.getProjectDetails);
+router.delete('/:salesOrderId/client-po/project-details', clientPOController.deleteProjectDetails);
 
 router.post('/:salesOrderId/client-po/project-requirements', clientPOController.createOrUpdateProjectRequirements);
 router.get('/:salesOrderId/client-po/project-requirements', clientPOController.getProjectRequirements);
