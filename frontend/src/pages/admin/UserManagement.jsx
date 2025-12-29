@@ -37,7 +37,7 @@ const UserManagement = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.get('/api/admin/users');
+      const response = await axios.get('/admin/users');
       setUsers(response.data.users || []);
     } catch (err) {
       setError('Failed to load users');
@@ -49,7 +49,7 @@ const UserManagement = () => {
 
   const fetchRoles = useCallback(async () => {
     try {
-      const response = await axios.get('/api/admin/roles');
+      const response = await axios.get('/admin/roles');
       setRoles(response.data.roles || []);
     } catch (err) {
       console.error('Roles fetch error:', err);
@@ -100,13 +100,13 @@ const UserManagement = () => {
 
     try {
       if (editingUser) {
-        await axios.put(`/api/admin/users/${editingUser.id}`, {
+        await axios.put(`/admin/users/${editingUser.id}`, {
           username: formData.username,
           roleId: parseInt(formData.roleId),
           email: formData.email
         });
       } else {
-        await axios.post('/api/admin/users', {
+        await axios.post('/admin/users', {
           username: formData.username,
           password: formData.password,
           roleId: parseInt(formData.roleId),
@@ -130,7 +130,7 @@ const UserManagement = () => {
     }
 
     try {
-      await axios.delete(`/api/admin/users/${userId}`);
+      await axios.delete(`/admin/users/${userId}`);
       setSuccess('User deleted successfully');
       fetchUsers();
       setTimeout(() => setSuccess(null), 3000);
@@ -148,7 +148,7 @@ const UserManagement = () => {
     }
 
     try {
-      await axios.put(`/api/admin/users/${userId}/password`, {
+      await axios.put(`/admin/users/${userId}/password`, {
         newPassword
       });
       setSuccess('Password changed successfully');

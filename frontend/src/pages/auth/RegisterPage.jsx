@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import axios from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
 import { Lock, User, Mail, Shield, Eye, EyeOff, Check, AlertCircle, Loader } from 'lucide-react';
 import './RegisterPage.css';
@@ -32,14 +33,8 @@ const RegisterPage = () => {
     const fetchRoles = async () => {
       try {
         setRolesLoading(true);
-        const response = await fetch('http://localhost:5001/api/auth/roles/active');
-        if (response.ok) {
-          const data = await response.json();
-          setRoles(data.roles || []);
-        } else {
-          console.error('Failed to load roles');
-          setRoles([]);
-        }
+        const response = await axios.get('/auth/roles/active');
+        setRoles(response.data.roles || []);
       } catch (error) {
         console.error('Failed to fetch roles:', error);
         setRoles([]);

@@ -1,9 +1,19 @@
 const MaterialRequirementsDetail = require('../../models/MaterialRequirementsDetail');
+const Material = require('../../models/Material');
 const SalesOrderStep = require('../../models/SalesOrderStep');
 const { validateMaterialRequirements } = require('../../utils/salesOrderValidators');
 const { formatSuccessResponse, formatErrorResponse, calculateMaterialCost } = require('../../utils/salesOrderHelpers');
 
 class MaterialRequirementsController {
+  static async getAllRequirements(req, res) {
+    try {
+      const requirements = await MaterialRequirementsDetail.findAll();
+      res.json(formatSuccessResponse(requirements, 'All material requirements retrieved'));
+    } catch (error) {
+      res.status(500).json(formatErrorResponse(error.message));
+    }
+  }
+
   static async createOrUpdate(req, res) {
     try {
       const { salesOrderId } = req.params;
@@ -38,9 +48,44 @@ class MaterialRequirementsController {
     try {
       const { salesOrderId } = req.params;
       const detail = await MaterialRequirementsDetail.findBySalesOrderId(salesOrderId);
+      
       if (!detail) {
         return res.status(404).json(formatErrorResponse('Material requirements not found'));
       }
+
+      // Fetch live stock levels from inventory
+      if (detail.materials && detail.materials.length > 0) {
+        const updatedMaterials = await Promise.all(detail.materials.map(async (m) => {
+          let currentStock = m.currentStock || 0;
+          
+          try {
+            // Try by itemCode first
+            let inventoryItem = null;
+            if (m.itemCode && m.itemCode !== 'N/A') {
+              inventoryItem = await Material.findByItemCode(m.itemCode);
+            }
+            
+            // Fallback to name if code fails or not present
+            if (!inventoryItem && m.itemName) {
+              inventoryItem = await Material.findByName(m.itemName);
+            }
+
+            if (inventoryItem) {
+              currentStock = inventoryItem.quantity || 0;
+            }
+          } catch (err) {
+            console.warn(`Failed to fetch live stock for material ${m.itemName}:`, err);
+          }
+
+          return {
+            ...m,
+            currentStock
+          };
+        }));
+
+        detail.materials = updatedMaterials;
+      }
+
       res.json(formatSuccessResponse(detail, 'Material requirements retrieved'));
     } catch (error) {
       res.status(500).json(formatErrorResponse(error.message));

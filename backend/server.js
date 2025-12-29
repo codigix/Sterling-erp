@@ -8,6 +8,7 @@ require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
 // Import migration runner
 const { runMigrations } = require('./utils/migrationRunner');
+const emailMonitorService = require('./services/emailMonitorService');
 
 const authRoutes = require('./routes/auth/authRoutes');
 const adminRoutes = require('./routes/admin/adminRoutes');
@@ -21,6 +22,8 @@ const productionStageTaskRoutes = require('./routes/production/productionStageTa
 const productionStageRoutes = require('./routes/production/productionStageRoutes');
 const materialRoutes = require('./routes/inventory/materialRoutes');
 const facilityRoutes = require('./routes/inventory/facilityRoutes');
+const vendorRoutes = require('./routes/inventory/vendorRoutes');
+const quotationRoutes = require('./routes/inventory/quotationRoutes');
 const notificationRoutes = require('./routes/notifications/notificationRoutes');
 const alertsRoutes = require('./routes/notifications/alertsRoutes');
 const taskRoutes = require('./routes/production/taskRoutes');
@@ -72,6 +75,8 @@ app.use('/api/production/stages', productionStageRoutes);
 app.use('/api/production/portal', productionPortalRoutes);
 app.use('/api/inventory/materials', materialRoutes);
 app.use('/api/inventory/facilities', facilityRoutes);
+app.use('/api/inventory/vendors', vendorRoutes);
+app.use('/api/inventory/quotations', quotationRoutes);
 app.use('/api/inventory/portal', inventoryPortalRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/alerts', alertsRoutes);
@@ -106,6 +111,9 @@ async function startServer() {
     console.log('Running database migrations...');
     await runMigrations();
     console.log('✅ Migrations completed successfully\n');
+
+    // Start Email Monitor
+    emailMonitorService.start();
 
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);

@@ -5,7 +5,7 @@ import { SalesOrderProvider } from "./context";
 import { useFormUI } from "./hooks";
 import { useSalesOrderContext } from "./hooks";
 import { validateStep1, validateStep2, validateStep3, validateStep4, validateStep5, validateStep6, validateStep7, validateStep8 } from "./utils";
-import { updateDraftWithStepData, saveAllStepsToSalesOrder } from "./stepDataHandler";
+import { updateDraftWithStepData, saveAllStepsToSalesOrder, saveStepDataToAPI } from "./stepDataHandler";
 import WizardHeader from "./shared/WizardHeader";
 import FormActions from "./shared/FormActions";
 import Step1_ClientPO from "./steps/Step1_ClientPO";
@@ -36,7 +36,7 @@ function SalesOrderFormContent({ onSubmit, onCancel, mode = 'create', initialDat
   useEffect(() => {
     const fetchConfigData = async () => {
       try {
-        const response = await axios.get("/api/sales/config/all");
+        const response = await axios.get("/sales/config/all");
         const { projectCategories, materialUnits, materialSources, priorityLevels } = response.data;
         setConfigData(projectCategories, materialUnits, materialSources, priorityLevels);
       } catch (err) {
@@ -46,7 +46,7 @@ function SalesOrderFormContent({ onSubmit, onCancel, mode = 'create', initialDat
 
     const fetchEmployees = async () => {
       try {
-        const response = await axios.get("/api/employees");
+        const response = await axios.get("/employees");
         setEmployees(response.data || []);
       } catch (err) {
         console.error("Failed to fetch employees:", err);
@@ -82,14 +82,14 @@ function SalesOrderFormContent({ onSubmit, onCancel, mode = 'create', initialDat
     try {
       setLoading(true);
       
-      const clientPOResponse = await axios.get(`/api/sales/steps/${salesOrderId}/client-po`).catch(() => null);
-      const salesOrderResponse = await axios.get(`/api/sales/steps/${salesOrderId}/sales-order`).catch(() => null);
-      const designResponse = await axios.get(`/api/sales/steps/${salesOrderId}/design-engineering`).catch(() => null);
-      const materialsResponse = await axios.get(`/api/sales/steps/${salesOrderId}/material-requirements`).catch(() => null);
-      const productionResponse = await axios.get(`/api/sales/steps/${salesOrderId}/production-plan`).catch(() => null);
-      const qcResponse = await axios.get(`/api/sales/steps/${salesOrderId}/quality-check`).catch(() => null);
-      const shipmentResponse = await axios.get(`/api/sales/steps/${salesOrderId}/shipment`).catch(() => null);
-      const deliveryResponse = await axios.get(`/api/sales/steps/${salesOrderId}/delivery`).catch(() => null);
+      const clientPOResponse = await axios.get(`/sales/steps/${salesOrderId}/client-po`).catch(() => null);
+      const salesOrderResponse = await axios.get(`/sales/steps/${salesOrderId}/sales-order`).catch(() => null);
+      const designResponse = await axios.get(`/sales/steps/${salesOrderId}/design-engineering`).catch(() => null);
+      const materialsResponse = await axios.get(`/sales/steps/${salesOrderId}/material-requirements`).catch(() => null);
+      const productionResponse = await axios.get(`/sales/steps/${salesOrderId}/production-plan`).catch(() => null);
+      const qcResponse = await axios.get(`/sales/steps/${salesOrderId}/quality-check`).catch(() => null);
+      const shipmentResponse = await axios.get(`/sales/steps/${salesOrderId}/shipment`).catch(() => null);
+      const deliveryResponse = await axios.get(`/sales/steps/${salesOrderId}/delivery`).catch(() => null);
 
       if (clientPOResponse?.data?.data) {
         const poData = clientPOResponse.data.data;
@@ -211,7 +211,7 @@ function SalesOrderFormContent({ onSubmit, onCancel, mode = 'create', initialDat
     if (mode === 'edit') {
       setLoading(true);
       try {
-        await updateDraftWithStepData(initialData.id, formData, currentStep, state.poDocuments || []);
+        await saveStepDataToAPI(currentStep, initialData.id, formData);
         setStep(currentStep + 1);
       } catch (err) {
         console.error('Error saving step:', err);
@@ -250,7 +250,7 @@ function SalesOrderFormContent({ onSubmit, onCancel, mode = 'create', initialDat
     if (mode === 'edit') {
       setLoading(true);
       try {
-        await updateDraftWithStepData(initialData.id, formData, currentStep, state.poDocuments || []);
+        await saveStepDataToAPI(currentStep, initialData.id, formData);
         setStep(currentStep - 1);
       } catch (err) {
         console.error('Error saving step:', err);
@@ -266,7 +266,7 @@ function SalesOrderFormContent({ onSubmit, onCancel, mode = 'create', initialDat
 
   const createDraft = async () => {
     try {
-      const response = await axios.post("/api/sales/drafts", {
+      const response = await axios.post("/sales/drafts", {
         formData,
         currentStep: 1,
       });
@@ -298,9 +298,9 @@ function SalesOrderFormContent({ onSubmit, onCancel, mode = 'create', initialDat
       setLoading(true);
       setError(null);
       try {
-        await updateDraftWithStepData(initialData.id, formData, currentStep, state.poDocuments || []);
+        await saveStepDataToAPI(currentStep, initialData.id, formData);
         
-        await axios.put(`/api/sales/orders/${initialData.id}`, {
+        await axios.put(`/sales/orders/${initialData.id}`, {
           clientName: formData.clientName || formData.customer,
           poNumber: formData.poNumber,
           projectName: formData.projectName || "",
@@ -328,7 +328,7 @@ function SalesOrderFormContent({ onSubmit, onCancel, mode = 'create', initialDat
       setLoading(true);
       setError(null);
       try {
-        await axios.post(`/api/sales/orders/${initialData.id}/assign`, {
+        await axios.post(`/sales/orders/${initialData.id}/assign`, {
           assignedTo: formData.internalProjectOwner,
           assignedAt: new Date().toISOString(),
         });
@@ -376,7 +376,7 @@ function SalesOrderFormContent({ onSubmit, onCancel, mode = 'create', initialDat
         }
       };
 
-      const response = await axios.post("/api/sales/orders", salesOrderData);
+      const response = await axios.post("/sales/orders", salesOrderData);
       const createdOrderId = response.data.order?.id;
 
       if (!createdOrderId) {
@@ -409,7 +409,7 @@ function SalesOrderFormContent({ onSubmit, onCancel, mode = 'create', initialDat
 
       try {
         if (state.createdOrderId) {
-          await axios.delete(`/api/sales/drafts/${state.createdOrderId}`);
+          await axios.delete(`/sales/drafts/${state.createdOrderId}`);
           console.log('Draft deleted successfully');
         }
       } catch (err) {

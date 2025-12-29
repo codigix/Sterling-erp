@@ -21,7 +21,7 @@ const SalesOrderDetailPage = () => {
       try {
         setLoading(true);
         setError(null);
-        const response = await axios.get(`/api/sales/orders/${id}`, {
+        const response = await axios.get(`/sales/orders/${id}`, {
           params: { includeSteps: true }
         });
         setSalesOrder(response.data.order || response.data);

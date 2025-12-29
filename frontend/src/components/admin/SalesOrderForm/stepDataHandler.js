@@ -157,14 +157,14 @@ export const buildStepPayload = (stepNumber, formData) => {
 
 export const getStepEndpoint = (stepNumber, salesOrderId) => {
   const endpoints = {
-    1: `/api/sales/steps/${salesOrderId}/client-po`,
-    2: `/api/sales/steps/${salesOrderId}/sales-order`,
-    3: `/api/sales/steps/${salesOrderId}/design-engineering`,
-    4: `/api/sales/steps/${salesOrderId}/material-requirements`,
-    5: `/api/sales/steps/${salesOrderId}/production-plan`,
-    6: `/api/sales/steps/${salesOrderId}/quality-check`,
-    7: `/api/sales/steps/${salesOrderId}/shipment`,
-    8: `/api/sales/steps/${salesOrderId}/delivery`
+    1: `/sales/steps/${salesOrderId}/client-po`,
+    2: `/sales/steps/${salesOrderId}/sales-order`,
+    3: `/sales/steps/${salesOrderId}/design-engineering`,
+    4: `/sales/steps/${salesOrderId}/material-requirements`,
+    5: `/sales/steps/${salesOrderId}/production-plan`,
+    6: `/sales/steps/${salesOrderId}/quality-check`,
+    7: `/sales/steps/${salesOrderId}/shipment`,
+    8: `/sales/steps/${salesOrderId}/delivery`
   };
 
   return endpoints[stepNumber];
@@ -176,7 +176,7 @@ export const updateDraftWithStepData = async (draftId, formData, currentStep, po
       throw new Error('Draft ID is required');
     }
 
-    const response = await axios.put(`/api/sales/drafts/${draftId}`, {
+    const response = await axios.put(`/sales/drafts/${draftId}`, {
       formData,
       currentStep,
       poDocuments
@@ -229,7 +229,7 @@ const saveStep2DataWithTabs = async (salesOrderId, formData) => {
     };
 
     const salesProductResponse = await axios.post(
-      `/api/sales/steps/${salesOrderId}/sales-order/sales-product`,
+      `/sales/steps/${salesOrderId}/sales-order/sales-product`,
       salesProductPayload
     );
     results.salesProduct = salesProductResponse.data;
@@ -241,7 +241,7 @@ const saveStep2DataWithTabs = async (salesOrderId, formData) => {
     };
 
     const qualityResponse = await axios.post(
-      `/api/sales/steps/${salesOrderId}/sales-order/quality-compliance`,
+      `/sales/steps/${salesOrderId}/sales-order/quality-compliance`,
       qualityCompliancePayload
     );
     results.qualityCompliance = qualityResponse.data;
@@ -257,7 +257,7 @@ const saveStep2DataWithTabs = async (salesOrderId, formData) => {
     };
 
     const paymentResponse = await axios.post(
-      `/api/sales/steps/${salesOrderId}/sales-order/payment-internal`,
+      `/sales/steps/${salesOrderId}/sales-order/payment-internal`,
       paymentInternalPayload
     );
     results.paymentInternal = paymentResponse.data;

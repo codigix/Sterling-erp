@@ -16,7 +16,7 @@ const EmployeeAlerts = () => {
       try {
         setLoading(true);
         if (user?.id) {
-          const response = await axios.get(`/api/employee/portal/alerts/${user.id}`);
+          const response = await axios.get(`/employee/portal/alerts/${user.id}`);
           setAlerts(response.data || []);
         }
       } catch (error) {

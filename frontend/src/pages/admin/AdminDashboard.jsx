@@ -79,10 +79,10 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const kpiResponse = await axios.get('/api/admin/kpis');
+        const kpiResponse = await axios.get('/admin/kpis');
         const kpiData = kpiResponse.data;
 
-        const projectsResponse = await axios.get('/api/admin/projects');
+        const projectsResponse = await axios.get('/admin/projects');
         const projects = projectsResponse.data.projects || [];
 
         const statusCounts = {

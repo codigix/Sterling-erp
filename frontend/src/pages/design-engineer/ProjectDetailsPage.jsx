@@ -122,7 +122,7 @@ const ProjectDetailsPage = () => {
 
   const fetchRoleId = async () => {
     try {
-      const response = await axios.get('/api/department/portal/role/design_engineer');
+      const response = await axios.get('/department/portal/role/design_engineer');
       setRoleId(response.data.roleId);
     } catch (err) {
       console.error('Error fetching role ID:', err);
@@ -132,7 +132,7 @@ const ProjectDetailsPage = () => {
   const fetchProjects = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/api/sales/orders');
+      const response = await axios.get('/sales/orders');
       console.log('Sales orders response:', response.data);
       const orders = Array.isArray(response.data) ? response.data : (response.data.orders || []);
       setProjects(orders);
@@ -156,7 +156,7 @@ const ProjectDetailsPage = () => {
   const fetchTasksForProject = async (project) => {
     try {
       if (!roleId) return;
-      const response = await axios.get(`/api/department/portal/tasks/${roleId}`);
+      const response = await axios.get(`/department/portal/tasks/${roleId}`);
       setTasks(response.data.filter(t => t.rootCard?.id === project.id || t.salesOrder?.id === project.id));
     } catch (err) {
       console.error('Error fetching tasks:', err);
@@ -185,7 +185,7 @@ const ProjectDetailsPage = () => {
 
       let salesOrder = null;
       try {
-        const response = await axios.get(`/api/sales/orders/${projectId}`);
+        const response = await axios.get(`/sales/orders/${projectId}`);
         salesOrder = response.data.order || response.data;
       } catch (err) {
         console.error('Sales order not found:', err);
@@ -204,7 +204,7 @@ const ProjectDetailsPage = () => {
 
       let designDetails = null;
       try {
-        const savedResponse = await axios.get(`/api/sales/orders/${salesOrder.id}/design-details`);
+        const savedResponse = await axios.get(`/sales/orders/${salesOrder.id}/design-details`);
         designDetails = savedResponse.data?.data;
         console.log('Saved design details:', designDetails);
       } catch (err) {
@@ -262,7 +262,7 @@ const ProjectDetailsPage = () => {
 
   const handleTaskStatusUpdate = async (taskId, newStatus) => {
     try {
-      await axios.put(`/api/department/portal/tasks/${taskId}`, { status: newStatus });
+      await axios.put(`/department/portal/tasks/${taskId}`, { status: newStatus });
       setTasks(tasks.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
     } catch (error) {
       console.error('Error updating task status:', error);
@@ -354,7 +354,7 @@ const ProjectDetailsPage = () => {
       };
 
       if (salesOrderId && !isNaN(salesOrderId)) {
-        await axios.post(`/api/sales/orders/${salesOrderId}/design-details`, payload);
+        await axios.post(`/sales/orders/${salesOrderId}/design-details`, payload);
       } else {
         alert('No sales order linked to this task. Cannot save details.');
         return;
@@ -375,7 +375,7 @@ const ProjectDetailsPage = () => {
   const handleDeleteProject = async (projectId) => {
     try {
       setSaving(true);
-      await axios.delete(`/api/sales/orders/${projectId}`);
+      await axios.delete(`/sales/orders/${projectId}`);
       alert('Project deleted successfully!');
       fetchProjects();
       setView('list');
@@ -583,6 +583,25 @@ const ProjectDetailsPage = () => {
                           </td>
                           <td className="p-3">
                             <div className="flex items-center justify-center gap-1">
+                              <button
+                                onClick={async () => {
+                                  if (!confirm('Are you sure you want to send materials to inventory?')) return;
+                                  try {
+                                    setSaving(true);
+                                    await axios.post(`/sales/orders/${project.id}/send-to-inventory`);
+                                    alert('Materials sent to inventory successfully!');
+                                  } catch (error) {
+                                    console.error('Error sending to inventory:', error);
+                                    alert('Failed to send to inventory');
+                                  } finally {
+                                    setSaving(false);
+                                  }
+                                }}
+                                className="p-2 hover:bg-green-100 dark:hover:bg-green-900 rounded-lg text-green-600 dark:text-green-400 transition"
+                                title="Send to Inventory"
+                              >
+                                <ArrowRight size={16} />
+                              </button>
                               <button
                                 onClick={() => handleSelectProject(project)}
                                 className="p-2 hover:bg-blue-100 dark:hover:bg-blue-900 rounded-lg text-blue-600 dark:text-blue-400 transition"
@@ -1075,14 +1094,16 @@ const ProjectDetailsPage = () => {
               Back to List
             </Button>
             {editMode && (
-              <Button
-                onClick={handleSave}
-                disabled={saving}
-                className="flex items-center gap-2"
-              >
-                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save size={20} />}
-                {saving ? 'Saving...' : 'Save Project Details'}
-              </Button>
+              <>
+                <Button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="flex items-center gap-2"
+                >
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save size={20} />}
+                  {saving ? 'Saving...' : 'Save Project Details'}
+                </Button>
+              </>
             )}
             {!editMode && selectedProject && (
               <Button

@@ -17,7 +17,7 @@ const EmployeePortal = () => {
   const fetchTasks = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/api/employee/tasks', {
+      const response = await axios.get('/employee/tasks', {
         params: { dateFilter: filter },
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
@@ -31,7 +31,7 @@ const EmployeePortal = () => {
 
   const fetchStats = async () => {
     try {
-      const response = await axios.get('/api/employee/tasks/statistics', {
+      const response = await axios.get('/employee/tasks/statistics', {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       setStats(response.data);
@@ -42,7 +42,7 @@ const EmployeePortal = () => {
 
   const updateTaskStatus = async (taskId, newStatus) => {
     try {
-      await axios.patch(`/api/employee/tasks/${taskId}/status`, 
+      await axios.patch(`/employee/tasks/${taskId}/status`, 
         { status: newStatus },
         { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
       );

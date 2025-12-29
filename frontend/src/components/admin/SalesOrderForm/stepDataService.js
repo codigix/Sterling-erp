@@ -7,7 +7,7 @@ export const saveAllStepData = async (salesOrderId, formData) => {
   try {
     if (formData.poNumber || formData.clientName) {
       try {
-        await axios.post(`/api/sales/steps/${salesOrderId}/client-po`, {
+        await axios.post(`/sales/steps/${salesOrderId}/client-po`, {
           poNumber: formData.poNumber,
           poDate: formData.poDate || new Date().toISOString().split('T')[0],
           clientName: formData.clientName,
@@ -28,7 +28,7 @@ export const saveAllStepData = async (salesOrderId, formData) => {
 
     if (formData.productList?.length > 0 || formData.qualityRequirements) {
       try {
-        await axios.post(`/api/sales/steps/${salesOrderId}/sales-order`, {
+        await axios.post(`/sales/steps/${salesOrderId}/sales-order`, {
           productList: formData.productList,
           qualityRequirements: formData.qualityRequirements,
           complianceInfo: formData.complianceInfo,
@@ -44,7 +44,7 @@ export const saveAllStepData = async (salesOrderId, formData) => {
 
     if (formData.designEngineering || formData.estimatedCost) {
       try {
-        await axios.post(`/api/sales/steps/${salesOrderId}/design-engineering`, {
+        await axios.post(`/sales/steps/${salesOrderId}/design-engineering`, {
           designApproach: formData.designApproach,
           estimatedCost: formData.estimatedCost,
           timelineWeeks: formData.timelineWeeks,
@@ -60,7 +60,7 @@ export const saveAllStepData = async (salesOrderId, formData) => {
 
     if (formData.materialProcurement?.materials?.length > 0 || formData.procurementStrategy) {
       try {
-        await axios.post(`/api/sales/steps/${salesOrderId}/material-requirements`, {
+        await axios.post(`/sales/steps/${salesOrderId}/material-requirements`, {
           materials: formData.materialProcurement?.materials || [],
           procurementStrategy: formData.procurementStrategy,
           supplierList: formData.supplierList,
@@ -77,7 +77,7 @@ export const saveAllStepData = async (salesOrderId, formData) => {
 
     if (formData.productionPlan?.phases?.length > 0 || formData.productionStrategy) {
       try {
-        await axios.post(`/api/sales/steps/${salesOrderId}/production-plan`, {
+        await axios.post(`/sales/steps/${salesOrderId}/production-plan`, {
           phases: formData.productionPlan?.phases || [],
           productionStrategy: formData.productionStrategy,
           estimatedDays: formData.estimatedDays,
@@ -93,7 +93,7 @@ export const saveAllStepData = async (salesOrderId, formData) => {
 
     if (formData.qualityCheck || formData.complianceDetails) {
       try {
-        await axios.post(`/api/sales/steps/${salesOrderId}/quality-check`, {
+        await axios.post(`/sales/steps/${salesOrderId}/quality-check`, {
           testingStrategy: formData.testingStrategy,
           complianceStandards: formData.complianceStandards,
           warrantyPeriod: formData.warrantyPeriod,
@@ -109,7 +109,7 @@ export const saveAllStepData = async (salesOrderId, formData) => {
 
     if (formData.shipment) {
       try {
-        await axios.post(`/api/sales/steps/${salesOrderId}/shipment`, {
+        await axios.post(`/sales/steps/${salesOrderId}/shipment`, {
           deliveryTerms: formData.shipment?.deliveryTerms,
           shipmentProcess: formData.shipment?.shipmentProcess,
           shippingDetails: formData.shipment?.shippingDetails
@@ -123,7 +123,7 @@ export const saveAllStepData = async (salesOrderId, formData) => {
 
     if (formData.delivery) {
       try {
-        await axios.post(`/api/sales/steps/${salesOrderId}/delivery`, {
+        await axios.post(`/sales/steps/${salesOrderId}/delivery`, {
           finalDelivery: formData.delivery?.finalDelivery,
           installationStatus: formData.delivery?.installationStatus,
           warrantyInfo: formData.delivery?.warrantyInfo,

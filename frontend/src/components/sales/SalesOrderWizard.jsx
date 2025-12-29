@@ -50,7 +50,7 @@ const SalesOrderWizard = ({ salesOrderId, onComplete, onCancel }) => {
   const fetchWorkflowSteps = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`/api/sales/workflow/${salesOrderId}/steps`);
+      const response = await axios.get(`/sales/workflow/${salesOrderId}/steps`);
       setWorkflowSteps(response.data.steps || []);
     } catch (err) {
       setError('Failed to load workflow steps');
@@ -62,7 +62,7 @@ const SalesOrderWizard = ({ salesOrderId, onComplete, onCancel }) => {
 
   const fetchEmployees = async () => {
     try {
-      const response = await axios.get('/api/sales/employees');
+      const response = await axios.get('/sales/employees');
       const employeeList = Array.isArray(response.data) ? response.data : response.data.users || [];
       setEmployees(employeeList);
     } catch (err) {
@@ -72,7 +72,7 @@ const SalesOrderWizard = ({ salesOrderId, onComplete, onCancel }) => {
 
   const handleAssignEmployee = async (stepId, employeeId) => {
     try {
-      const response = await axios.post('/api/sales/workflow/steps/assign', {
+      const response = await axios.post('/sales/workflow/steps/assign', {
         stepId,
         employeeId,
         reason: `Assigned to ${WORKFLOW_STEPS[currentStep - 1].name} step`,
@@ -96,7 +96,7 @@ const SalesOrderWizard = ({ salesOrderId, onComplete, onCancel }) => {
   const handleUpdateStepStatus = async (stepId, status) => {
     try {
       setLoading(true);
-      await axios.put(`/api/sales/workflow/steps/${stepId}/status`, {
+      await axios.put(`/sales/workflow/steps/${stepId}/status`, {
         status,
         notes: stepData[currentStep]?.notes || '',
       });
@@ -126,7 +126,7 @@ const SalesOrderWizard = ({ salesOrderId, onComplete, onCancel }) => {
       }
 
       setLoading(true);
-      await axios.post(`/api/sales/workflow/steps/${stepId}/upload`, formData, {
+      await axios.post(`/sales/workflow/steps/${stepId}/upload`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 

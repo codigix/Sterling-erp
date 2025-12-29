@@ -65,10 +65,7 @@ const RoleDashboardLayout = ({ roleNavigation, roleName, roleIcon: RoleIcon, chi
               <Menu size={20} />
             </button>
             <Link to={roleNavigation[0]?.path || "/"} className="flex items-center text-xs gap-2">
-              {RoleIcon && <RoleIcon size={24} className="text-blue-600 dark:text-blue-400" />}
-              <div className="font-bold text-xl text-blue-600 dark:text-blue-400">
-                Sterling ERP
-              </div>
+              <img src="/logo.png" alt="Sterling ERP" className="h-8 w-auto" />
             </Link>
           </div>
 

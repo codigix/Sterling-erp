@@ -41,7 +41,7 @@ const MyDesignsPage = () => {
 
   const fetchProjects = async () => {
     try {
-      const response = await axios.get('/api/sales/orders');
+      const response = await axios.get('/sales/orders');
       const orders = Array.isArray(response.data) ? response.data : (response.data?.orders || []);
       const projectsList = orders.map(order => ({
         value: String(order.id),
@@ -75,7 +75,7 @@ const MyDesignsPage = () => {
 
   const fetchDesigns = async () => {
     try {
-      const response = await axios.get('/api/production/designs');
+      const response = await axios.get('/production/designs');
       const designs = response.data.designs || [];
       let designsList = designs.map(design => ({
         id: design.id,
@@ -136,7 +136,7 @@ const MyDesignsPage = () => {
 
   const confirmDelete = async () => {
     try {
-      await axios.delete(`/api/production/designs/${selectedDesign.id}`);
+      await axios.delete(`/production/designs/${selectedDesign.id}`);
       setDesigns(designs.filter(d => d.id !== selectedDesign.id));
       alert(`Design "${selectedDesign.name}" has been deleted successfully!`);
       setShowDeleteModal(false);
@@ -186,7 +186,7 @@ const MyDesignsPage = () => {
         salesOrderId: formData.salesOrderId // Send salesOrderId
       };
 
-      await axios.post('/api/production/design-projects', payload);
+      await axios.post('/production/design-projects', payload);
       
       await fetchDesigns();
       alert(`Design "${formData.designName}" created successfully!\nDesign ID: ${finalDesignId}`);

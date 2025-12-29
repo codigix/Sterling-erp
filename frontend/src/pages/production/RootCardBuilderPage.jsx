@@ -46,7 +46,7 @@ const RootCardBuilderPage = () => {
   const fetchSalesOrders = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await axios.get('/api/sales/orders', { __sessionGuard: true });
+      const response = await axios.get('/sales/orders', { __sessionGuard: true });
       setSalesOrders(response.data.orders || []);
     } catch (err) {
       setError('Failed to load sales orders');
@@ -58,7 +58,7 @@ const RootCardBuilderPage = () => {
   const fetchBOMs = useCallback(async () => {
     if (!selectedSalesOrder) return;
     try {
-      const response = await axios.get('/api/engineering/bom', {
+      const response = await axios.get('/engineering/bom', {
         params: { salesOrderId: selectedSalesOrder },
         __sessionGuard: true
       });
@@ -71,8 +71,8 @@ const RootCardBuilderPage = () => {
   const fetchEmployeesAndFacilities = useCallback(async () => {
     try {
       const [empRes, facRes] = await Promise.all([
-        axios.get('/api/admin/users?role=Operator,Employee', { __sessionGuard: true }),
-        axios.get('/api/inventory/facilities', { __sessionGuard: true })
+        axios.get('/admin/users?role=Operator,Employee', { __sessionGuard: true }),
+        axios.get('/inventory/facilities', { __sessionGuard: true })
       ]);
       setEmployees(empRes.data?.users || []);
       setFacilities(facRes.data || []);
@@ -84,7 +84,7 @@ const RootCardBuilderPage = () => {
   const fetchProductions = useCallback(async () => {
     if (!selectedSalesOrder) return;
     try {
-      const response = await axios.get('/api/production/plans', {
+      const response = await axios.get('/production/plans', {
         params: { projectId: selectedSalesOrder },
         __sessionGuard: true
       });
@@ -148,7 +148,7 @@ const RootCardBuilderPage = () => {
     }
 
     try {
-      await axios.post('/api/production/plans', {
+      await axios.post('/production/plans', {
         projectId: selectedSalesOrder,
         planName: formData.planName,
         startDate: formData.startDate,
@@ -168,7 +168,7 @@ const RootCardBuilderPage = () => {
 
   const handleStartProduction = async (planId) => {
     try {
-      await axios.patch(`/api/production/plans/${planId}/status`, {
+      await axios.patch(`/production/plans/${planId}/status`, {
         status: 'in_progress'
       }, { __sessionGuard: true });
       fetchProductions();

@@ -63,7 +63,7 @@ export const AuthProvider = ({ children }) => {
     axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
 
     try {
-      const response = await axios.get("/api/auth/me", { __sessionGuard: true });
+      const response = await axios.get("/auth/me", { __sessionGuard: true });
       setUser(response.data.user);
     } catch (error) {
       if (error.response?.status === 401) {
@@ -80,7 +80,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (username, password) => {
     try {
-      const response = await axios.post("/api/auth/login", {
+      const response = await axios.post("/auth/login", {
         username,
         password,
       });
@@ -123,7 +123,7 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (username, password, roleId, email) => {
     try {
-      const response = await axios.post("/api/auth/register", {
+      const response = await axios.post("/auth/register", {
         username,
         password,
         roleId,

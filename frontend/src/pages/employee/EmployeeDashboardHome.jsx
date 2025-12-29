@@ -20,7 +20,7 @@ const EmployeeDashboardHome = () => {
     const fetchStats = async () => {
       try {
         if (user?.id) {
-          const response = await axios.get(`/api/employee/portal/stats/${user.id}`);
+          const response = await axios.get(`/employee/portal/stats/${user.id}`);
           setStats({
             tasksCompleted: response.data.tasksCompleted || 0,
             tasksInProgress: response.data.tasksInProgress || 0,

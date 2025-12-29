@@ -39,6 +39,14 @@ class Material {
     return rows[0];
   }
 
+  static async findByName(itemName) {
+    const [rows] = await pool.execute(
+      'SELECT * FROM inventory WHERE item_name = ?',
+      [itemName]
+    );
+    return rows[0];
+  }
+
   static async create(data) {
     const { itemCode, itemName, batch, specification, unit, category, quantity, reorderLevel, location, vendorId, unitCost } = data;
     const [result] = await pool.execute(

@@ -18,8 +18,8 @@ const QCTasksPage = () => {
       try {
         setLoading(true);
         const [grnRes, stageRes] = await Promise.all([
-          axios.get('/api/qc/portal/grn-inspections'),
-          axios.get('/api/qc/portal/stage-qc')
+          axios.get('/qc/portal/grn-inspections'),
+          axios.get('/qc/portal/stage-qc')
         ]);
         setGrnInspections(grnRes.data.grnInspections || []);
         setGrnStats(grnRes.data.stats || {});

@@ -19,6 +19,21 @@ class MaterialRequirementsDetail {
     `);
   }
 
+  static async findAll() {
+    const [rows] = await pool.execute(
+      `SELECT mrd.*, so.project_name, so.po_number, so.customer 
+       FROM material_requirements_details mrd
+       JOIN sales_orders so ON mrd.sales_order_id = so.id
+       ORDER BY mrd.updated_at DESC`
+    );
+    return rows.map(row => ({
+      ...this.formatRow(row),
+      projectName: row.project_name,
+      poNumber: row.po_number,
+      customer: row.customer
+    }));
+  }
+
   static async findBySalesOrderId(salesOrderId) {
     const [rows] = await pool.execute(
       `SELECT * FROM material_requirements_details WHERE sales_order_id = ?`,

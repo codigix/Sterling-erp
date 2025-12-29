@@ -38,7 +38,17 @@ async function initDatabase() {
         id INT PRIMARY KEY AUTO_INCREMENT,
         name VARCHAR(255) NOT NULL,
         contact VARCHAR(255),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        email VARCHAR(100),
+        phone VARCHAR(20),
+        address VARCHAR(500),
+        category VARCHAR(100),
+        rating DECIMAL(3,2) DEFAULT 0.00,
+        status ENUM('active', 'inactive') DEFAULT 'active',
+        total_orders INT DEFAULT 0,
+        total_value DECIMAL(15,2) DEFAULT 0.00,
+        last_order_date DATE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       )`,
 
       `CREATE TABLE inventory (

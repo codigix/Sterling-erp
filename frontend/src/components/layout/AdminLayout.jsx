@@ -114,9 +114,7 @@ const AdminLayout = () => {
               <Menu size={20} />
             </button>
             <Link to="/admin/dashboard" className="flex items-center text-xs">
-              <div className="font-bold text-xl text-primary-600 dark:text-primary-400">
-                Sterling ERP
-              </div>
+              <img src="/logo.png" alt="Sterling ERP" className="h-8 w-auto" />
             </Link>
           </div>
 

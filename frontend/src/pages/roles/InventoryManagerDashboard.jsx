@@ -14,6 +14,7 @@ import GRNProcessingPage from '../inventory/GRNProcessingPage';
 import QCInspectionsPage from '../inventory/QCInspectionsPage';
 import ReportsPage from '../inventory/ReportsPage';
 import MaterialSpecificationsPage from '../inventory/MaterialSpecificationsPage';
+import CreateQuotationPage from '../inventory/CreateQuotationPage';
 import InventoryTasksPage from '../department/InventoryTasksPage';
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
 import {
@@ -513,6 +514,7 @@ const InventoryManagerDashboard = () => {
         <Route path="/tracking/location" element={<RackAndShelfPage />} />
         <Route path="/vendors/list" element={<VendorsPage />} />
         <Route path="/vendors/quotations" element={<QuotationsPage />} />
+        <Route path="/vendors/quotations/new" element={<CreateQuotationPage />} />
         <Route path="/vendors/po" element={<PurchaseOrderPage />} />
         <Route path="/qc/grn" element={<GRNProcessingPage />} />
         <Route path="/qc/inspections" element={<QCInspectionsPage />} />

@@ -20,9 +20,9 @@ const ProcurementTasksPage = () => {
       try {
         setLoading(true);
         const [prRes, poRes, quotesRes] = await Promise.all([
-          axios.get('/api/procurement/portal/purchase-requests'),
-          axios.get('/api/procurement/portal/purchase-orders'),
-          axios.get('/api/procurement/portal/quotes')
+          axios.get('/procurement/portal/purchase-requests'),
+          axios.get('/procurement/portal/purchase-orders'),
+          axios.get('/procurement/portal/quotes')
         ]);
         setPurchaseRequests(prRes.data || []);
         setPurchaseOrders(poRes.data || []);

@@ -66,7 +66,7 @@ const SystemSettings = () => {
   const fetchSettings = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/api/admin/settings');
+      const response = await axios.get('/admin/settings');
       setSettings(response.data);
     } catch (err) {
       console.error('Settings fetch error:', err);
@@ -78,7 +78,7 @@ const SystemSettings = () => {
   const saveSettings = async () => {
     try {
       setSaving(true);
-      await axios.put('/api/admin/settings', settings);
+      await axios.put('/admin/settings', settings);
       alert('Settings saved successfully!');
     } catch (err) {
       console.error('Settings save error:', err);

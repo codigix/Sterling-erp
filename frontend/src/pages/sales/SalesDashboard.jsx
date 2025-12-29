@@ -26,7 +26,7 @@ const SalesDashboard = () => {
   const fetchAssignedOrders = async () => {
     setLoading(true);
     try {
-      const response = await axios.get('/api/sales/orders/assigned');
+      const response = await axios.get('/sales/orders/assigned');
       setOrders(response.data.orders || []);
       
       const stats = {

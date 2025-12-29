@@ -1,8 +1,16 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
+const path = require('path');
 const authMiddleware = require('../../middleware/authMiddleware');
 const roleMiddleware = require('../../middleware/roleMiddleware');
 const productionController = require('../../controllers/production/productionController');
+const drawingController = require('../../controllers/production/drawingController');
+
+const upload = multer({
+  dest: path.join(__dirname, '../../uploads/design-engineering'),
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
+});
 
 router.use(authMiddleware);
 
@@ -24,6 +32,10 @@ router.post('/worker-tasks', roleMiddleware('Admin', 'Management'), productionCo
 router.patch('/worker-tasks/:id/status', roleMiddleware('Admin', 'Management', 'Production'), productionController.updateTaskStatus);
 
 router.get('/statistics', roleMiddleware('Admin', 'Management', 'Production'), productionController.getProductionStatistics);
+
+// Drawing routes
+router.get('/drawings', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer'), drawingController.getDrawings);
+router.post('/drawings', roleMiddleware('Admin', 'Management', 'Design Engineer'), upload.single('file'), drawingController.uploadDrawing);
 
 router.post('/design-projects', roleMiddleware('Admin', 'Management', 'Design Engineer'), productionController.createDesignProject);
 router.post('/root-cards/:rootCardId/design-details', roleMiddleware('Admin', 'Management', 'Design Engineer'), productionController.saveDesignProjectDetails);

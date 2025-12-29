@@ -78,7 +78,7 @@ const DesignEngineerDashboard = () => {
 
   const getRoleId = async (roleName) => {
     try {
-      const response = await axios.get(`/api/department/portal/role/${roleName}`);
+      const response = await axios.get(`/department/portal/role/${roleName}`);
       return response.data.roleId;
     } catch {
       console.warn(`Role '${roleName}' not found, will use default role ID`);
@@ -88,7 +88,7 @@ const DesignEngineerDashboard = () => {
 
   const fetchTasksForDesignEngineer = async (roleId) => {
     try {
-      const response = await axios.get(`/api/department/portal/tasks/${roleId}`);
+      const response = await axios.get(`/department/portal/tasks/${roleId}`);
       setDepartmentTasks(response.data);
 
       generateStatisticsFromTasks(response.data);
@@ -100,7 +100,7 @@ const DesignEngineerDashboard = () => {
 
   const fetchTaskStats = async (roleId) => {
     try {
-      const response = await axios.get(`/api/department/portal/stats/${roleId}`);
+      const response = await axios.get(`/department/portal/stats/${roleId}`);
       setTaskStats(response.data);
     } catch (err) {
       console.error('Error fetching task stats:', err);

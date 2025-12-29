@@ -94,7 +94,7 @@ const CreateBOMPage = () => {
         items: validItems
       };
       
-      await axios.post('/api/production/bom', payload);
+      await axios.post('/production/bom', payload);
       
       setSuccessMessage(`BOM "${bomData.projectName}" saved successfully with ${validItems.length} items!`);
       setTimeout(() => {

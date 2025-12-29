@@ -27,7 +27,7 @@ const DepartmentTasksPage = ({ departmentName }) => {
 
   const fetchRoleId = async () => {
     try {
-      const response = await axios.get(`/api/department/portal/role/${departmentName.toLowerCase().replace(/\s+/g, '_')}`);
+      const response = await axios.get(`/department/portal/role/${departmentName.toLowerCase().replace(/\s+/g, '_')}`);
       setRoleId(response.data.roleId);
     } catch (error) {
       console.error('Error fetching role ID:', error);
@@ -40,7 +40,7 @@ const DepartmentTasksPage = ({ departmentName }) => {
       const params = {};
       if (statusFilter !== 'all') params.status = statusFilter;
       if (priorityFilter !== 'all') params.priority = priorityFilter;
-      const response = await axios.get(`/api/department/portal/tasks/${roleId}`, { params });
+      const response = await axios.get(`/department/portal/tasks/${roleId}`, { params });
       setTasks(response.data);
     } catch (error) {
       console.error('Error fetching tasks:', error);
@@ -51,7 +51,7 @@ const DepartmentTasksPage = ({ departmentName }) => {
 
   const fetchStats = async () => {
     try {
-      const response = await axios.get(`/api/department/portal/stats/${roleId}`);
+      const response = await axios.get(`/department/portal/stats/${roleId}`);
       setStats(response.data);
     } catch (error) {
       console.error('Error fetching stats:', error);

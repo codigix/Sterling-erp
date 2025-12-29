@@ -12,7 +12,7 @@ const EmployeeUpdates = () => {
     const fetchUpdates = async () => {
       try {
         setLoading(true);
-        const response = await axios.get('/api/employee/portal/company-updates');
+        const response = await axios.get('/employee/portal/company-updates');
         setUpdates(response.data || []);
       } catch (error) {
         console.error('Fetch updates error:', error);

@@ -4,6 +4,9 @@ const parseJson = (value, fallback = []) => {
   if (!value) {
     return fallback;
   }
+  if (typeof value === 'object') {
+    return value;
+  }
   try {
     return JSON.parse(value);
   } catch (_error) {
@@ -66,69 +69,46 @@ class SalesOrder {
   }
 
   static async enrichOrderWithSteps(order) {
-    try {
-      const [clientPO] = await pool.execute(
-        'SELECT * FROM client_po_details WHERE sales_order_id = ?',
-        [order.id]
-      );
-      const [salesDetail] = await pool.execute(
-        'SELECT * FROM sales_order_details WHERE sales_order_id = ?',
-        [order.id]
-      );
-      const [design] = await pool.execute(
-        'SELECT * FROM design_engineering_details WHERE sales_order_id = ?',
-        [order.id]
-      );
-      const [materials] = await pool.execute(
-        'SELECT * FROM material_requirements_details WHERE sales_order_id = ?',
-        [order.id]
-      );
-      const [production] = await pool.execute(
-        'SELECT * FROM production_plan_details WHERE sales_order_id = ?',
-        [order.id]
-      );
-      const [quality] = await pool.execute(
-        'SELECT * FROM quality_check_details WHERE sales_order_id = ?',
-        [order.id]
-      );
-      const [shipment] = await pool.execute(
-        'SELECT * FROM shipment_details WHERE sales_order_id = ?',
-        [order.id]
-      );
-      const [delivery] = await pool.execute(
-        'SELECT * FROM delivery_details WHERE sales_order_id = ?',
-        [order.id]
-      );
+    const steps = {
+      step1_clientPO: null,
+      step2_salesOrder: null,
+      step3_design: null,
+      step4_materials: null,
+      step5_production: null,
+      step6_quality: null,
+      step7_shipment: null,
+      step8_delivery: null
+    };
 
-      return {
-        ...order,
-        steps: {
-          step1_clientPO: clientPO[0] ? SalesOrder.parseStepData(clientPO[0]) : null,
-          step2_salesOrder: salesDetail[0] ? SalesOrder.parseStepData(salesDetail[0]) : null,
-          step3_design: design[0] ? SalesOrder.parseStepData(design[0]) : null,
-          step4_materials: materials[0] ? SalesOrder.parseStepData(materials[0]) : null,
-          step5_production: production[0] ? SalesOrder.parseStepData(production[0]) : null,
-          step6_quality: quality[0] ? SalesOrder.parseStepData(quality[0]) : null,
-          step7_shipment: shipment[0] ? SalesOrder.parseStepData(shipment[0]) : null,
-          step8_delivery: delivery[0] ? SalesOrder.parseStepData(delivery[0]) : null
+    const tables = [
+      { key: 'step1_clientPO', name: 'client_po_details' },
+      { key: 'step2_salesOrder', name: 'sales_order_details' },
+      { key: 'step3_design', name: 'design_engineering_details' },
+      { key: 'step4_materials', name: 'material_requirements_details' },
+      { key: 'step5_production', name: 'production_plan_details' },
+      { key: 'step6_quality', name: 'quality_check_details' },
+      { key: 'step7_shipment', name: 'shipment_details' },
+      { key: 'step8_delivery', name: 'delivery_details' }
+    ];
+
+    for (const table of tables) {
+      try {
+        const [rows] = await pool.execute(
+          `SELECT * FROM ${table.name} WHERE sales_order_id = ?`,
+          [order.id]
+        );
+        if (rows && rows.length > 0) {
+          steps[table.key] = SalesOrder.parseStepData(rows[0]);
         }
-      };
-    } catch (error) {
-      console.error('Error enriching order with steps:', error);
-      return {
-        ...order,
-        steps: {
-          step1_clientPO: null,
-          step2_salesOrder: null,
-          step3_design: null,
-          step4_materials: null,
-          step5_production: null,
-          step6_quality: null,
-          step7_shipment: null,
-          step8_delivery: null
-        }
-      };
+      } catch (error) {
+        console.warn(`Table ${table.name} not available`);
+      }
     }
+
+    return {
+      ...order,
+      steps
+    };
   }
 
   static parseStepData(row) {

@@ -86,15 +86,29 @@ CREATE TABLE vendors (
     id INT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(255) NOT NULL,
     contact VARCHAR(255),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    email VARCHAR(100),
+    phone VARCHAR(20),
+    address VARCHAR(500),
+    category VARCHAR(100),
+    vendor_type ENUM('material_supplier', 'manufacturer', 'outsourcing_partner') DEFAULT 'material_supplier',
+    rating DECIMAL(3,2) DEFAULT 0.00,
+    status ENUM('active', 'inactive') DEFAULT 'active',
+    total_orders INT DEFAULT 0,
+    total_value DECIMAL(15,2) DEFAULT 0.00,
+    last_order_date DATE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 CREATE TABLE quotations (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    pr_id INT NOT NULL,
     vendor_id INT NOT NULL,
-    items JSON NOT NULL,
+    quotation_number VARCHAR(100) UNIQUE NOT NULL,
+    total_amount DECIMAL(15,2) DEFAULT 0.00,
+    valid_until DATE,
     status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+    items JSON,
+    notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (vendor_id) REFERENCES vendors(id)
 );

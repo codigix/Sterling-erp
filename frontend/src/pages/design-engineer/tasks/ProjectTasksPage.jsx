@@ -42,7 +42,7 @@ const ProjectTasksPage = () => {
 
   const fetchRoleId = async () => {
     try {
-      const response = await axios.get('/api/department/portal/role/design_engineer');
+      const response = await axios.get('/department/portal/role/design_engineer');
       setRoleId(response.data.roleId);
     } catch (err) {
       console.warn('Design Engineer role not found, using default role ID');
@@ -53,7 +53,7 @@ const ProjectTasksPage = () => {
   const fetchProjects = async () => {
     setLoading(true);
     try {
-      const response = await axios.get('/api/sales/orders', {
+      const response = await axios.get('/sales/orders', {
         params: { includeSteps: true }
       });
       const data = response.data.orders || [];
@@ -73,7 +73,7 @@ const ProjectTasksPage = () => {
   const fetchTasksForProject = async (salesOrder) => {
     try {
       if (!roleId) return;
-      const response = await axios.get(`/api/department/portal/tasks/${roleId}`);
+      const response = await axios.get(`/department/portal/tasks/${roleId}`);
       const filtered = response.data.filter(t => t.salesOrder?.id === salesOrder.id);
       console.log('Fetched tasks:', response.data.length, 'Filtered for sales order:', salesOrder.id, 'Result:', filtered.length);
       setTasks(filtered);
@@ -102,7 +102,7 @@ const ProjectTasksPage = () => {
         rootCardId: null // Let backend resolve root card from sales order
       };
 
-      const response = await axios.post('/api/department/portal/tasks', payload);
+      const response = await axios.post('/department/portal/tasks', payload);
 
       if (response.status === 201) {
         setShowCreateModal(false);
@@ -142,7 +142,7 @@ const ProjectTasksPage = () => {
 
     try {
       const deletePromises = tasks.map(task =>
-        axios.delete(`/api/department/portal/tasks/${task.id}`)
+        axios.delete(`/department/portal/tasks/${task.id}`)
       );
       await Promise.all(deletePromises);
       alert(`Successfully deleted all ${tasks.length} tasks`);
@@ -161,7 +161,7 @@ const ProjectTasksPage = () => {
 
     setIsCreatingWorkflow(true);
     try {
-      const response = await axios.post(`/api/production/root-cards/${selectedProject.id}/workflow-tasks`);
+      const response = await axios.post(`/production/root-cards/${selectedProject.id}/workflow-tasks`);
       if (response.status === 201) {
         alert(`Successfully created ${response.data.totalCreated} workflow-based design tasks across ${response.data.workflowSteps} process steps!`);
         await fetchTasksForProject(selectedProject);

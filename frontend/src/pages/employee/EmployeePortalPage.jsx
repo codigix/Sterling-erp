@@ -31,7 +31,7 @@ const EmployeePortalPage = () => {
   const fetchEmployeeTasks = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`/api/production/stage-tasks/employee/${employeeId}`, {
+      const response = await axios.get(`/production/stage-tasks/employee/${employeeId}`, {
         params: {
           status: filterStatus !== 'all' ? filterStatus : undefined,
           dateFilter: filterDate !== 'all' ? filterDate : undefined
@@ -49,7 +49,7 @@ const EmployeePortalPage = () => {
 
   const fetchEmployeeStats = async () => {
     try {
-      const response = await axios.get(`/api/production/stage-tasks/employee/${employeeId}/stats`);
+      const response = await axios.get(`/production/stage-tasks/employee/${employeeId}/stats`);
       setStats(response.data);
     } catch (err) {
       console.error('Failed to fetch stats:', err);
@@ -58,12 +58,12 @@ const EmployeePortalPage = () => {
 
   const fetchAlerts = async () => {
     try {
-      const response = await axios.get(`/api/alerts/user/${employeeId}`, {
+      const response = await axios.get(`/alerts/user/${employeeId}`, {
         params: { limit: 10 }
       });
       setAlerts(response.data);
 
-      const unreadResponse = await axios.get(`/api/alerts/user/${employeeId}/unread-count`);
+      const unreadResponse = await axios.get(`/alerts/user/${employeeId}/unread-count`);
       setUnreadAlerts(unreadResponse.data.unreadCount);
     } catch (err) {
       console.error('Failed to fetch alerts:', err);
@@ -77,7 +77,7 @@ const EmployeePortalPage = () => {
         cancelReason: status === 'cancel' ? cancelReason : undefined
       };
 
-      await axios.patch(`/api/production/stage-tasks/${taskId}/status`, payload);
+      await axios.patch(`/production/stage-tasks/${taskId}/status`, payload);
 
       setTasks(tasks.map(t => t.id === taskId ? { ...t, status } : t));
       setShowModal(false);

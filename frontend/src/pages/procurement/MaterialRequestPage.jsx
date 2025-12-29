@@ -48,7 +48,7 @@ const MaterialRequestPage = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get('/api/procurement/material-requests', { __sessionGuard: true });
+      const response = await axios.get('/procurement/material-requests', { __sessionGuard: true });
       setMaterialRequests(response.data.materialRequests || []);
       setStats(response.data.stats || {});
     } catch (err) {
@@ -106,7 +106,7 @@ const MaterialRequestPage = () => {
 
     try {
       await axios.post(
-        '/api/procurement/material-requests',
+        '/procurement/material-requests',
         {
           salesOrderId: Number(formData.salesOrderId),
           materialName: formData.materialName.trim(),
@@ -149,7 +149,7 @@ const MaterialRequestPage = () => {
 
     try {
       await axios.post(
-        `/api/procurement/material-requests/${requestId}/vendors`,
+        `/procurement/material-requests/${requestId}/vendors`,
         {
           vendorId: Number(vendorData.vendorId),
           quotedPrice: vendorData.quotedPrice ? Number(vendorData.quotedPrice) : null,
@@ -175,7 +175,7 @@ const MaterialRequestPage = () => {
   const handleDeleteRequest = async (id) => {
     if (window.confirm('Are you sure you want to delete this material request?')) {
       try {
-        await axios.delete(`/api/procurement/material-requests/${id}`, { __sessionGuard: true });
+        await axios.delete(`/procurement/material-requests/${id}`, { __sessionGuard: true });
         fetchMaterialRequests();
       } catch (err) {
         setError(err.response?.data?.message || 'Failed to delete material request');

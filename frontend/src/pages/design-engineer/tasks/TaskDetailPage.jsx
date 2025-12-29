@@ -23,7 +23,7 @@ const TaskDetailPage = () => {
 
   const redirectToTaskPage = async () => {
     try {
-      const response = await axios.get(`/api/department/portal/tasks/detail/${taskId}`);
+      const response = await axios.get(`/department/portal/tasks/detail/${taskId}`);
       const task = response.data;
       
       let redirectPath = '/design-engineer/tasks/projects';

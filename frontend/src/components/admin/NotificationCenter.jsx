@@ -15,7 +15,7 @@ const NotificationCenter = ({ onClose }) => {
 
   const fetchNotifications = async () => {
     try {
-      const response = await axios.get('/api/notifications', {
+      const response = await axios.get('/notifications', {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       setNotifications(response.data.notifications);
@@ -31,7 +31,7 @@ const NotificationCenter = ({ onClose }) => {
 
   const markAsRead = async (notificationId) => {
     try {
-      await axios.patch(`/api/notifications/${notificationId}/read`,
+      await axios.patch(`/notifications/${notificationId}/read`,
         {},
         { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
       );
@@ -43,7 +43,7 @@ const NotificationCenter = ({ onClose }) => {
 
   const markAllAsRead = async () => {
     try {
-      await axios.patch('/api/notifications/mark-all/read',
+      await axios.patch('/notifications/mark-all/read',
         {},
         { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
       );
@@ -55,7 +55,7 @@ const NotificationCenter = ({ onClose }) => {
 
   const deleteNotification = async (notificationId) => {
     try {
-      await axios.delete(`/api/notifications/${notificationId}`,
+      await axios.delete(`/notifications/${notificationId}`,
         { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
       );
       fetchNotifications();

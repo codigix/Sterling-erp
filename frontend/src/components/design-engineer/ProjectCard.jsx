@@ -94,7 +94,7 @@ const ProjectCard = ({ project, tasks, onStartDesigning, onTaskStatusChange, isC
   const handleTaskStatusUpdate = async (taskId, newStatus) => {
     setUpdatingTaskId(taskId);
     try {
-      await axios.patch(`/api/department/portal/tasks/${taskId}`, { status: newStatus });
+      await axios.patch(`/department/portal/tasks/${taskId}`, { status: newStatus });
       if (onTaskStatusChange) {
         onTaskStatusChange(taskId, newStatus);
       }

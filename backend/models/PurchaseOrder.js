@@ -2,7 +2,15 @@ const pool = require('../config/database');
 
 class PurchaseOrder {
   static async findAll(filters = {}) {
-    let query = 'SELECT po.*, q.vendor_id FROM purchase_orders po LEFT JOIN quotations q ON po.quotation_id = q.id WHERE 1=1';
+    let query = `
+      SELECT po.*, q.vendor_id, v.name as vendor_name, v.email as vendor_email,
+      (SELECT COUNT(*) FROM purchase_order_communications poc WHERE poc.po_id = po.id) as communication_count,
+      (SELECT COUNT(*) FROM purchase_order_communications poc WHERE poc.po_id = po.id AND poc.is_read = FALSE) as unread_communication_count
+      FROM purchase_orders po 
+      LEFT JOIN quotations q ON po.quotation_id = q.id 
+      LEFT JOIN vendors v ON q.vendor_id = v.id 
+      WHERE 1=1
+    `;
     const params = [];
 
     if (filters.status) {
@@ -23,7 +31,7 @@ class PurchaseOrder {
 
   static async findById(id) {
     const [rows] = await pool.execute(
-      `SELECT po.*, q.vendor_id, q.pr_id, v.name as vendor_name
+      `SELECT po.*, q.vendor_id, v.name as vendor_name, v.email as vendor_email
        FROM purchase_orders po
        LEFT JOIN quotations q ON po.quotation_id = q.id
        LEFT JOIN vendors v ON q.vendor_id = v.id
@@ -33,11 +41,35 @@ class PurchaseOrder {
     return rows[0];
   }
 
-  static async create(quotationId, items) {
+  static async findByPoNumber(poNumber) {
+    const [rows] = await pool.execute(
+      `SELECT po.*, q.vendor_id, v.name as vendor_name, v.email as vendor_email
+       FROM purchase_orders po
+       LEFT JOIN quotations q ON po.quotation_id = q.id
+       LEFT JOIN vendors v ON q.vendor_id = v.id
+       WHERE po.po_number = ?`,
+      [poNumber]
+    );
+    return rows[0];
+  }
+
+  static async create(data) {
+    const poNumber = `PO-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    
     const [result] = await pool.execute(
-      `INSERT INTO purchase_orders (quotation_id, items, status)
-       VALUES (?, ?, ?)`,
-      [quotationId, JSON.stringify(items), 'pending']
+      `INSERT INTO purchase_orders (
+        po_number, quotation_id, vendor_id, items, total_amount, expected_delivery_date, notes, status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        poNumber,
+        data.quotation_id,
+        data.vendor_id || null,
+        JSON.stringify(data.items || []),
+        data.total_amount || 0,
+        data.expected_delivery_date || null,
+        data.notes || null,
+        data.status || 'pending'
+      ]
     );
     return result.insertId;
   }
@@ -55,7 +87,7 @@ class PurchaseOrder {
 
   static async getByVendor(vendorId) {
     const [rows] = await pool.execute(
-      `SELECT po.*, q.vendor_id, v.name as vendor_name
+      `SELECT po.*, q.vendor_id, v.name as vendor_name, v.email as vendor_email
        FROM purchase_orders po
        LEFT JOIN quotations q ON po.quotation_id = q.id
        LEFT JOIN vendors v ON q.vendor_id = v.id
@@ -76,6 +108,29 @@ class PurchaseOrder {
        FROM purchase_orders`
     );
     return rows[0];
+  }
+
+  static async getReceivedQuotes(filters = {}) {
+    let query = `SELECT q.*, v.name as vendor_name 
+                 FROM quotations q 
+                 LEFT JOIN vendors v ON q.vendor_id = v.id 
+                 WHERE q.type = 'inbound'`;
+    const params = [];
+
+    if (filters.sales_order_id) {
+      query += ' AND q.sales_order_id = ?';
+      params.push(filters.sales_order_id);
+    }
+
+    if (filters.project_id) {
+      query += ' AND q.sales_order_id = ?';
+      params.push(filters.project_id);
+    }
+
+    query += ' ORDER BY q.created_at DESC';
+
+    const [rows] = await pool.execute(query, params);
+    return rows || [];
   }
 }
 

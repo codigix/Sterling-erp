@@ -6,6 +6,7 @@ const draftController = require('../../controllers/sales/draftController');
 const employeeController = require('../../controllers/admin/employeeController');
 const systemConfigController = require('../../controllers/admin/systemConfigController');
 const salesOrderWorkflowRoutes = require('./salesOrderWorkflowRoutes');
+const materialRequirementsRoutes = require('./materialRequirementsRoutes');
 
 const router = express.Router();
 
@@ -33,8 +34,10 @@ router.put('/drafts/:id', draftController.updateDraft);
 router.delete('/drafts/:id', draftController.deleteDraft);
 
 router.post('/orders/:salesOrderId/design-details', salesController.saveDesignDetails);
+router.post('/orders/:salesOrderId/send-to-inventory', salesController.sendToInventory);
 router.get('/orders/:salesOrderId/design-details', salesController.getDesignDetails);
 
 router.use('/workflow', salesOrderWorkflowRoutes);
+router.use('/requirements', materialRequirementsRoutes);
 
 module.exports = router;

@@ -35,7 +35,7 @@ const ProductionPlanDetail = ({ rootCard, onRefresh }) => {
   const fetchStages = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`/api/production/manufacturing-stages/${rootCard.id}`);
+      const response = await axios.get(`/production/manufacturing-stages/${rootCard.id}`);
       setStages(response.data.stages || []);
     } catch (error) {
       console.error('Failed to fetch stages:', error);
@@ -58,7 +58,7 @@ const ProductionPlanDetail = ({ rootCard, onRefresh }) => {
     }
 
     try {
-      await axios.post('/api/production/manufacturing-stages', {
+      await axios.post('/production/manufacturing-stages', {
         rootCardId: rootCard.id,
         ...newStageData
       });
@@ -73,7 +73,7 @@ const ProductionPlanDetail = ({ rootCard, onRefresh }) => {
 
   const handleUpdateStageStatus = async (stageId, newStatus) => {
     try {
-      await axios.patch(`/api/production/manufacturing-stages/${stageId}/status`, {
+      await axios.patch(`/production/manufacturing-stages/${stageId}/status`, {
         status: newStatus
       });
       fetchStages();

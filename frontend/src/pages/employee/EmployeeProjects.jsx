@@ -16,7 +16,7 @@ const EmployeeProjects = () => {
       try {
         setLoading(true);
         if (user?.id) {
-          const response = await axios.get(`/api/employee/portal/projects/${user.id}`);
+          const response = await axios.get(`/employee/portal/projects/${user.id}`);
           setProjects(response.data || []);
         }
       } catch (err) {

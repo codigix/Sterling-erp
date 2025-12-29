@@ -32,7 +32,7 @@ const DrawingsPage = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.get('/api/production/drawings');
+      const response = await axios.get('/production/drawings');
       setDrawings(response.data.drawings || []);
     } catch (err) {
       console.error('Failed to fetch drawings:', err);
@@ -44,7 +44,7 @@ const DrawingsPage = () => {
 
   const fetchDesigns = async () => {
     try {
-      const response = await axios.get('/api/production/root-cards');
+      const response = await axios.get('/production/root-cards');
       const rootCards = response.data.rootCards || [];
       const designsList = rootCards.map(card => ({
         id: card.id,
@@ -86,7 +86,7 @@ const DrawingsPage = () => {
       formData.append('remarks', uploadFormData.remarks);
       formData.append('file', uploadFormData.file);
 
-      const response = await axios.post('/api/production/drawings', formData, {
+      const response = await axios.post('/production/drawings', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 

@@ -40,7 +40,7 @@ const ProductionPlanFormPage = () => {
 
   const fetchProjects = async () => {
     try {
-      const response = await axios.get('/api/sales');
+      const response = await axios.get('/sales');
       setProjects(response.data);
     } catch (err) {
       console.error('Failed to fetch projects:', err);
@@ -49,7 +49,7 @@ const ProductionPlanFormPage = () => {
 
   const fetchEmployees = async () => {
     try {
-      const response = await axios.get('/api/admin/users');
+      const response = await axios.get('/admin/users');
       setEmployees(response.data);
     } catch (err) {
       console.error('Failed to fetch employees:', err);
@@ -58,7 +58,7 @@ const ProductionPlanFormPage = () => {
 
   const fetchFacilities = async () => {
     try {
-      const response = await axios.get('/api/inventory/facilities/available');
+      const response = await axios.get('/inventory/facilities/available');
       setFacilities(response.data);
     } catch (err) {
       console.error('Failed to fetch facilities:', err);
@@ -137,7 +137,7 @@ const ProductionPlanFormPage = () => {
     setSuccess('');
 
     try {
-      await axios.post('/api/production/plans', {
+      await axios.post('/production/plans', {
         projectId: formData.projectId,
         planName: formData.planName,
         startDate: formData.startDate,

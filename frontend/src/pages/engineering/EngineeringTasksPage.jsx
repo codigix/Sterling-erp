@@ -31,7 +31,7 @@ const EngineeringTasksPage = () => {
   const fetchSalesOrders = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await axios.get('/api/sales/orders', { __sessionGuard: true });
+      const response = await axios.get('/sales/orders', { __sessionGuard: true });
       setSalesOrders(response.data.orders || []);
       if (response.data.orders && response.data.orders.length > 0) {
         setSelectedSalesOrder(response.data.orders[0].id);
@@ -46,7 +46,7 @@ const EngineeringTasksPage = () => {
   const fetchDocuments = useCallback(async () => {
     if (!selectedSalesOrder) return;
     try {
-      const response = await axios.get('/api/engineering/documents', {
+      const response = await axios.get('/engineering/documents', {
         params: { salesOrderId: selectedSalesOrder },
         __sessionGuard: true
       });
@@ -59,7 +59,7 @@ const EngineeringTasksPage = () => {
   const fetchBOMs = useCallback(async () => {
     if (!selectedSalesOrder) return;
     try {
-      const response = await axios.get('/api/engineering/bom', {
+      const response = await axios.get('/engineering/bom', {
         params: { salesOrderId: selectedSalesOrder },
         __sessionGuard: true
       });
@@ -101,7 +101,7 @@ const EngineeringTasksPage = () => {
     formData.append('document', uploadForm.file);
 
     try {
-      await axios.post('/api/engineering/documents/upload', formData, {
+      await axios.post('/engineering/documents/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         __sessionGuard: true
       });
@@ -145,7 +145,7 @@ const EngineeringTasksPage = () => {
     }
 
     try {
-      await axios.post('/api/engineering/bom/generate', {
+      await axios.post('/engineering/bom/generate', {
         salesOrderId: selectedSalesOrder,
         bomName: bomForm.bomName,
         description: bomForm.description,

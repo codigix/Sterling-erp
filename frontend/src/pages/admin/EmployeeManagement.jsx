@@ -106,7 +106,7 @@ const EmployeeManagement = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.get("/api/employees");
+      const response = await axios.get("/employees");
       setEmployees(response.data || []);
     } catch (err) {
       console.error("API Error:", err);
@@ -171,9 +171,9 @@ const EmployeeManagement = () => {
       };
 
       if (editingEmployee) {
-        await axios.put(`/api/employees/${editingEmployee.id}`, data);
+        await axios.put(`/employees/${editingEmployee.id}`, data);
       } else {
-        const response = await axios.post("/api/employees", data);
+        const response = await axios.post("/employees", data);
         setSelectedCredentials({
           name: `${formData.firstName} ${formData.lastName}`,
           loginId: autoLoginId,
@@ -221,7 +221,7 @@ const EmployeeManagement = () => {
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this employee?")) {
       try {
-        await axios.delete(`/api/employees/${id}`);
+        await axios.delete(`/employees/${id}`);
         await fetchEmployees();
       } catch (err) {
         setError("Failed to delete employee");
@@ -240,7 +240,7 @@ const EmployeeManagement = () => {
 
   const sendRegistrationEmail = async () => {
     try {
-      await axios.post(`/api/employees/${registeringEmployee.id}/send-credentials`, {
+      await axios.post(`/employees/${registeringEmployee.id}/send-credentials`, {
         email: registeringEmployee.email,
         loginId: registeringEmployee.loginId,
         password: registeringEmployee.password,

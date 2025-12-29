@@ -760,6 +760,183 @@ async function runMigrations() {
       console.log('⚠️  Could not backfill sales_order_id (might already be populated)');
     }
 
+    try {
+      const vendorColumns = await connection.query(`
+        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_NAME='vendors' AND TABLE_SCHEMA='sterling_erp'
+      `);
+      
+      const columnNames = vendorColumns[0].map(col => col.COLUMN_NAME);
+
+      if (!columnNames.includes('email')) {
+        await connection.execute(`ALTER TABLE vendors ADD COLUMN email VARCHAR(100)`);
+      }
+      if (!columnNames.includes('phone')) {
+        await connection.execute(`ALTER TABLE vendors ADD COLUMN phone VARCHAR(20)`);
+      }
+      if (!columnNames.includes('address')) {
+        await connection.execute(`ALTER TABLE vendors ADD COLUMN address VARCHAR(500)`);
+      }
+      if (!columnNames.includes('category')) {
+        await connection.execute(`ALTER TABLE vendors ADD COLUMN category VARCHAR(100)`);
+      }
+      if (!columnNames.includes('rating')) {
+        await connection.execute(`ALTER TABLE vendors ADD COLUMN rating DECIMAL(3,2) DEFAULT 0.00`);
+      }
+      if (!columnNames.includes('status')) {
+        await connection.execute(`ALTER TABLE vendors ADD COLUMN status ENUM('active', 'inactive') DEFAULT 'active'`);
+      }
+      if (!columnNames.includes('total_orders')) {
+        await connection.execute(`ALTER TABLE vendors ADD COLUMN total_orders INT DEFAULT 0`);
+      }
+      if (!columnNames.includes('total_value')) {
+        await connection.execute(`ALTER TABLE vendors ADD COLUMN total_value DECIMAL(15,2) DEFAULT 0.00`);
+      }
+      if (!columnNames.includes('last_order_date')) {
+        await connection.execute(`ALTER TABLE vendors ADD COLUMN last_order_date DATE`);
+      }
+      if (!columnNames.includes('updated_at')) {
+        await connection.execute(`ALTER TABLE vendors ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`);
+      }
+      if (!columnNames.includes('vendor_type')) {
+        await connection.execute(`ALTER TABLE vendors ADD COLUMN vendor_type ENUM('material_supplier', 'manufacturer', 'outsourcing_partner') DEFAULT 'material_supplier'`);
+      } else {
+        try {
+          // Temporarily allow any string to facilitate mapping
+          await connection.execute(`ALTER TABLE vendors MODIFY COLUMN vendor_type VARCHAR(50)`);
+          
+          // Map old values to new ones
+          await connection.execute(`UPDATE vendors SET vendor_type = 'material_supplier' WHERE vendor_type = 'supplier'`);
+          await connection.execute(`UPDATE vendors SET vendor_type = 'outsourcing_partner' WHERE vendor_type = 'service_provider'`);
+          await connection.execute(`UPDATE vendors SET vendor_type = 'material_supplier' WHERE vendor_type NOT IN ('material_supplier', 'manufacturer', 'outsourcing_partner')`);
+          
+          // Apply strict ENUM definition
+          await connection.execute(`ALTER TABLE vendors MODIFY COLUMN vendor_type ENUM('material_supplier', 'manufacturer', 'outsourcing_partner') DEFAULT 'material_supplier'`);
+          console.log('✅ Updated vendor_type column definition');
+        } catch (err) {
+          console.log('⚠️  Could not update vendor_type column definition:', err.message);
+        }
+      }
+      
+      console.log('✅ Vendors table columns verified/updated');
+    } catch (err) {
+      console.log('⚠️  Vendors table column update:', err.message);
+    }
+
+    try {
+      await connection.execute(`
+        CREATE TABLE IF NOT EXISTS quotations (
+          id INT PRIMARY KEY AUTO_INCREMENT,
+          vendor_id INT NOT NULL,
+          quotation_number VARCHAR(100) UNIQUE NOT NULL,
+          total_amount DECIMAL(15,2) DEFAULT 0.00,
+          valid_until DATE,
+          status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+          items JSON,
+          notes TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (vendor_id) REFERENCES vendors(id)
+        )
+      `);
+      console.log('✅ Quotations table created/verified');
+    } catch (err) {
+      if (err.code !== 'ER_TABLE_EXISTS_ERROR') throw err;
+      console.log('⚠️  Quotations table already exists');
+    }
+
+    try {
+      const quotationColumns = await connection.query(`
+        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_NAME='quotations' AND TABLE_SCHEMA='sterling_erp'
+      `);
+      
+      const columnNames = quotationColumns[0].map(col => col.COLUMN_NAME);
+
+      if (!columnNames.includes('quotation_number')) {
+        await connection.execute(`ALTER TABLE quotations ADD COLUMN quotation_number VARCHAR(100) UNIQUE`);
+      }
+      if (!columnNames.includes('total_amount')) {
+        await connection.execute(`ALTER TABLE quotations ADD COLUMN total_amount DECIMAL(15,2) DEFAULT 0.00`);
+      }
+      if (!columnNames.includes('valid_until')) {
+        await connection.execute(`ALTER TABLE quotations ADD COLUMN valid_until DATE`);
+      }
+      if (!columnNames.includes('notes')) {
+        await connection.execute(`ALTER TABLE quotations ADD COLUMN notes TEXT`);
+      }
+      if (!columnNames.includes('type')) {
+        await connection.execute(`ALTER TABLE quotations ADD COLUMN type ENUM('inbound', 'outbound') DEFAULT 'outbound'`);
+      }
+      if (!columnNames.includes('sales_order_id')) {
+        await connection.execute(`ALTER TABLE quotations ADD COLUMN sales_order_id INT NULL`);
+      }
+      if (!columnNames.includes('reference_id')) {
+        await connection.execute(`ALTER TABLE quotations ADD COLUMN reference_id INT NULL`);
+      }
+      
+      if (columnNames.includes('pr_id')) {
+        await connection.execute(`ALTER TABLE quotations DROP COLUMN pr_id`);
+        console.log('✅ Removed pr_id column from quotations table');
+      }
+      
+      console.log('✅ Quotations table columns verified/updated');
+    } catch (err) {
+      console.log('⚠️  Quotations table column update:', err.message);
+    }
+
+    // Migration: Create drawings table
+    try {
+      await connection.execute(`
+        CREATE TABLE IF NOT EXISTS drawings (
+          id INT PRIMARY KEY AUTO_INCREMENT,
+          root_card_id INT NOT NULL,
+          name VARCHAR(255) NOT NULL,
+          drawing_number VARCHAR(100),
+          type ENUM('2D', '3D') DEFAULT '2D',
+          version VARCHAR(50) DEFAULT 'V1.0',
+          status ENUM('Draft', 'Final') DEFAULT 'Draft',
+          remarks TEXT,
+          file_path VARCHAR(500) NOT NULL,
+          format VARCHAR(50),
+          size VARCHAR(50),
+          uploaded_by INT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          FOREIGN KEY (root_card_id) REFERENCES root_cards(id) ON DELETE CASCADE,
+          FOREIGN KEY (uploaded_by) REFERENCES users(id)
+        )
+      `);
+      console.log('✅ Drawings table created/verified');
+    } catch (err) {
+      if (err.code !== 'ER_TABLE_EXISTS_ERROR') throw err;
+      console.log('⚠️  Drawings table already exists');
+    }
+
+    // Migration: Create purchase_orders table
+    try {
+      await connection.execute(`
+        CREATE TABLE IF NOT EXISTS purchase_orders (
+          id INT PRIMARY KEY AUTO_INCREMENT,
+          po_number VARCHAR(50) UNIQUE NOT NULL,
+          quotation_id INT NOT NULL,
+          vendor_id INT NULL,
+          items JSON NOT NULL,
+          total_amount DECIMAL(15, 2) DEFAULT 0,
+          expected_delivery_date DATE NULL,
+          notes TEXT NULL,
+          status ENUM('pending', 'approved', 'delivered') DEFAULT 'pending',
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          FOREIGN KEY (quotation_id) REFERENCES quotations(id) ON DELETE CASCADE,
+          FOREIGN KEY (vendor_id) REFERENCES vendors(id) ON DELETE SET NULL
+        )
+      `);
+      console.log('✅ purchase_orders table created/verified');
+    } catch (err) {
+      if (err.code !== 'ER_TABLE_EXISTS_ERROR') throw err;
+      console.log('⚠️  purchase_orders table already exists');
+    }
+
     console.log('\n✅ All migrations completed successfully!');
   } catch (error) {
     console.error('❌ Migration failed:', error.message);

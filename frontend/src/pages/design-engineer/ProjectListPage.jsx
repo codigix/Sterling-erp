@@ -21,7 +21,7 @@ const ProjectListPage = () => {
   const fetchProjects = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/api/design/projects');
+      const response = await axios.get('/design/projects');
       const projectsData = Array.isArray(response.data) ? response.data : (response.data?.projects || []);
       const mapped = projectsData.map(project => ({
         id: project.id,
@@ -64,7 +64,7 @@ const ProjectListPage = () => {
   const handleDeleteProject = async (projectId) => {
     try {
       setDeleting(true);
-      await axios.delete(`/api/design/projects/${projectId}`);
+      await axios.delete(`/design/projects/${projectId}`);
       setProjects(projects.filter(p => p.id !== projectId));
       setDeleteConfirm(null);
       alert('Project deleted successfully');

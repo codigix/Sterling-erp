@@ -95,7 +95,7 @@ const CreateProjectPage = () => {
       let rootCard = null;
       
       try {
-        const response = await axios.get(`/api/production/root-cards?salesOrderId=${salesOrderId}`);
+        const response = await axios.get(`/production/root-cards?salesOrderId=${salesOrderId}`);
         if (Array.isArray(response.data)) {
           rootCard = response.data[0];
         } else {
@@ -152,7 +152,7 @@ const CreateProjectPage = () => {
       let rootCard = null;
       
       try {
-        const response = await axios.get(`/api/production/root-cards/${orderId}`);
+        const response = await axios.get(`/production/root-cards/${orderId}`);
         rootCard = response.data;
       } catch (err) {
         console.log('Root card not found by orderId');
@@ -236,7 +236,7 @@ const CreateProjectPage = () => {
 
       setSaving(true);
 
-      const response = await axios.post(`/api/design/projects`, {
+      const response = await axios.post(`/design/projects`, {
         projectName: projectData.projectName,
         projectCode: projectData.projectCode || "",
         designId: projectData.designId || "",
@@ -270,7 +270,7 @@ const CreateProjectPage = () => {
       
       if (taskId) {
         try {
-          await axios.patch(`/api/department/portal/tasks/${taskId}`, { status: 'completed' });
+          await axios.patch(`/department/portal/tasks/${taskId}`, { status: 'completed' });
         } catch (err) {
           console.error('Error completing task:', err);
         }

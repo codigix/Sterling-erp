@@ -3,6 +3,8 @@ const SalesOrder = require('../../models/SalesOrder');
 const EmployeeTask = require('../../models/EmployeeTask');
 const Project = require('../../models/Project');
 const RootCard = require('../../models/RootCard');
+const Material = require('../../models/Material');
+const MaterialRequirementsDetail = require('../../models/MaterialRequirementsDetail');
 const { assignTasksFromRootCard } = require('../../utils/taskAssignmentHelper');
 
 exports.getAssignedOrders = async (req, res) => {
@@ -353,7 +355,7 @@ exports.saveDesignDetails = async (req, res) => {
 
     const [result] = await pool.execute(
       'UPDATE sales_orders SET design_details = ? WHERE id = ?',
-      [designDetails, salesOrderId]
+      [JSON.stringify(designDetails), salesOrderId]
     );
 
     if (result.affectedRows === 0) {
@@ -368,6 +370,143 @@ exports.saveDesignDetails = async (req, res) => {
     console.error('Save design details error:', error);
     res.status(500).json({ 
       message: 'Failed to save design details',
+      error: error.message 
+    });
+  }
+};
+
+exports.sendToInventory = async (req, res) => {
+  try {
+    const { salesOrderId } = req.params;
+    
+    if (!salesOrderId) {
+      return res.status(400).json({ message: 'Sales order ID is required' });
+    }
+
+    // 1. Fetch Sales Order with Design Details
+    const [rows] = await pool.execute(
+      'SELECT design_details, project_name FROM sales_orders WHERE id = ?',
+      [salesOrderId]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'Sales order not found' });
+    }
+
+    const designDetails = rows[0].design_details;
+    const projectName = rows[0].project_name;
+
+    if (!designDetails) {
+      return res.status(400).json({ message: 'No design details found for this project' });
+    }
+
+    // 2. Extract Materials
+    const categories = {
+      steelSections: 'Steel Section',
+      plates: 'Plate',
+      fasteners: 'Fastener',
+      components: 'Component',
+      electrical: 'Electrical',
+      consumables: 'Consumable'
+    };
+
+    const requirements = [];
+    const addedToMaster = [];
+
+    // Parse design details if string
+    const details = typeof designDetails === 'string' ? JSON.parse(designDetails) : designDetails;
+
+    for (const [field, category] of Object.entries(categories)) {
+      const items = details[field];
+      if (Array.isArray(items)) {
+        for (const rawItemName of items) {
+          if (!rawItemName || typeof rawItemName !== 'string' || rawItemName.trim() === '') continue;
+          const itemName = rawItemName.trim();
+
+          // Check/Create Master Material
+          let material = await Material.findByName(itemName);
+          if (!material) {
+            const itemCode = `MAT-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+            const newId = await Material.create({
+              itemCode,
+              itemName,
+              category,
+              quantity: 0,
+              unit: 'Nos',
+              reorderLevel: 10,
+              location: 'Main Store',
+              vendorId: null,
+              unitCost: 0,
+              batch: '',
+              specification: projectName
+            });
+            material = await Material.findById(newId);
+            addedToMaster.push(itemName);
+          }
+
+          // Add to Requirements List
+          requirements.push({
+            id: Date.now() + Math.random(),
+            itemCode: material.item_code || material.itemCode || 'N/A',
+            itemName: material.item_name || material.itemName || itemName,
+            category: material.category,
+            requiredQuantity: 0, // Default to 0 as we don't have qty from Design
+            currentStock: material.quantity || 0,
+            status: 'pending',
+            notes: 'Auto-generated from Design'
+          });
+        }
+      }
+    }
+
+    // 3. Create/Update Material Requirements Detail
+    // Force clean rebuild of requirements to fix "Unnamed Material" issues
+    const existingReq = await MaterialRequirementsDetail.findBySalesOrderId(salesOrderId);
+    
+    // Instead of complex merging that might preserve bad data, we will:
+    // 1. Keep track of manually entered quantities from existing records
+    // 2. Rebuild the list based on current Design Details
+    // 3. Re-apply the quantities where names match
+
+    const quantityMap = new Map();
+    if (existingReq && existingReq.materials) {
+      existingReq.materials.forEach(m => {
+        if (m.itemName && m.requiredQuantity) {
+          quantityMap.set(m.itemName, m.requiredQuantity);
+        }
+      });
+    }
+
+    // Apply saved quantities to the freshly generated requirements
+    const finalRequirements = requirements.map(req => ({
+      ...req,
+      requiredQuantity: quantityMap.get(req.itemName) || 0
+    }));
+
+    if (existingReq) {
+      await MaterialRequirementsDetail.update(salesOrderId, {
+        materials: finalRequirements,
+        procurementStatus: existingReq.procurementStatus
+      });
+    } else {
+      await MaterialRequirementsDetail.create({
+        salesOrderId,
+        materials: finalRequirements,
+        procurementStatus: 'pending',
+        notes: `Generated from Design Project: ${projectName}`
+      });
+    }
+
+    res.json({ 
+      message: 'Sent to inventory successfully',
+      addedToMasterCount: addedToMaster.length,
+      requirementsCount: requirements.length
+    });
+
+  } catch (error) {
+    console.error('Send to Inventory error:', error);
+    res.status(500).json({ 
+      message: 'Failed to send to inventory',
       error: error.message 
     });
   }

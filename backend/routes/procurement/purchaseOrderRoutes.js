@@ -6,11 +6,15 @@ const purchaseOrderController = require('../../controllers/procurement/purchaseO
 
 router.use(authMiddleware);
 
+router.get('/quotes/received', roleMiddleware('Admin', 'Procurement Manager'), purchaseOrderController.getReceivedQuotes);
 router.get('/', roleMiddleware('Admin', 'Procurement Manager'), purchaseOrderController.getPurchaseOrders);
 router.post('/', roleMiddleware('Admin', 'Procurement Manager'), purchaseOrderController.createPurchaseOrder);
-router.get('/:id', roleMiddleware('Admin', 'Procurement Manager'), purchaseOrderController.getPurchaseOrderById);
-router.patch('/:id/status', roleMiddleware('Admin', 'Procurement Manager'), purchaseOrderController.updatePurchaseOrderStatus);
-router.delete('/:id', roleMiddleware('Admin', 'Procurement Manager'), purchaseOrderController.deletePurchaseOrder);
 router.get('/stats/all', roleMiddleware('Admin', 'Procurement Manager'), purchaseOrderController.getPurchaseOrderStats);
+router.get('/:id', roleMiddleware('Admin', 'Procurement Manager'), purchaseOrderController.getPurchaseOrderById);
+router.get('/:id/communications', roleMiddleware('Admin', 'Procurement Manager'), purchaseOrderController.getPurchaseOrderCommunications);
+router.get('/attachments/:id/download', roleMiddleware('Admin', 'Procurement Manager'), purchaseOrderController.downloadAttachment);
+router.patch('/:id/status', roleMiddleware('Admin', 'Procurement Manager'), purchaseOrderController.updatePurchaseOrderStatus);
+router.post('/:id/email', roleMiddleware('Admin', 'Procurement Manager'), purchaseOrderController.sendPurchaseOrderEmail);
+router.delete('/:id', roleMiddleware('Admin', 'Procurement Manager'), purchaseOrderController.deletePurchaseOrder);
 
 module.exports = router;

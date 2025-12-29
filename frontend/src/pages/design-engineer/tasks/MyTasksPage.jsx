@@ -19,10 +19,10 @@ const MyTasksPage = () => {
       setLoading(true);
       setError(null);
       
-      const roleResponse = await axios.get('/api/department/portal/role/design_engineer');
+      const roleResponse = await axios.get('/department/portal/role/design_engineer');
       const roleId = roleResponse.data.roleId;
       
-      const tasksResponse = await axios.get(`/api/department/portal/tasks/${roleId}`);
+      const tasksResponse = await axios.get(`/department/portal/tasks/${roleId}`);
       const fetchedTasks = tasksResponse.data || [];
       
       const formattedTasks = fetchedTasks.map(task => ({

@@ -30,7 +30,7 @@ const ProjectTrackingDashboard = () => {
   const fetchProjects = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/api/sales');
+      const response = await axios.get('/sales');
       setProjects(response.data);
       setError('');
     } catch (err) {
@@ -43,13 +43,13 @@ const ProjectTrackingDashboard = () => {
 
   const fetchProjectDetails = async () => {
     try {
-      const milestoneRes = await axios.get(`/api/tracking/project/${selectedProject.id}/milestones`);
+      const milestoneRes = await axios.get(`/tracking/project/${selectedProject.id}/milestones`);
       setMilestones(milestoneRes.data);
 
-      const progressRes = await axios.get(`/api/tracking/project/${selectedProject.id}/progress`);
+      const progressRes = await axios.get(`/tracking/project/${selectedProject.id}/progress`);
       setProjectProgress(progressRes.data);
 
-      const teamRes = await axios.get(`/api/tracking/project/${selectedProject.id}/team`);
+      const teamRes = await axios.get(`/tracking/project/${selectedProject.id}/team`);
       setTeamMembers(teamRes.data);
     } catch (err) {
       console.error('Failed to fetch project details:', err);
@@ -58,7 +58,7 @@ const ProjectTrackingDashboard = () => {
 
   const handleAddMilestone = async () => {
     try {
-      await axios.post('/api/tracking/project-milestone', {
+      await axios.post('/tracking/project-milestone', {
         projectId: selectedProject.id,
         milestoneName: newMilestone.name,
         targetDate: newMilestone.targetDate
@@ -75,7 +75,7 @@ const ProjectTrackingDashboard = () => {
 
   const updateMilestoneStatus = async (milestoneId, status) => {
     try {
-      await axios.patch(`/api/tracking/milestone/${milestoneId}/status`, { status });
+      await axios.patch(`/tracking/milestone/${milestoneId}/status`, { status });
       await fetchProjectDetails();
     } catch (err) {
       console.error('Failed to update milestone:', err);

@@ -104,7 +104,7 @@ const ProjectDetailViewPage = () => {
 
   const fetchRoleId = async () => {
     try {
-      const response = await axios.get('/api/department/portal/role/design_engineer');
+      const response = await axios.get('/department/portal/role/design_engineer');
       setRoleId(response.data.roleId);
     } catch (err) {
       console.error('Error fetching role ID:', err);
@@ -121,20 +121,20 @@ const ProjectDetailViewPage = () => {
       let order = null;
 
       try {
-        const rootCardResponse = await axios.get(`/api/production/root-cards/${projectId}`);
+        const rootCardResponse = await axios.get(`/production/root-cards/${projectId}`);
         rootCard = rootCardResponse.data;
         console.log('Loaded root card:', rootCard);
         setSelectedRootCard(rootCard);
       } catch (err) {
         console.log('Root card not found, trying as sales order:', err.message);
         try {
-          const orderResponse = await axios.get(`/api/sales/orders/${projectId}`);
+          const orderResponse = await axios.get(`/sales/orders/${projectId}`);
           order = orderResponse.data.order || orderResponse.data;
           console.log('Loaded sales order:', order);
           setSelectedProject(order);
           
           if (order?.id) {
-            const rootCardsResponse = await axios.get(`/api/production/root-cards?salesOrderId=${order.id}`);
+            const rootCardsResponse = await axios.get(`/production/root-cards?salesOrderId=${order.id}`);
             const rootCards = Array.isArray(rootCardsResponse.data) ? rootCardsResponse.data : (rootCardsResponse.data.rootCards || rootCardsResponse.data);
             rootCard = Array.isArray(rootCards) && rootCards.length > 0 ? rootCards[0] : null;
             if (rootCard) {
@@ -160,7 +160,7 @@ const ProjectDetailViewPage = () => {
       let designDetails = null;
       if (order?.id) {
         try {
-          const designResponse = await axios.get(`/api/sales/${order.id}/client-po/project-details`);
+          const designResponse = await axios.get(`/sales/${order.id}/client-po/project-details`);
           designDetails = designResponse.data;
         } catch {
           console.log('No design details found');
@@ -171,7 +171,7 @@ const ProjectDetailViewPage = () => {
       if (rootCard?.id) {
         try {
           console.log('Fetching design details for root card:', rootCard.id);
-          const savedResponse = await axios.get(`/api/production/root-cards/${rootCard.id}/design-details`);
+          const savedResponse = await axios.get(`/production/root-cards/${rootCard.id}/design-details`);
           console.log('Design details response:', savedResponse.data);
           savedProjectDetails = savedResponse.data?.data;
           console.log('Extracted saved project details:', savedProjectDetails);
@@ -227,7 +227,7 @@ const ProjectDetailViewPage = () => {
 
       if (roleId && (rootCard?.id || order?.id)) {
         try {
-          const response = await axios.get(`/api/department/portal/tasks/${roleId}`);
+          const response = await axios.get(`/department/portal/tasks/${roleId}`);
           setTasks(response.data.filter(t => t.salesOrder?.id === order?.id || t.rootCard?.id === rootCard?.id));
         } catch (err) {
           console.error('Error fetching tasks:', err);
@@ -245,7 +245,7 @@ const ProjectDetailViewPage = () => {
 
   const handleTaskStatusUpdate = async (taskId, newStatus) => {
     try {
-      await axios.put(`/api/department/portal/tasks/${taskId}`, { status: newStatus });
+      await axios.put(`/department/portal/tasks/${taskId}`, { status: newStatus });
       setTasks(tasks.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
     } catch (error) {
       console.error('Error updating task status:', error);
@@ -300,7 +300,7 @@ const ProjectDetailViewPage = () => {
         return;
       }
 
-      await axios.post(`/api/production/root-cards/${rootCardId}/design-details`, {
+      await axios.post(`/production/root-cards/${rootCardId}/design-details`, {
         designId: projectData.designId,
         projectName: projectData.projectName,
         productName: projectData.productName,

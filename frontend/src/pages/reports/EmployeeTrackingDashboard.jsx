@@ -25,7 +25,7 @@ const EmployeeTrackingDashboard = () => {
   const fetchEmployees = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/api/admin/users');
+      const response = await axios.get('/admin/users');
       const employees = response.data.filter(u => u.role !== 'admin');
       setEmployees(employees);
       setError('');
@@ -39,10 +39,10 @@ const EmployeeTrackingDashboard = () => {
 
   const fetchEmployeeDetails = async () => {
     try {
-      const trackingRes = await axios.get(`/api/tracking/employee/${selectedEmployee.id}`);
+      const trackingRes = await axios.get(`/tracking/employee/${selectedEmployee.id}`);
       setEmployeeTracking(trackingRes.data);
 
-      const performanceRes = await axios.get(`/api/tracking/employee/${selectedEmployee.id}/performance`);
+      const performanceRes = await axios.get(`/tracking/employee/${selectedEmployee.id}/performance`);
       setPerformance(performanceRes.data);
     } catch (err) {
       console.error('Failed to fetch employee details:', err);

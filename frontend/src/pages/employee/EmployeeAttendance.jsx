@@ -26,7 +26,7 @@ const EmployeeAttendance = () => {
       try {
         setLoading(true);
         if (user?.id) {
-          const response = await axios.get(`/api/employee/portal/attendance/${user.id}`);
+          const response = await axios.get(`/employee/portal/attendance/${user.id}`);
           setAttendance(response.data.attendance || []);
           setStats(response.data.stats || {});
         }

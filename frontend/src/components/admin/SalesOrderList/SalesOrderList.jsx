@@ -43,7 +43,7 @@ const SalesOrderList = ({ onCreateNew, onViewOrder, onEditOrder, onAssignOrder, 
     const fetchOrders = async () => {
       try {
         setLoading(true);
-        const response = await axios.get('/api/sales/orders', {
+        const response = await axios.get('/sales/orders', {
           params: { includeSteps: true }
         });
         setOrders(response.data.orders || []);
@@ -66,7 +66,7 @@ const SalesOrderList = ({ onCreateNew, onViewOrder, onEditOrder, onAssignOrder, 
       return;
     }
     try {
-      await axios.delete(`/api/sales/orders/${orderId}`);
+      await axios.delete(`/sales/orders/${orderId}`);
       setOrders(orders.filter(order => order.id !== orderId));
       setSuccess('Sales order deleted successfully');
       setTimeout(() => setSuccess(null), 3000);
@@ -120,7 +120,7 @@ const SalesOrderList = ({ onCreateNew, onViewOrder, onEditOrder, onAssignOrder, 
   const handleStatusChange = async (orderId, newStatus) => {
     try {
       setUpdatingStatus(orderId);
-      const response = await axios.patch(`/api/sales/orders/${orderId}/status`, {
+      const response = await axios.patch(`/sales/orders/${orderId}/status`, {
         status: newStatus
       });
       setOrders(orders.map(order => 

@@ -77,7 +77,7 @@ export const sendAssignmentNotifications = async (salesOrderData, formData) => {
     if (assignmentNotifications.length > 0) {
       await Promise.all(
         assignmentNotifications.map(notification =>
-          axios.post('/api/notifications', notification).catch(err => {
+          axios.post('/notifications', notification).catch(err => {
             console.error('Failed to send notification:', err);
             return null;
           })
@@ -109,7 +109,7 @@ export const sendOrderCreatedNotification = async (salesOrderData, formData) => 
       }
     };
 
-    await axios.post('/api/notifications', notification);
+    await axios.post('/notifications', notification);
     return notification;
   } catch (error) {
     console.error('Error sending order created notification:', error);
@@ -119,7 +119,7 @@ export const sendOrderCreatedNotification = async (salesOrderData, formData) => 
 
 export const getNotificationsForUser = async (userId) => {
   try {
-    const response = await axios.get(`/api/notifications/user/${userId}`);
+    const response = await axios.get(`/notifications/user/${userId}`);
     return response.data;
   } catch (error) {
     console.error('Error fetching notifications:', error);
@@ -129,7 +129,7 @@ export const getNotificationsForUser = async (userId) => {
 
 export const markNotificationAsRead = async (notificationId) => {
   try {
-    await axios.patch(`/api/notifications/${notificationId}/read`);
+    await axios.patch(`/notifications/${notificationId}/read`);
   } catch (error) {
     console.error('Error marking notification as read:', error);
     throw error;
@@ -138,7 +138,7 @@ export const markNotificationAsRead = async (notificationId) => {
 
 export const deleteNotification = async (notificationId) => {
   try {
-    await axios.delete(`/api/notifications/${notificationId}`);
+    await axios.delete(`/notifications/${notificationId}`);
   } catch (error) {
     console.error('Error deleting notification:', error);
     throw error;
