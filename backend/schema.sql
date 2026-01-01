@@ -106,7 +106,7 @@ CREATE TABLE quotations (
     quotation_number VARCHAR(100) UNIQUE NOT NULL,
     total_amount DECIMAL(15,2) DEFAULT 0.00,
     valid_until DATE,
-    status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+    status ENUM('pending', 'approved', 'rejected', 'sent') DEFAULT 'pending',
     items JSON,
     notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -351,3 +351,7 @@ INSERT INTO design_workflow_steps (step_name, step_order, description, task_temp
 
 CREATE INDEX idx_design_workflow_steps_order ON design_workflow_steps(step_order);
 CREATE INDEX idx_design_workflow_steps_trigger ON design_workflow_steps(auto_create_on_trigger);
+
+-- Add columns to GRN table for received quantity and inspection status tracking
+ALTER TABLE grn ADD COLUMN received_quantity INT DEFAULT 0 AFTER items;
+ALTER TABLE grn ADD COLUMN inspection_status VARCHAR(50) DEFAULT 'pending' AFTER qc_status;

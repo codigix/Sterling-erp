@@ -55,6 +55,18 @@ class Quotation {
     return rows[0] || null;
   }
 
+  static async findByQuotationNumber(quotationNumber) {
+    const [rows] = await pool.execute(
+      `SELECT q.*, v.name as vendor_name, ref.quotation_number as reference_number
+       FROM quotations q 
+       LEFT JOIN vendors v ON q.vendor_id = v.id 
+       LEFT JOIN quotations ref ON q.reference_id = ref.id
+       WHERE q.quotation_number = ?`,
+      [quotationNumber]
+    );
+    return rows[0] || null;
+  }
+
   static async create(data) {
     const quotationNumber = `QT-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     
@@ -151,7 +163,7 @@ class Quotation {
   }
 
   static async changeStatus(id, status) {
-    const validStatuses = ['pending', 'approved', 'rejected'];
+    const validStatuses = ['pending', 'approved', 'rejected', 'sent'];
     if (!validStatuses.includes(status)) {
       throw new Error('Invalid status');
     }
@@ -160,6 +172,18 @@ class Quotation {
       'UPDATE quotations SET status = ? WHERE id = ?',
       [status, id]
     );
+  }
+
+  static async getResponses(quotationId) {
+    const [rows] = await pool.execute(
+      `SELECT q.*, v.name as vendor_name
+       FROM quotations q
+       LEFT JOIN vendors v ON q.vendor_id = v.id
+       WHERE q.reference_id = ? AND q.type = 'inbound'
+       ORDER BY q.created_at DESC`,
+      [quotationId]
+    );
+    return rows || [];
   }
 }
 

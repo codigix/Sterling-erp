@@ -10,6 +10,11 @@ class EmailService {
     // Reload env vars to ensure we have the latest
     // This helps if the service is instantiated before dotenv (though it shouldn't be)
     
+    console.log('📧 Initializing Email Service with credentials from .env');
+    console.log('EMAIL_USER:', process.env.EMAIL_USER);
+    console.log('EMAIL_HOST:', process.env.EMAIL_HOST);
+    console.log('EMAIL_PORT:', process.env.EMAIL_PORT);
+    
     this.transporter = nodemailer.createTransport({
       host: process.env.EMAIL_HOST || 'smtp.gmail.com',
       port: parseInt(process.env.EMAIL_PORT || '587'),
@@ -46,10 +51,11 @@ class EmailService {
         return { success: false, message: 'Email credentials not configured' };
       }
 
-      console.log(`Attempting to send email to: ${to}`);
+      const fromEmail = process.env.EMAIL_FROM || process.env.EMAIL_USER;
+      console.log(`📤 Attempting to send email FROM: ${fromEmail} TO: ${to}`);
 
       const info = await this.transporter.sendMail({
-        from: `"${process.env.EMAIL_FROM_NAME || 'Sterling ERP'}" <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
+        from: `"${process.env.EMAIL_FROM_NAME || 'Sterling ERP'}" <${fromEmail}>`,
         to,
         subject,
         text,
@@ -57,7 +63,7 @@ class EmailService {
         attachments
       });
 
-      console.log('✅ Email sent successfully. Message ID:', info.messageId);
+      console.log('✅ Email sent successfully from:', fromEmail, 'Message ID:', info.messageId);
       return { success: true, messageId: info.messageId };
     } catch (error) {
       console.error('❌ Error sending email:', error);

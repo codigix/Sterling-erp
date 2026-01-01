@@ -1,7 +1,18 @@
 import React from "react";
-import Card, { CardHeader, CardTitle, CardContent } from "../../../../components/ui/Card";
+import Card, {
+  CardHeader,
+  CardTitle,
+  CardContent,
+} from "../../../../components/ui/Card";
 import Badge from "../../../../components/ui/Badge";
-import { Truck, BarChart3, PieChart, Target, DollarSign, LineChart } from "lucide-react";
+import {
+  Truck,
+  BarChart3,
+  PieChart,
+  Target,
+  DollarSign,
+  LineChart,
+} from "lucide-react";
 import { Bar, Doughnut, Line } from "react-chartjs-2";
 import vendorData from "../data/vendorsData.json";
 import { getStatusColor, getQualityColor } from "../utils/colorHelpers";
@@ -19,7 +30,11 @@ const VendorsTab = () => {
                   <Truck className="w-3.5 h-3.5 text-primary-600" />
                   <span className="truncate">{vendor.name}</span>
                 </span>
-                <Badge className={`${getStatusColor(vendor.status)} text-xs px-2 py-0.5`}>
+                <Badge
+                  className={`${getStatusColor(
+                    vendor.status
+                  )} text-xs px-2 py-0.5`}
+                >
                   {vendor.status}
                 </Badge>
               </CardTitle>
@@ -33,7 +48,7 @@ const VendorsTab = () => {
                   <p className="text-xs text-slate-600 dark:text-slate-400 leading-tight">
                     On-Time Delivery
                   </p>
-                  <p className="text-sm font-bold text-slate-900 dark:text-white">
+                  <p className="text-sm font-bold text-slate-900 dark:text-white text-xs">
                     {vendor.onTimeDelivery}/{vendor.totalOrders}
                   </p>
                   <p className="text-xs text-green-600">
@@ -62,13 +77,15 @@ const VendorsTab = () => {
                   <span className="text-slate-600 dark:text-slate-400">
                     Avg. Time
                   </span>
-                  <span className="font-medium text-slate-900 dark:text-white">{vendor.avgDeliveryTime}</span>
+                  <span className="font-medium text-slate-900 dark:text-white text-xs">
+                    {vendor.avgDeliveryTime}
+                  </span>
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-slate-600 dark:text-slate-400">
                     Total Value
                   </span>
-                  <span className="font-medium text-slate-900 dark:text-white">
+                  <span className="font-medium text-slate-900 dark:text-white text-xs">
                     ₹{vendor.totalValue.toLocaleString()}
                   </span>
                 </div>
@@ -175,7 +192,10 @@ const VendorsTab = () => {
                   responsive: true,
                   maintainAspectRatio: false,
                   plugins: {
-                    legend: { position: "bottom", labels: { boxWidth: 8, font: { size: 10 } } },
+                    legend: {
+                      position: "bottom",
+                      labels: { boxWidth: 8, font: { size: 10 } },
+                    },
                   },
                 }}
               />
@@ -220,7 +240,10 @@ const VendorsTab = () => {
                   responsive: true,
                   maintainAspectRatio: false,
                   plugins: {
-                    legend: { position: "top", labels: { boxWidth: 8, font: { size: 10 } } },
+                    legend: {
+                      position: "top",
+                      labels: { boxWidth: 8, font: { size: 10 } },
+                    },
                   },
                   scales: {
                     y: {
@@ -253,7 +276,7 @@ const VendorsTab = () => {
             <div className="space-y-2">
               <div className="flex items-start justify-between p-2 border border-slate-200 dark:border-slate-700 rounded text-xs">
                 <div>
-                  <p className="font-medium text-slate-900 dark:text-white text-xs">
+                  <p className="font-medium text-slate-900 dark:text-white text-xs text-xs">
                     Top Vendor
                   </p>
                   <p className="text-xs text-slate-600 dark:text-slate-400">
@@ -268,7 +291,7 @@ const VendorsTab = () => {
 
               <div className="flex items-start justify-between p-2 border border-slate-200 dark:border-slate-700 rounded text-xs">
                 <div>
-                  <p className="font-medium text-slate-900 dark:text-white text-xs">
+                  <p className="font-medium text-slate-900 dark:text-white text-xs text-xs">
                     Total Spend
                   </p>
                   <p className="text-xs text-slate-600 dark:text-slate-400">
@@ -276,7 +299,7 @@ const VendorsTab = () => {
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="font-bold text-slate-900 dark:text-white text-sm">
+                  <p className="font-bold text-slate-900 dark:text-white text-xs text-sm">
                     ₹45.2L
                   </p>
                   <p className="text-xs text-green-600">+8%</p>
@@ -285,7 +308,7 @@ const VendorsTab = () => {
 
               <div className="flex items-start justify-between p-2 border border-slate-200 dark:border-slate-700 rounded text-xs">
                 <div>
-                  <p className="font-medium text-slate-900 dark:text-white text-xs">
+                  <p className="font-medium text-slate-900 dark:text-white text-xs text-xs">
                     Savings
                   </p>
                   <p className="text-xs text-slate-600 dark:text-slate-400">

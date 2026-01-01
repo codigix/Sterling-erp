@@ -14,7 +14,12 @@ import {
 } from "lucide-react";
 import "./RoleDashboardLayout.css";
 
-const RoleDashboardLayout = ({ roleNavigation, roleName, roleIcon: RoleIcon, children }) => {
+const RoleDashboardLayout = ({
+  roleNavigation,
+  roleName,
+  roleIcon: RoleIcon,
+  children,
+}) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [expandedSections, setExpandedSections] = useState({});
@@ -28,9 +33,9 @@ const RoleDashboardLayout = ({ roleNavigation, roleName, roleIcon: RoleIcon, chi
   };
 
   const toggleSection = (section) => {
-    setExpandedSections(prev => ({
+    setExpandedSections((prev) => ({
       ...prev,
-      [section]: !prev[section]
+      [section]: !prev[section],
     }));
   };
 
@@ -44,7 +49,7 @@ const RoleDashboardLayout = ({ roleNavigation, roleName, roleIcon: RoleIcon, chi
         return section.title;
       }
       if (section.submenu) {
-        const subitem = section.submenu.find(item => isActive(item.path));
+        const subitem = section.submenu.find((item) => isActive(item.path));
         if (subitem) return subitem.title;
       }
     }
@@ -64,7 +69,10 @@ const RoleDashboardLayout = ({ roleNavigation, roleName, roleIcon: RoleIcon, chi
             >
               <Menu size={20} />
             </button>
-            <Link to={roleNavigation[0]?.path || "/"} className="flex items-center text-xs gap-2">
+            <Link
+              to={roleNavigation[0]?.path || "/"}
+              className="flex items-center text-xs gap-2"
+            >
               <img src="/logo.png" alt="Sterling ERP" className="h-8 w-auto" />
             </Link>
           </div>
@@ -77,7 +85,7 @@ const RoleDashboardLayout = ({ roleNavigation, roleName, roleIcon: RoleIcon, chi
               </div>
               <input
                 type="text"
-                className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs"
                 placeholder="Search..."
               />
             </div>
@@ -182,13 +190,20 @@ const RoleDashboardLayout = ({ roleNavigation, roleName, roleIcon: RoleIcon, chi
                                 : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
                             }`}
                           >
-                            <IconComponent size={18} className="flex-shrink-0" />
+                            <IconComponent
+                              size={18}
+                              className="flex-shrink-0"
+                            />
                             {!sidebarCollapsed && (
                               <>
-                                <span className="ml-3 flex-1 text-left">{item.title}</span>
+                                <span className="ml-3 flex-1 text-left">
+                                  {item.title}
+                                </span>
                                 <ChevronDown
                                   size={16}
-                                  className={`transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                                  className={`transition-transform ${
+                                    isExpanded ? "rotate-180" : ""
+                                  }`}
                                 />
                               </>
                             )}
@@ -207,8 +222,13 @@ const RoleDashboardLayout = ({ roleNavigation, roleName, roleIcon: RoleIcon, chi
                                           : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
                                       }`}
                                     >
-                                      <SubIconComponent size={16} className="flex-shrink-0" />
-                                      <span className="ml-3">{subitem.title}</span>
+                                      <SubIconComponent
+                                        size={16}
+                                        className="flex-shrink-0"
+                                      />
+                                      <span className="ml-3">
+                                        {subitem.title}
+                                      </span>
                                     </Link>
                                   </li>
                                 );
@@ -265,12 +285,9 @@ const RoleDashboardLayout = ({ roleNavigation, roleName, roleIcon: RoleIcon, chi
       >
         <div className="p-6">
           {/* Page Header */}
-         
 
           {/* Page Content */}
-          <div className="space-y-6">
-            {children || <Outlet />}
-          </div>
+          <div className="space-y-6">{children || <Outlet />}</div>
         </div>
       </main>
     </div>

@@ -1,5 +1,9 @@
 import React from "react";
-import Card, { CardHeader, CardTitle, CardContent } from "../../../../components/ui/Card";
+import Card, {
+  CardHeader,
+  CardTitle,
+  CardContent,
+} from "../../../../components/ui/Card";
 import Badge from "../../../../components/ui/Badge";
 import { Factory, BarChart3, PieChart, LineChart } from "lucide-react";
 import { Bar, Doughnut, Line } from "react-chartjs-2";
@@ -19,7 +23,11 @@ const DepartmentsTab = () => {
                   <Factory className="w-3.5 h-3.5 text-primary-600" />
                   <span className="truncate">{dept.name}</span>
                 </span>
-                <Badge className={`${getStatusColor(dept.status)} text-xs px-2 py-0.5`}>
+                <Badge
+                  className={`${getStatusColor(
+                    dept.status
+                  )} text-xs px-2 py-0.5`}
+                >
                   {dept.status}
                 </Badge>
               </CardTitle>
@@ -30,7 +38,7 @@ const DepartmentsTab = () => {
                   <p className="text-xs text-slate-600 dark:text-slate-400 leading-tight">
                     Tasks
                   </p>
-                  <p className="text-sm font-bold text-slate-900 dark:text-white">
+                  <p className="text-sm font-bold text-slate-900 dark:text-white text-xs">
                     {dept.tasksCompleted}/{dept.totalTasks}
                   </p>
                 </div>
@@ -49,13 +57,17 @@ const DepartmentsTab = () => {
                   <span className="text-slate-600 dark:text-slate-400">
                     Avg. Time
                   </span>
-                  <span className="font-medium text-slate-900 dark:text-white">{dept.avgTime}</span>
+                  <span className="font-medium text-slate-900 dark:text-white text-xs">
+                    {dept.avgTime}
+                  </span>
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-slate-600 dark:text-slate-400">
                     Employees
                   </span>
-                  <span className="font-medium text-slate-900 dark:text-white">{dept.employees}</span>
+                  <span className="font-medium text-slate-900 dark:text-white text-xs">
+                    {dept.employees}
+                  </span>
                 </div>
               </div>
 
@@ -83,7 +95,7 @@ const DepartmentsTab = () => {
             <div className="h-40">
               <Bar
                 data={{
-                  labels: departmentData.map((d) => d.name.split(' ')[0]),
+                  labels: departmentData.map((d) => d.name.split(" ")[0]),
                   datasets: [
                     {
                       label: "Efficiency %",
@@ -129,7 +141,7 @@ const DepartmentsTab = () => {
             <div className="h-40">
               <Doughnut
                 data={{
-                  labels: departmentData.map((d) => d.name.split(' ')[0]),
+                  labels: departmentData.map((d) => d.name.split(" ")[0]),
                   datasets: [
                     {
                       data: departmentData.map((d) => d.tasksCompleted),
@@ -151,7 +163,10 @@ const DepartmentsTab = () => {
                   responsive: true,
                   maintainAspectRatio: false,
                   plugins: {
-                    legend: { position: "bottom", labels: { boxWidth: 8, font: { size: 10 } } },
+                    legend: {
+                      position: "bottom",
+                      labels: { boxWidth: 8, font: { size: 10 } },
+                    },
                   },
                 }}
               />
@@ -208,7 +223,10 @@ const DepartmentsTab = () => {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                  legend: { position: "top", labels: { boxWidth: 8, font: { size: 10 } } },
+                  legend: {
+                    position: "top",
+                    labels: { boxWidth: 8, font: { size: 10 } },
+                  },
                 },
                 scales: {
                   y: {

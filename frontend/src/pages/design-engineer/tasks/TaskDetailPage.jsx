@@ -17,10 +17,6 @@ const TaskDetailPage = () => {
     'Manage Technical Files': '/design-engineer/documents/technical',
   };
 
-  useEffect(() => {
-    redirectToTaskPage();
-  }, [taskId]);
-
   const redirectToTaskPage = async () => {
     try {
       const response = await axios.get(`/department/portal/tasks/detail/${taskId}`);
@@ -41,6 +37,11 @@ const TaskDetailPage = () => {
       setTimeout(() => navigate('/design-engineer/tasks/projects'), 2000);
     }
   };
+
+  useEffect(() => {
+    redirectToTaskPage();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [taskId]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-900">

@@ -1,5 +1,9 @@
 import React, { useState } from "react";
-import Card, { CardContent, CardTitle, CardHeader } from "../../components/ui/Card";
+import Card, {
+  CardContent,
+  CardTitle,
+  CardHeader,
+} from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import { Bell, Lock, Eye, Moon } from "lucide-react";
 
@@ -24,10 +28,8 @@ const EmployeeSettings = () => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold  dark:">
-          Settings
-        </h1>
-        <p className="text-slate-600 dark:text-slate-400 mt-1">
+        <h1 className="text-3xl font-bold  dark:">Settings</h1>
+        <p className="text-slate-600 dark:text-slate-400 mt-1 text-xs">
           Manage your preferences and account settings
         </p>
       </div>
@@ -68,9 +70,7 @@ const EmployeeSettings = () => {
               className="flex items-center text-xs justify-between p-4 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 transition"
             >
               <div>
-                <h3 className="font-medium  dark:">
-                  {setting.label}
-                </h3>
+                <h3 className="font-medium  dark:">{setting.label}</h3>
                 <p className="text-sm text-slate-600 dark:text-slate-400">
                   {setting.description}
                 </p>
@@ -121,16 +121,15 @@ const EmployeeSettings = () => {
             {settings.twoFactorAuth && (
               <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
                 <p className="text-sm text-blue-800 dark:text-blue-200">
-                  Two-factor authentication is enabled. You will need to verify with your phone on your next login.
+                  Two-factor authentication is enabled. You will need to verify
+                  with your phone on your next login.
                 </p>
               </div>
             )}
           </div>
 
           <div className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg">
-            <h3 className="font-medium  dark: mb-3">
-              Change Password
-            </h3>
+            <h3 className="font-medium  dark: mb-3">Change Password</h3>
             <div className="space-y-3">
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
@@ -176,9 +175,7 @@ const EmployeeSettings = () => {
         <CardContent>
           <div className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 transition flex items-center text-xs justify-between">
             <div>
-              <h3 className="font-medium  dark:">
-                Dark Mode
-              </h3>
+              <h3 className="font-medium  dark:">Dark Mode</h3>
               <p className="text-sm text-slate-600 dark:text-slate-400">
                 Toggle dark mode for the application
               </p>

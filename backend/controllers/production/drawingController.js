@@ -111,3 +111,60 @@ exports.uploadDrawing = async (req, res) => {
     res.status(500).json({ message: 'Internal server error', error: error.message });
   }
 };
+
+exports.downloadDrawing = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const drawing = await Drawing.findById(id);
+    if (!drawing) {
+      return res.status(404).json({ message: 'Drawing not found' });
+    }
+
+    const filePath = drawing.file_path;
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ message: 'File not found on server' });
+    }
+
+    const fileName = `${drawing.drawing_number || drawing.name}.${path.extname(filePath).substring(1)}`;
+    res.download(filePath, fileName, (err) => {
+      if (err) {
+        console.error('Download error:', err);
+        if (!res.headersSent) {
+          res.status(500).json({ message: 'Failed to download file', error: err.message });
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Download drawing error:', error);
+    res.status(500).json({ message: 'Internal server error', error: error.message });
+  }
+};
+
+exports.deleteDrawing = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const drawing = await Drawing.findById(id);
+    if (!drawing) {
+      return res.status(404).json({ message: 'Drawing not found' });
+    }
+
+    const filePath = drawing.file_path;
+    
+    await Drawing.delete(id);
+    
+    if (fs.existsSync(filePath)) {
+      try {
+        fs.unlinkSync(filePath);
+      } catch (err) {
+        console.error('Failed to delete file:', err);
+      }
+    }
+
+    res.json({ message: 'Drawing deleted successfully' });
+  } catch (error) {
+    console.error('Delete drawing error:', error);
+    res.status(500).json({ message: 'Internal server error', error: error.message });
+  }
+};

@@ -1,27 +1,32 @@
-import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import Swal from 'sweetalert2';
-import { 
-  ArrowLeft, 
-  Save, 
-  Trash2, 
-  Plus, 
-  Calendar, 
-  DollarSign, 
-  FileText, 
+import React, { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import Swal from "sweetalert2";
+import {
+  ArrowLeft,
+  Save,
+  Trash2,
+  Plus,
+  Calendar,
+  DollarSign,
+  FileText,
   Truck,
   Loader2,
-  Briefcase
-} from 'lucide-react';
-import axios from '../../utils/api';
-import Card, { CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
-import Button from '../../components/ui/Button';
+  Briefcase,
+} from "lucide-react";
+import axios from "../../utils/api";
+import Card, {
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../../components/ui/Card";
+import Button from "../../components/ui/Button";
+import taskService from "../../utils/taskService";
 
 const CreateQuotationPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { materials, salesOrderId } = location.state || {};
-  
+
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [vendors, setVendors] = useState([]);
@@ -30,16 +35,21 @@ const CreateQuotationPage = () => {
   const [loadingMaterials, setLoadingMaterials] = useState(false);
   const [savingRequirements, setSavingRequirements] = useState(false);
   const [analysisMode, setAnalysisMode] = useState(false);
-  
+  const [taskId, setTaskId] = useState(null);
+
   const [formData, setFormData] = useState({
-    vendor_id: '',
-    sales_order_id: salesOrderId || '',
-    valid_until: '',
-    notes: '',
-    items: []
+    vendor_id: "",
+    sales_order_id: salesOrderId || "",
+    valid_until: "",
+    notes: "",
+    items: [],
   });
 
   useEffect(() => {
+    const extractedTaskId = taskService.getTaskIdFromParams();
+    if (extractedTaskId) {
+      setTaskId(extractedTaskId);
+    }
     fetchVendors();
     fetchProjects();
     if (materials) {
@@ -49,20 +59,20 @@ const CreateQuotationPage = () => {
 
   const fetchVendors = async () => {
     try {
-      const response = await axios.get('/inventory/vendors');
+      const response = await axios.get("/inventory/vendors");
       setVendors(response.data);
     } catch (error) {
-      console.error('Error fetching vendors:', error);
+      console.error("Error fetching vendors:", error);
     }
   };
 
   const fetchProjects = async () => {
     try {
       setLoadingProjects(true);
-      const response = await axios.get('/sales/requirements');
+      const response = await axios.get("/sales/requirements");
       setProjects(response.data.data || []);
     } catch (error) {
-      console.error('Error fetching projects:', error);
+      console.error("Error fetching projects:", error);
     } finally {
       setLoadingProjects(false);
     }
@@ -70,145 +80,161 @@ const CreateQuotationPage = () => {
 
   const handleProjectChange = async (e) => {
     const selectedSalesOrderId = e.target.value;
-    
-    setFormData(prev => ({
+
+    setFormData((prev) => ({
       ...prev,
-      sales_order_id: selectedSalesOrderId
+      sales_order_id: selectedSalesOrderId,
     }));
 
     if (!selectedSalesOrderId) {
       setProjectMaterials([]);
-      setFormData(prev => ({ ...prev, items: [] }));
+      setFormData((prev) => ({ ...prev, items: [] }));
       return;
     }
 
     try {
       setLoadingMaterials(true);
-      const reqResponse = await axios.get(`/sales/requirements/${selectedSalesOrderId}`);
+      const reqResponse = await axios.get(
+        `/sales/requirements/${selectedSalesOrderId}`
+      );
       const reqData = reqResponse.data.data;
-      
+
       let parsedMaterials = reqData.materials || [];
-      if (typeof parsedMaterials === 'string') {
+      if (typeof parsedMaterials === "string") {
         parsedMaterials = JSON.parse(parsedMaterials);
       }
 
       // Initialize materials with selection state
-      const initializedMaterials = parsedMaterials.map(m => ({
+      const initializedMaterials = parsedMaterials.map((m) => ({
         ...m,
-        selected: (parseFloat(m.requiredQuantity) || 0) > (parseFloat(m.currentStock) || 0)
+        selected:
+          (parseFloat(m.requiredQuantity) || 0) >
+          (parseFloat(m.currentStock) || 0),
       }));
 
       setProjectMaterials(initializedMaterials);
-      
+
       // Auto-populate if shortages exist (optional behavior)
-      const shortages = initializedMaterials.filter(m => (parseFloat(m.requiredQuantity) || 0) > (parseFloat(m.currentStock) || 0));
+      const shortages = initializedMaterials.filter(
+        (m) =>
+          (parseFloat(m.requiredQuantity) || 0) >
+          (parseFloat(m.currentStock) || 0)
+      );
       // if (shortages.length > 0) {
       //   initializeItemsFromMaterials(shortages);
       // }
-      
+
       setAnalysisMode(true);
     } catch (error) {
-      console.error('Error fetching project materials:', error);
-      Swal.fire('Error', 'Failed to load project requirements', 'error');
+      console.error("Error fetching project materials:", error);
+      Swal.fire("Error", "Failed to load project requirements", "error");
     } finally {
       setLoadingMaterials(false);
     }
   };
 
   const handleRequirementChange = (index, field, value) => {
-    setProjectMaterials(prev => {
+    setProjectMaterials((prev) => {
       const newMaterials = [...prev];
       newMaterials[index] = { ...newMaterials[index], [field]: value };
-      
+
       // Update selected state based on shortage if required qty changed
-      if (field === 'requiredQuantity') {
+      if (field === "requiredQuantity") {
         const required = parseFloat(value) || 0;
         const stock = parseFloat(newMaterials[index].currentStock) || 0;
         newMaterials[index].selected = required > stock;
       }
-      
+
       return newMaterials;
     });
   };
 
   const handleSaveRequirements = async () => {
     if (!formData.sales_order_id) return;
-    
+
     try {
       setSavingRequirements(true);
       await axios.post(`/sales/requirements/${formData.sales_order_id}`, {
         materials: projectMaterials.map(({ selected, ...m }) => m), // Exclude UI-only 'selected' field
-        procurementStatus: 'pending' // Or keep existing status
+        procurementStatus: "pending", // Or keep existing status
       });
-      
+
       // Auto-proceed
-      const selectedItems = projectMaterials.filter(m => m.selected);
+      const selectedItems = projectMaterials.filter((m) => m.selected);
       initializeItemsFromMaterials(selectedItems);
       setAnalysisMode(false);
-      
+
       // Swal.fire('Success', 'Requirements saved successfully', 'success');
     } catch (error) {
-      console.error('Error saving requirements:', error);
-      Swal.fire('Error', 'Failed to save requirements', 'error');
+      console.error("Error saving requirements:", error);
+      Swal.fire("Error", "Failed to save requirements", "error");
     } finally {
       setSavingRequirements(false);
     }
   };
 
   const generateQuoteItems = () => {
-    const selectedItems = projectMaterials.filter(m => m.selected);
+    const selectedItems = projectMaterials.filter((m) => m.selected);
     initializeItemsFromMaterials(selectedItems);
     setAnalysisMode(false);
   };
 
   const initializeItemsFromMaterials = (materialsList) => {
-    const items = materialsList.map(m => ({
-      description: m.itemName || m.item_name || 'Unnamed Material',
-      quantity: Math.max(0, (parseFloat(m.requiredQuantity) || 0) - (parseFloat(m.currentStock) || 0)),
+    const items = materialsList.map((m) => ({
+      description: m.itemName || m.item_name || "Unnamed Material",
+      quantity: Math.max(
+        0,
+        (parseFloat(m.requiredQuantity) || 0) -
+          (parseFloat(m.currentStock) || 0)
+      ),
       unit_price: 0,
-      material_id: m._id || null
+      material_id: m._id || null,
     }));
-    setFormData(prev => ({ ...prev, items }));
+    setFormData((prev) => ({ ...prev, items }));
   };
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
   const handleItemChange = (index, field, value) => {
-    setFormData(prev => {
+    setFormData((prev) => {
       const newItems = [...prev.items];
-      newItems[index][field] = field === 'description' ? value : parseFloat(value) || 0;
+      newItems[index][field] =
+        field === "description" ? value : parseFloat(value) || 0;
       return { ...prev, items: newItems };
     });
   };
 
   const handleRemoveItem = (index) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      items: prev.items.filter((_, i) => i !== index)
+      items: prev.items.filter((_, i) => i !== index),
     }));
   };
 
   const handleAddItem = () => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      items: [...prev.items, { description: '', quantity: 1, unit_price: 0 }]
+      items: [...prev.items, { description: "", quantity: 1, unit_price: 0 }],
     }));
   };
 
   const calculateTotal = () => {
-    return formData.items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
+    return formData.items.reduce(
+      (sum, item) => sum + item.quantity * item.unit_price,
+      0
+    );
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.vendor_id) {
-      Swal.fire('Warning', 'Please select a vendor', 'warning');
+      Swal.fire("Warning", "Please select a vendor", "warning");
       return;
     }
 
@@ -219,17 +245,22 @@ const CreateQuotationPage = () => {
         total_amount: calculateTotal(),
         valid_until: formData.valid_until,
         items: formData.items,
-        notes: formData.sales_order_id 
-          ? `Ref: Sales Order ${formData.sales_order_id}\n\n${formData.notes}` 
-          : formData.notes
+        notes: formData.sales_order_id
+          ? `Ref: Sales Order ${formData.sales_order_id}\n\n${formData.notes}`
+          : formData.notes,
       };
 
-      await axios.post('/inventory/quotations', payload);
-      Swal.fire('Success', 'Quotation created successfully', 'success');
-      navigate('/inventory-manager/vendors/quotations');
+      await axios.post("/inventory/quotations", payload);
+
+      if (taskId) {
+        await taskService.autoCompleteTaskByAction(taskId, "create");
+      }
+
+      Swal.fire("Success", "Quotation created successfully", "success");
+      navigate("/inventory-manager/vendors/quotations");
     } catch (error) {
-      console.error('Error creating quotation:', error);
-      Swal.fire('Error', 'Failed to create quotation', 'error');
+      console.error("Error creating quotation:", error);
+      Swal.fire("Error", "Failed to create quotation", "error");
     } finally {
       setSubmitting(false);
     }
@@ -239,18 +270,23 @@ const CreateQuotationPage = () => {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
-          <button 
+          <button
             onClick={() => {
               setAnalysisMode(false);
-              setFormData(prev => ({ ...prev, sales_order_id: '' }));
+              setFormData((prev) => ({ ...prev, sales_order_id: "" }));
               setProjectMaterials([]);
             }}
             className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition"
           >
-            <ArrowLeft size={24} className="text-slate-600 dark:text-slate-400" />
+            <ArrowLeft
+              size={24}
+              className="text-slate-600 dark:text-slate-400"
+            />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Material Analysis</h1>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white text-xs">
+              Material Analysis
+            </h1>
             <p className="text-slate-600 dark:text-slate-400 text-sm">
               Review stock availability and select items for quotation
             </p>
@@ -265,13 +301,17 @@ const CreateQuotationPage = () => {
                 Project Requirements
               </CardTitle>
               <div className="flex gap-2">
-                <Button 
-                  type="button" 
+                <Button
+                  type="button"
                   onClick={handleSaveRequirements}
                   disabled={savingRequirements}
                   className="gap-2 bg-blue-600 hover:bg-blue-700"
                 >
-                  {savingRequirements ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                  {savingRequirements ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <Save size={16} />
+                  )}
                   Save & Continue to Quotation
                 </Button>
               </div>
@@ -283,51 +323,93 @@ const CreateQuotationPage = () => {
                 <Loader2 className="animate-spin text-blue-600" size={32} />
               </div>
             ) : projectMaterials.length === 0 ? (
-              <p className="text-center py-8 text-slate-500">No materials found for this project.</p>
+              <p className="text-center py-8 text-slate-500">
+                No materials found for this project.
+              </p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-white dark:bg-slate-800">
                     <tr>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Include</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Material</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Current Stock</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Required Qty</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Shortage</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">
+                        Include
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">
+                        Material
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">
+                        Current Stock
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">
+                        Required Qty
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">
+                        Shortage
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                     {projectMaterials.map((material, idx) => {
-                      const required = parseFloat(material.requiredQuantity) || 0;
+                      const required =
+                        parseFloat(material.requiredQuantity) || 0;
                       const stock = parseFloat(material.currentStock) || 0;
                       const shortage = Math.max(0, required - stock);
-                      
+
                       return (
-                        <tr key={idx} className={shortage > 0 ? "bg-red-50/50 dark:bg-red-900/10" : ""}>
+                        <tr
+                          key={idx}
+                          className={
+                            shortage > 0
+                              ? "bg-red-50/50 dark:bg-red-900/10"
+                              : ""
+                          }
+                        >
                           <td className="px-4 py-2">
-                            <input 
+                            <input
                               type="checkbox"
                               checked={material.selected || false}
-                              onChange={(e) => handleRequirementChange(idx, 'selected', e.target.checked)}
+                              onChange={(e) =>
+                                handleRequirementChange(
+                                  idx,
+                                  "selected",
+                                  e.target.checked
+                                )
+                              }
                               className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                             />
                           </td>
                           <td className="px-4 py-2">
-                            <div className="text-sm font-medium text-slate-900 dark:text-white">{material.itemName}</div>
-                            <div className="text-xs text-slate-500">{material.category}</div>
+                            <div className="text-sm font-medium text-slate-900 dark:text-white text-xs">
+                              {material.itemName}
+                            </div>
+                            <div className="text-xs text-slate-500">
+                              {material.category}
+                            </div>
                           </td>
-                          <td className="px-4 py-2 text-sm text-slate-700 dark:text-slate-300">{stock}</td>
+                          <td className="px-4 py-2 text-sm text-slate-700 dark:text-slate-300">
+                            {stock}
+                          </td>
                           <td className="px-4 py-2">
                             <input
                               type="number"
                               min="0"
                               value={material.requiredQuantity}
-                              onChange={(e) => handleRequirementChange(idx, 'requiredQuantity', e.target.value)}
+                              onChange={(e) =>
+                                handleRequirementChange(
+                                  idx,
+                                  "requiredQuantity",
+                                  e.target.value
+                                )
+                              }
                               className="w-24 px-2 py-1 text-sm border border-slate-300 dark:border-slate-600 rounded"
                             />
                           </td>
                           <td className="px-4 py-2">
-                            <span className={`text-sm font-bold ${shortage > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                            <span
+                              className={`text-sm font-bold ${
+                                shortage > 0 ? "text-red-600" : "text-green-600"
+                              }`}
+                            >
                               {shortage}
                             </span>
                           </td>
@@ -347,16 +429,20 @@ const CreateQuotationPage = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <button 
+        <button
           onClick={() => navigate(-1)}
           className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition"
         >
           <ArrowLeft size={24} className="text-slate-600 dark:text-slate-400" />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Create Quotation</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white text-xs">
+            Create Quotation
+          </h1>
           <p className="text-slate-600 dark:text-slate-400 text-sm">
-            {salesOrderId ? `For Sales Order: ${salesOrderId}` : 'New Vendor Quotation'}
+            {salesOrderId
+              ? `For Sales Order: ${salesOrderId}`
+              : "New Vendor Quotation"}
           </p>
         </div>
       </div>
@@ -374,36 +460,50 @@ const CreateQuotationPage = () => {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
-                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                     Select Project (Optional)
                   </label>
                   <div className="relative">
-                    <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <Briefcase
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                      size={18}
+                    />
                     <select
                       name="sales_order_id"
                       value={formData.sales_order_id}
                       onChange={handleProjectChange}
                       className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                     >
-                      <option value="">Select Project to Load Requirements</option>
-                      {projects.map(p => (
+                      <option value="">
+                        Select Project to Load Requirements
+                      </option>
+                      {projects.map((p) => (
                         <option key={p.salesOrderId} value={p.salesOrderId}>
                           {p.projectName} ({p.poNumber})
                         </option>
                       ))}
                     </select>
-                    {loadingProjects && <div className="absolute right-3 top-1/2 -translate-y-1/2"><Loader2 className="animate-spin text-blue-500" size={16} /></div>}
+                    {loadingProjects && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        <Loader2
+                          className="animate-spin text-blue-500"
+                          size={16}
+                        />
+                      </div>
+                    )}
                   </div>
                   {formData.sales_order_id && (
                     <div className="mt-2 flex items-center justify-between">
-                       <p className="text-xs text-slate-500">Project selected. Requirements loaded.</p>
-                       <button 
-                         type="button"
-                         onClick={() => setAnalysisMode(true)}
-                         className="text-xs text-blue-600 hover:text-blue-800 font-medium"
-                       >
-                         View Analysis
-                       </button>
+                      <p className="text-xs text-slate-500">
+                        Project selected. Requirements loaded.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setAnalysisMode(true)}
+                        className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                      >
+                        View Analysis
+                      </button>
                     </div>
                   )}
                 </div>
@@ -413,7 +513,10 @@ const CreateQuotationPage = () => {
                     Vendor <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
-                    <Truck className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <Truck
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                      size={18}
+                    />
                     <select
                       name="vendor_id"
                       value={formData.vendor_id}
@@ -422,8 +525,10 @@ const CreateQuotationPage = () => {
                       className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="">Select Vendor</option>
-                      {vendors.map(v => (
-                        <option key={v.id} value={v.id}>{v.name}</option>
+                      {vendors.map((v) => (
+                        <option key={v.id} value={v.id}>
+                          {v.name}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -433,7 +538,10 @@ const CreateQuotationPage = () => {
                     Valid Until
                   </label>
                   <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <Calendar
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                      size={18}
+                    />
                     <input
                       type="date"
                       name="valid_until"
@@ -472,21 +580,34 @@ const CreateQuotationPage = () => {
             <CardContent>
               <div className="space-y-4">
                 <div className="flex justify-between items-center py-2 border-b border-slate-200 dark:border-slate-700">
-                  <span className="text-slate-600 dark:text-slate-400">Total Items</span>
-                  <span className="font-semibold text-slate-900 dark:text-white">{formData.items.length}</span>
-                </div>
-                <div className="flex justify-between items-center py-2">
-                  <span className="text-lg font-bold text-slate-900 dark:text-white">Total Amount</span>
-                  <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                    ₹{calculateTotal().toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  <span className="text-slate-600 dark:text-slate-400">
+                    Total Items
+                  </span>
+                  <span className="font-semibold text-slate-900 dark:text-white">
+                    {formData.items.length}
                   </span>
                 </div>
-                <Button 
-                  type="submit" 
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-lg font-bold text-slate-900 dark:text-white text-xs">
+                    Total Amount
+                  </span>
+                  <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                    ₹
+                    {calculateTotal().toLocaleString("en-IN", {
+                      minimumFractionDigits: 2,
+                    })}
+                  </span>
+                </div>
+                <Button
+                  type="submit"
                   className="w-full gap-2"
                   disabled={submitting}
                 >
-                  {submitting ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
+                  {submitting ? (
+                    <Loader2 className="animate-spin" size={20} />
+                  ) : (
+                    <Save size={20} />
+                  )}
                   Create Quotation
                 </Button>
               </div>
@@ -504,20 +625,24 @@ const CreateQuotationPage = () => {
                   Project Material Analysis
                 </CardTitle>
                 <div className="flex gap-2">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
                     onClick={handleSaveRequirements}
                     disabled={savingRequirements}
                     className="gap-2"
                   >
-                    {savingRequirements ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                    {savingRequirements ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : (
+                      <Save size={16} />
+                    )}
                     Save Requirements
                   </Button>
-                  <Button 
-                    type="button" 
-                    size="sm" 
+                  <Button
+                    type="button"
+                    size="sm"
                     onClick={generateQuoteItems}
                     className="gap-2 bg-blue-600 hover:bg-blue-700"
                   >
@@ -533,51 +658,95 @@ const CreateQuotationPage = () => {
                   <Loader2 className="animate-spin text-blue-600" size={32} />
                 </div>
               ) : projectMaterials.length === 0 ? (
-                <p className="text-center py-8 text-slate-500">No materials found for this project.</p>
+                <p className="text-center py-8 text-slate-500">
+                  No materials found for this project.
+                </p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead className="bg-white dark:bg-slate-800">
                       <tr>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Include</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Material</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Current Stock</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Required Qty</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Shortage</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">
+                          Include
+                        </th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">
+                          Material
+                        </th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">
+                          Current Stock
+                        </th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">
+                          Required Qty
+                        </th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">
+                          Shortage
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                       {projectMaterials.map((material, idx) => {
-                        const required = parseFloat(material.requiredQuantity) || 0;
+                        const required =
+                          parseFloat(material.requiredQuantity) || 0;
                         const stock = parseFloat(material.currentStock) || 0;
                         const shortage = Math.max(0, required - stock);
-                        
+
                         return (
-                          <tr key={idx} className={shortage > 0 ? "bg-red-50/50 dark:bg-red-900/10" : ""}>
+                          <tr
+                            key={idx}
+                            className={
+                              shortage > 0
+                                ? "bg-red-50/50 dark:bg-red-900/10"
+                                : ""
+                            }
+                          >
                             <td className="px-4 py-2">
-                              <input 
+                              <input
                                 type="checkbox"
                                 checked={material.selected || false}
-                                onChange={(e) => handleRequirementChange(idx, 'selected', e.target.checked)}
+                                onChange={(e) =>
+                                  handleRequirementChange(
+                                    idx,
+                                    "selected",
+                                    e.target.checked
+                                  )
+                                }
                                 className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                               />
                             </td>
                             <td className="px-4 py-2">
-                              <div className="text-sm font-medium text-slate-900 dark:text-white">{material.itemName}</div>
-                              <div className="text-xs text-slate-500">{material.category}</div>
+                              <div className="text-sm font-medium text-slate-900 dark:text-white text-xs">
+                                {material.itemName}
+                              </div>
+                              <div className="text-xs text-slate-500">
+                                {material.category}
+                              </div>
                             </td>
-                            <td className="px-4 py-2 text-sm text-slate-700 dark:text-slate-300">{stock}</td>
+                            <td className="px-4 py-2 text-sm text-slate-700 dark:text-slate-300">
+                              {stock}
+                            </td>
                             <td className="px-4 py-2">
                               <input
                                 type="number"
                                 min="0"
                                 value={material.requiredQuantity}
-                                onChange={(e) => handleRequirementChange(idx, 'requiredQuantity', e.target.value)}
+                                onChange={(e) =>
+                                  handleRequirementChange(
+                                    idx,
+                                    "requiredQuantity",
+                                    e.target.value
+                                  )
+                                }
                                 className="w-24 px-2 py-1 text-sm border border-slate-300 dark:border-slate-600 rounded"
                               />
                             </td>
                             <td className="px-4 py-2">
-                              <span className={`text-sm font-bold ${shortage > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                              <span
+                                className={`text-sm font-bold ${
+                                  shortage > 0
+                                    ? "text-red-600"
+                                    : "text-green-600"
+                                }`}
+                              >
                                 {shortage}
                               </span>
                             </td>
@@ -596,7 +765,13 @@ const CreateQuotationPage = () => {
         <Card>
           <CardHeader className="flex flex-row justify-between items-center">
             <CardTitle>Items</CardTitle>
-            <Button type="button" onClick={handleAddItem} variant="outline" size="sm" className="gap-2">
+            <Button
+              type="button"
+              onClick={handleAddItem}
+              variant="outline"
+              size="sm"
+              className="gap-2"
+            >
               <Plus size={16} />
               Add Item
             </Button>
@@ -606,10 +781,18 @@ const CreateQuotationPage = () => {
               <table className="w-full">
                 <thead className="bg-slate-50 dark:bg-slate-900">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Description</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase w-32">Qty</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase w-40">Unit Price (₹)</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase w-40">Total (₹)</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">
+                      Description
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase w-32">
+                      Qty
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase w-40">
+                      Unit Price (₹)
+                    </th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase w-40">
+                      Total (₹)
+                    </th>
                     <th className="px-4 py-3 w-16"></th>
                   </tr>
                 </thead>
@@ -620,7 +803,13 @@ const CreateQuotationPage = () => {
                         <input
                           type="text"
                           value={item.description}
-                          onChange={(e) => handleItemChange(index, 'description', e.target.value)}
+                          onChange={(e) =>
+                            handleItemChange(
+                              index,
+                              "description",
+                              e.target.value
+                            )
+                          }
                           className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded bg-transparent text-sm"
                           placeholder="Item description"
                         />
@@ -630,7 +819,9 @@ const CreateQuotationPage = () => {
                           type="number"
                           min="0"
                           value={item.quantity}
-                          onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
+                          onChange={(e) =>
+                            handleItemChange(index, "quantity", e.target.value)
+                          }
                           className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded bg-transparent text-sm"
                         />
                       </td>
@@ -640,12 +831,22 @@ const CreateQuotationPage = () => {
                           min="0"
                           step="0.01"
                           value={item.unit_price}
-                          onChange={(e) => handleItemChange(index, 'unit_price', e.target.value)}
+                          onChange={(e) =>
+                            handleItemChange(
+                              index,
+                              "unit_price",
+                              e.target.value
+                            )
+                          }
                           className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded bg-transparent text-sm"
                         />
                       </td>
-                      <td className="px-4 py-3 text-right font-medium text-slate-900 dark:text-white">
-                        ₹{(item.quantity * item.unit_price).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      <td className="px-4 py-3 text-right font-medium text-slate-900 dark:text-white text-xs">
+                        ₹
+                        {(item.quantity * item.unit_price).toLocaleString(
+                          "en-IN",
+                          { minimumFractionDigits: 2 }
+                        )}
                       </td>
                       <td className="px-4 py-3 text-center">
                         <button
@@ -660,7 +861,10 @@ const CreateQuotationPage = () => {
                   ))}
                   {formData.items.length === 0 && (
                     <tr>
-                      <td colSpan="5" className="px-4 py-8 text-center text-slate-500 text-sm">
+                      <td
+                        colSpan="5"
+                        className="px-4 py-8 text-center text-slate-500 text-sm"
+                      >
                         No items added. Click "Add Item" to begin.
                       </td>
                     </tr>

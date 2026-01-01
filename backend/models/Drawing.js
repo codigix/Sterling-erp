@@ -60,6 +60,19 @@ class Drawing {
     }
   }
 
+  static async findById(id) {
+    const connection = await pool.getConnection();
+    try {
+      const [rows] = await connection.execute(
+        `SELECT * FROM drawings WHERE id = ?`,
+        [id]
+      );
+      return rows.length > 0 ? rows[0] : null;
+    } finally {
+      connection.release();
+    }
+  }
+
   static async delete(id) {
     const connection = await pool.getConnection();
     try {

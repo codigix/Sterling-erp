@@ -276,6 +276,30 @@ exports.deleteDepartmentTask = async (req, res) => {
   }
 };
 
+exports.deleteBulkDepartmentTasks = async (req, res) => {
+  try {
+    const { taskIds } = req.body;
+
+    if (!Array.isArray(taskIds) || taskIds.length === 0) {
+      return res.status(400).json({ message: 'Task IDs array is required' });
+    }
+
+    const result = await DepartmentTask.deleteBulkDepartmentTasks(taskIds);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'No tasks found to delete' });
+    }
+
+    res.json({
+      message: `Successfully deleted ${result.affectedRows} task(s)`,
+      deletedCount: result.affectedRows
+    });
+  } catch (error) {
+    console.error('Bulk delete department tasks error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
 exports.getRoleIdByName = async (req, res) => {
   try {
     const { roleName } = req.params;

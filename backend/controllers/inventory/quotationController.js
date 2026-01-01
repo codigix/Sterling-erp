@@ -1,5 +1,9 @@
 const Quotation = require('../../models/Quotation');
 const Vendor = require('../../models/Vendor');
+const emailService = require('../../services/emailService');
+const QuotationCommunication = require('../../models/QuotationCommunication');
+const path = require('path');
+const fs = require('fs');
 
 exports.getAllQuotations = async (req, res) => {
   try {
@@ -220,5 +224,106 @@ exports.getQuotationsByProject = async (req, res) => {
   } catch (error) {
     console.error('Error fetching project quotations:', error);
     res.status(500).json({ message: 'Error fetching project quotations' });
+  }
+};
+
+exports.sendQuotationEmail = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { email, pdfBase64, subject, message } = req.body;
+
+    if (!email || !pdfBase64) {
+      return res.status(400).json({ message: 'Email and PDF are required' });
+    }
+
+    const quotation = await Quotation.findById(id);
+    if (!quotation) {
+      return res.status(404).json({ message: 'Quotation not found' });
+    }
+
+    const base64Data = pdfBase64.includes(',') ? pdfBase64.split(',')[1] : pdfBase64;
+    const pdfBuffer = Buffer.from(base64Data, 'base64');
+
+    await emailService.sendMail({
+      to: email,
+      subject: subject || `Quotation ${quotation.quotation_number}`,
+      text: message || `Please find attached Quotation ${quotation.quotation_number}.`,
+      attachments: [
+        {
+          filename: `${quotation.quotation_number}.pdf`,
+          content: pdfBuffer
+        }
+      ]
+    });
+
+    await Quotation.changeStatus(id, 'sent');
+
+    res.json({ message: 'Email sent successfully' });
+  } catch (error) {
+    console.error('Send quotation email error:', error);
+    res.status(500).json({ message: 'Failed to send email', error: error.message });
+  }
+};
+
+exports.getQuotationResponses = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const quotation = await Quotation.findById(id);
+    if (!quotation) {
+      return res.status(404).json({ message: 'Quotation not found' });
+    }
+
+    const responses = await Quotation.getResponses(id);
+    res.json(responses || []);
+  } catch (error) {
+    console.error('Error fetching quotation responses:', error);
+    res.status(500).json({ message: 'Error fetching quotation responses' });
+  }
+};
+
+exports.getQuotationCommunications = async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log(`📞 Fetching communications for quotation ID: ${id}`);
+    
+    const communications = await QuotationCommunication.findByQuotationId(id);
+    console.log(`💬 Found ${communications.length} communications`);
+    
+    for (const comm of communications) {
+      if (!comm.is_read) {
+        QuotationCommunication.markAsRead(comm.id).catch(err => console.error('Error marking read:', err));
+      }
+    }
+    
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    res.json(communications);
+  } catch (error) {
+    console.error('Get quotation communications error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+exports.downloadQuotationAttachment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const attachment = await QuotationCommunication.getAttachmentById(id);
+    
+    if (!attachment) {
+      return res.status(404).json({ message: 'Attachment not found' });
+    }
+    
+    const filePath = path.join(__dirname, '../../', attachment.file_path);
+    
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ message: 'File not found on server' });
+    }
+    
+    res.download(filePath, attachment.file_name);
+  } catch (error) {
+    console.error('Download attachment error:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
 };

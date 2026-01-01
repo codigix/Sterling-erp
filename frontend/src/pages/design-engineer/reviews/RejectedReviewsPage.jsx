@@ -1,33 +1,64 @@
-import React from 'react';
-import { AlertCircle, Download, MessageSquare, Edit } from 'lucide-react';
+import React from "react";
+import { AlertCircle, Download, MessageSquare, Edit } from "lucide-react";
 
 const RejectedReviewsPage = () => {
   const reviews = [
-    { id: 1, design: 'Assembly Drawing v1.5', rejectedBy: 'Mike Johnson', rejectedDate: '2024-12-06', reason: 'Tolerance specifications not met' },
-    { id: 2, design: 'Electrical Schematic v1.2', rejectedBy: 'Sarah Lee', rejectedDate: '2024-12-03', reason: 'Missing safety certifications' },
+    {
+      id: 1,
+      design: "Assembly Drawing v1.5",
+      rejectedBy: "Mike Johnson",
+      rejectedDate: "2024-12-06",
+      reason: "Tolerance specifications not met",
+    },
+    {
+      id: 2,
+      design: "Electrical Schematic v1.2",
+      rejectedBy: "Sarah Lee",
+      rejectedDate: "2024-12-03",
+      reason: "Missing safety certifications",
+    },
   ];
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold text-slate-900 dark:text-white">Rejected Reviews</h2>
-        <p className="text-slate-600 dark:text-slate-400 mt-1">Designs that need revisions</p>
+        <h2 className="text-xl font-bold text-slate-900 dark:text-white text-xs">
+          Rejected Reviews
+        </h2>
+        <p className="text-slate-600 dark:text-slate-400 mt-1 text-xs">
+          Designs that need revisions
+        </p>
       </div>
 
       <div className="space-y-4">
         {reviews.map((review) => (
-          <div key={review.id} className="bg-white dark:bg-slate-800 rounded-lg border border-red-200 dark:border-red-800 p-6">
+          <div
+            key={review.id}
+            className="bg-white dark:bg-slate-800 rounded-lg border border-red-200 dark:border-red-800 p-6"
+          >
             <div className="flex items-start justify-between mb-4">
               <div>
                 <div className="flex items-center text-xs gap-2 mb-2">
-                  <AlertCircle size={24} className="text-red-600 dark:text-red-400" />
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{review.design}</h3>
+                  <AlertCircle
+                    size={24}
+                    className="text-red-600 dark:text-red-400"
+                  />
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+                    {review.design}
+                  </h3>
                 </div>
-                <p className="text-sm text-slate-600 dark:text-slate-400">Rejected by: <span className="font-medium">{review.rejectedBy}</span></p>
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  Rejected by:{" "}
+                  <span className="font-medium">{review.rejectedBy}</span>
+                </p>
               </div>
               <div className="text-right">
-                <p className="text-sm text-slate-600 dark:text-slate-400">Rejected Date</p>
-                <p className="font-semibold text-slate-900 dark:text-white">{review.rejectedDate}</p>
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  Rejected Date
+                </p>
+                <p className="font-semibold text-slate-900 dark:text-white">
+                  {review.rejectedDate}
+                </p>
               </div>
             </div>
 

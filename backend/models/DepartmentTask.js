@@ -165,6 +165,17 @@ class DepartmentTask {
     );
     return result;
   }
+
+  static async deleteBulkDepartmentTasks(taskIds) {
+    if (!Array.isArray(taskIds) || taskIds.length === 0) {
+      return { affectedRows: 0 };
+    }
+
+    const placeholders = taskIds.map(() => '?').join(',');
+    const query = `DELETE FROM department_tasks WHERE id IN (${placeholders})`;
+    const [result] = await pool.execute(query, taskIds);
+    return result;
+  }
 }
 
 module.exports = DepartmentTask;

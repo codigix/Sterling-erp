@@ -203,11 +203,12 @@ exports.deleteRootCard = async (req, res) => {
 
     await connection.execute('DELETE FROM worker_tasks WHERE stage_id IN (SELECT id FROM manufacturing_stages WHERE root_card_id = ?)', [id]);
     await connection.execute('DELETE FROM manufacturing_stages WHERE root_card_id = ?', [id]);
+    await connection.execute('DELETE FROM department_tasks WHERE root_card_id = ?', [id]);
     await connection.execute('DELETE FROM root_cards WHERE id = ?', [id]);
 
     await connection.commit();
 
-    res.json({ message: 'Root card deleted successfully' });
+    res.json({ message: 'Root card and all associated tasks deleted successfully' });
   } catch (error) {
     await connection.rollback();
     console.error('Delete root card error:', error);
@@ -1105,5 +1106,75 @@ exports.deleteDesign = async (req, res) => {
   } catch (error) {
     console.error('Delete design error:', error);
     res.status(500).json({ message: 'Failed to delete design', error: error.message });
+  }
+};
+
+exports.updateDesign = async (req, res) => {
+  const connection = await pool.getConnection();
+  
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    const rootCard = await RootCard.findById(id);
+    if (!rootCard) {
+      return res.status(404).json({ message: 'Design not found' });
+    }
+
+    await DesignProjectDetails.update(id, updateData, connection);
+
+    if (updateData.status || updateData.priority) {
+      const updateFields = {};
+      if (updateData.status) updateFields.status = updateData.status;
+      if (updateData.priority) updateFields.priority = updateData.priority;
+      
+      await RootCard.update(id, updateFields, connection);
+    }
+
+    res.json({ message: 'Design updated successfully', designId: id });
+  } catch (error) {
+    console.error('Update design error:', error);
+    res.status(500).json({ message: 'Failed to update design', error: error.message });
+  } finally {
+    connection.release();
+  }
+};
+
+exports.downloadDesign = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const rootCard = await RootCard.findById(id);
+    if (!rootCard) {
+      return res.status(404).json({ message: 'Design not found' });
+    }
+
+    const designDetails = await DesignProjectDetails.findByRootCardId(id);
+    if (!designDetails || !designDetails.referenceDocuments) {
+      return res.status(404).json({ message: 'No design documents available for download' });
+    }
+
+    const documents = Array.isArray(designDetails.referenceDocuments)
+      ? designDetails.referenceDocuments
+      : [designDetails.referenceDocuments];
+
+    if (documents.length === 0) {
+      return res.status(404).json({ message: 'No design documents available for download' });
+    }
+
+    const filePath = documents[0];
+    const fileName = `${rootCard.code}-${rootCard.title}.pdf`;
+
+    res.download(filePath, fileName, (err) => {
+      if (err) {
+        console.error('Download error:', err);
+        if (!res.headersSent) {
+          res.status(500).json({ message: 'Failed to download design file', error: err.message });
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Download design error:', error);
+    res.status(500).json({ message: 'Failed to download design', error: error.message });
   }
 };

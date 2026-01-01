@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from "react";
 import {
   Truck,
   Search,
@@ -13,27 +13,27 @@ import {
   Trash2,
   TrendingUp,
   X,
-} from 'lucide-react';
-import axios from 'axios';
+} from "lucide-react";
+import axios from "axios";
 
 const VendorsPage = () => {
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [ratingFilter, setRatingFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [ratingFilter, setRatingFilter] = useState("all");
   const [stats, setStats] = useState({});
   const [error, setError] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [formData, setFormData] = useState({
-    name: '',
-    contact: '',
-    email: '',
-    phone: '',
-    address: '',
-    category: '',
-    vendor_type: 'material_supplier',
-    rating: '',
-    status: 'active'
+    name: "",
+    contact: "",
+    email: "",
+    phone: "",
+    address: "",
+    category: "",
+    vendor_type: "material_supplier",
+    rating: "",
+    status: "active",
   });
   const [submitting, setSubmitting] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -42,24 +42,26 @@ const VendorsPage = () => {
   const [selectedVendor, setSelectedVendor] = useState(null);
   const [categories, setCategories] = useState([]);
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
   const fetchVendors = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
-      if (searchQuery) params.append('search', searchQuery);
-      if (ratingFilter !== 'all') {
-        if (ratingFilter === '4+') params.append('minRating', '4');
-        else if (ratingFilter === '3+') params.append('minRating', '3');
+      if (searchQuery) params.append("search", searchQuery);
+      if (ratingFilter !== "all") {
+        if (ratingFilter === "4+") params.append("minRating", "4");
+        else if (ratingFilter === "3+") params.append("minRating", "3");
       }
 
-      const response = await axios.get(`${API_URL}/inventory/vendors?${params}`);
+      const response = await axios.get(
+        `${API_URL}/inventory/vendors?${params}`
+      );
       setVendors(response.data);
       setError(null);
     } catch (err) {
-      console.error('Error fetching vendors:', err);
-      setError('Failed to fetch vendors');
+      console.error("Error fetching vendors:", err);
+      setError("Failed to fetch vendors");
     } finally {
       setLoading(false);
     }
@@ -70,29 +72,36 @@ const VendorsPage = () => {
       const response = await axios.get(`${API_URL}/inventory/vendors/stats`);
       setStats(response.data);
     } catch (err) {
-      console.error('Error fetching stats:', err);
+      console.error("Error fetching stats:", err);
     }
   }, [API_URL]);
 
   const fetchCategories = useCallback(async () => {
     try {
-      const response = await axios.get(`${API_URL}/inventory/vendors/categories`);
-      const categoryData = response.data.map(cat => cat.category).filter(Boolean);
+      const response = await axios.get(
+        `${API_URL}/inventory/vendors/categories`
+      );
+      const categoryData = response.data
+        .map((cat) => cat.category)
+        .filter(Boolean);
       setCategories(categoryData);
     } catch (err) {
-      console.error('Error fetching categories:', err);
+      console.error("Error fetching categories:", err);
     }
   }, [API_URL]);
 
-  const fetchVendorById = useCallback(async (id) => {
-    try {
-      const response = await axios.get(`${API_URL}/inventory/vendors/${id}`);
-      return response.data;
-    } catch (err) {
-      console.error('Error fetching vendor:', err);
-      return null;
-    }
-  }, [API_URL]);
+  const fetchVendorById = useCallback(
+    async (id) => {
+      try {
+        const response = await axios.get(`${API_URL}/inventory/vendors/${id}`);
+        return response.data;
+      } catch (err) {
+        console.error("Error fetching vendor:", err);
+        return null;
+      }
+    },
+    [API_URL]
+  );
 
   useEffect(() => {
     fetchVendors();
@@ -101,13 +110,13 @@ const VendorsPage = () => {
   }, [fetchVendors, fetchStats, fetchCategories]);
 
   const handleDeleteVendor = async (id) => {
-    if (window.confirm('Are you sure you want to delete this vendor?')) {
+    if (window.confirm("Are you sure you want to delete this vendor?")) {
       try {
         await axios.delete(`${API_URL}/inventory/vendors/${id}`);
         fetchVendors();
       } catch (err) {
-        console.error('Error deleting vendor:', err);
-        alert('Failed to delete vendor');
+        console.error("Error deleting vendor:", err);
+        alert("Failed to delete vendor");
       }
     }
   };
@@ -122,17 +131,17 @@ const VendorsPage = () => {
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
   const handleAddVendor = async (e) => {
     e.preventDefault();
-    
+
     if (!formData.name.trim()) {
-      alert('Vendor name is required');
+      alert("Vendor name is required");
       return;
     }
 
@@ -140,30 +149,30 @@ const VendorsPage = () => {
     try {
       const payload = {
         ...formData,
-        rating: formData.rating ? parseFloat(formData.rating) : 0
+        rating: formData.rating ? parseFloat(formData.rating) : 0,
       };
-      
+
       await axios.post(`${API_URL}/inventory/vendors`, payload);
-      
+
       setShowAddModal(false);
       setFormData({
-        name: '',
-        contact: '',
-        email: '',
-        phone: '',
-        address: '',
-        category: '',
-        vendor_type: 'material_supplier',
-        rating: '',
-        status: 'active'
+        name: "",
+        contact: "",
+        email: "",
+        phone: "",
+        address: "",
+        category: "",
+        vendor_type: "material_supplier",
+        rating: "",
+        status: "active",
       });
-      
+
       fetchVendors();
       fetchStats();
-      alert('Vendor added successfully');
+      alert("Vendor added successfully");
     } catch (err) {
-      console.error('Error adding vendor:', err);
-      alert('Failed to add vendor');
+      console.error("Error adding vendor:", err);
+      alert("Failed to add vendor");
     } finally {
       setSubmitting(false);
     }
@@ -174,15 +183,15 @@ const VendorsPage = () => {
     if (vendorData) {
       setEditingVendor(vendorData);
       setFormData({
-        name: vendorData.name || '',
-        contact: vendorData.contact || '',
-        email: vendorData.email || '',
-        phone: vendorData.phone || '',
-        address: vendorData.address || '',
-        category: vendorData.category || '',
-        vendor_type: vendorData.vendor_type || 'material_supplier',
-        rating: vendorData.rating || '',
-        status: vendorData.status || 'active'
+        name: vendorData.name || "",
+        contact: vendorData.contact || "",
+        email: vendorData.email || "",
+        phone: vendorData.phone || "",
+        address: vendorData.address || "",
+        category: vendorData.category || "",
+        vendor_type: vendorData.vendor_type || "material_supplier",
+        rating: vendorData.rating || "",
+        status: vendorData.status || "active",
       });
       setShowEditModal(true);
     }
@@ -190,9 +199,9 @@ const VendorsPage = () => {
 
   const handleUpdateVendor = async (e) => {
     e.preventDefault();
-    
+
     if (!formData.name.trim()) {
-      alert('Vendor name is required');
+      alert("Vendor name is required");
       return;
     }
 
@@ -200,31 +209,34 @@ const VendorsPage = () => {
     try {
       const payload = {
         ...formData,
-        rating: formData.rating ? parseFloat(formData.rating) : 0
+        rating: formData.rating ? parseFloat(formData.rating) : 0,
       };
-      
-      await axios.put(`${API_URL}/inventory/vendors/${editingVendor.id}`, payload);
-      
+
+      await axios.put(
+        `${API_URL}/inventory/vendors/${editingVendor.id}`,
+        payload
+      );
+
       setShowEditModal(false);
       setEditingVendor(null);
       setFormData({
-        name: '',
-        contact: '',
-        email: '',
-        phone: '',
-        address: '',
-        category: '',
-        vendor_type: 'material_supplier',
-        rating: '',
-        status: 'active'
+        name: "",
+        contact: "",
+        email: "",
+        phone: "",
+        address: "",
+        category: "",
+        vendor_type: "material_supplier",
+        rating: "",
+        status: "active",
       });
-      
+
       fetchVendors();
       fetchStats();
-      alert('Vendor updated successfully');
+      alert("Vendor updated successfully");
     } catch (err) {
-      console.error('Error updating vendor:', err);
-      alert('Failed to update vendor');
+      console.error("Error updating vendor:", err);
+      alert("Failed to update vendor");
     } finally {
       setSubmitting(false);
     }
@@ -240,7 +252,12 @@ const VendorsPage = () => {
 
   const renderStars = (rating) => {
     const numRating = parseFloat(rating);
-    if (!rating || isNaN(numRating)) return <span className="text-sm font-medium text-slate-700 dark:text-slate-300">No rating</span>;
+    if (!rating || isNaN(numRating))
+      return (
+        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+          No rating
+        </span>
+      );
     const fullStars = Math.floor(numRating);
     const hasHalfStar = numRating % 1 !== 0;
 
@@ -250,27 +267,35 @@ const VendorsPage = () => {
           <Star
             key={i}
             size={16}
-            className={i < fullStars ? 'fill-yellow-400 text-yellow-400' : hasHalfStar && i === fullStars ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}
+            className={
+              i < fullStars
+                ? "fill-yellow-400 text-yellow-400"
+                : hasHalfStar && i === fullStars
+                ? "fill-yellow-400 text-yellow-400"
+                : "text-gray-300"
+            }
           />
         ))}
-        <span className="text-sm font-medium text-slate-700 dark:text-slate-300 ml-1">{numRating.toFixed(1)}</span>
+        <span className="text-sm font-medium text-slate-700 dark:text-slate-300 ml-1">
+          {numRating.toFixed(1)}
+        </span>
       </div>
     );
   };
 
   const getStatusColor = (status) => {
-    return status === 'active'
-      ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-      : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
+    return status === "active"
+      ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+      : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200";
   };
 
   const formatCurrency = (value) => {
-    if (!value) return '₹0';
+    if (!value) return "₹0";
     return `₹${(value / 100000).toFixed(2)}L`;
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
+    if (!dateString) return "N/A";
     const date = new Date(dateString);
     return `${date.getDate()}/${date.getMonth() + 1}`;
   };
@@ -280,18 +305,19 @@ const VendorsPage = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center text-xs gap-2">
+          <h2 className="text-md font-bold text-slate-900 dark:text-white text-xs flex items-center  gap-2">
             <Truck size={24} />
             Vendor Management
           </h2>
-          <p className="text-slate-600 dark:text-slate-400 mt-1">
+          <p className="text-slate-600 dark:text-slate-400 mt-1 text-xs">
             Manage and track vendor relationships
           </p>
         </div>
         <div className="flex gap-3 flex-wrap">
-          <button 
+          <button
             onClick={() => setShowAddModal(true)}
-            className="flex items-center text-xs gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors font-medium">
+            className="flex items-center text-xs gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors font-medium"
+          >
             <Plus size={18} />
             Add Vendor
           </button>
@@ -306,20 +332,23 @@ const VendorsPage = () => {
       <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="relative">
-            <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
+            <Search
+              size={18}
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"
+            />
             <input
               type="text"
               placeholder="Search vendor or category..."
               value={searchQuery}
               onChange={(e) => handleSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs"
             />
           </div>
 
           <select
             value={ratingFilter}
             onChange={(e) => handleRatingFilter(e.target.value)}
-            className="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white font-medium"
+            className="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white font-medium text-xs"
           >
             <option value="all">All Vendors</option>
             <option value="4+">Rating 4+ Stars</option>
@@ -337,7 +366,9 @@ const VendorsPage = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {loading ? (
           <div className="col-span-2 flex justify-center items-center py-12">
-            <p className="text-slate-500 dark:text-slate-400">Loading vendors...</p>
+            <p className="text-slate-500 dark:text-slate-400">
+              Loading vendors...
+            </p>
           </div>
         ) : error ? (
           <div className="col-span-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
@@ -345,43 +376,66 @@ const VendorsPage = () => {
           </div>
         ) : vendors.length === 0 ? (
           <div className="col-span-2 text-center py-12">
-            <p className="text-slate-500 dark:text-slate-400">No vendors found</p>
+            <p className="text-slate-500 dark:text-slate-400">
+              No vendors found
+            </p>
           </div>
         ) : (
-          vendors.map(vendor => (
-            <div key={vendor.id} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-6 hover:shadow-lg transition-shadow">
+          vendors.map((vendor) => (
+            <div
+              key={vendor.id}
+              className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-6 hover:shadow-lg transition-shadow"
+            >
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">{vendor.name}</h3>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white text-xs">
+                    {vendor.name}
+                  </h3>
                   <div className="flex items-center gap-2 mt-2 flex-wrap">
                     <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded">
-                      {vendor.category || 'No category'}
+                      {vendor.category || "No category"}
                     </span>
                     <span className="text-xs bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 px-2 py-1 rounded capitalize">
-                      {(vendor.vendor_type || 'material_supplier').replace(/_/g, ' ')}
+                      {(vendor.vendor_type || "material_supplier").replace(
+                        /_/g,
+                        " "
+                      )}
                     </span>
                   </div>
                 </div>
-                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(vendor.status)}`}>
-                  {vendor.status.charAt(0).toUpperCase() + vendor.status.slice(1)}
+                <span
+                  className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(
+                    vendor.status
+                  )}`}
+                >
+                  {vendor.status.charAt(0).toUpperCase() +
+                    vendor.status.slice(1)}
                 </span>
               </div>
 
-              <div className="mb-4">
-                {renderStars(vendor.rating)}
-              </div>
+              <div className="mb-4">{renderStars(vendor.rating)}</div>
 
               <div className="space-y-2 mb-4 text-sm">
                 {vendor.email && (
                   <div className="flex items-center text-xs gap-2 text-slate-600 dark:text-slate-400">
                     <Mail size={16} />
-                    <a href={`mailto:${vendor.email}`} className="hover:text-blue-600 dark:hover:text-blue-400">{vendor.email}</a>
+                    <a
+                      href={`mailto:${vendor.email}`}
+                      className="hover:text-blue-600 dark:hover:text-blue-400"
+                    >
+                      {vendor.email}
+                    </a>
                   </div>
                 )}
                 {vendor.phone && (
                   <div className="flex items-center text-xs gap-2 text-slate-600 dark:text-slate-400">
                     <Phone size={16} />
-                    <a href={`tel:${vendor.phone}`} className="hover:text-blue-600 dark:hover:text-blue-400">{vendor.phone}</a>
+                    <a
+                      href={`tel:${vendor.phone}`}
+                      className="hover:text-blue-600 dark:hover:text-blue-400"
+                    >
+                      {vendor.phone}
+                    </a>
                   </div>
                 )}
                 {vendor.address && (
@@ -394,29 +448,43 @@ const VendorsPage = () => {
 
               <div className="grid grid-cols-3 gap-2 p-3 bg-slate-50 dark:bg-slate-700 rounded-lg mb-4">
                 <div className="text-center">
-                  <p className="text-xs text-slate-600 dark:text-slate-400">Total Orders</p>
-                  <p className="text-lg font-bold text-slate-900 dark:text-white">{vendor.total_orders || 0}</p>
+                  <p className="text-xs text-slate-600 dark:text-slate-400">
+                    Total Orders
+                  </p>
+                  <p className="text-lg font-bold text-slate-900 dark:text-white text-xs">
+                    {vendor.total_orders || 0}
+                  </p>
                 </div>
                 <div className="text-center border-l border-r border-slate-200 dark:border-slate-600">
-                  <p className="text-xs text-slate-600 dark:text-slate-400">Total Value</p>
-                  <p className="text-sm font-bold text-slate-900 dark:text-white">{formatCurrency(vendor.total_value)}</p>
+                  <p className="text-xs text-slate-600 dark:text-slate-400">
+                    Total Value
+                  </p>
+                  <p className="text-sm font-bold text-slate-900 dark:text-white text-xs">
+                    {formatCurrency(vendor.total_value)}
+                  </p>
                 </div>
                 <div className="text-center">
-                  <p className="text-xs text-slate-600 dark:text-slate-400">Last Order</p>
-                  <p className="text-sm font-bold text-slate-900 dark:text-white">{formatDate(vendor.last_order_date)}</p>
+                  <p className="text-xs text-slate-600 dark:text-slate-400">
+                    Last Order
+                  </p>
+                  <p className="text-sm font-bold text-slate-900 dark:text-white text-xs">
+                    {formatDate(vendor.last_order_date)}
+                  </p>
                 </div>
               </div>
 
               <div className="flex gap-2">
-                <button 
+                <button
                   onClick={() => handleEditVendor(vendor)}
-                  className="flex-1 flex items-center text-xs justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium text-sm">
+                  className="flex-1 flex items-center text-xs justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium text-sm"
+                >
                   <Edit size={16} />
                   Edit
                 </button>
-                <button 
+                <button
                   onClick={() => handleShowPerformance(vendor)}
-                  className="flex-1 flex items-center text-xs justify-center gap-2 px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors font-medium text-sm">
+                  className="flex-1 flex items-center text-xs justify-center gap-2 px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors font-medium text-sm"
+                >
                   <TrendingUp size={16} />
                   Performance
                 </button>
@@ -435,43 +503,57 @@ const VendorsPage = () => {
       {/* Vendor Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-slate-800 dark:to-slate-700 rounded-xl p-4 border border-blue-200 dark:border-slate-600">
-          <p className="text-sm font-semibold text-slate-600 dark:text-slate-400">Total Vendors</p>
-          <p className="text-xl font-bold text-slate-900 dark:text-white mt-1">{stats.total || 0}</p>
+          <p className="text-sm font-semibold text-slate-600 dark:text-slate-400">
+            Total Vendors
+          </p>
+          <p className="text-xl font-bold text-slate-900 dark:text-white text-xs mt-1">
+            {stats.total || 0}
+          </p>
         </div>
         <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-slate-800 dark:to-slate-700 rounded-xl p-4 border border-green-200 dark:border-slate-600">
-          <p className="text-sm font-semibold text-slate-600 dark:text-slate-400">Active Vendors</p>
-          <p className="text-xl font-bold text-slate-900 dark:text-white mt-1">
+          <p className="text-sm font-semibold text-slate-600 dark:text-slate-400">
+            Active Vendors
+          </p>
+          <p className="text-xl font-bold text-slate-900 dark:text-white text-xs mt-1">
             {stats.active_count || 0}
           </p>
         </div>
         <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-slate-800 dark:to-slate-700 rounded-xl p-4 border border-yellow-200 dark:border-slate-600">
-          <p className="text-sm font-semibold text-slate-600 dark:text-slate-400">Avg. Rating</p>
-          <p className="text-xl font-bold text-slate-900 dark:text-white mt-1">
-            {stats.avg_rating ? parseFloat(stats.avg_rating).toFixed(1) : '0'}
+          <p className="text-sm font-semibold text-slate-600 dark:text-slate-400">
+            Avg. Rating
+          </p>
+          <p className="text-xl font-bold text-slate-900 dark:text-white text-xs mt-1">
+            {stats.avg_rating ? parseFloat(stats.avg_rating).toFixed(1) : "0"}
           </p>
         </div>
         <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-slate-800 dark:to-slate-700 rounded-xl p-4 border border-purple-200 dark:border-slate-600">
-          <p className="text-sm font-semibold text-slate-600 dark:text-slate-400">Total Orders</p>
-          <p className="text-xl font-bold text-slate-900 dark:text-white mt-1">
+          <p className="text-sm font-semibold text-slate-600 dark:text-slate-400">
+            Total Orders
+          </p>
+          <p className="text-xl font-bold text-slate-900 dark:text-white text-xs mt-1">
             {stats.total_orders_sum || 0}
           </p>
         </div>
       </div>
 
       {showAddModal && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/10 backdrop-blur-sm flex items-center justify-center z-50 p-4"
           onClick={() => setShowAddModal(false)}
         >
-          <div 
+          <div
             className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[95vh] overflow-hidden flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
             <div className="sticky top-0 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-slate-700 dark:to-slate-800 flex justify-between items-center px-8 py-6 border-b border-slate-200 dark:border-slate-600">
               <div>
-                <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Add New Vendor</h3>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Fill in the vendor details below</p>
+                <h3 className="text-2xl font-bold text-slate-900 dark:text-white text-xs">
+                  Add New Vendor
+                </h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 text-xs">
+                  Fill in the vendor details below
+                </p>
               </div>
               <button
                 onClick={() => setShowAddModal(false)}
@@ -482,10 +564,15 @@ const VendorsPage = () => {
             </div>
 
             {/* Form Content */}
-            <form onSubmit={handleAddVendor} className="overflow-y-auto flex-1 px-8 py-6">
+            <form
+              onSubmit={handleAddVendor}
+              className="overflow-y-auto flex-1 px-8 py-6"
+            >
               {/* Basic Information */}
               <div className="mb-8">
-                <h4 className="text-sm font-semibold text-slate-900 dark:text-white uppercase tracking-wide mb-4">Basic Information</h4>
+                <h4 className="text-sm font-semibold text-slate-900 dark:text-white uppercase tracking-wide mb-4">
+                  Basic Information
+                </h4>
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
@@ -541,9 +628,13 @@ const VendorsPage = () => {
                         required
                         className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                       >
-                        <option value="material_supplier">Material Supplier</option>
+                        <option value="material_supplier">
+                          Material Supplier
+                        </option>
                         <option value="manufacturer">Manufacturer</option>
-                        <option value="outsourcing_partner">Outsourcing Partner</option>
+                        <option value="outsourcing_partner">
+                          Outsourcing Partner
+                        </option>
                       </select>
                     </div>
                   </div>
@@ -567,7 +658,9 @@ const VendorsPage = () => {
 
               {/* Contact Information */}
               <div className="mb-8">
-                <h4 className="text-sm font-semibold text-slate-900 dark:text-white uppercase tracking-wide mb-4">Contact Information</h4>
+                <h4 className="text-sm font-semibold text-slate-900 dark:text-white uppercase tracking-wide mb-4">
+                  Contact Information
+                </h4>
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -616,7 +709,9 @@ const VendorsPage = () => {
 
               {/* Performance */}
               <div className="mb-8">
-                <h4 className="text-sm font-semibold text-slate-900 dark:text-white uppercase tracking-wide mb-4">Performance</h4>
+                <h4 className="text-sm font-semibold text-slate-900 dark:text-white uppercase tracking-wide mb-4">
+                  Performance
+                </h4>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                     Initial Rating (0-5)
@@ -638,7 +733,11 @@ const VendorsPage = () => {
                         <Star
                           key={i}
                           size={20}
-                          className={i < Math.floor(formData.rating || 0) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}
+                          className={
+                            i < Math.floor(formData.rating || 0)
+                              ? "fill-yellow-400 text-yellow-400"
+                              : "text-gray-300"
+                          }
                         />
                       ))}
                     </div>
@@ -662,7 +761,7 @@ const VendorsPage = () => {
                 disabled={submitting}
                 className="px-6 py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-green-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium"
               >
-                {submitting ? 'Adding Vendor...' : 'Add Vendor'}
+                {submitting ? "Adding Vendor..." : "Add Vendor"}
               </button>
             </div>
           </div>
@@ -670,19 +769,23 @@ const VendorsPage = () => {
       )}
 
       {showEditModal && editingVendor && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/10 backdrop-blur-sm flex items-center justify-center z-50 p-4"
           onClick={() => setShowEditModal(false)}
         >
-          <div 
+          <div
             className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[95vh] overflow-hidden flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
             <div className="sticky top-0 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-slate-700 dark:to-slate-800 flex justify-between items-center px-8 py-6 border-b border-slate-200 dark:border-slate-600">
               <div>
-                <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Edit Vendor</h3>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Update vendor information</p>
+                <h3 className="text-2xl font-bold text-slate-900 dark:text-white text-xs">
+                  Edit Vendor
+                </h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 text-xs">
+                  Update vendor information
+                </p>
               </div>
               <button
                 onClick={() => setShowEditModal(false)}
@@ -693,10 +796,15 @@ const VendorsPage = () => {
             </div>
 
             {/* Form Content */}
-            <form onSubmit={handleUpdateVendor} className="overflow-y-auto flex-1 px-8 py-6">
+            <form
+              onSubmit={handleUpdateVendor}
+              className="overflow-y-auto flex-1 px-8 py-6"
+            >
               {/* Basic Information */}
               <div className="mb-8">
-                <h4 className="text-sm font-semibold text-slate-900 dark:text-white uppercase tracking-wide mb-4">Basic Information</h4>
+                <h4 className="text-sm font-semibold text-slate-900 dark:text-white uppercase tracking-wide mb-4">
+                  Basic Information
+                </h4>
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
@@ -751,9 +859,13 @@ const VendorsPage = () => {
                         onChange={handleFormChange}
                         className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                       >
-                        <option value="material_supplier">Material Supplier</option>
+                        <option value="material_supplier">
+                          Material Supplier
+                        </option>
                         <option value="manufacturer">Manufacturer</option>
-                        <option value="outsourcing_partner">Outsourcing Partner</option>
+                        <option value="outsourcing_partner">
+                          Outsourcing Partner
+                        </option>
                       </select>
                     </div>
                   </div>
@@ -777,7 +889,9 @@ const VendorsPage = () => {
 
               {/* Contact Information */}
               <div className="mb-8">
-                <h4 className="text-sm font-semibold text-slate-900 dark:text-white uppercase tracking-wide mb-4">Contact Information</h4>
+                <h4 className="text-sm font-semibold text-slate-900 dark:text-white uppercase tracking-wide mb-4">
+                  Contact Information
+                </h4>
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -826,7 +940,9 @@ const VendorsPage = () => {
 
               {/* Performance */}
               <div className="mb-8">
-                <h4 className="text-sm font-semibold text-slate-900 dark:text-white uppercase tracking-wide mb-4">Performance</h4>
+                <h4 className="text-sm font-semibold text-slate-900 dark:text-white uppercase tracking-wide mb-4">
+                  Performance
+                </h4>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                     Rating (0-5)
@@ -848,7 +964,11 @@ const VendorsPage = () => {
                         <Star
                           key={i}
                           size={20}
-                          className={i < Math.floor(formData.rating || 0) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}
+                          className={
+                            i < Math.floor(formData.rating || 0)
+                              ? "fill-yellow-400 text-yellow-400"
+                              : "text-gray-300"
+                          }
                         />
                       ))}
                     </div>
@@ -872,7 +992,7 @@ const VendorsPage = () => {
                 disabled={submitting}
                 className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium"
               >
-                {submitting ? 'Updating...' : 'Update Vendor'}
+                {submitting ? "Updating..." : "Update Vendor"}
               </button>
             </div>
           </div>
@@ -880,19 +1000,23 @@ const VendorsPage = () => {
       )}
 
       {showPerformanceModal && selectedVendor && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/10 backdrop-blur-sm flex items-center justify-center z-50 p-4"
           onClick={() => setShowPerformanceModal(false)}
         >
-          <div 
+          <div
             className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
             <div className="bg-gradient-to-r from-purple-50 to-purple-100 dark:from-slate-700 dark:to-slate-800 flex justify-between items-center px-8 py-6 border-b border-slate-200 dark:border-slate-600">
               <div>
-                <h3 className="text-2xl font-bold text-slate-900 dark:text-white">{selectedVendor.name}</h3>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Performance Metrics</p>
+                <h3 className="text-2xl font-bold text-slate-900 dark:text-white text-xs">
+                  {selectedVendor.name}
+                </h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 text-xs">
+                  Performance Metrics
+                </p>
               </div>
               <button
                 onClick={() => setShowPerformanceModal(false)}
@@ -906,53 +1030,91 @@ const VendorsPage = () => {
             <div className="px-8 py-6">
               <div className="grid grid-cols-2 gap-6 mb-8">
                 <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-slate-700 dark:to-slate-800 rounded-xl p-6 border border-blue-200 dark:border-slate-600">
-                  <p className="text-sm font-semibold text-slate-600 dark:text-slate-400">Total Orders</p>
-                  <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">{selectedVendor.total_orders || 0}</p>
+                  <p className="text-sm font-semibold text-slate-600 dark:text-slate-400">
+                    Total Orders
+                  </p>
+                  <p className="text-3xl font-bold text-slate-900 dark:text-white text-xs mt-2">
+                    {selectedVendor.total_orders || 0}
+                  </p>
                 </div>
                 <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-slate-700 dark:to-slate-800 rounded-xl p-6 border border-green-200 dark:border-slate-600">
-                  <p className="text-sm font-semibold text-slate-600 dark:text-slate-400">Total Value</p>
-                  <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">{formatCurrency(selectedVendor.total_value)}</p>
+                  <p className="text-sm font-semibold text-slate-600 dark:text-slate-400">
+                    Total Value
+                  </p>
+                  <p className="text-3xl font-bold text-slate-900 dark:text-white text-xs mt-2">
+                    {formatCurrency(selectedVendor.total_value)}
+                  </p>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-6">
                 <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-slate-700 dark:to-slate-800 rounded-xl p-6 border border-yellow-200 dark:border-slate-600">
-                  <p className="text-sm font-semibold text-slate-600 dark:text-slate-400">Rating</p>
+                  <p className="text-sm font-semibold text-slate-600 dark:text-slate-400">
+                    Rating
+                  </p>
                   <div className="mt-3">
                     {renderStars(selectedVendor.rating)}
                   </div>
                 </div>
                 <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-slate-700 dark:to-slate-800 rounded-xl p-6 border border-purple-200 dark:border-slate-600">
-                  <p className="text-sm font-semibold text-slate-600 dark:text-slate-400">Status</p>
-                  <p className={`text-sm font-bold mt-2 ${selectedVendor.status === 'active' ? 'text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-400'}`}>
-                    {selectedVendor.status.charAt(0).toUpperCase() + selectedVendor.status.slice(1)}
+                  <p className="text-sm font-semibold text-slate-600 dark:text-slate-400">
+                    Status
+                  </p>
+                  <p
+                    className={`text-sm font-bold mt-2 ${
+                      selectedVendor.status === "active"
+                        ? "text-green-600 dark:text-green-400"
+                        : "text-gray-600 dark:text-gray-400"
+                    }`}
+                  >
+                    {selectedVendor.status.charAt(0).toUpperCase() +
+                      selectedVendor.status.slice(1)}
                   </p>
                 </div>
               </div>
 
               <div className="mt-8 pt-8 border-t border-slate-200 dark:border-slate-700">
-                <h4 className="text-sm font-semibold text-slate-900 dark:text-white uppercase tracking-wide mb-4">Contact Information</h4>
+                <h4 className="text-sm font-semibold text-slate-900 dark:text-white uppercase tracking-wide mb-4">
+                  Contact Information
+                </h4>
                 <div className="space-y-3">
                   {selectedVendor.email && (
                     <div className="flex items-center gap-3">
-                      <Mail size={18} className="text-blue-600 dark:text-blue-400" />
-                      <a href={`mailto:${selectedVendor.email}`} className="text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400">
+                      <Mail
+                        size={18}
+                        className="text-blue-600 dark:text-blue-400"
+                      />
+                      <a
+                        href={`mailto:${selectedVendor.email}`}
+                        className="text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400"
+                      >
                         {selectedVendor.email}
                       </a>
                     </div>
                   )}
                   {selectedVendor.phone && (
                     <div className="flex items-center gap-3">
-                      <Phone size={18} className="text-green-600 dark:text-green-400" />
-                      <a href={`tel:${selectedVendor.phone}`} className="text-slate-700 dark:text-slate-300 hover:text-green-600 dark:hover:text-green-400">
+                      <Phone
+                        size={18}
+                        className="text-green-600 dark:text-green-400"
+                      />
+                      <a
+                        href={`tel:${selectedVendor.phone}`}
+                        className="text-slate-700 dark:text-slate-300 hover:text-green-600 dark:hover:text-green-400"
+                      >
                         {selectedVendor.phone}
                       </a>
                     </div>
                   )}
                   {selectedVendor.address && (
                     <div className="flex items-start gap-3">
-                      <MapPin size={18} className="text-orange-600 dark:text-orange-400 mt-1" />
-                      <p className="text-slate-700 dark:text-slate-300">{selectedVendor.address}</p>
+                      <MapPin
+                        size={18}
+                        className="text-orange-600 dark:text-orange-400 mt-1"
+                      />
+                      <p className="text-slate-700 dark:text-slate-300">
+                        {selectedVendor.address}
+                      </p>
                     </div>
                   )}
                 </div>

@@ -1,6 +1,7 @@
 const pool = require('../../config/database');
 const PurchaseOrder = require('../../models/PurchaseOrder');
 const PurchaseOrderCommunication = require('../../models/PurchaseOrderCommunication');
+const GRN = require('../../models/GRN');
 const emailService = require('../../services/emailService');
 const path = require('path');
 const fs = require('fs');
@@ -76,6 +77,34 @@ exports.updatePurchaseOrderStatus = async (req, res) => {
     }
     
     await PurchaseOrder.updateStatus(id, status);
+
+    // Auto-create GRN if approved
+    if (status === 'approved') {
+      try {
+        const existingGRN = await GRN.findByPoId(id);
+        if (!existingGRN) {
+          const po = await PurchaseOrder.findById(id);
+          if (po) {
+             let items = [];
+             try {
+                items = typeof po.items === 'string' ? JSON.parse(po.items) : (po.items || []);
+             } catch (e) {
+                console.error('Error parsing items for GRN:', e);
+             }
+             
+             await GRN.create({
+               po_id: po.id,
+               items: items
+             });
+             console.log(`Auto-created GRN for PO #${po.po_number}`);
+          }
+        }
+      } catch (grnError) {
+        console.error('Error auto-creating GRN:', grnError);
+        // We don't fail the request if GRN creation fails, just log it
+      }
+    }
+
     res.json({ message: 'Purchase order status updated successfully' });
   } catch (error) {
     console.error('Update purchase order error:', error);
@@ -84,13 +113,42 @@ exports.updatePurchaseOrderStatus = async (req, res) => {
 };
 
 exports.deletePurchaseOrder = async (req, res) => {
+  const conn = await pool.getConnection();
   try {
+    await conn.beginTransaction();
+
     const { id } = req.params;
-    await PurchaseOrder.delete(id);
-    res.json({ message: 'Purchase order deleted successfully' });
+
+    // Find related GRNs
+    const [grns] = await conn.query('SELECT id FROM grn WHERE po_id = ?', [id]);
+    
+    // For each GRN, delete QC Inspections
+    for (const grn of grns) {
+        await conn.query('DELETE FROM qc_inspections WHERE grn_id = ?', [grn.id]);
+        
+        // Also delete any qc_reports if they exist (based on schema.sql)
+        await conn.query('DELETE FROM qc_reports WHERE grn_id = ?', [grn.id]);
+    }
+
+    // Delete GRNs
+    if (grns.length > 0) {
+        await conn.query('DELETE FROM grn WHERE po_id = ?', [id]);
+    }
+
+    // Delete PO Communications if necessary (optional but good practice)
+    await conn.query('DELETE FROM purchase_order_communications WHERE po_id = ?', [id]);
+
+    // Finally delete the Purchase Order
+    await conn.query('DELETE FROM purchase_orders WHERE id = ?', [id]);
+
+    await conn.commit();
+    res.json({ message: 'Purchase order and related records (GRN, QC) deleted successfully' });
   } catch (error) {
+    await conn.rollback();
     console.error('Delete purchase order error:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    res.status(500).json({ message: 'Internal server error', error: error.message });
+  } finally {
+    conn.release();
   }
 };
 

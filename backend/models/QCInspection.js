@@ -11,14 +11,15 @@ class QCInspection {
         inspectorId,
         remarks,
         qrCode,
-        batchLabel
+        batchLabel,
+        itemsResults
       } = data;
 
       const [result] = await conn.query(
         `INSERT INTO qc_inspections 
-        (grn_id, inspection_type, production_stage_id, inspector_id, remarks, qr_code, batch_label, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')`,
-        [grnId, inspectionType, productionStageId, inspectorId, remarks, qrCode, batchLabel]
+        (grn_id, inspection_type, production_stage_id, inspector_id, remarks, qr_code, batch_label, items_results, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+        [grnId, inspectionType || 'grn', productionStageId, inspectorId, remarks, qrCode, batchLabel, JSON.stringify(itemsResults)]
       );
 
       return result.insertId;
@@ -27,13 +28,21 @@ class QCInspection {
     }
   }
 
-  static async updateStatus(inspectionId, status, remarks = null) {
+  static async updateStatus(inspectionId, status, remarks = null, itemsResults = null) {
     const conn = await pool.getConnection();
     try {
-      await conn.query(
-        `UPDATE qc_inspections SET status = ?, remarks = ? WHERE id = ?`,
-        [status, remarks, inspectionId]
-      );
+      let query = `UPDATE qc_inspections SET status = ?, remarks = ?`;
+      const params = [status, remarks];
+
+      if (itemsResults) {
+        query += `, items_results = ?`;
+        params.push(JSON.stringify(itemsResults));
+      }
+
+      query += ` WHERE id = ?`;
+      params.push(inspectionId);
+
+      await conn.query(query, params);
     } finally {
       conn.release();
     }
@@ -42,11 +51,13 @@ class QCInspection {
   static async findById(id) {
     const conn = await pool.getConnection();
     try {
+      // Joining with grn and possibly purchase_orders to get more context
       const [rows] = await conn.query(
-        `SELECT qi.*, u.name as inspector_name, grn.grn_number 
+        `SELECT qi.*, u.username as inspector_name, grn.id as grn_number, po.po_number
         FROM qc_inspections qi
         LEFT JOIN users u ON qi.inspector_id = u.id
-        LEFT JOIN goods_receipt_notes grn ON qi.grn_id = grn.id
+        LEFT JOIN grn ON qi.grn_id = grn.id
+        LEFT JOIN purchase_orders po ON grn.po_id = po.id
         WHERE qi.id = ?`,
         [id]
       );
@@ -60,9 +71,10 @@ class QCInspection {
     const conn = await pool.getConnection();
     try {
       const [rows] = await conn.query(
-        `SELECT qi.*, grn.grn_number, u.name as inspector_name 
+        `SELECT qi.*, grn.id as grn_number, po.po_number, u.username as inspector_name 
         FROM qc_inspections qi
-        LEFT JOIN goods_receipt_notes grn ON qi.grn_id = grn.id
+        LEFT JOIN grn ON qi.grn_id = grn.id
+        LEFT JOIN purchase_orders po ON grn.po_id = po.id
         LEFT JOIN users u ON qi.inspector_id = u.id
         WHERE qi.status IN ('pending', 'in_progress')
         ORDER BY qi.created_at DESC`
@@ -77,7 +89,7 @@ class QCInspection {
     const conn = await pool.getConnection();
     try {
       const [rows] = await conn.query(
-        `SELECT qi.*, u.name as inspector_name 
+        `SELECT qi.*, u.username as inspector_name 
         FROM qc_inspections qi
         LEFT JOIN users u ON qi.inspector_id = u.id
         WHERE qi.production_stage_id = ?
@@ -94,7 +106,7 @@ class QCInspection {
     const conn = await pool.getConnection();
     try {
       const [rows] = await conn.query(
-        `SELECT qi.*, u.name as inspector_name 
+        `SELECT qi.*, u.username as inspector_name 
         FROM qc_inspections qi
         LEFT JOIN users u ON qi.inspector_id = u.id
         WHERE qi.grn_id = ?`,

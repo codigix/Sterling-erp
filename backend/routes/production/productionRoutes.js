@@ -6,6 +6,8 @@ const authMiddleware = require('../../middleware/authMiddleware');
 const roleMiddleware = require('../../middleware/roleMiddleware');
 const productionController = require('../../controllers/production/productionController');
 const drawingController = require('../../controllers/production/drawingController');
+const specificationController = require('../../controllers/production/specificationController');
+const technicalFileController = require('../../controllers/production/technicalFileController');
 
 const upload = multer({
   dest: path.join(__dirname, '../../uploads/design-engineering'),
@@ -36,6 +38,20 @@ router.get('/statistics', roleMiddleware('Admin', 'Management', 'Production'), p
 // Drawing routes
 router.get('/drawings', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer'), drawingController.getDrawings);
 router.post('/drawings', roleMiddleware('Admin', 'Management', 'Design Engineer'), upload.single('file'), drawingController.uploadDrawing);
+router.get('/drawings/:id/download', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer'), drawingController.downloadDrawing);
+router.delete('/drawings/:id', roleMiddleware('Admin', 'Management', 'Design Engineer'), drawingController.deleteDrawing);
+
+// Specification routes
+router.get('/specifications', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer'), specificationController.getSpecifications);
+router.post('/specifications', roleMiddleware('Admin', 'Management', 'Design Engineer'), upload.single('file'), specificationController.createSpecification);
+router.get('/specifications/:id/download', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer'), specificationController.downloadSpecification);
+router.delete('/specifications/:id', roleMiddleware('Admin', 'Management', 'Design Engineer'), specificationController.deleteSpecification);
+
+// Technical Files routes
+router.get('/technical-files', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer'), technicalFileController.getTechnicalFiles);
+router.post('/technical-files', roleMiddleware('Admin', 'Management', 'Design Engineer'), upload.single('file'), technicalFileController.createTechnicalFile);
+router.get('/technical-files/:id/download', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer'), technicalFileController.downloadTechnicalFile);
+router.delete('/technical-files/:id', roleMiddleware('Admin', 'Management', 'Design Engineer'), technicalFileController.deleteTechnicalFile);
 
 router.post('/design-projects', roleMiddleware('Admin', 'Management', 'Design Engineer'), productionController.createDesignProject);
 router.post('/root-cards/:rootCardId/design-details', roleMiddleware('Admin', 'Management', 'Design Engineer'), productionController.saveDesignProjectDetails);
@@ -43,6 +59,8 @@ router.get('/root-cards/:rootCardId/design-details', roleMiddleware('Admin', 'Ma
 
 router.get('/designs', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer'), productionController.getAllDesignsWithDetails);
 router.get('/designs/:id', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer'), productionController.getDesignWithDetails);
+router.put('/designs/:id', roleMiddleware('Admin', 'Management', 'Design Engineer'), productionController.updateDesign);
 router.delete('/designs/:id', roleMiddleware('Admin', 'Management', 'Design Engineer'), productionController.deleteDesign);
+router.get('/designs/:id/download', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer'), productionController.downloadDesign);
 
 module.exports = router;

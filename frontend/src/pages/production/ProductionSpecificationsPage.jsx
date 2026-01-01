@@ -1,8 +1,12 @@
-import React, { useState } from 'react';
-import { FileText, Plus, X, Save } from 'lucide-react';
-import Card, { CardContent, CardTitle, CardHeader } from '../../components/ui/Card';
-import Button from '../../components/ui/Button';
-import Input from '../../components/ui/Input';
+import React, { useState } from "react";
+import { FileText, Plus, X, Save } from "lucide-react";
+import Card, {
+  CardContent,
+  CardTitle,
+  CardHeader,
+} from "../../components/ui/Card";
+import Button from "../../components/ui/Button";
+import Input from "../../components/ui/Input";
 
 const PRODUCTION_PHASES = {
   "Material Prep": [
@@ -82,7 +86,8 @@ const PRODUCTION_PHASE_FORMS = {
       name: "remarks",
       label: "Remarks",
       type: "textarea",
-      placeholder: "e.g., Follow drawing DRG-001 exactly, Use waterproof marker",
+      placeholder:
+        "e.g., Follow drawing DRG-001 exactly, Use waterproof marker",
     },
     {
       name: "qcInspectionResult",
@@ -355,7 +360,9 @@ const ProductionSpecificationsPage = () => {
   };
 
   const handleDeleteStage = (id) => {
-    if (window.confirm("Are you sure you want to delete this production stage?")) {
+    if (
+      window.confirm("Are you sure you want to delete this production stage?")
+    ) {
       setProductionStages(productionStages.filter((s) => s.id !== id));
     }
   };
@@ -364,7 +371,11 @@ const ProductionSpecificationsPage = () => {
     setProductionStages(
       productionStages.map((s) =>
         s.id === id
-          ? { ...s, status: "In Progress", startTime: new Date().toLocaleString() }
+          ? {
+              ...s,
+              status: "In Progress",
+              startTime: new Date().toLocaleString(),
+            }
           : s
       )
     );
@@ -374,7 +385,11 @@ const ProductionSpecificationsPage = () => {
     setProductionStages(
       productionStages.map((s) =>
         s.id === id
-          ? { ...s, status: "Completed", finishTime: new Date().toLocaleString() }
+          ? {
+              ...s,
+              status: "Completed",
+              finishTime: new Date().toLocaleString(),
+            }
           : s
       )
     );
@@ -386,15 +401,19 @@ const ProductionSpecificationsPage = () => {
         {/* Header */}
         <div className="mb-8 flex justify-between items-start">
           <div>
-            <h1 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
+            <h1 className="text-xl font-bold text-slate-900 dark:text-white text-xs flex items-center gap-3">
               <FileText className="text-blue-600" size={36} />
               Production Specifications
             </h1>
             <p className="text-slate-600 dark:text-slate-400 text-xs ">
-              Manage production phases, sub-tasks, requirements, and detailed specifications
+              Manage production phases, sub-tasks, requirements, and detailed
+              specifications
             </p>
           </div>
-          <Button onClick={handleAddStage} className="bg-blue-600 hover:bg-blue-700">
+          <Button
+            onClick={handleAddStage}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
             <Plus size={16} className="mr-2" />
             Add Production Stage
           </Button>
@@ -402,7 +421,7 @@ const ProductionSpecificationsPage = () => {
 
         {/* Production Stages Table */}
         <div className="bg-white dark:bg-slate-800 rounded-lg p-6 border border-slate-200 dark:border-slate-700">
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-4">
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white text-xs mb-4">
             Production Stages & Timeline
           </h2>
           <div className="overflow-x-auto">
@@ -434,17 +453,32 @@ const ProductionSpecificationsPage = () => {
               </thead>
               <tbody>
                 {productionStages.map((stage) => (
-                  <tr key={stage.id} className="border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700">
-                    <td className="p-2 text-slate-900 dark:text-white">{stage.stepNumber}</td>
+                  <tr
+                    key={stage.id}
+                    className="border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700"
+                  >
+                    <td className="p-2 text-slate-900 dark:text-white">
+                      {stage.stepNumber}
+                    </td>
                     <td className="p-2">
                       <div>
-                        <p className="font-medium text-slate-900 dark:text-white">{stage.phase}</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">{stage.subTask}</p>
+                        <p className="font-medium text-slate-900 dark:text-white text-xs">
+                          {stage.phase}
+                        </p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          {stage.subTask}
+                        </p>
                       </div>
                     </td>
-                    <td className="p-2 text-slate-900 dark:text-white">{stage.assignee}</td>
-                    <td className="p-2 text-slate-900 dark:text-white text-xs">{stage.startTime || "—"}</td>
-                    <td className="p-2 text-slate-900 dark:text-white text-xs">{stage.finishTime || "—"}</td>
+                    <td className="p-2 text-slate-900 dark:text-white">
+                      {stage.assignee}
+                    </td>
+                    <td className="p-2 text-slate-900 dark:text-white text-xs">
+                      {stage.startTime || "—"}
+                    </td>
+                    <td className="p-2 text-slate-900 dark:text-white text-xs">
+                      {stage.finishTime || "—"}
+                    </td>
                     <td className="p-2">
                       <span
                         className={`px-3 py-1 rounded-full text-xs font-medium ${
@@ -467,16 +501,19 @@ const ProductionSpecificationsPage = () => {
                           Edit
                         </button>
                         {stage.status === "Completed" && (
-                          <span className="text-xs text-slate-500">Completed</span>
+                          <span className="text-xs text-slate-500">
+                            Completed
+                          </span>
                         )}
-                        {stage.status !== "Completed" && stage.status !== "In Progress" && (
-                          <button
-                            onClick={() => handleStartStage(stage.id)}
-                            className="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
-                          >
-                            Start
-                          </button>
-                        )}
+                        {stage.status !== "Completed" &&
+                          stage.status !== "In Progress" && (
+                            <button
+                              onClick={() => handleStartStage(stage.id)}
+                              className="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
+                            >
+                              Start
+                            </button>
+                          )}
                         {stage.status === "In Progress" && (
                           <button
                             onClick={() => handleFinishStage(stage.id)}
@@ -506,7 +543,9 @@ const ProductionSpecificationsPage = () => {
             <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
               <div className="sticky top-0 bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 p-1 border-b border-blue-400 flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-white">
-                  {selectedPhaseKey ? "Edit Production Stage" : "Add Production Stage"}
+                  {selectedPhaseKey
+                    ? "Edit Production Stage"
+                    : "Add Production Stage"}
                 </h3>
                 <button
                   onClick={() => setModalOpen(false)}
@@ -525,7 +564,9 @@ const ProductionSpecificationsPage = () => {
                     </label>
                     <select
                       value={phaseDetails.phase || ""}
-                      onChange={(e) => handlePhaseDetailChange("phase", e.target.value)}
+                      onChange={(e) =>
+                        handlePhaseDetailChange("phase", e.target.value)
+                      }
                       className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="">Select Phase</option>
@@ -549,7 +590,9 @@ const ProductionSpecificationsPage = () => {
                             tasks.some((t) => t.label === e.target.value)
                         );
                         if (phaseObj) {
-                          const task = phaseObj[1].find((t) => t.label === e.target.value);
+                          const task = phaseObj[1].find(
+                            (t) => t.label === e.target.value
+                          );
                           setSelectedPhaseType(task?.value);
                         }
                       }}
@@ -569,49 +612,73 @@ const ProductionSpecificationsPage = () => {
                 {/* Form Fields */}
                 {selectedPhaseType &&
                   PRODUCTION_PHASE_FORMS[selectedPhaseType] &&
-                  PRODUCTION_PHASE_FORMS[selectedPhaseType].map((field, idx) => (
-                    <div key={idx}>
-                      <label className="block text-sm font-medium text-slate-900 text-left dark:text-white mb-2">
-                        {field.label}
-                      </label>
-                      {field.type === "text" || field.type === "number" || field.type === "date" ? (
-                        <input
-                          type={field.type}
-                          placeholder={field.placeholder}
-                          value={phaseDetails[field.name] || ""}
-                          onChange={(e) => handlePhaseDetailChange(field.name, e.target.value)}
-                          className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                      ) : field.type === "select" ? (
-                        <select
-                          value={phaseDetails[field.name] || ""}
-                          onChange={(e) => handlePhaseDetailChange(field.name, e.target.value)}
-                          className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                          <option value="">Select {field.label}</option>
-                          {field.options?.map((opt, i) => (
-                            <option key={i} value={opt}>
-                              {opt}
-                            </option>
-                          ))}
-                        </select>
-                      ) : field.type === "textarea" ? (
-                        <textarea
-                          placeholder={field.placeholder}
-                          value={phaseDetails[field.name] || ""}
-                          onChange={(e) => handlePhaseDetailChange(field.name, e.target.value)}
-                          className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          rows="4"
-                        />
-                      ) : field.type === "file" ? (
-                        <input
-                          type="file"
-                          onChange={(e) => handlePhaseDetailChange(field.name, e.target.files?.[0])}
-                          className="block w-full text-sm text-slate-500 dark:text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-slate-100 dark:file:bg-slate-600 file:text-slate-900 dark:file:text-white hover:file:bg-slate-200 dark:hover:file:bg-slate-500"
-                        />
-                      ) : null}
-                    </div>
-                  ))}
+                  PRODUCTION_PHASE_FORMS[selectedPhaseType].map(
+                    (field, idx) => (
+                      <div key={idx}>
+                        <label className="block text-sm font-medium text-slate-900 text-left dark:text-white mb-2">
+                          {field.label}
+                        </label>
+                        {field.type === "text" ||
+                        field.type === "number" ||
+                        field.type === "date" ? (
+                          <input
+                            type={field.type}
+                            placeholder={field.placeholder}
+                            value={phaseDetails[field.name] || ""}
+                            onChange={(e) =>
+                              handlePhaseDetailChange(
+                                field.name,
+                                e.target.value
+                              )
+                            }
+                            className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        ) : field.type === "select" ? (
+                          <select
+                            value={phaseDetails[field.name] || ""}
+                            onChange={(e) =>
+                              handlePhaseDetailChange(
+                                field.name,
+                                e.target.value
+                              )
+                            }
+                            className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value="">Select {field.label}</option>
+                            {field.options?.map((opt, i) => (
+                              <option key={i} value={opt}>
+                                {opt}
+                              </option>
+                            ))}
+                          </select>
+                        ) : field.type === "textarea" ? (
+                          <textarea
+                            placeholder={field.placeholder}
+                            value={phaseDetails[field.name] || ""}
+                            onChange={(e) =>
+                              handlePhaseDetailChange(
+                                field.name,
+                                e.target.value
+                              )
+                            }
+                            className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            rows="4"
+                          />
+                        ) : field.type === "file" ? (
+                          <input
+                            type="file"
+                            onChange={(e) =>
+                              handlePhaseDetailChange(
+                                field.name,
+                                e.target.files?.[0]
+                              )
+                            }
+                            className="block w-full text-sm text-slate-500 dark:text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-slate-100 dark:file:bg-slate-600 file:text-slate-900 dark:file:text-white hover:file:bg-slate-200 dark:hover:file:bg-slate-500"
+                          />
+                        ) : null}
+                      </div>
+                    )
+                  )}
 
                 {/* Assignee */}
                 <div>
@@ -622,7 +689,9 @@ const ProductionSpecificationsPage = () => {
                     type="text"
                     placeholder="e.g., John Doe"
                     value={phaseDetails.assignee || ""}
-                    onChange={(e) => handlePhaseDetailChange("assignee", e.target.value)}
+                    onChange={(e) =>
+                      handlePhaseDetailChange("assignee", e.target.value)
+                    }
                     className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>

@@ -91,7 +91,10 @@ const DepartmentLayout = () => {
             >
               <Menu size={20} />
             </button>
-            <Link to={getDepartmentRole().path} className="flex items-center text-xs">
+            <Link
+              to={getDepartmentRole().path}
+              className="flex items-center text-xs"
+            >
               <div className="font-bold text-xl text-blue-600 dark:text-blue-400">
                 Sterling ERP
               </div>
@@ -278,7 +281,7 @@ const DepartmentLayout = () => {
             <h1 className="text-3xl font-bold  dark:">
               {getCurrentPageTitle()} Tasks
             </h1>
-            <p className="text-slate-600 dark:text-slate-400 mt-1">
+            <p className="text-slate-600 dark:text-slate-400 mt-1 text-xs">
               Manage your department tasks and activities
             </p>
           </div>

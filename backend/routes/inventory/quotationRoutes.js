@@ -4,11 +4,15 @@ const quotationController = require('../../controllers/inventory/quotationContro
 const router = express.Router();
 
 router.get('/stats', quotationController.getQuotationStats);
+router.get('/attachments/:id/download', quotationController.downloadQuotationAttachment);
 router.get('/vendor/:vendor_id', quotationController.getVendorQuotations);
 router.get('/project/:projectId', quotationController.getQuotationsByProject);
+router.get('/:id/communications', quotationController.getQuotationCommunications);
+router.get('/:id/responses', quotationController.getQuotationResponses);
 router.get('/:id', quotationController.getQuotationById);
 router.get('/', quotationController.getAllQuotations);
 router.post('/', quotationController.createQuotation);
+router.post('/:id/email', quotationController.sendQuotationEmail);
 router.put('/:id', quotationController.updateQuotation);
 router.delete('/:id', quotationController.deleteQuotation);
 router.patch('/:id/approve', quotationController.approveQuotation);

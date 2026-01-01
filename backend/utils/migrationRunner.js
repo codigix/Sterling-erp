@@ -831,7 +831,7 @@ async function runMigrations() {
           quotation_number VARCHAR(100) UNIQUE NOT NULL,
           total_amount DECIMAL(15,2) DEFAULT 0.00,
           valid_until DATE,
-          status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+          status ENUM('pending', 'approved', 'rejected', 'sent') DEFAULT 'pending',
           items JSON,
           notes TEXT,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -877,6 +877,17 @@ async function runMigrations() {
       if (columnNames.includes('pr_id')) {
         await connection.execute(`ALTER TABLE quotations DROP COLUMN pr_id`);
         console.log('✅ Removed pr_id column from quotations table');
+      }
+      
+      try {
+        await connection.execute(`ALTER TABLE quotations MODIFY COLUMN status ENUM('pending', 'approved', 'rejected', 'sent') DEFAULT 'pending'`);
+        console.log('✅ Updated quotations status ENUM to include sent');
+      } catch (enumErr) {
+        if (enumErr.message.includes('Duplicate column')) {
+          console.log('⚠️  Status column already updated');
+        } else {
+          console.log('ℹ️  Status ENUM update:', enumErr.message);
+        }
       }
       
       console.log('✅ Quotations table columns verified/updated');
@@ -935,6 +946,94 @@ async function runMigrations() {
     } catch (err) {
       if (err.code !== 'ER_TABLE_EXISTS_ERROR') throw err;
       console.log('⚠️  purchase_orders table already exists');
+    }
+
+    // Migration: Create quotation_communications table
+    try {
+      await connection.execute(`
+        CREATE TABLE IF NOT EXISTS quotation_communications (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          quotation_id INT NOT NULL,
+          sender_email VARCHAR(255) NOT NULL,
+          subject VARCHAR(255),
+          content_text TEXT,
+          content_html LONGTEXT,
+          message_id VARCHAR(255) UNIQUE,
+          received_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          is_read BOOLEAN DEFAULT FALSE,
+          has_attachments BOOLEAN DEFAULT FALSE,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (quotation_id) REFERENCES quotations(id) ON DELETE CASCADE
+        )
+      `);
+      console.log('✅ quotation_communications table created/verified');
+    } catch (err) {
+      if (err.code !== 'ER_TABLE_EXISTS_ERROR') throw err;
+      console.log('⚠️  quotation_communications table already exists');
+    }
+
+    // Migration: Create quotation_attachments table
+    try {
+      await connection.execute(`
+        CREATE TABLE IF NOT EXISTS quotation_attachments (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          communication_id INT NOT NULL,
+          file_name VARCHAR(255) NOT NULL,
+          file_path VARCHAR(500),
+          file_size INT,
+          mime_type VARCHAR(100),
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (communication_id) REFERENCES quotation_communications(id) ON DELETE CASCADE
+        )
+      `);
+      console.log('✅ quotation_attachments table created/verified');
+    } catch (err) {
+      if (err.code !== 'ER_TABLE_EXISTS_ERROR') throw err;
+      console.log('⚠️  quotation_attachments table already exists');
+    }
+
+    // Migration: Create technical_files table
+    try {
+      await connection.execute(`
+        CREATE TABLE IF NOT EXISTS technical_files (
+          id INT PRIMARY KEY AUTO_INCREMENT,
+          name VARCHAR(255) NOT NULL,
+          category VARCHAR(100),
+          description TEXT,
+          file_name VARCHAR(255),
+          file_path VARCHAR(500) NOT NULL,
+          uploaded_by INT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE SET NULL
+        )
+      `);
+      console.log('✅ technical_files table created/verified');
+    } catch (err) {
+      if (err.code !== 'ER_TABLE_EXISTS_ERROR') throw err;
+      console.log('⚠️  technical_files table already exists');
+    }
+
+    // Migration: Create specifications table
+    try {
+      await connection.execute(`
+        CREATE TABLE IF NOT EXISTS specifications (
+          id INT PRIMARY KEY AUTO_INCREMENT,
+          title VARCHAR(255) NOT NULL,
+          description TEXT,
+          version VARCHAR(50) DEFAULT 'v1.0',
+          file_name VARCHAR(255),
+          file_path VARCHAR(500) NOT NULL,
+          uploaded_by INT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE SET NULL
+        )
+      `);
+      console.log('✅ specifications table created/verified');
+    } catch (err) {
+      if (err.code !== 'ER_TABLE_EXISTS_ERROR') throw err;
+      console.log('⚠️  specifications table already exists');
     }
 
     console.log('\n✅ All migrations completed successfully!');

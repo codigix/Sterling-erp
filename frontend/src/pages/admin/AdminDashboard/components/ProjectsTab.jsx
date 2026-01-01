@@ -1,5 +1,9 @@
 import React from "react";
-import Card, { CardHeader, CardTitle, CardContent } from "../../../../components/ui/Card";
+import Card, {
+  CardHeader,
+  CardTitle,
+  CardContent,
+} from "../../../../components/ui/Card";
 import Badge from "../../../../components/ui/Badge";
 import { Target, Calendar, TrendingUp } from "lucide-react";
 
@@ -16,7 +20,9 @@ const ProjectsTab = ({ projects }) => (
                 </div>
                 <span className="text-sm">Active Projects</span>
               </CardTitle>
-              <Badge variant="secondary" className="text-xs px-2 py-0.5">{projects.progress.length}</Badge>
+              <Badge variant="secondary" className="text-xs px-2 py-0.5">
+                {projects.progress.length}
+              </Badge>
             </div>
           </CardHeader>
           <CardContent className="p-0">
@@ -89,7 +95,7 @@ const ProjectsTab = ({ projects }) => (
                 <p className="text-xs text-slate-600 dark:text-slate-400 leading-tight">
                   Completed
                 </p>
-                <p className="text-sm font-bold text-slate-900 dark:text-white">
+                <p className="text-sm font-bold text-slate-900 dark:text-white text-xs">
                   6
                 </p>
               </div>
@@ -100,7 +106,7 @@ const ProjectsTab = ({ projects }) => (
                 <p className="text-xs text-slate-600 dark:text-slate-400 leading-tight">
                   In Progress
                 </p>
-                <p className="text-sm font-bold text-slate-900 dark:text-white">
+                <p className="text-sm font-bold text-slate-900 dark:text-white text-xs">
                   18
                 </p>
               </div>
@@ -111,7 +117,7 @@ const ProjectsTab = ({ projects }) => (
                 <p className="text-xs text-slate-600 dark:text-slate-400 leading-tight">
                   Delayed
                 </p>
-                <p className="text-sm font-bold text-slate-900 dark:text-white">
+                <p className="text-sm font-bold text-slate-900 dark:text-white text-xs">
                   4
                 </p>
               </div>
@@ -136,7 +142,7 @@ const ProjectsTab = ({ projects }) => (
               )}
               %
             </p>
-            <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 text-xs">
               all projects
             </p>
           </CardContent>

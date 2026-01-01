@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   BarChart3,
   Download,
@@ -12,104 +12,118 @@ import {
   AlertTriangle,
   PieChart,
   LineChart,
-} from 'lucide-react';
+} from "lucide-react";
 
 const ReportsPage = () => {
-  const [dateRange, setDateRange] = useState('30days');
-  const [reportType, setReportType] = useState('all');
+  const [dateRange, setDateRange] = useState("30days");
+  const [reportType, setReportType] = useState("all");
 
   const reports = [
     {
       id: 1,
-      name: 'Stock Level Report',
-      description: 'Current inventory levels by category',
-      category: 'inventory',
-      lastGenerated: '2024-12-15 10:30',
-      format: 'PDF, Excel',
+      name: "Stock Level Report",
+      description: "Current inventory levels by category",
+      category: "inventory",
+      lastGenerated: "2024-12-15 10:30",
+      format: "PDF, Excel",
       icon: Package,
     },
     {
       id: 2,
-      name: 'Stock Movement Summary',
-      description: 'Inbound, outbound, and transfer movements',
-      category: 'movement',
-      lastGenerated: '2024-12-14 15:45',
-      format: 'PDF, Excel',
+      name: "Stock Movement Summary",
+      description: "Inbound, outbound, and transfer movements",
+      category: "movement",
+      lastGenerated: "2024-12-14 15:45",
+      format: "PDF, Excel",
       icon: TrendingUp,
     },
     {
       id: 3,
-      name: 'GRN Processing Report',
-      description: 'Goods received notes status and inspections',
-      category: 'grn',
-      lastGenerated: '2024-12-15 09:20',
-      format: 'PDF, Excel',
+      name: "GRN Processing Report",
+      description: "Goods received notes status and inspections",
+      category: "grn",
+      lastGenerated: "2024-12-15 09:20",
+      format: "PDF, Excel",
       icon: Truck,
     },
     {
       id: 4,
-      name: 'Quality Control Report',
-      description: 'QC inspection results and defect analysis',
-      category: 'qc',
-      lastGenerated: '2024-12-14 16:00',
-      format: 'PDF, Excel',
+      name: "Quality Control Report",
+      description: "QC inspection results and defect analysis",
+      category: "qc",
+      lastGenerated: "2024-12-14 16:00",
+      format: "PDF, Excel",
       icon: CheckCircle,
     },
     {
       id: 5,
-      name: 'Reorder Analysis',
-      description: 'Items below reorder levels and predictions',
-      category: 'reorder',
-      lastGenerated: '2024-12-13 11:15',
-      format: 'PDF, Excel',
+      name: "Reorder Analysis",
+      description: "Items below reorder levels and predictions",
+      category: "reorder",
+      lastGenerated: "2024-12-13 11:15",
+      format: "PDF, Excel",
       icon: AlertTriangle,
     },
     {
       id: 6,
-      name: 'Vendor Performance',
-      description: 'Vendor rating, delivery, and quality metrics',
-      category: 'vendor',
-      lastGenerated: '2024-12-12 14:30',
-      format: 'PDF, Excel',
+      name: "Vendor Performance",
+      description: "Vendor rating, delivery, and quality metrics",
+      category: "vendor",
+      lastGenerated: "2024-12-12 14:30",
+      format: "PDF, Excel",
       icon: TrendingUp,
     },
     {
       id: 7,
-      name: 'Batch Expiry Report',
-      description: 'Expiring and expired batch tracking',
-      category: 'batch',
-      lastGenerated: '2024-12-15 08:45',
-      format: 'PDF, Excel',
+      name: "Batch Expiry Report",
+      description: "Expiring and expired batch tracking",
+      category: "batch",
+      lastGenerated: "2024-12-15 08:45",
+      format: "PDF, Excel",
       icon: Calendar,
     },
     {
       id: 8,
-      name: 'Warehouse Utilization',
-      description: 'Rack and shelf capacity analysis',
-      category: 'warehouse',
-      lastGenerated: '2024-12-14 13:20',
-      format: 'PDF, Excel',
+      name: "Warehouse Utilization",
+      description: "Rack and shelf capacity analysis",
+      category: "warehouse",
+      lastGenerated: "2024-12-14 13:20",
+      format: "PDF, Excel",
       icon: BarChart3,
     },
   ];
 
-  const filteredReports = reports.filter(report =>
-    reportType === 'all' || report.category === reportType
+  const filteredReports = reports.filter(
+    (report) => reportType === "all" || report.category === reportType
   );
 
   const keyMetrics = [
-    { label: 'Total Stock Value', value: '₹24.5L', icon: Package, trend: '+8%' },
-    { label: 'Pending GRN', value: '3', icon: Truck, trend: '-2%' },
-    { label: 'QC Approved', value: '94%', icon: CheckCircle, trend: '+5%' },
-    { label: 'Low Stock Items', value: '23', icon: AlertTriangle, trend: '+3%' },
+    {
+      label: "Total Stock Value",
+      value: "₹24.5L",
+      icon: Package,
+      trend: "+8%",
+    },
+    { label: "Pending GRN", value: "3", icon: Truck, trend: "-2%" },
+    { label: "QC Approved", value: "94%", icon: CheckCircle, trend: "+5%" },
+    {
+      label: "Low Stock Items",
+      value: "23",
+      icon: AlertTriangle,
+      trend: "+3%",
+    },
   ];
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-900 dark:text-white">Reports</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">Generate and view inventory analytics reports</p>
+          <h1 className="text-xl font-bold text-slate-900 dark:text-white text-xs">
+            Reports
+          </h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">
+            Generate and view inventory analytics reports
+          </p>
         </div>
         <div className="flex gap-3 flex-wrap">
           <button className="flex items-center text-xs gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium">
@@ -127,14 +141,26 @@ const ReportsPage = () => {
         {keyMetrics.map((metric, idx) => {
           const Icon = metric.icon;
           return (
-            <div key={idx} className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700 rounded-lg p-4 border border-slate-200 dark:border-slate-600">
+            <div
+              key={idx}
+              className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700 rounded-lg p-4 border border-slate-200 dark:border-slate-600"
+            >
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">{metric.label}</p>
-                  <p className="text-xl font-bold text-slate-900 dark:text-white mt-2">{metric.value}</p>
-                  <p className="text-xs text-green-600 dark:text-green-400 mt-2">{metric.trend}</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">
+                    {metric.label}
+                  </p>
+                  <p className="text-xl font-bold text-slate-900 dark:text-white text-xs mt-2">
+                    {metric.value}
+                  </p>
+                  <p className="text-xs text-green-600 dark:text-green-400 mt-2">
+                    {metric.trend}
+                  </p>
                 </div>
-                <Icon size={24} className="text-slate-400 dark:text-slate-500" />
+                <Icon
+                  size={24}
+                  className="text-slate-400 dark:text-slate-500"
+                />
               </div>
             </div>
           );
@@ -144,11 +170,13 @@ const ReportsPage = () => {
       <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6">
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Date Range</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Date Range
+            </label>
             <select
               value={dateRange}
               onChange={(e) => setDateRange(e.target.value)}
-              className="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white font-medium"
+              className="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white font-medium text-xs"
             >
               <option value="7days">Last 7 Days</option>
               <option value="30days">Last 30 Days</option>
@@ -157,11 +185,13 @@ const ReportsPage = () => {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Report Type</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Report Type
+            </label>
             <select
               value={reportType}
               onChange={(e) => setReportType(e.target.value)}
-              className="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white font-medium"
+              className="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white font-medium text-xs"
             >
               <option value="all">All Reports</option>
               <option value="inventory">Inventory</option>
@@ -187,23 +217,38 @@ const ReportsPage = () => {
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center text-xs gap-3">
                     <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg group-hover:bg-blue-200 dark:group-hover:bg-blue-900/50 transition-colors">
-                      <Icon size={24} className="text-blue-600 dark:text-blue-400" />
+                      <Icon
+                        size={24}
+                        className="text-blue-600 dark:text-blue-400"
+                      />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-slate-900 dark:text-white">{report.name}</h3>
-                      <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">{report.description}</p>
+                      <h3 className="font-semibold text-slate-900 dark:text-white">
+                        {report.name}
+                      </h3>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 text-xs">
+                        {report.description}
+                      </p>
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-3">
                   <div className="flex items-center text-xs justify-between text-sm">
-                    <span className="text-slate-600 dark:text-slate-400">Last Generated:</span>
-                    <span className="text-slate-900 dark:text-white font-medium">{report.lastGenerated}</span>
+                    <span className="text-slate-600 dark:text-slate-400">
+                      Last Generated:
+                    </span>
+                    <span className="text-slate-900 dark:text-white font-medium">
+                      {report.lastGenerated}
+                    </span>
                   </div>
                   <div className="flex items-center text-xs justify-between text-sm">
-                    <span className="text-slate-600 dark:text-slate-400">Format:</span>
-                    <span className="text-slate-900 dark:text-white font-medium">{report.format}</span>
+                    <span className="text-slate-600 dark:text-slate-400">
+                      Format:
+                    </span>
+                    <span className="text-slate-900 dark:text-white font-medium">
+                      {report.format}
+                    </span>
                   </div>
 
                   <div className="pt-3 border-t border-slate-200 dark:border-slate-700 flex gap-2">
@@ -225,34 +270,57 @@ const ReportsPage = () => {
         <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6">
           <div className="flex items-center text-xs gap-3 mb-4">
             <LineChart size={20} className="text-blue-600 dark:text-blue-400" />
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Stock Trend (30 Days)</h3>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white text-xs">
+              Stock Trend (30 Days)
+            </h3>
           </div>
           <div className="space-y-4">
             <div>
               <div className="flex items-center text-xs justify-between text-sm mb-1">
-                <span className="text-slate-600 dark:text-slate-400">Inbound</span>
-                <span className="font-medium text-slate-900 dark:text-white">+420 units</span>
+                <span className="text-slate-600 dark:text-slate-400">
+                  Inbound
+                </span>
+                <span className="font-medium text-slate-900 dark:text-white text-xs">
+                  +420 units
+                </span>
               </div>
               <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                <div className="bg-green-600 h-2 rounded-full" style={{ width: '65%' }}></div>
+                <div
+                  className="bg-green-600 h-2 rounded-full"
+                  style={{ width: "65%" }}
+                ></div>
               </div>
             </div>
             <div>
               <div className="flex items-center text-xs justify-between text-sm mb-1">
-                <span className="text-slate-600 dark:text-slate-400">Outbound</span>
-                <span className="font-medium text-slate-900 dark:text-white">-380 units</span>
+                <span className="text-slate-600 dark:text-slate-400">
+                  Outbound
+                </span>
+                <span className="font-medium text-slate-900 dark:text-white text-xs">
+                  -380 units
+                </span>
               </div>
               <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                <div className="bg-orange-600 h-2 rounded-full" style={{ width: '59%' }}></div>
+                <div
+                  className="bg-orange-600 h-2 rounded-full"
+                  style={{ width: "59%" }}
+                ></div>
               </div>
             </div>
             <div>
               <div className="flex items-center text-xs justify-between text-sm mb-1">
-                <span className="text-slate-600 dark:text-slate-400">Transfers</span>
-                <span className="font-medium text-slate-900 dark:text-white">+120 units</span>
+                <span className="text-slate-600 dark:text-slate-400">
+                  Transfers
+                </span>
+                <span className="font-medium text-slate-900 dark:text-white text-xs">
+                  +120 units
+                </span>
               </div>
               <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                <div className="bg-blue-600 h-2 rounded-full" style={{ width: '18%' }}></div>
+                <div
+                  className="bg-blue-600 h-2 rounded-full"
+                  style={{ width: "18%" }}
+                ></div>
               </div>
             </div>
           </div>
@@ -260,44 +328,77 @@ const ReportsPage = () => {
 
         <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6">
           <div className="flex items-center text-xs gap-3 mb-4">
-            <PieChart size={20} className="text-purple-600 dark:text-purple-400" />
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Category Distribution</h3>
+            <PieChart
+              size={20}
+              className="text-purple-600 dark:text-purple-400"
+            />
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white text-xs">
+              Category Distribution
+            </h3>
           </div>
           <div className="space-y-4">
             <div>
               <div className="flex items-center text-xs justify-between text-sm mb-1">
-                <span className="text-slate-600 dark:text-slate-400">Raw Materials</span>
-                <span className="font-medium text-slate-900 dark:text-white">35%</span>
+                <span className="text-slate-600 dark:text-slate-400">
+                  Raw Materials
+                </span>
+                <span className="font-medium text-slate-900 dark:text-white text-xs">
+                  35%
+                </span>
               </div>
               <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                <div className="bg-blue-600 h-2 rounded-full" style={{ width: '35%' }}></div>
+                <div
+                  className="bg-blue-600 h-2 rounded-full"
+                  style={{ width: "35%" }}
+                ></div>
               </div>
             </div>
             <div>
               <div className="flex items-center text-xs justify-between text-sm mb-1">
-                <span className="text-slate-600 dark:text-slate-400">Components</span>
-                <span className="font-medium text-slate-900 dark:text-white">28%</span>
+                <span className="text-slate-600 dark:text-slate-400">
+                  Components
+                </span>
+                <span className="font-medium text-slate-900 dark:text-white text-xs">
+                  28%
+                </span>
               </div>
               <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                <div className="bg-purple-600 h-2 rounded-full" style={{ width: '28%' }}></div>
+                <div
+                  className="bg-purple-600 h-2 rounded-full"
+                  style={{ width: "28%" }}
+                ></div>
               </div>
             </div>
             <div>
               <div className="flex items-center text-xs justify-between text-sm mb-1">
-                <span className="text-slate-600 dark:text-slate-400">Finished Goods</span>
-                <span className="font-medium text-slate-900 dark:text-white">22%</span>
+                <span className="text-slate-600 dark:text-slate-400">
+                  Finished Goods
+                </span>
+                <span className="font-medium text-slate-900 dark:text-white text-xs">
+                  22%
+                </span>
               </div>
               <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                <div className="bg-pink-600 h-2 rounded-full" style={{ width: '22%' }}></div>
+                <div
+                  className="bg-pink-600 h-2 rounded-full"
+                  style={{ width: "22%" }}
+                ></div>
               </div>
             </div>
             <div>
               <div className="flex items-center text-xs justify-between text-sm mb-1">
-                <span className="text-slate-600 dark:text-slate-400">Packaging</span>
-                <span className="font-medium text-slate-900 dark:text-white">15%</span>
+                <span className="text-slate-600 dark:text-slate-400">
+                  Packaging
+                </span>
+                <span className="font-medium text-slate-900 dark:text-white text-xs">
+                  15%
+                </span>
               </div>
               <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                <div className="bg-cyan-600 h-2 rounded-full" style={{ width: '15%' }}></div>
+                <div
+                  className="bg-cyan-600 h-2 rounded-full"
+                  style={{ width: "15%" }}
+                ></div>
               </div>
             </div>
           </div>

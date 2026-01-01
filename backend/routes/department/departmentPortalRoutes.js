@@ -7,6 +7,7 @@ router.use(authMiddleware);
 
 router.get('/tasks/:roleId', departmentPortalController.getDepartmentTasks);
 router.post('/tasks', departmentPortalController.createDepartmentTask);
+router.post('/tasks/delete-bulk', departmentPortalController.deleteBulkDepartmentTasks);
 router.get('/tasks/detail/:taskId', departmentPortalController.getDepartmentTaskById);
 router.patch('/tasks/:taskId', departmentPortalController.updateDepartmentTask);
 router.delete('/tasks/:taskId', departmentPortalController.deleteDepartmentTask);

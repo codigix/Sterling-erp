@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import axios from '../../utils/api';
-import Card, { div, CardTitle, div } from '../ui/Card';
-import Button from '../ui/Button';
-import Badge from '../ui/Badge';
+import React, { useState, useEffect } from "react";
+import axios from "../../utils/api";
+import Card, { div, CardTitle, div } from "../ui/Card";
+import Button from "../ui/Button";
+import Badge from "../ui/Badge";
 import {
   Plus,
   ChevronDown,
@@ -13,8 +13,8 @@ import {
   Clock,
   AlertCircle,
   TrendingUp,
-  Users
-} from 'lucide-react';
+  Users,
+} from "lucide-react";
 
 const ProductionPlanDetail = ({ rootCard, onRefresh }) => {
   const [stages, setStages] = useState([]);
@@ -22,10 +22,10 @@ const ProductionPlanDetail = ({ rootCard, onRefresh }) => {
   const [loading, setLoading] = useState(false);
   const [showNewStageForm, setShowNewStageForm] = useState(false);
   const [newStageData, setNewStageData] = useState({
-    stageName: '',
-    stageType: 'in_house',
-    plannedStart: '',
-    plannedEnd: ''
+    stageName: "",
+    stageType: "in_house",
+    plannedStart: "",
+    plannedEnd: "",
   });
 
   useEffect(() => {
@@ -35,81 +35,98 @@ const ProductionPlanDetail = ({ rootCard, onRefresh }) => {
   const fetchStages = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`/production/manufacturing-stages/${rootCard.id}`);
+      const response = await axios.get(
+        `/production/manufacturing-stages/${rootCard.id}`
+      );
       setStages(response.data.stages || []);
     } catch (error) {
-      console.error('Failed to fetch stages:', error);
+      console.error("Failed to fetch stages:", error);
     } finally {
       setLoading(false);
     }
   };
 
   const toggleStageExpand = (stageId) => {
-    setExpandedStages(prev => ({
+    setExpandedStages((prev) => ({
       ...prev,
-      [stageId]: !prev[stageId]
+      [stageId]: !prev[stageId],
     }));
   };
 
   const handleAddStage = async () => {
     if (!newStageData.stageName.trim()) {
-      alert('Stage name is required');
+      alert("Stage name is required");
       return;
     }
 
     try {
-      await axios.post('/production/manufacturing-stages', {
+      await axios.post("/production/manufacturing-stages", {
         rootCardId: rootCard.id,
-        ...newStageData
+        ...newStageData,
       });
-      setNewStageData({ stageName: '', stageType: 'in_house', plannedStart: '', plannedEnd: '' });
+      setNewStageData({
+        stageName: "",
+        stageType: "in_house",
+        plannedStart: "",
+        plannedEnd: "",
+      });
       setShowNewStageForm(false);
       fetchStages();
     } catch (error) {
-      console.error('Failed to create stage:', error);
-      alert('Failed to create manufacturing stage');
+      console.error("Failed to create stage:", error);
+      alert("Failed to create manufacturing stage");
     }
   };
 
   const handleUpdateStageStatus = async (stageId, newStatus) => {
     try {
       await axios.patch(`/production/manufacturing-stages/${stageId}/status`, {
-        status: newStatus
+        status: newStatus,
       });
       fetchStages();
     } catch (error) {
-      console.error('Failed to update stage status:', error);
-      alert('Failed to update stage status');
+      console.error("Failed to update stage status:", error);
+      alert("Failed to update stage status");
     }
   };
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'completed': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
-      case 'in_progress': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
-      case 'pending': return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
-      case 'failed': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
-      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
+      case "completed":
+        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
+      case "in_progress":
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
+      case "pending":
+        return "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200";
+      case "failed":
+        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
+      default:
+        return "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200";
     }
   };
 
   const getPriorityColor = (priority) => {
     switch (priority) {
-      case 'critical': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
-      case 'high': return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
-      case 'medium': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
-      case 'low': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
-      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
+      case "critical":
+        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
+      case "high":
+        return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200";
+      case "medium":
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
+      case "low":
+        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
+      default:
+        return "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200";
     }
   };
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'completed':
+      case "completed":
         return <CheckCircle className="w-4 h-4 text-green-600" />;
-      case 'in_progress':
+      case "in_progress":
         return <Clock className="w-4 h-4 text-blue-600" />;
-      case 'failed':
+      case "failed":
         return <AlertCircle className="w-4 h-4 text-red-600" />;
       default:
         return <Clock className="w-4 h-4 text-gray-600" />;
@@ -123,8 +140,9 @@ const ProductionPlanDetail = ({ rootCard, onRefresh }) => {
           <div className="flex items-center text-xs justify-between">
             <div>
               <CardTitle className="text-2xl">{rootCard.title}</CardTitle>
-              <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-                {rootCard.project} {rootCard.projectCode && `(${rootCard.projectCode})`}
+              <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 text-xs">
+                {rootCard.project}{" "}
+                {rootCard.projectCode && `(${rootCard.projectCode})`}
               </p>
             </div>
             <div className="flex items-center text-xs space-x-2">
@@ -132,7 +150,7 @@ const ProductionPlanDetail = ({ rootCard, onRefresh }) => {
                 {rootCard.priority.toUpperCase()}
               </Badge>
               <Badge className={getStatusColor(rootCard.status)}>
-                {rootCard.status.replace('_', ' ').toUpperCase()}
+                {rootCard.status.replace("_", " ").toUpperCase()}
               </Badge>
             </div>
           </div>
@@ -140,19 +158,33 @@ const ProductionPlanDetail = ({ rootCard, onRefresh }) => {
         <div className="space-y-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
-              <p className="text-sm text-slate-600 dark:text-slate-400">Production Code</p>
-              <p className="text-md font-semibold  dark:">{rootCard.code || 'N/A'}</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                Production Code
+              </p>
+              <p className="text-md font-semibold  dark:">
+                {rootCard.code || "N/A"}
+              </p>
             </div>
             <div>
-              <p className="text-sm text-slate-600 dark:text-slate-400">Total Stages</p>
-              <p className="text-md font-semibold  dark:">{rootCard.totalStages}</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                Total Stages
+              </p>
+              <p className="text-md font-semibold  dark:">
+                {rootCard.totalStages}
+              </p>
             </div>
             <div>
-              <p className="text-sm text-slate-600 dark:text-slate-400">Completed Stages</p>
-              <p className="text-md font-semibold  dark:">{rootCard.completedStages}</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                Completed Stages
+              </p>
+              <p className="text-md font-semibold  dark:">
+                {rootCard.completedStages}
+              </p>
             </div>
             <div>
-              <p className="text-sm text-slate-600 dark:text-slate-400">Overall Progress</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                Overall Progress
+              </p>
               <div className="flex items-center text-xs space-x-2">
                 <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                   <div
@@ -160,7 +192,9 @@ const ProductionPlanDetail = ({ rootCard, onRefresh }) => {
                     style={{ width: `${rootCard.progress || 0}%` }}
                   ></div>
                 </div>
-                <span className="text-md font-semibold  dark:">{rootCard.progress || 0}%</span>
+                <span className="text-md font-semibold  dark:">
+                  {rootCard.progress || 0}%
+                </span>
               </div>
             </div>
           </div>
@@ -169,14 +203,22 @@ const ProductionPlanDetail = ({ rootCard, onRefresh }) => {
             <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-200 dark:border-slate-700">
               {rootCard.plannedStart && (
                 <div>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">Planned Start</p>
-                  <p className=" dark:">{new Date(rootCard.plannedStart).toLocaleDateString()}</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">
+                    Planned Start
+                  </p>
+                  <p className=" dark:">
+                    {new Date(rootCard.plannedStart).toLocaleDateString()}
+                  </p>
                 </div>
               )}
               {rootCard.plannedEnd && (
                 <div>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">Planned End</p>
-                  <p className=" dark:">{new Date(rootCard.plannedEnd).toLocaleDateString()}</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">
+                    Planned End
+                  </p>
+                  <p className=" dark:">
+                    {new Date(rootCard.plannedEnd).toLocaleDateString()}
+                  </p>
                 </div>
               )}
             </div>
@@ -203,12 +245,22 @@ const ProductionPlanDetail = ({ rootCard, onRefresh }) => {
                   type="text"
                   placeholder="Stage Name"
                   value={newStageData.stageName}
-                  onChange={(e) => setNewStageData({ ...newStageData, stageName: e.target.value })}
+                  onChange={(e) =>
+                    setNewStageData({
+                      ...newStageData,
+                      stageName: e.target.value,
+                    })
+                  }
                   className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800  dark:"
                 />
                 <select
                   value={newStageData.stageType}
-                  onChange={(e) => setNewStageData({ ...newStageData, stageType: e.target.value })}
+                  onChange={(e) =>
+                    setNewStageData({
+                      ...newStageData,
+                      stageType: e.target.value,
+                    })
+                  }
                   className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800  dark:"
                 >
                   <option value="in_house">In-House</option>
@@ -219,13 +271,23 @@ const ProductionPlanDetail = ({ rootCard, onRefresh }) => {
                 <input
                   type="date"
                   value={newStageData.plannedStart}
-                  onChange={(e) => setNewStageData({ ...newStageData, plannedStart: e.target.value })}
+                  onChange={(e) =>
+                    setNewStageData({
+                      ...newStageData,
+                      plannedStart: e.target.value,
+                    })
+                  }
                   className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800  dark:"
                 />
                 <input
                   type="date"
                   value={newStageData.plannedEnd}
-                  onChange={(e) => setNewStageData({ ...newStageData, plannedEnd: e.target.value })}
+                  onChange={(e) =>
+                    setNewStageData({
+                      ...newStageData,
+                      plannedEnd: e.target.value,
+                    })
+                  }
                   className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800  dark:"
                 />
               </div>
@@ -246,16 +308,23 @@ const ProductionPlanDetail = ({ rootCard, onRefresh }) => {
 
           {loading ? (
             <div className="text-center py-8">
-              <p className="text-slate-600 dark:text-slate-400">Loading stages...</p>
+              <p className="text-slate-600 dark:text-slate-400">
+                Loading stages...
+              </p>
             </div>
           ) : stages.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-slate-600 dark:text-slate-400">No manufacturing stages yet</p>
+              <p className="text-slate-600 dark:text-slate-400">
+                No manufacturing stages yet
+              </p>
             </div>
           ) : (
             <div className="space-y-3">
               {stages.map((stage, index) => (
-                <div key={stage.id} className="border border-slate-200 dark:border-slate-700 rounded-lg">
+                <div
+                  key={stage.id}
+                  className="border border-slate-200 dark:border-slate-700 rounded-lg"
+                >
                   <button
                     onClick={() => toggleStageExpand(stage.id)}
                     className="w-full p-2 flex items-center text-xs justify-between hover:bg-slate-50 dark:hover:bg-slate-800 text-xs transition-colors"
@@ -283,26 +352,36 @@ const ProductionPlanDetail = ({ rootCard, onRefresh }) => {
                     <div className="px-4 py-4 bg-slate-50 dark: border-t border-slate-200 dark:border-slate-700 space-y-3">
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <p className="text-sm text-slate-600 dark:text-slate-400">Type</p>
+                          <p className="text-sm text-slate-600 dark:text-slate-400">
+                            Type
+                          </p>
                           <p className=" dark:">
-                            {stage.stage_type?.replace('_', ' ') || 'N/A'}
+                            {stage.stage_type?.replace("_", " ") || "N/A"}
                           </p>
                         </div>
                         <div>
-                          <p className="text-sm text-slate-600 dark:text-slate-400">Progress</p>
+                          <p className="text-sm text-slate-600 dark:text-slate-400">
+                            Progress
+                          </p>
                           <p className=" dark:">{stage.progress || 0}%</p>
                         </div>
                         {stage.planned_start && (
                           <div>
-                            <p className="text-sm text-slate-600 dark:text-slate-400">Planned Start</p>
+                            <p className="text-sm text-slate-600 dark:text-slate-400">
+                              Planned Start
+                            </p>
                             <p className=" dark:">
-                              {new Date(stage.planned_start).toLocaleDateString()}
+                              {new Date(
+                                stage.planned_start
+                              ).toLocaleDateString()}
                             </p>
                           </div>
                         )}
                         {stage.planned_end && (
                           <div>
-                            <p className="text-sm text-slate-600 dark:text-slate-400">Planned End</p>
+                            <p className="text-sm text-slate-600 dark:text-slate-400">
+                              Planned End
+                            </p>
                             <p className=" dark:">
                               {new Date(stage.planned_end).toLocaleDateString()}
                             </p>
@@ -311,22 +390,29 @@ const ProductionPlanDetail = ({ rootCard, onRefresh }) => {
                       </div>
 
                       <div className="flex space-x-2 pt-2">
-                        {stage.status !== 'completed' && (
+                        {stage.status !== "completed" && (
                           <>
-                            {stage.status === 'pending' && (
+                            {stage.status === "pending" && (
                               <Button
                                 size="sm"
                                 variant="secondary"
-                                onClick={() => handleUpdateStageStatus(stage.id, 'in_progress')}
+                                onClick={() =>
+                                  handleUpdateStageStatus(
+                                    stage.id,
+                                    "in_progress"
+                                  )
+                                }
                               >
                                 Start Stage
                               </Button>
                             )}
-                            {stage.status === 'in_progress' && (
+                            {stage.status === "in_progress" && (
                               <Button
                                 size="sm"
                                 variant="secondary"
-                                onClick={() => handleUpdateStageStatus(stage.id, 'completed')}
+                                onClick={() =>
+                                  handleUpdateStageStatus(stage.id, "completed")
+                                }
                               >
                                 Complete Stage
                               </Button>

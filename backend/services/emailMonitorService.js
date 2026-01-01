@@ -2,6 +2,8 @@ const imaps = require('imap-simple');
 const { simpleParser } = require('mailparser');
 const PurchaseOrder = require('../models/PurchaseOrder');
 const PurchaseOrderCommunication = require('../models/PurchaseOrderCommunication');
+const Quotation = require('../models/Quotation');
+const QuotationCommunication = require('../models/QuotationCommunication');
 const Notification = require('../models/Notification');
 const User = require('../models/User');
 const fs = require('fs');
@@ -88,11 +90,22 @@ class EmailMonitorService {
   }
 
   async checkEmails() {
+    let connection;
     try {
-      const connection = await imaps.connect(this.config);
+      connection = await imaps.connect(this.config);
+
+      // Handle connection errors to prevent crash
+      connection.on('error', (err) => {
+        console.error('❌ IMAP Connection Error:', err);
+      });
+
       await connection.openBox('INBOX');
 
-      const searchCriteria = ['UNSEEN'];
+      const oneHourAgo = Date.now() - (60 * 60 * 1000);
+      
+      const searchCriteria = [
+        ['OR', ['SUBJECT', 'QT-'], ['SUBJECT', 'PO-']]
+      ];
       const fetchOptions = {
         bodies: ['HEADER', 'TEXT'],
         markSeen: false
@@ -100,15 +113,25 @@ class EmailMonitorService {
 
       const messages = await connection.search(searchCriteria, fetchOptions);
 
-      // if (messages.length > 0) {
-      //   console.log(`📧 Found ${messages.length} unread emails. Processing...`);
-      // }
+      const recentMessages = messages.filter(item => {
+        try {
+          const headerPart = item.parts.find(p => p.which === 'HEADER');
+          const date = new Date(headerPart.body.date[0]).getTime();
+          return date >= oneHourAgo;
+        } catch (e) {
+          return false;
+        }
+      });
 
-      for (const item of messages) {
+      console.log(`📬 Found ${recentMessages.length} recent emails with QT/PO in subject`);
+
+      for (const item of recentMessages) {
         const subject = item.parts.find(p => p.which === 'HEADER').body.subject[0];
         
         // Look for PO number in subject: PO-timestamp-random
         const poMatch = subject.match(/PO-\d+-\d+/);
+        // Look for QT number in subject: QT-timestamp-random
+        const qtMatch = subject.match(/QT-\d+-\d+/);
         
         if (poMatch) {
           const poNumber = poMatch[0];
@@ -198,13 +221,107 @@ class EmailMonitorService {
               }
             }
           }
+        } else if (qtMatch) {
+          const qtNumber = qtMatch[0];
+          console.log(`🔎 Found potential Quotation reply for ${qtNumber}`);
+          
+          const quotation = await Quotation.findByQuotationNumber(qtNumber);
+          
+          if (quotation) {
+            console.log(`✅ Matched to Quotation ID: ${quotation.id}`);
+            
+            // Let's do a specific fetch for this message to get full content
+            const fullMessage = await connection.search([['UID', item.attributes.uid]], { bodies: [''], markSeen: true });
+             
+            if (fullMessage.length > 0) {
+              const source = fullMessage[0].parts[0].body;
+              const parsed = await simpleParser(source);
+              
+              const exists = await QuotationCommunication.exists(parsed.messageId);
+              
+              if (!exists) {
+                // Parse the email to get only the visible reply text
+                const visibleText = getVisibleText(parsed.text);
+
+                const communicationId = await QuotationCommunication.create({
+                  quotation_id: quotation.id,
+                  sender_email: parsed.from.value[0].address,
+                  subject: parsed.subject,
+                  content_text: visibleText, // Save only the visible text
+                  content_html: parsed.html, 
+                  message_id: parsed.messageId,
+                  has_attachments: parsed.attachments && parsed.attachments.length > 0
+                });
+
+                // Save attachments if any
+                if (parsed.attachments && parsed.attachments.length > 0) {
+                   const uploadDir = path.join(__dirname, '../uploads/quotation_attachments');
+                   if (!fs.existsSync(uploadDir)) {
+                     fs.mkdirSync(uploadDir, { recursive: true });
+                   }
+
+                   for (const attachment of parsed.attachments) {
+                     try {
+                        const fileName = attachment.filename || 'unknown';
+                        const uniqueFileName = `${Date.now()}-${fileName.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+                        const filePath = path.join(uploadDir, uniqueFileName);
+                        
+                        fs.writeFileSync(filePath, attachment.content);
+                        
+                        await QuotationCommunication.addAttachment(communicationId, {
+                            fileName: fileName,
+                            filePath: `uploads/quotation_attachments/${uniqueFileName}`,
+                            fileSize: attachment.size,
+                            mimeType: attachment.contentType
+                        });
+                        console.log(`📎 Attachment saved: ${uniqueFileName}`);
+                     } catch (attError) {
+                       console.error('❌ Failed to save attachment:', attError);
+                     }
+                   }
+                }
+
+                console.log(`💾 Saved reply for Quotation ${qtNumber}`);
+
+                // Send notifications to Admin and Procurement Manager
+                try {
+                  const users = await User.findAll();
+                  const recipients = users.filter(u => 
+                    u.role_name === 'Admin' || u.role_name === 'Procurement Manager'
+                  );
+
+                  for (const user of recipients) {
+                    await Notification.create({
+                      userId: user.id,
+                      message: `New reply received for ${qtNumber} from ${parsed.from.value[0].address}`,
+                      type: 'info',
+                      relatedId: quotation.id,
+                      relatedType: 'quotation'
+                    });
+                  }
+                  console.log(`🔔 Notifications sent to ${recipients.length} users`);
+                } catch (notifError) {
+                  console.error('❌ Failed to send notifications:', notifError);
+                }
+
+              } else {
+                console.log(`⚠️ Message ${parsed.messageId} already exists`);
+              }
+            }
+          }
         }
       }
-
-      connection.end();
     } catch (error) {
       console.error('❌ Email Monitor Error:', error.message);
       // Don't crash the loop
+    } finally {
+      if (connection) {
+        try {
+          connection.end(); 
+        } catch (e) {
+          console.error('Error closing connection:', e);
+        }
+      }
     }
   }
 }

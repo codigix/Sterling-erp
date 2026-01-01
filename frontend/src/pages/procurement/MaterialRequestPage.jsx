@@ -1,23 +1,32 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Plus, Edit2, Eye, CheckCircle, Clock, AlertCircle, Trash2, Filter } from 'lucide-react';
-import axios from '../../utils/api';
-import Card from '../../components/ui/Card';
-import Badge from '../../components/ui/Badge';
-import '../../styles/TaskPage.css';
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Plus,
+  Edit2,
+  Eye,
+  CheckCircle,
+  Clock,
+  AlertCircle,
+  Trash2,
+  Filter,
+} from "lucide-react";
+import axios from "../../utils/api";
+import Card from "../../components/ui/Card";
+import Badge from "../../components/ui/Badge";
+import "../../styles/TaskPage.css";
 
 const formatCurrency = (value) => {
   const amount = Number(value || 0);
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    minimumFractionDigits: 2
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    minimumFractionDigits: 2,
   }).format(amount);
 };
 
 const MaterialRequestPage = () => {
   const [materialRequests, setMaterialRequests] = useState([]);
   const [stats, setStats] = useState({});
-  const [activeTab, setActiveTab] = useState('all');
+  const [activeTab, setActiveTab] = useState("all");
   const [showNewForm, setShowNewForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -26,33 +35,37 @@ const MaterialRequestPage = () => {
   const [showVendorModal, setShowVendorModal] = useState(false);
 
   const [formData, setFormData] = useState({
-    salesOrderId: '',
-    materialName: '',
-    materialCode: '',
-    quantity: '',
-    unit: 'Nos',
-    specification: '',
-    requiredDate: '',
-    priority: 'medium',
-    remarks: ''
+    salesOrderId: "",
+    materialName: "",
+    materialCode: "",
+    quantity: "",
+    unit: "Nos",
+    specification: "",
+    requiredDate: "",
+    priority: "medium",
+    remarks: "",
   });
 
   const [vendorData, setVendorData] = useState({
-    vendorId: '',
-    quotedPrice: '',
-    deliveryDays: '',
-    notes: ''
+    vendorId: "",
+    quotedPrice: "",
+    deliveryDays: "",
+    notes: "",
   });
 
   const fetchMaterialRequests = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get('/procurement/material-requests', { __sessionGuard: true });
+      const response = await axios.get("/procurement/material-requests", {
+        __sessionGuard: true,
+      });
       setMaterialRequests(response.data.materialRequests || []);
       setStats(response.data.stats || {});
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load material requests');
+      setError(
+        err.response?.data?.message || "Failed to load material requests"
+      );
       console.error(err);
     } finally {
       setLoading(false);
@@ -64,7 +77,7 @@ const MaterialRequestPage = () => {
   }, [fetchMaterialRequests]);
 
   const filteredRequests = useMemo(() => {
-    if (activeTab === 'all') {
+    if (activeTab === "all") {
       return materialRequests;
     }
     return materialRequests.filter((req) => req.status === activeTab);
@@ -72,32 +85,36 @@ const MaterialRequestPage = () => {
 
   const getStatusColor = (status) => {
     const colors = {
-      draft: 'bg-gray-100 text-gray-800',
-      submitted: 'bg-blue-100 text-blue-800',
-      approved: 'bg-green-100 text-green-800',
-      ordered: 'bg-indigo-100 text-indigo-800',
-      received: 'bg-emerald-100 text-emerald-800',
-      rejected: 'bg-red-100 text-red-800',
-      cancelled: 'bg-red-100 text-red-800'
+      draft: "bg-gray-100 text-gray-800",
+      submitted: "bg-blue-100 text-blue-800",
+      approved: "bg-green-100 text-green-800",
+      ordered: "bg-indigo-100 text-indigo-800",
+      received: "bg-emerald-100 text-emerald-800",
+      rejected: "bg-red-100 text-red-800",
+      cancelled: "bg-red-100 text-red-800",
     };
-    return colors[status] || 'bg-gray-100 text-gray-800';
+    return colors[status] || "bg-gray-100 text-gray-800";
   };
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleVendorChange = (e) => {
     const { name, value } = e.target;
-    setVendorData(prev => ({ ...prev, [name]: value }));
+    setVendorData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleCreateRequest = async (e) => {
     e.preventDefault();
 
-    if (!formData.salesOrderId || !formData.materialName || !formData.quantity) {
-      setError('Sales Order ID, material name, and quantity are required');
+    if (
+      !formData.salesOrderId ||
+      !formData.materialName ||
+      !formData.quantity
+    ) {
+      setError("Sales Order ID, material name, and quantity are required");
       return;
     }
 
@@ -106,7 +123,7 @@ const MaterialRequestPage = () => {
 
     try {
       await axios.post(
-        '/procurement/material-requests',
+        "/procurement/material-requests",
         {
           salesOrderId: Number(formData.salesOrderId),
           materialName: formData.materialName.trim(),
@@ -116,26 +133,28 @@ const MaterialRequestPage = () => {
           specification: formData.specification || null,
           requiredDate: formData.requiredDate || null,
           priority: formData.priority,
-          remarks: formData.remarks || null
+          remarks: formData.remarks || null,
         },
         { __sessionGuard: true }
       );
 
       setFormData({
-        salesOrderId: '',
-        materialName: '',
-        materialCode: '',
-        quantity: '',
-        unit: 'Nos',
-        specification: '',
-        requiredDate: '',
-        priority: 'medium',
-        remarks: ''
+        salesOrderId: "",
+        materialName: "",
+        materialCode: "",
+        quantity: "",
+        unit: "Nos",
+        specification: "",
+        requiredDate: "",
+        priority: "medium",
+        remarks: "",
       });
       setShowNewForm(false);
       fetchMaterialRequests();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to create material request');
+      setError(
+        err.response?.data?.message || "Failed to create material request"
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -143,7 +162,7 @@ const MaterialRequestPage = () => {
 
   const handleAddVendor = async (requestId) => {
     if (!vendorData.vendorId) {
-      setError('Vendor is required');
+      setError("Vendor is required");
       return;
     }
 
@@ -152,33 +171,43 @@ const MaterialRequestPage = () => {
         `/procurement/material-requests/${requestId}/vendors`,
         {
           vendorId: Number(vendorData.vendorId),
-          quotedPrice: vendorData.quotedPrice ? Number(vendorData.quotedPrice) : null,
-          deliveryDays: vendorData.deliveryDays ? Number(vendorData.deliveryDays) : null,
-          notes: vendorData.notes || null
+          quotedPrice: vendorData.quotedPrice
+            ? Number(vendorData.quotedPrice)
+            : null,
+          deliveryDays: vendorData.deliveryDays
+            ? Number(vendorData.deliveryDays)
+            : null,
+          notes: vendorData.notes || null,
         },
         { __sessionGuard: true }
       );
 
       setVendorData({
-        vendorId: '',
-        quotedPrice: '',
-        deliveryDays: '',
-        notes: ''
+        vendorId: "",
+        quotedPrice: "",
+        deliveryDays: "",
+        notes: "",
       });
       setShowVendorModal(false);
       fetchMaterialRequests();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to add vendor quote');
+      setError(err.response?.data?.message || "Failed to add vendor quote");
     }
   };
 
   const handleDeleteRequest = async (id) => {
-    if (window.confirm('Are you sure you want to delete this material request?')) {
+    if (
+      window.confirm("Are you sure you want to delete this material request?")
+    ) {
       try {
-        await axios.delete(`/procurement/material-requests/${id}`, { __sessionGuard: true });
+        await axios.delete(`/procurement/material-requests/${id}`, {
+          __sessionGuard: true,
+        });
         fetchMaterialRequests();
       } catch (err) {
-        setError(err.response?.data?.message || 'Failed to delete material request');
+        setError(
+          err.response?.data?.message || "Failed to delete material request"
+        );
       }
     }
   };
@@ -194,57 +223,81 @@ const MaterialRequestPage = () => {
       <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-8">
         <Card>
           <div className="p-4">
-            <p className="text-sm text-slate-600 dark:text-slate-400">Total Requests</p>
-            <p className="text-xl font-bold text-slate-900 dark:text-white mt-1">{stats.total || 0}</p>
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Total Requests
+            </p>
+            <p className="text-xl font-bold text-slate-900 dark:text-white text-xs mt-1">
+              {stats.total || 0}
+            </p>
           </div>
         </Card>
         <Card>
           <div className="p-4">
             <p className="text-sm text-slate-600 dark:text-slate-400">Draft</p>
-            <p className="text-2xl font-bold text-gray-600 mt-1">{stats.draft || 0}</p>
+            <p className="text-2xl font-bold text-gray-600 mt-1">
+              {stats.draft || 0}
+            </p>
           </div>
         </Card>
         <Card>
           <div className="p-4">
-            <p className="text-sm text-slate-600 dark:text-slate-400">Approved</p>
-            <p className="text-2xl font-bold text-green-600 mt-1">{stats.approved || 0}</p>
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Approved
+            </p>
+            <p className="text-2xl font-bold text-green-600 mt-1">
+              {stats.approved || 0}
+            </p>
           </div>
         </Card>
         <Card>
           <div className="p-4">
-            <p className="text-sm text-slate-600 dark:text-slate-400">Ordered</p>
-            <p className="text-2xl font-bold text-indigo-600 mt-1">{stats.ordered || 0}</p>
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Ordered
+            </p>
+            <p className="text-2xl font-bold text-indigo-600 mt-1">
+              {stats.ordered || 0}
+            </p>
           </div>
         </Card>
         <Card>
           <div className="p-4">
-            <p className="text-sm text-slate-600 dark:text-slate-400">Received</p>
-            <p className="text-2xl font-bold text-emerald-600 mt-1">{stats.received || 0}</p>
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Received
+            </p>
+            <p className="text-2xl font-bold text-emerald-600 mt-1">
+              {stats.received || 0}
+            </p>
           </div>
         </Card>
         <Card>
           <div className="p-4">
-            <p className="text-sm text-slate-600 dark:text-slate-400">Submitted</p>
-            <p className="text-2xl font-bold text-blue-600 mt-1">{stats.submitted || 0}</p>
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Submitted
+            </p>
+            <p className="text-2xl font-bold text-blue-600 mt-1">
+              {stats.submitted || 0}
+            </p>
           </div>
         </Card>
       </div>
 
       <div className="mb-6 flex justify-between items-center">
         <div className="flex gap-2">
-          {['all', 'draft', 'submitted', 'approved', 'ordered', 'received'].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 rounded-lg transition-colors capitalize ${
-                activeTab === tab
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-slate-200 dark:bg-slate-700  dark: hover:'
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
+          {["all", "draft", "submitted", "approved", "ordered", "received"].map(
+            (tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-4 py-2 rounded-lg transition-colors capitalize ${
+                  activeTab === tab
+                    ? "bg-blue-600 text-white"
+                    : "bg-slate-200 dark:bg-slate-700  dark: hover:"
+                }`}
+              >
+                {tab}
+              </button>
+            )
+          )}
         </div>
         <button
           onClick={() => setShowNewForm(!showNewForm)}
@@ -258,12 +311,16 @@ const MaterialRequestPage = () => {
       {showNewForm && (
         <Card className="mb-6">
           <div className="p-6 border-b">
-            <h3 className="text-md font-semibold  dark:">Create Material Request</h3>
+            <h3 className="text-md font-semibold  dark:">
+              Create Material Request
+            </h3>
           </div>
           <form onSubmit={handleCreateRequest} className="p-6 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Sales Order ID</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Sales Order ID
+                </label>
                 <input
                   type="number"
                   name="salesOrderId"
@@ -275,7 +332,9 @@ const MaterialRequestPage = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Material Name</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Material Name
+                </label>
                 <input
                   type="text"
                   name="materialName"
@@ -290,7 +349,9 @@ const MaterialRequestPage = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Code</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Code
+                </label>
                 <input
                   type="text"
                   name="materialCode"
@@ -301,7 +362,9 @@ const MaterialRequestPage = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Quantity</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Quantity
+                </label>
                 <input
                   type="number"
                   step="0.01"
@@ -314,7 +377,9 @@ const MaterialRequestPage = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Unit</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Unit
+                </label>
                 <select
                   name="unit"
                   value={formData.unit}
@@ -328,7 +393,9 @@ const MaterialRequestPage = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Priority</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Priority
+                </label>
                 <select
                   name="priority"
                   value={formData.priority}
@@ -344,7 +411,9 @@ const MaterialRequestPage = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Specification</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                Specification
+              </label>
               <textarea
                 name="specification"
                 value={formData.specification}
@@ -357,7 +426,9 @@ const MaterialRequestPage = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Required Date</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Required Date
+                </label>
                 <input
                   type="date"
                   name="requiredDate"
@@ -367,7 +438,9 @@ const MaterialRequestPage = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Remarks</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Remarks
+                </label>
                 <input
                   type="text"
                   name="remarks"
@@ -392,7 +465,7 @@ const MaterialRequestPage = () => {
                 disabled={isSubmitting}
                 className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50"
               >
-                {isSubmitting ? 'Creating...' : 'Create Request'}
+                {isSubmitting ? "Creating..." : "Create Request"}
               </button>
             </div>
           </form>
@@ -401,31 +474,60 @@ const MaterialRequestPage = () => {
 
       {loading ? (
         <div className="text-center py-12">
-          <p className="text-slate-500 dark:text-slate-400">Loading material requests...</p>
+          <p className="text-slate-500 dark:text-slate-400">
+            Loading material requests...
+          </p>
         </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-slate-100 dark:bg-slate-800">
               <tr>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Material</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Code</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Quantity</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Priority</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Status</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Actions</th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">
+                  Material
+                </th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">
+                  Code
+                </th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">
+                  Quantity
+                </th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">
+                  Priority
+                </th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
               {filteredRequests.map((request) => (
-                <tr key={request.id} className="hover:bg-slate-50 dark:hover: transition-colors">
-                  <td className="p-1 text-sm text-slate-700 dark:text-slate-300">{request.material_name}</td>
-                  <td className="p-1 text-sm text-slate-700 dark:text-slate-300">{request.material_code || '-'}</td>
+                <tr
+                  key={request.id}
+                  className="hover:bg-slate-50 dark:hover: transition-colors"
+                >
+                  <td className="p-1 text-sm text-slate-700 dark:text-slate-300">
+                    {request.material_name}
+                  </td>
+                  <td className="p-1 text-sm text-slate-700 dark:text-slate-300">
+                    {request.material_code || "-"}
+                  </td>
                   <td className="p-1 text-sm text-slate-700 dark:text-slate-300">
                     {request.quantity} {request.unit}
                   </td>
                   <td className="p-1 text-sm">
-                    <Badge className={request.priority === 'urgent' ? 'bg-red-100 text-red-800' : request.priority === 'high' ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'}>
+                    <Badge
+                      className={
+                        request.priority === "urgent"
+                          ? "bg-red-100 text-red-800"
+                          : request.priority === "high"
+                          ? "bg-orange-100 text-orange-800"
+                          : "bg-green-100 text-green-800"
+                      }
+                    >
                       {request.priority}
                     </Badge>
                   </td>
@@ -476,7 +578,9 @@ const MaterialRequestPage = () => {
             </div>
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Vendor ID</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Vendor ID
+                </label>
                 <input
                   type="number"
                   name="vendorId"
@@ -487,7 +591,9 @@ const MaterialRequestPage = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Quoted Price</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Quoted Price
+                </label>
                 <input
                   type="number"
                   step="0.01"
@@ -499,7 +605,9 @@ const MaterialRequestPage = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Delivery Days</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Delivery Days
+                </label>
                 <input
                   type="number"
                   name="deliveryDays"
@@ -510,7 +618,9 @@ const MaterialRequestPage = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Notes</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Notes
+                </label>
                 <textarea
                   name="notes"
                   value={vendorData.notes}
@@ -525,7 +635,12 @@ const MaterialRequestPage = () => {
                   onClick={() => {
                     setShowVendorModal(false);
                     setSelectedRequest(null);
-                    setVendorData({ vendorId: '', quotedPrice: '', deliveryDays: '', notes: '' });
+                    setVendorData({
+                      vendorId: "",
+                      quotedPrice: "",
+                      deliveryDays: "",
+                      notes: "",
+                    });
                   }}
                   className="px-4 py-2 rounded-lg bg-slate-200 dark:bg-slate-700  dark:"
                 >
