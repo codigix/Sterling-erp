@@ -46,7 +46,7 @@ const ProjectCard = ({
 
   const getTaskNavigationUrl = (task) => {
     const baseParams = `taskId=${task.id}&taskTitle=${encodeURIComponent(
-      task.title
+      task.task_title || task.title
     )}&salesOrderId=${project.id}&projectName=${encodeURIComponent(
       project.project_name || ""
     )}&poNumber=${encodeURIComponent(
@@ -55,7 +55,7 @@ const ProjectCard = ({
       project.customer || project.customer_name || project.client_name || ""
     )}`;
 
-    const taskTitle = (task.title || "").toLowerCase();
+    const taskTitle = (task.task_title || task.title || "").toLowerCase();
 
     // Map specific task titles to their respective pages
     // Step 1: Enter Project Details
@@ -388,10 +388,10 @@ const ProjectCard = ({
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <div className="flex-1 min-w-0">
                       <h4 className="font-semibold text-slate-900 dark:text-white text-xs hover:text-blue-600 dark:hover:text-blue-400">
-                        {task.title}
+                        {task.task_title || task.title}
                       </h4>
                       <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 text-xs">
-                        {task.description}
+                        {task.task_description || task.description}
                       </p>
                     </div>
                     <select

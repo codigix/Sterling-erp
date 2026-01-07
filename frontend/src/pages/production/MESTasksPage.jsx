@@ -10,7 +10,6 @@ import {
 } from "lucide-react";
 import Card from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
-import "../../styles/TaskPage.css";
 
 const MESTasksPage = () => {
   const [workerTasks] = useState([
@@ -90,9 +89,9 @@ const MESTasksPage = () => {
   };
 
   return (
-    <div className="task-page-container">
+    <div className="space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <div className="p-4">
             <p className="text-sm text-slate-600 dark:text-slate-400">
@@ -145,7 +144,7 @@ const MESTasksPage = () => {
               className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
                 activeTab === tab
                   ? "bg-blue-600 text-white"
-                  : "bg-slate-200 dark:bg-slate-700  dark: hover:"
+                  : "bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-white hover:bg-slate-300 dark:hover:bg-slate-600"
               }`}
             >
               {tab === "in-progress"
@@ -154,7 +153,7 @@ const MESTasksPage = () => {
             </button>
           ))}
         </div>
-        <button className="flex items-center text-xs gap-2 px-4 py-2 rounded-lg bg-slate-200 dark:bg-slate-700  dark: hover: transition-colors">
+        <button className="flex items-center text-xs gap-2 px-4 py-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-white hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
           <Filter size={18} />
           Filter
         </button>
@@ -238,7 +237,7 @@ const MESTasksPage = () => {
                     setSelectedTask(task);
                     setShowTaskLogs(true);
                   }}
-                  className="flex-1 flex items-center text-xs justify-center gap-2 px-3 py-2 rounded-lg bg-slate-200 dark:bg-slate-700  dark: hover: transition-colors text-sm font-medium"
+                  className="flex-1 flex items-center text-xs justify-center gap-2 px-3 py-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-white hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors text-sm font-medium"
                 >
                   <Eye size={16} />
                   View Logs
@@ -254,18 +253,18 @@ const MESTasksPage = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center text-xs justify-center z-50 p-4">
           <Card className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
-              <div className="flex items-center text-xs justify-between mb-6">
+              <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h3 className="text-lg font-bold  dark:">Task Logs</h3>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">Task Logs</h3>
                   <p className="text-sm text-slate-600 dark:text-slate-400">
                     {selectedTask.id} - {selectedTask.operation}
                   </p>
                 </div>
                 <button
                   onClick={() => setShowTaskLogs(false)}
-                  className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded"
+                  className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors"
                 >
-                  <span className="text-2xl">×</span>
+                  <span className="text-2xl text-slate-600 dark:text-slate-400">×</span>
                 </button>
               </div>
 
@@ -308,7 +307,7 @@ const MESTasksPage = () => {
               )}
 
               <div className="mt-6 p-4 bg-slate-50 dark:bg-slate-700 rounded-lg">
-                <h4 className="text-sm font-semibold  dark: mb-3">
+                <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">
                   Task Summary
                 </h4>
                 <div className="grid grid-cols-2 gap-4 text-sm">

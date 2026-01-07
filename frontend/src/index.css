@@ -100,4 +100,23 @@
   .card {
     @apply bg-white rounded-xl shadow-soft border border-slate-200 p-6;
   }
+
+  /* Sidebar scrollbar styling */
+  aside {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.3) transparent;
+  }
+
+  aside::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  aside::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  aside::-webkit-scrollbar-thumb {
+    background-color: rgba(148, 163, 184, 0.3);
+    border-radius: 3px;
+  }
 }

@@ -1,0 +1,370 @@
+
+> sterling-erp@1.0.0 lint
+> npm run lint --prefix frontend
+
+
+> frontend@0.0.0 lint
+> eslint .
+
+
+d:\passion\Sterling-erp\frontend\src\components\admin\EmployeePortal.jsx
+  10:10  error    'selectedTask' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                   no-unused-vars
+  10:24  error    'setSelectedTask' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                no-unused-vars
+  15:6   warning  React Hook useEffect has a missing dependency: 'fetchTasks'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+d:\passion\Sterling-erp\frontend\src\components\admin\ProductionPhaseModule\index.jsx
+  1:10  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+d:\passion\Sterling-erp\frontend\src\components\admin\ProductionPlanDetail.jsx
+  3:32  error  Parsing error: Identifier 'div' has already been declared
+
+d:\passion\Sterling-erp\frontend\src\components\admin\SalesOrderForm\context.jsx
+  3:14  error  Fast refresh only works when a file only exports components. Move your React context(s) to a separate file  react-refresh/only-export-components
+
+d:\passion\Sterling-erp\frontend\src\components\admin\SalesOrderForm\hooks\useMaterialForm.js
+  133:33  error  Error: Cannot call impure function during render
+
+`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+  131 |     updateField("materials", [
+  132 |       ...formData.materials,
+> 133 |       { ...currentMaterial, id: Date.now() },
+      |                                 ^^^^^^^^^^ Cannot call impure function
+  134 |     ]);
+  135 |     resetMaterial();
+  136 |   };  react-hooks/purity
+
+d:\passion\Sterling-erp\frontend\src\components\admin\SalesOrderForm\index.jsx
+  79:6  warning  React Hook useEffect has a missing dependency: 'loadAllStepData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+d:\passion\Sterling-erp\frontend\src\components\admin\SalesOrderForm\shared\AssigneeField.jsx
+   52:31  error  React Hook "useMemo" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?  react-hooks/rules-of-hooks
+  110:10  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components                                                             react-refresh/only-export-components
+
+d:\passion\Sterling-erp\frontend\src\components\admin\SalesOrderForm\steps\Step1_ClientPO.jsx
+  19:6  warning  React Hook useEffect has missing dependencies: 'formData.projectCode' and 'updateField'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  28:6  warning  React Hook useEffect has missing dependencies: 'formData.poNumber' and 'updateField'. Either include them or remove the dependency array     react-hooks/exhaustive-deps
+
+d:\passion\Sterling-erp\frontend\src\components\admin\SalesOrderForm\steps\Step2_SalesOrder.jsx
+  10:44  error  'readOnly' is assigned a value but never used  no-unused-vars
+
+d:\passion\Sterling-erp\frontend\src\components\admin\SalesOrderForm\steps\Step4_MaterialRequirement.jsx
+    35:3   error  'formatDetailDisplay' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     no-unused-vars
+    37:3   error  'getMaterialTypeLabel' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    no-unused-vars
+    38:3   error  'getDetailRowConfig' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      no-unused-vars
+    39:3   error  'buildSpecsObject' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        no-unused-vars
+    40:3   error  'getDetailRowEditData' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    no-unused-vars
+    41:3   error  'getSpecsKeyName' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         no-unused-vars
+    42:3   error  'getQuantityKeyName' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      no-unused-vars
+    43:3   error  'getQualityKeyName' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       no-unused-vars
+    44:3   error  'getSubFieldsForMaterialType' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             no-unused-vars
+    54:53  error  'readOnly' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  no-unused-vars
+    59:5   error  'updateMaterialDetail' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           no-unused-vars
+    60:5   error  'deleteMaterialDetail' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           no-unused-vars
+   122:68  error  Error: Cannot call impure function during render
+
+`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+  120 |     }
+  121 |
+> 122 |     const normalizedMaterial = { ...currentMaterial, quantity, id: Date.now() };
+      |                                                                    ^^^^^^^^^^ Cannot call impure function
+  123 |     updateField("materials", [
+  124 |       ...formData.materials,
+  125 |       normalizedMaterial,  react-hooks/purity
+   142:9   error  'updateMaterial' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 no-unused-vars
+   178:9   error  'getSpecsForType' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                no-unused-vars
+   764:27  error  'assigneeName' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   no-unused-vars
+   987:31  error  'removeDetailRow' is not defined                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               no-undef
+  1048:44  error  'removeDetailRow' is not defined                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               no-undef
+  1113:31  error  'removeDetailRow' is not defined                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               no-undef
+  1175:31  error  'removeDetailRow' is not defined                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               no-undef
+  1252:31  error  'removeDetailRow' is not defined                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               no-undef
+  1333:31  error  'removeDetailRow' is not defined                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               no-undef
+  1417:31  error  'removeDetailRow' is not defined                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               no-undef
+  1498:31  error  'removeDetailRow' is not defined                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               no-undef
+  1576:31  error  'removeDetailRow' is not defined                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               no-undef
+  1654:31  error  'removeDetailRow' is not defined                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               no-undef
+  1733:31  error  'removeDetailRow' is not defined                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               no-undef
+  1809:31  error  'removeDetailRow' is not defined                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               no-undef
+  1888:31  error  'removeDetailRow' is not defined                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               no-undef
+
+d:\passion\Sterling-erp\frontend\src\components\admin\SalesOrderForm\steps\Step4_MaterialRequirement_Simplified.jsx
+  44:17  error  '_' is defined but never used  no-unused-vars
+
+d:\passion\Sterling-erp\frontend\src\components\admin\SalesOrderForm\steps\Step5_ProductionPlan.jsx
+  44:48  error  'readOnly' is assigned a value but never used  no-unused-vars
+
+d:\passion\Sterling-erp\frontend\src\components\admin\SalesOrderForm\steps\Step7_Shipment.jsx
+  9:42  error  'readOnly' is assigned a value but never used  no-unused-vars
+
+d:\passion\Sterling-erp\frontend\src\components\admin\SalesOrderForm\utils.js
+  73:31  error  'formData' is defined but never used  no-unused-vars
+  78:31  error  'formData' is defined but never used  no-unused-vars
+  83:31  error  'formData' is defined but never used  no-unused-vars
+  88:31  error  'formData' is defined but never used  no-unused-vars
+  93:31  error  'formData' is defined but never used  no-unused-vars
+
+d:\passion\Sterling-erp\frontend\src\components\admin\SalesOrderList\SalesOrderList.jsx
+   39:10  error  'loading' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u   no-unused-vars
+  123:13  error  'response' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+  247:23  error  'row' is defined but never used                                                           no-unused-vars
+
+d:\passion\Sterling-erp\frontend\src\components\design-engineer\ProjectCard.jsx
+   30:6   warning  React Hook useEffect has a missing dependency: 'extractWorkflowTasks'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+   38:18  error    'e' is defined but never used                                                                                            no-unused-vars
+  113:9   error    'getStatusIcon' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                            no-unused-vars
+  461:34  error    'e' is defined but never used                                                                                            no-unused-vars
+  461:37  error    Empty block statement                                                                                                    no-empty
+
+d:\passion\Sterling-erp\frontend\src\components\inventory\CheckProjectMaterialRequirementsModal.jsx
+  12:3  error    'taskId' is defined but never used                                                                                            no-unused-vars
+  27:6  warning  React Hook useEffect has a missing dependency: 'fetchMaterialRequirements'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+d:\passion\Sterling-erp\frontend\src\components\inventory\ProjectInventoryWorkflow.jsx
+   22:48  error    'rootCardId' is defined but never used                                                                                no-unused-vars
+   35:6   warning  React Hook useEffect has a missing dependency: 'fetchProjectTasks'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  185:29  error    'index' is defined but never used                                                                                     no-unused-vars
+
+d:\passion\Sterling-erp\frontend\src\components\layout\AdminLayout.jsx
+  229:39  error  'idx' is defined but never used  no-unused-vars
+
+d:\passion\Sterling-erp\frontend\src\components\layout\RoleDashboardLayout.jsx
+  20:13  error  'RoleIcon' is defined but never used                                                                 no-unused-vars
+  46:9   error  'getCurrentPageTitle' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+d:\passion\Sterling-erp\frontend\src\components\sales\SalesOrderWizard.jsx
+  43:10  error    'assignments' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                            no-unused-vars
+  48:6   warning  React Hook useEffect has a missing dependency: 'fetchWorkflowSteps'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  75:13  error    'response' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                               no-unused-vars
+
+d:\passion\Sterling-erp\frontend\src\components\ui\SearchableSelect.jsx
+  20:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+  18 |
+  19 |   useEffect(() => {
+> 20 |     setFilteredOptions(
+     |     ^^^^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  21 |       options.filter(option =>
+  22 |         option.label.toLowerCase().includes(searchTerm.toLowerCase())
+  23 |       )  react-hooks/set-state-in-effect
+
+d:\passion\Sterling-erp\frontend\src\pages\accountant\BankReconciliationPage.jsx
+  12:10  error  'reconciliationStatus' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u     no-unused-vars
+  12:32  error  'setReconciliationStatus' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+  88:9   error  'totalDeposits' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u            no-unused-vars
+  89:9   error  'totalWithdrawals' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u         no-unused-vars
+
+d:\passion\Sterling-erp\frontend\src\pages\admin\AdminDashboard.jsx
+  127:9  error  'metrics' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u     no-unused-vars
+  158:9  error  'navigation' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+d:\passion\Sterling-erp\frontend\src\pages\admin\AdminDashboard\components\ProductionTab.jsx
+  17:10  error  'selectedRootCard' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u     no-unused-vars
+  17:28  error  'setSelectedRootCard' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+d:\passion\Sterling-erp\frontend\src\pages\admin\EmployeeManagement.jsx
+   22:9   error    'navigate' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                      no-unused-vars
+  118:6   warning  React Hook useCallback has a missing dependency: 'fallbackSampleEmployees'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  132:9   error    'handleActionToggle' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                            no-unused-vars
+  176:15  error    'response' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                      no-unused-vars
+  226:16  error    'err' is defined but never used                                                                                               no-unused-vars
+
+d:\passion\Sterling-erp\frontend\src\pages\admin\ReportsAnalytics.jsx
+  21:21  error  Error: Cannot call impure function during render
+
+`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+  19 |   const [selectedReport, setSelectedReport] = useState('overview');
+  20 |   const [dateRange, setDateRange] = useState({
+> 21 |     start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+     |                     ^^^^^^^^^^ Cannot call impure function
+  22 |     end: new Date().toISOString().split('T')[0]
+  23 |   });
+  24 |   const [exportDropdownOpen, setExportDropdownOpen] = useState(false);  react-hooks/purity
+
+d:\passion\Sterling-erp\frontend\src\pages\admin\RoleManagement.jsx
+  82:5  error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+  80 |
+  81 |   useEffect(() => {
+> 82 |     setRoles(initialRoles);
+     |     ^^^^^^^^ Avoid calling setState() directly within an effect
+  83 |   }, []);
+  84 |
+  85 |   const openCreateModal = () => {  react-hooks/set-state-in-effect
+  83:6  warning  React Hook useEffect has a missing dependency: 'initialRoles'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  react-hooks/exhaustive-deps
+
+d:\passion\Sterling-erp\frontend\src\pages\department\DepartmentTasksPage.jsx
+  19:6  warning  React Hook useEffect has a missing dependency: 'fetchRoleId'. Either include it or remove the dependency array                    react-hooks/exhaustive-deps
+  26:6  warning  React Hook useEffect has missing dependencies: 'fetchStats' and 'fetchTasks'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+d:\passion\Sterling-erp\frontend\src\pages\department\InventoryTasksPage.jsx
+  26:3   error  'generateWorkflowTasks' is defined but never used. Allowed unused vars must match /^[A-Z_]/u           no-unused-vars
+  40:22  error  'setIsCreating' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u          no-unused-vars
+  41:30  error  'setIsCreatingWorkflow' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+  42:28  error  'setWorkflowProgress' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u    no-unused-vars
+  46:10  error  'showBulkDeleteConfirm' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+d:\passion\Sterling-erp\frontend\src\pages\design-engineer\documents\SpecificationsPage.jsx
+  140:9  error  'handleEditSpecification' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+d:\passion\Sterling-erp\frontend\src\pages\employee\EmployeeAlerts.jsx
+  12:10  error  'loading' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+d:\passion\Sterling-erp\frontend\src\pages\employee\EmployeeAttendance.jsx
+  31:10  error  'loading' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+  32:10  error  'error' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u    no-unused-vars
+
+d:\passion\Sterling-erp\frontend\src\pages\employee\EmployeeDashboardHome.jsx
+  17:10  error  'loading' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+d:\passion\Sterling-erp\frontend\src\pages\employee\EmployeePortalPage.jsx
+  29:6  warning  React Hook useEffect has missing dependencies: 'fetchAlerts', 'fetchEmployeeStats', and 'fetchEmployeeTasks'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+d:\passion\Sterling-erp\frontend\src\pages\employee\EmployeeProfile.jsx
+  21:10  error  'isEditing' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u     no-unused-vars
+  21:21  error  'setIsEditing' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+d:\passion\Sterling-erp\frontend\src\pages\employee\EmployeeProjects.jsx
+  11:10  error  'loading' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+  12:10  error  'error' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u    no-unused-vars
+
+d:\passion\Sterling-erp\frontend\src\pages\employee\EmployeeUpdates.jsx
+  9:10  error  'loading' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+d:\passion\Sterling-erp\frontend\src\pages\inventory\CreateQuotationPage.jsx
+   30:10  error  'loading' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u     no-unused-vars
+   30:19  error  'setLoading' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+   71:7   error  'setLoadingProjects' is not defined                                                         no-undef
+   77:7   error  'setLoadingProjects' is not defined                                                         no-undef
+  118:13  error  'shortages' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u   no-unused-vars
+  158:44  error  'selected' is defined but never used                                                        no-unused-vars
+  486:22  error  'loadingProjects' is not defined                                                            no-undef
+
+d:\passion\Sterling-erp\frontend\src\pages\inventory\GRNProcessingPage.jsx
+  25:10  error  'loading' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+d:\passion\Sterling-erp\frontend\src\pages\inventory\QuotationsPage.jsx
+   43:29  error  'setSelectedQuotation' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u    no-unused-vars
+  457:9   error  'handleViewQuotationPDF' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+d:\passion\Sterling-erp\frontend\src\pages\inventory\VendorsPage.jsx
+  43:10  error  'categories' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+d:\passion\Sterling-erp\frontend\src\pages\procurement\MaterialRequestPage.jsx
+  17:7  error  'formatCurrency' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+d:\passion\Sterling-erp\frontend\src\pages\procurement\ProcurementTasksPage.jsx
+  23:10  error  'error' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+d:\passion\Sterling-erp\frontend\src\pages\production\ProductionPlansPage.jsx
+  122:9  error  'getPriorityColor' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+d:\passion\Sterling-erp\frontend\src\pages\production\ProductionTasksPage.jsx
+  20:10  error  'productionStats' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+  21:10  error  'stageStats' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u       no-unused-vars
+
+d:\passion\Sterling-erp\frontend\src\pages\production\ResourceAllocationPage.jsx
+  16:28  error  'setDepartmentFilter' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+d:\passion\Sterling-erp\frontend\src\pages\production\RootCardBuilderPage.jsx
+  10:10  error  'searchParams' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+  18:10  error  'loading' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u       no-unused-vars
+  51:14  error  'err' is defined but never used                                                               no-unused-vars
+
+d:\passion\Sterling-erp\frontend\src\pages\reports\EmployeeTrackingDashboard.jsx
+  23:6  warning  React Hook useEffect has a missing dependency: 'fetchEmployeeDetails'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+d:\passion\Sterling-erp\frontend\src\pages\reports\ProjectTrackingDashboard.jsx
+  28:6  warning  React Hook useEffect has a missing dependency: 'fetchProjectDetails'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+d:\passion\Sterling-erp\frontend\src\pages\roles\ProductionManagerDashboard.jsx
+  431:35  error  Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+  429 |     >
+  430 |       <Routes>
+> 431 |         <Route path="/" element={<DashboardContent />} />
+      |                                   ^^^^^^^^^^^^^^^^ This component is created during render
+  432 |         <Route path="/dashboard" element={<DashboardContent />} />
+  433 |         <Route path="/planning/plans" element={<ProductionPlansPage />} />
+  434 |         <Route
+
+  166 |   ];
+  167 |
+> 168 |   const DashboardContent = () => (
+      |                            ^^^^^^^
+> 169 |     <div className="space-y-6">
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 170 |       {/* Stats Grid */}
+      …
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 421 |     </div>
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 422 |   );
+      | ^^^^ The component is created during render here
+  423 |
+  424 |   return (
+  425 |     <RoleDashboardLayout                                               react-hooks/static-components
+  432:44  error  Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+  430 |       <Routes>
+  431 |         <Route path="/" element={<DashboardContent />} />
+> 432 |         <Route path="/dashboard" element={<DashboardContent />} />
+      |                                            ^^^^^^^^^^^^^^^^ This component is created during render
+  433 |         <Route path="/planning/plans" element={<ProductionPlansPage />} />
+  434 |         <Route
+  435 |           path="/planning/specifications"
+
+  166 |   ];
+  167 |
+> 168 |   const DashboardContent = () => (
+      |                            ^^^^^^^
+> 169 |     <div className="space-y-6">
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 170 |       {/* Stats Grid */}
+      …
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 421 |     </div>
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 422 |   );
+      | ^^^^ The component is created during render here
+  423 |
+  424 |   return (
+  425 |     <RoleDashboardLayout  react-hooks/static-components
+
+d:\passion\Sterling-erp\frontend\src\pages\roles\WorkerDashboard.jsx
+  142:10  error  'dateRange' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u     no-unused-vars
+  142:21  error  'setDateRange' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+d:\passion\Sterling-erp\frontend\src\pages\sales\SalesDashboard.jsx
+  13:18  error  'setFilter' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u         no-unused-vars
+  59:9   error  'getPriorityColor' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+d:\passion\Sterling-erp\frontend\src\pages\worker\RequestHistoryPage.jsx
+  5:26  error  'setRequestHistory' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+d:\passion\Sterling-erp\frontend\src\utils\idGenerator.js
+  21:9  error  'timestamp' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+d:\passion\Sterling-erp\frontend\vite.config.js
+  9:25  error  '__dirname' is not defined  no-undef
+
+✖ 135 problems (120 errors, 15 warnings)
+

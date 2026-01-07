@@ -49,6 +49,25 @@ import InventoryTasksPage from "./pages/inventory/InventoryTasksPage";
 
 // Production Pages
 import ProductionTasksPage from "./pages/production/ProductionTasksPage";
+import RootCardBuilderPage from "./pages/production/RootCardBuilderPage";
+import RootCardDetailPage from "./pages/production/RootCardDetailPage";
+import ProductionPlansPage from "./pages/production/ProductionPlansPage";
+import ProductionPlanDetailPage from "./pages/production/ProductionPlanDetailPage";
+import SchedulingPage from "./pages/production/SchedulingPage";
+import ResourceAllocationPage from "./pages/production/ResourceAllocationPage";
+import AssignTasksPage from "./pages/production/AssignTasksPage";
+import ActiveStagesPage from "./pages/production/ActiveStagesPage";
+import MESTasksPage from "./pages/production/MESTasksPage";
+import StageProgressPage from "./pages/production/StageProgressPage";
+import TaskTrackingPage from "./pages/production/TaskTrackingPage";
+import StageDetailsPage from "./pages/production/StageDetailsPage";
+import ProductionSpecificationsPage from "./pages/production/ProductionSpecificationsPage";
+import ChallanListPage from "./pages/production/ChallanListPage";
+import GenerateChallanPage from "./pages/production/GenerateChallanPage";
+import TrackChallanPage from "./pages/production/TrackChallanPage";
+import PerformancePage from "./pages/production/PerformancePage";
+import PerformanceMetricsPage from "./pages/production/PerformanceMetricsPage";
+import ProductionPlanFormPage from "./pages/production/ProductionPlanFormPage";
 
 // Employee Portal
 import EmployeePortalPage from "./pages/employee/EmployeePortalPage";
@@ -136,6 +155,27 @@ function App() {
               <Route path="qc" element={<QCTasksPage />} />
               <Route path="inventory" element={<InventoryTasksPage />} />
               <Route path="production" element={<ProductionTasksPage />} />
+              
+              {/* Production Flow Routes */}
+              <Route path="production/root-cards" element={<RootCardBuilderPage />} />
+              <Route path="production/root-cards/:id" element={<RootCardDetailPage />} />
+              <Route path="production/plans" element={<ProductionPlansPage />} />
+              <Route path="production/plans/new" element={<ProductionPlanFormPage />} />
+              <Route path="production/plans/:id" element={<ProductionPlanDetailPage />} />
+              <Route path="production/scheduling" element={<SchedulingPage />} />
+              <Route path="production/resources" element={<ResourceAllocationPage />} />
+              <Route path="production/assign-tasks" element={<AssignTasksPage />} />
+              <Route path="production/active-stages" element={<ActiveStagesPage />} />
+              <Route path="production/mes-tasks" element={<MESTasksPage />} />
+              <Route path="production/stage-progress" element={<StageProgressPage />} />
+              <Route path="production/task-tracking" element={<TaskTrackingPage />} />
+              <Route path="production/stage-details" element={<StageDetailsPage />} />
+              <Route path="production/specifications" element={<ProductionSpecificationsPage />} />
+              <Route path="production/challans" element={<ChallanListPage />} />
+              <Route path="production/challans/new" element={<GenerateChallanPage />} />
+              <Route path="production/challans/track" element={<TrackChallanPage />} />
+              <Route path="production/performance" element={<PerformancePage />} />
+              <Route path="production/performance/metrics" element={<PerformanceMetricsPage />} />
             </Route>
 
             {/* Employee Routes */}

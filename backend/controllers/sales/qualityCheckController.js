@@ -8,6 +8,7 @@ class QualityCheckController {
     try {
       const { salesOrderId } = req.params;
       const data = req.body;
+      const { assignedTo } = req.body;
 
       const validation = validateQualityCheck(data);
       if (!validation.isValid) {
@@ -24,7 +25,11 @@ class QualityCheckController {
       }
 
       const updated = await QualityCheckDetail.findBySalesOrderId(salesOrderId);
-      await SalesOrderStep.update(salesOrderId, 6, { status: 'in_progress', data: updated });
+      await SalesOrderStep.update(salesOrderId, 6, { status: 'in_progress', data: updated, assignedTo });
+      
+      if (assignedTo) {
+        await SalesOrderStep.assignEmployee(salesOrderId, 6, assignedTo);
+      }
 
       res.json(formatSuccessResponse(updated, 'Quality check data saved'));
     } catch (error) {

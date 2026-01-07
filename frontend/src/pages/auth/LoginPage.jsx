@@ -25,17 +25,38 @@ const ROLE_MAP = {
   supervisor: "/department/production",
 };
 
+const DEPARTMENT_USERS = {
+  admin: { username: "accountant", password: "password", label: "Admin" },
+  inventory: { username: "inventory.manager", password: "password", label: "Inventory" },
+  design_engineer: { username: "design.engineer", password: "password", label: "Design Engineer" },
+  production: { username: "production.manager", password: "password", label: "Production" },
+  engineering: { username: "john.doe", password: "password", label: "Engineering" },
+  qc: { username: "qc.manager", password: "password", label: "QC" },
+};
+
 const LoginPage = () => {
   const [formData, setFormData] = useState({
     username: "",
     password: "",
   });
+  const [selectedDept, setSelectedDept] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   const { login, user } = useAuth();
   const navigate = useNavigate();
+
+  const handleDepartmentSelect = (deptKey) => {
+    const deptUser = DEPARTMENT_USERS[deptKey];
+    if (deptUser) {
+      setSelectedDept(deptKey);
+      setFormData({
+        username: deptUser.username,
+        password: deptUser.password,
+      });
+    }
+  };
 
   const normalizeRoleName = (role) => {
     if (!role) return "";

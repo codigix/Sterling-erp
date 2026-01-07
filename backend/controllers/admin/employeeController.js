@@ -10,11 +10,13 @@ exports.getEmployees = async (req, res) => {
       lastName: emp.last_name,
       email: emp.email,
       designation: emp.designation,
-      department: emp.department,
+      department: emp.department_name || emp.department,
+      departmentId: emp.department_id,
       role: emp.role_name,
       loginId: emp.login_id,
       status: emp.status,
-      actions: emp.actions || []
+      actions: emp.actions || [],
+      roleId: emp.role_id
     }));
     res.json(formattedEmployees);
   } catch (error) {
@@ -36,11 +38,13 @@ exports.getEmployee = async (req, res) => {
       lastName: employee.last_name,
       email: employee.email,
       designation: employee.designation,
-      department: employee.department,
+      department: employee.department_name || employee.department,
+      departmentId: employee.department_id,
       role: employee.role_name,
       loginId: employee.login_id,
       status: employee.status,
-      actions: employee.actions || []
+      actions: employee.actions || [],
+      roleId: employee.role_id
     };
     res.json(formatted);
   } catch (error) {
@@ -51,9 +55,9 @@ exports.getEmployee = async (req, res) => {
 
 exports.createEmployee = async (req, res) => {
   try {
-    const { firstName, lastName, email, designation, department, roleId, loginId, password, actions } = req.body;
+    const { firstName, lastName, email, designation, department, departmentId, roleId, loginId, password, actions } = req.body;
     
-    if (!firstName || !lastName || !email || !designation || !department || !roleId || !loginId || !password) {
+    if (!firstName || !lastName || !email || !designation || !roleId || !loginId || !password) {
       return res.status(400).json({ message: 'All fields are required' });
     }
 
@@ -77,7 +81,8 @@ exports.createEmployee = async (req, res) => {
       lastName,
       email,
       designation,
-      department,
+      department: department || null,
+      departmentId: departmentId || null,
       roleId,
       loginId,
       password,

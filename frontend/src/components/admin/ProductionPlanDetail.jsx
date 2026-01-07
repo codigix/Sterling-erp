@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "../../utils/api";
-import Card, { div, CardTitle, div } from "../ui/Card";
+import Card, { CardTitle } from "../ui/Card";
 import Button from "../ui/Button";
 import Badge from "../ui/Badge";
 import {
@@ -16,7 +16,7 @@ import {
   Users,
 } from "lucide-react";
 
-const ProductionPlanDetail = ({ rootCard, onRefresh }) => {
+const ProductionPlanDetail = ({ rootCard }) => {
   const [stages, setStages] = useState([]);
   const [expandedStages, setExpandedStages] = useState({});
   const [loading, setLoading] = useState(false);

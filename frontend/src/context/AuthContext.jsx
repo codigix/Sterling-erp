@@ -11,14 +11,14 @@ const DEMO_USERS = {
   production: { password: "password", role: "Production", name: "Production Planner" },
   mes: { password: "password", role: "MES", name: "MES Controller" },
   challan: { password: "password", role: "Challan", name: "Logistics Coordinator" },
-  "john.doe": { password: "password", role: "Employee", name: "John Doe", designation: "Senior Engineer", department: "Engineering" },
-  "jane.smith": { password: "password", role: "Supervisor", name: "Jane Smith", designation: "Project Supervisor", department: "Production" },
-  "rajesh.kumar": { password: "password", role: "Employee", name: "Rajesh Kumar", designation: "Engineer", department: "Engineering" },
-  "inventory.manager": { password: "password", role: "Inventory Manager", name: "Inventory Manager", department: "Inventory" },
-  "design.engineer": { password: "password", role: "Design Engineer", name: "Design Engineer", designation: "Design Engineer", department: "Engineering" },
-  "qc.manager": { password: "password", role: "QC Manager", name: "QC Manager", department: "Quality Control" },
-  "production.manager": { password: "password", role: "Production Manager", name: "Production Manager", department: "Production" },
-  "accountant": { password: "password", role: "Admin", name: "Accountant", department: "Finance" },
+  "john.doe": { password: "password", role: "Employee", type: "employee", name: "John Doe", designation: "Senior Engineer", department: "Engineering", departmentId: 1 },
+  "jane.smith": { password: "password", role: "Supervisor", type: "employee", name: "Jane Smith", designation: "Project Supervisor", department: "Production", departmentId: 2 },
+  "rajesh.kumar": { password: "password", role: "Employee", type: "employee", name: "Rajesh Kumar", designation: "Engineer", department: "Engineering", departmentId: 1 },
+  "inventory.manager": { password: "password", role: "Inventory Manager", type: "user", name: "Inventory Manager", department: "Inventory", departmentId: 5 },
+  "design.engineer": { password: "password", role: "Design Engineer", type: "user", name: "Design Engineer", designation: "Design Engineer", department: "Engineering", departmentId: 1 },
+  "qc.manager": { password: "password", role: "QC Manager", type: "user", name: "QC Manager", department: "Quality Control", departmentId: 3 },
+  "production.manager": { password: "password", role: "Production Manager", type: "user", name: "Production Manager", department: "Production", departmentId: 2 },
+  "accountant": { password: "password", role: "Admin", type: "user", name: "Accountant", department: "Finance", departmentId: 8 },
 };
 
 const AuthContext = createContext();
@@ -102,9 +102,10 @@ export const AuthProvider = ({ children }) => {
           username: normalizedUsername,
           role: demoEntry.role,
           name: demoEntry.name,
-          type: demoEntry.role === 'employee' ? 'employee' : 'user',
+          type: demoEntry.type || (demoEntry.role === 'employee' || demoEntry.role === 'Employee' ? 'employee' : 'user'),
           designation: demoEntry.designation,
           department: demoEntry.department,
+          departmentId: demoEntry.departmentId,
         };
         localStorage.setItem("token", "demo-token");
         localStorage.setItem("demoUser", JSON.stringify(userData));

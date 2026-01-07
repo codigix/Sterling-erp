@@ -13,7 +13,7 @@ import {
 
 const ResourceAllocationPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [departmentFilter, setDepartmentFilter] = useState("all");
+  const [departmentFilter] = useState("all");
 
   const resources = [
     {

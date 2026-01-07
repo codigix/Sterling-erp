@@ -73,7 +73,8 @@ export const buildStepPayload = (stepNumber, formData) => {
           filePath: f.name || `document_${idx}`,
           fileName: f.name
         })) || [])
-      ]
+      ],
+      assignedTo: formData.design_engineeringAssignedTo || null
     },
     
     4: {
@@ -88,7 +89,8 @@ export const buildStepPayload = (stepNumber, formData) => {
       ],
       procurementStatus: formData.procurementStatus || 'pending',
       totalMaterialCost: formData.totalMaterialCost || 0,
-      notes: formData.materialNotes || ''
+      notes: formData.materialNotes || '',
+      assignedTo: formData.material_requirementAssignedTo || null
     },
     
     5: {
@@ -96,7 +98,8 @@ export const buildStepPayload = (stepNumber, formData) => {
         startDate: formData.productionStartDate,
         endDate: formData.estimatedCompletionDate
       },
-      selectedPhases: formData.selectedPhases || {}
+      selectedPhases: formData.selectedPhases || {},
+      assignedTo: formData.production_planAssignedTo || null
     },
     
     6: {
@@ -112,7 +115,8 @@ export const buildStepPayload = (stepNumber, formData) => {
         warrantyPeriod: formData.warrantySupport?.warrantyPeriod || '',
         serviceSupport: formData.warrantySupport?.serviceSupport || ''
       },
-      internalProjectOwner: formData.internalProjectOwner || null
+      internalProjectOwner: formData.internalProjectOwner || null,
+      assignedTo: formData.quality_checkAssignedTo || null
     },
     
     7: {
@@ -128,7 +132,8 @@ export const buildStepPayload = (stepNumber, formData) => {
         dismantling: formData.shipment?.dismantling || '',
         packing: formData.shipment?.packing || '',
         dispatch: formData.shipment?.dispatch || ''
-      }
+      },
+      assignedTo: formData.shipmentAssignedTo || null
     },
     
     8: {

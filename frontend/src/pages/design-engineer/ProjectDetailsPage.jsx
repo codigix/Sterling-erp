@@ -686,7 +686,7 @@ const ProjectDetailsPage = () => {
                                   try {
                                     setSaving(true);
                                     await axios.post(
-                                      `/sales/orders/${project.id}/send-to-inventory`
+                                      `/api/sales/orders/${project.id}/send-to-inventory`
                                     );
                                     alert(
                                       "Materials sent to inventory successfully!"

@@ -293,6 +293,11 @@ const GRNProcessingPage = () => {
   const addToInventory = async (grnId, status) => {
     try {
       await axios.post(`/inventory/grns/${grnId}/add-to-stock`, { status });
+      
+      if (taskId) {
+        await taskService.autoCompleteTaskByAction(taskId, "add");
+      }
+      
       Swal.fire(
         "Success",
         "Material added to inventory successfully!",

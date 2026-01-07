@@ -54,6 +54,75 @@ export const taskService = {
     };
   },
 
+  getProjectIdFromParams: () => {
+    const params = new URLSearchParams(window.location.search);
+    const projectId = params.get("projectId");
+    return projectId ? parseInt(projectId, 10) : null;
+  },
+
+  getProjectInventoryTaskParams: () => {
+    const params = new URLSearchParams(window.location.search);
+    return {
+      taskId: params.get("taskId") ? parseInt(params.get("taskId"), 10) : null,
+      projectId: params.get("projectId") ? parseInt(params.get("projectId"), 10) : null,
+      rootCardId: params.get("rootCardId") ? parseInt(params.get("rootCardId"), 10) : null,
+      taskTitle: params.get("taskTitle"),
+    };
+  },
+
+  completeProjectInventoryTask: async (taskId, projectId, notes = "") => {
+    try {
+      if (!taskId || !projectId) {
+        return null;
+      }
+      const response = await axios.patch(
+        `/inventory/project-tasks/project/${projectId}/task/${taskId}/complete`,
+        { notes }
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error completing project inventory task:", error);
+      throw error;
+    }
+  },
+
+  updateProjectInventoryTaskStatus: async (taskId, projectId, status) => {
+    try {
+      if (!taskId || !projectId) {
+        return null;
+      }
+      if (!["pending", "in_progress", "completed"].includes(status)) {
+        throw new Error("Invalid status value");
+      }
+      const response = await axios.patch(
+        `/inventory/project-tasks/project/${projectId}/task/${taskId}/status`,
+        { status }
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error updating project inventory task status:", error);
+      throw error;
+    }
+  },
+
+  completeProjectTaskIfPresent: async (taskId, notes = "") => {
+    const projectId = taskService.getProjectIdFromParams();
+    if (projectId && taskId) {
+      try {
+        return await taskService.completeProjectInventoryTask(taskId, projectId, notes);
+      } catch (error) {
+        console.error("Error completing project task:", error);
+        return null;
+      }
+    }
+    return null;
+  },
+
+  isNavigatingFromDepartmentTasks: () => {
+    const projectId = taskService.getProjectIdFromParams();
+    return projectId !== null;
+  },
+
   autoCompleteTaskByAction: async (taskId, actionType) => {
     if (!taskId) return null;
     try {

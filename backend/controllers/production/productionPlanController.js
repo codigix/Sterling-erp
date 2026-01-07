@@ -55,12 +55,17 @@ const productionPlanController = {
         return res.status(404).json({ message: 'Production plan not found' });
       }
 
-      const finishedGoods = await ProductionPlan.getFinishedGoods(id);
-      plan.finishedGoods = finishedGoods;
+      try {
+        const finishedGoods = await ProductionPlan.getFinishedGoods(id);
+        plan.finishedGoods = finishedGoods || [];
+      } catch (fgError) {
+        console.warn(`[ProductionPlanController] Could not fetch finished goods for plan ${id}:`, fgError.message);
+        plan.finishedGoods = [];
+      }
 
       res.json(plan);
     } catch (error) {
-      console.error(error);
+      console.error(`[ProductionPlanController] Error fetching plan ${req.params.id}:`, error.message);
       res.status(500).json({ message: 'Error fetching production plan', error: error.message });
     }
   },
@@ -81,7 +86,7 @@ const productionPlanController = {
       }
 
       const plans = await ProductionPlan.findAll(filters);
-      res.json(plans);
+      res.json({ plans });
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: 'Error fetching production plans', error: error.message });

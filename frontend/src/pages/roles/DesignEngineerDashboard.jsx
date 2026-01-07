@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
-import axios from "@/utils/api";
 import {
   Wrench,
   TrendingUp,
@@ -45,7 +44,6 @@ ChartJS.register(
 const DesignEngineerDashboard = () => {
   const [stats, setStats] = useState([]);
   const [departmentTasks, setDepartmentTasks] = useState([]);
-  const [taskStats, setTaskStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -53,15 +51,48 @@ const DesignEngineerDashboard = () => {
     try {
       setLoading(true);
       setError(null);
-
-      const roleId = await getRoleId("design_engineer");
-      if (!roleId) {
-        console.warn("Design Engineer role not found, using default role ID");
-      }
-
-      await Promise.all([
-        fetchTasksForDesignEngineer(roleId || 1),
-        fetchTaskStats(roleId || 1),
+      setDepartmentTasks([]);
+      setStats([
+        {
+          title: "Assigned Projects",
+          value: "0",
+          change: "+0",
+          positive: true,
+          icon: Wrench,
+          bgColor: "bg-blue-100 dark:bg-blue-900/30",
+          iconColor: "text-blue-600 dark:text-blue-400",
+          borderColor: "border-blue-200 dark:border-blue-700",
+        },
+        {
+          title: "Pending Tasks",
+          value: "0",
+          change: "+0",
+          positive: true,
+          icon: Clock,
+          bgColor: "bg-amber-100 dark:bg-amber-900/30",
+          iconColor: "text-amber-600 dark:text-amber-400",
+          borderColor: "border-amber-200 dark:border-amber-700",
+        },
+        {
+          title: "Completed",
+          value: "0",
+          change: "+0",
+          positive: true,
+          icon: CheckCircle,
+          bgColor: "bg-green-100 dark:bg-green-900/30",
+          iconColor: "text-green-600 dark:text-green-400",
+          borderColor: "border-green-200 dark:border-green-700",
+        },
+        {
+          title: "Critical Priority",
+          value: "0",
+          change: "None",
+          positive: true,
+          icon: AlertCircle,
+          bgColor: "bg-red-100 dark:bg-red-900/30",
+          iconColor: "text-red-600 dark:text-red-400",
+          borderColor: "border-red-200 dark:border-red-700",
+        },
       ]);
     } catch (err) {
       console.error("Error fetching dashboard data:", err);
@@ -69,98 +100,13 @@ const DesignEngineerDashboard = () => {
     } finally {
       setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     fetchDashboardData();
   }, [fetchDashboardData]);
 
-  const getRoleId = async (roleName) => {
-    try {
-      const response = await axios.get(`/department/portal/role/${roleName}`);
-      return response.data.roleId;
-    } catch {
-      console.warn(`Role '${roleName}' not found, will use default role ID`);
-      return null;
-    }
-  };
 
-  const fetchTasksForDesignEngineer = async (roleId) => {
-    try {
-      const response = await axios.get(`/department/portal/tasks/${roleId}`);
-      setDepartmentTasks(response.data);
-
-      generateStatisticsFromTasks(response.data);
-    } catch (err) {
-      console.error("Error fetching design engineer tasks:", err);
-      throw err;
-    }
-  };
-
-  const fetchTaskStats = async (roleId) => {
-    try {
-      const response = await axios.get(`/department/portal/stats/${roleId}`);
-      setTaskStats(response.data);
-    } catch (err) {
-      console.error("Error fetching task stats:", err);
-      throw err;
-    }
-  };
-
-  const generateStatisticsFromTasks = (tasks) => {
-    const pendingCount = tasks.filter((t) => t.status === "pending").length;
-    const _inProgressCount = tasks.filter(
-      (t) => t.status === "in_progress"
-    ).length;
-    const completedCount = tasks.filter((t) => t.status === "completed").length;
-    const criticalCount = tasks.filter((t) => t.priority === "critical").length;
-
-    const generatedStats = [
-      {
-        title: "Assigned Projects",
-        value: tasks.length.toString(),
-        change: "+" + tasks.filter((t) => t.status === "pending").length,
-        positive: true,
-        icon: Wrench,
-        bgColor: "bg-blue-100 dark:bg-blue-900/30",
-        iconColor: "text-blue-600 dark:text-blue-400",
-        borderColor: "border-blue-200 dark:border-blue-700",
-      },
-      {
-        title: "Pending Tasks",
-        value: pendingCount.toString(),
-        change: pendingCount > 0 ? "+" + pendingCount : "0",
-        positive: pendingCount <= 2,
-        icon: Clock,
-        bgColor: "bg-amber-100 dark:bg-amber-900/30",
-        iconColor: "text-amber-600 dark:text-amber-400",
-        borderColor: "border-amber-200 dark:border-amber-700",
-      },
-      {
-        title: "Completed",
-        value: completedCount.toString(),
-        change: completedCount > 0 ? "+" + completedCount : "0",
-        positive: true,
-        icon: CheckCircle,
-        bgColor: "bg-green-100 dark:bg-green-900/30",
-        iconColor: "text-green-600 dark:text-green-400",
-        borderColor: "border-green-200 dark:border-green-700",
-      },
-      {
-        title: "Critical Priority",
-        value: criticalCount.toString(),
-        change: criticalCount > 0 ? criticalCount + " tasks" : "None",
-        positive: criticalCount === 0,
-        icon: AlertCircle,
-        bgColor: "bg-red-100 dark:bg-red-900/30",
-        iconColor: "text-red-600 dark:text-red-400",
-        borderColor: "border-red-200 dark:border-red-700",
-      },
-    ];
-
-    setStats(generatedStats);
-  };
 
   const chartOptions = {
     responsive: true,
@@ -453,68 +399,7 @@ const DesignEngineerDashboard = () => {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-6">
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white text-xs mb-5">
-            Task Statistics
-          </h3>
-          <div className="space-y-4">
-            {taskStats &&
-              [
-                {
-                  label: "Total Tasks",
-                  value: taskStats.total,
-                  color: "bg-blue-500",
-                  icon: "📋",
-                },
-                {
-                  label: "In Progress",
-                  value: taskStats.in_progress,
-                  color: "bg-indigo-500",
-                  icon: "⚙️",
-                },
-                {
-                  label: "Completed",
-                  value: taskStats.completed,
-                  color: "bg-green-500",
-                  icon: "✓",
-                },
-                {
-                  label: "On Hold",
-                  value: taskStats.on_hold,
-                  color: "bg-red-500",
-                  icon: "⏸",
-                },
-              ].map((metric, idx) => (
-                <div key={idx} className="group">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <div
-                        className={`text-lg font-bold ${metric.color} text-white w-8 h-8 rounded-full flex items-center justify-center text-sm`}
-                      >
-                        {metric.icon}
-                      </div>
-                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                        {metric.label}
-                      </span>
-                    </div>
-                    <span className="text-sm font-bold text-slate-900 dark:text-white text-xs">
-                      {metric.value}
-                    </span>
-                  </div>
-                  <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5 overflow-hidden">
-                    <div
-                      className={`${metric.color} h-2.5 rounded-full transition-all duration-500`}
-                      style={{
-                        width: `${
-                          (metric.value / Math.max(taskStats.total, 1)) * 100
-                        }%`,
-                      }}
-                    />
-                  </div>
-                </div>
-              ))}
-          </div>
-        </div>
+
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">

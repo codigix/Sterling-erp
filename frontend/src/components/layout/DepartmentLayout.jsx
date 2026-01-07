@@ -16,15 +16,31 @@ import {
   Boxes,
   Factory,
   AlertCircle,
+  Zap,
+  Users,
+  Calendar,
+  Activity,
+  BarChart3,
+  Layers,
+  Truck,
+  ClipboardList,
 } from "lucide-react";
-import "./DepartmentLayout.css";
 
 const DepartmentLayout = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+
+  React.useEffect(() => {
+    const handleResize = () => {
+      setIsDesktop(window.innerWidth >= 1024);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -95,9 +111,7 @@ const DepartmentLayout = () => {
               to={getDepartmentRole().path}
               className="flex items-center text-xs"
             >
-              <div className="font-bold text-xl text-blue-600 dark:text-blue-400">
-                Sterling ERP
-              </div>
+              <img src="/logo.png" alt="Sterling ERP" className="h-8 w-auto" />
             </Link>
           </div>
 
@@ -223,6 +237,220 @@ const DepartmentLayout = () => {
               </ul>
             </div>
 
+            {/* Production Flow Menu - Only show for Production department */}
+            {getDepartmentRole().title === "Production" && (
+              <div>
+                <h6
+                  className={`text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3 ${
+                    sidebarCollapsed ? "text-center" : ""
+                  }`}
+                >
+                  {!sidebarCollapsed && "Production Flow"}
+                </h6>
+                <ul className="space-y-1">
+                  <li>
+                    <Link
+                      to="/department/production/root-cards"
+                      className={`flex items-center text-xs px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                        isActive("/department/production/root-cards")
+                          ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"
+                          : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+                      }`}
+                    >
+                      <Zap size={18} className="flex-shrink-0" />
+                      {!sidebarCollapsed && <span className="ml-3">Root Cards</span>}
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      to="/department/production/plans"
+                      className={`flex items-center text-xs px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                        isActive("/department/production/plans")
+                          ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"
+                          : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+                      }`}
+                    >
+                      <ClipboardList size={18} className="flex-shrink-0" />
+                      {!sidebarCollapsed && <span className="ml-3">Production Plans</span>}
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      to="/department/production/scheduling"
+                      className={`flex items-center text-xs px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                        isActive("/department/production/scheduling")
+                          ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"
+                          : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+                      }`}
+                    >
+                      <Calendar size={18} className="flex-shrink-0" />
+                      {!sidebarCollapsed && <span className="ml-3">Scheduling</span>}
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      to="/department/production/resources"
+                      className={`flex items-center text-xs px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                        isActive("/department/production/resources")
+                          ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"
+                          : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+                      }`}
+                    >
+                      <Users size={18} className="flex-shrink-0" />
+                      {!sidebarCollapsed && <span className="ml-3">Resource Allocation</span>}
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      to="/department/production/assign-tasks"
+                      className={`flex items-center text-xs px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                        isActive("/department/production/assign-tasks")
+                          ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"
+                          : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+                      }`}
+                    >
+                      <CheckSquare size={18} className="flex-shrink-0" />
+                      {!sidebarCollapsed && <span className="ml-3">Assign Tasks</span>}
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+            )}
+
+            {/* Production Execution Menu - Only show for Production department */}
+            {getDepartmentRole().title === "Production" && (
+              <div>
+                <h6
+                  className={`text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3 ${
+                    sidebarCollapsed ? "text-center" : ""
+                  }`}
+                >
+                  {!sidebarCollapsed && "Execution & Tracking"}
+                </h6>
+                <ul className="space-y-1">
+                  <li>
+                    <Link
+                      to="/department/production/active-stages"
+                      className={`flex items-center text-xs px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                        isActive("/department/production/active-stages")
+                          ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"
+                          : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+                      }`}
+                    >
+                      <Layers size={18} className="flex-shrink-0" />
+                      {!sidebarCollapsed && <span className="ml-3">Active Stages</span>}
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      to="/department/production/mes-tasks"
+                      className={`flex items-center text-xs px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                        isActive("/department/production/mes-tasks")
+                          ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"
+                          : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+                      }`}
+                    >
+                      <Activity size={18} className="flex-shrink-0" />
+                      {!sidebarCollapsed && <span className="ml-3">MES Tasks</span>}
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      to="/department/production/stage-progress"
+                      className={`flex items-center text-xs px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                        isActive("/department/production/stage-progress")
+                          ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"
+                          : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+                      }`}
+                    >
+                      <BarChart3 size={18} className="flex-shrink-0" />
+                      {!sidebarCollapsed && <span className="ml-3">Stage Progress</span>}
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      to="/department/production/task-tracking"
+                      className={`flex items-center text-xs px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                        isActive("/department/production/task-tracking")
+                          ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"
+                          : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+                      }`}
+                    >
+                      <Activity size={18} className="flex-shrink-0" />
+                      {!sidebarCollapsed && <span className="ml-3">Task Tracking</span>}
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+            )}
+
+            {/* Production Completion Menu - Only show for Production department */}
+            {getDepartmentRole().title === "Production" && (
+              <div>
+                <h6
+                  className={`text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3 ${
+                    sidebarCollapsed ? "text-center" : ""
+                  }`}
+                >
+                  {!sidebarCollapsed && "Completion & Delivery"}
+                </h6>
+                <ul className="space-y-1">
+                  <li>
+                    <Link
+                      to="/department/production/stage-details"
+                      className={`flex items-center text-xs px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                        isActive("/department/production/stage-details")
+                          ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"
+                          : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+                      }`}
+                    >
+                      <ClipboardList size={18} className="flex-shrink-0" />
+                      {!sidebarCollapsed && <span className="ml-3">Stage Details</span>}
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      to="/department/production/specifications"
+                      className={`flex items-center text-xs px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                        isActive("/department/production/specifications")
+                          ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"
+                          : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+                      }`}
+                    >
+                      <Layers size={18} className="flex-shrink-0" />
+                      {!sidebarCollapsed && <span className="ml-3">Specifications</span>}
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      to="/department/production/challans"
+                      className={`flex items-center text-xs px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                        isActive("/department/production/challans")
+                          ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"
+                          : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+                      }`}
+                    >
+                      <Truck size={18} className="flex-shrink-0" />
+                      {!sidebarCollapsed && <span className="ml-3">Challans</span>}
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      to="/department/production/performance"
+                      className={`flex items-center text-xs px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                        isActive("/department/production/performance")
+                          ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"
+                          : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+                      }`}
+                    >
+                      <BarChart3 size={18} className="flex-shrink-0" />
+                      {!sidebarCollapsed && <span className="ml-3">Performance</span>}
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+            )}
+
             {/* Quick Actions */}
             <div>
               <h6
@@ -271,26 +499,14 @@ const DepartmentLayout = () => {
 
       {/* Main Content */}
       <main
-        className={`transition-all duration-300 ${
-          sidebarCollapsed ? "" : ""
-        } pt-16`}
+        style={{
+          marginLeft: isDesktop ? (sidebarCollapsed ? '4rem' : '16rem') : '0',
+          transition: 'margin-left 300ms ease-in-out'
+        }}
+        className="pt-16 min-h-[calc(100vh-4rem)]"
       >
-        <div className="p-6">
-          {/* Page Header */}
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold  dark:">
-              {getCurrentPageTitle()} Tasks
-            </h1>
-            <p className="text-slate-600 dark:text-slate-400 mt-1 text-xs">
-              Manage your department tasks and activities
-            </p>
-          </div>
-
-          {/* Page Content */}
-          <div className="space-y-6">
-            <Outlet />
-          </div>
-        </div>
+        {/* Page Content */}
+        <Outlet />
       </main>
     </div>
   );

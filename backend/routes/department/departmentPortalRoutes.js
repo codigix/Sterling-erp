@@ -1,17 +1,17 @@
 const express = require('express');
-const router = express.Router();
-const authMiddleware = require('../../middleware/authMiddleware');
 const departmentPortalController = require('../../controllers/department/departmentPortalController');
+const authMiddleware = require('../../middleware/authMiddleware');
+const roleMiddleware = require('../../middleware/roleMiddleware');
 
-router.use(authMiddleware);
+const router = express.Router();
 
-router.get('/tasks/:roleId', departmentPortalController.getDepartmentTasks);
-router.post('/tasks', departmentPortalController.createDepartmentTask);
-router.post('/tasks/delete-bulk', departmentPortalController.deleteBulkDepartmentTasks);
-router.get('/tasks/detail/:taskId', departmentPortalController.getDepartmentTaskById);
-router.patch('/tasks/:taskId', departmentPortalController.updateDepartmentTask);
-router.delete('/tasks/:taskId', departmentPortalController.deleteDepartmentTask);
-router.get('/stats/:roleId', departmentPortalController.getDepartmentTaskStats);
-router.get('/role/:roleName', departmentPortalController.getRoleIdByName);
+router.get('/role/:roleName', authMiddleware, departmentPortalController.getRoleByName);
+router.get('/tasks/:roleId', authMiddleware, departmentPortalController.getTasksByRole);
+router.get('/tasks/:taskId/detail', authMiddleware, departmentPortalController.getTaskById);
+router.get('/role/:roleId/stats', authMiddleware, departmentPortalController.getRoleStats);
+
+router.post('/tasks', authMiddleware, roleMiddleware('Admin', 'Management', 'Design Engineer', 'Engineering'), departmentPortalController.createTask);
+router.patch('/tasks/:taskId', authMiddleware, roleMiddleware('Admin', 'Management', 'Design Engineer', 'Engineering'), departmentPortalController.updateTask);
+router.delete('/tasks/:taskId', authMiddleware, roleMiddleware('Admin', 'Management', 'Design Engineer', 'Engineering'), departmentPortalController.deleteTask);
 
 module.exports = router;

@@ -5,7 +5,6 @@ const Project = require('../../models/Project');
 const RootCard = require('../../models/RootCard');
 const Material = require('../../models/Material');
 const MaterialRequirementsDetail = require('../../models/MaterialRequirementsDetail');
-const { assignTasksFromRootCard } = require('../../utils/taskAssignmentHelper');
 
 exports.getAssignedOrders = async (req, res) => {
   try {
@@ -104,6 +103,8 @@ exports.createSalesOrder = async (req, res) => {
     await connection.beginTransaction();
 
     try {
+      const SalesOrderStep = require('../../models/SalesOrderStep');
+      
       const salesOrderId = await SalesOrder.create({
         customer: clientName,
         poNumber,
@@ -120,6 +121,8 @@ exports.createSalesOrder = async (req, res) => {
         status: status || 'pending',
         createdBy
       }, connection);
+
+      await SalesOrderStep.initializeAllSteps(salesOrderId, connection);
 
       const projectCode = `PRJ-${poNumber}-${Date.now()}`;
       const projectId = await Project.create({
@@ -252,17 +255,11 @@ exports.updateSalesOrderStatus = async (req, res) => {
 
     await SalesOrder.updateStatus(id, status);
 
-    if (['assigned', 'ready_to_start', 'in_progress', 'approved'].includes(status)) {
-      console.log(`Triggering task assignment for sales order ${id} with status ${status}`);
-      await assignTasksFromRootCard(id);
-    }
-
     const updatedOrder = await SalesOrder.findById(id);
 
     res.json({ 
       message: 'Status updated successfully',
-      order: updatedOrder,
-      taskAssignmentTriggered: ['assigned', 'ready_to_start', 'in_progress', 'approved'].includes(status)
+      order: updatedOrder
     });
   } catch (error) {
     console.error('Update sales order status error:', error.message);
@@ -318,32 +315,6 @@ exports.assignSalesOrder = async (req, res) => {
   }
 };
 
-exports.manuallyAssignTasks = async (req, res) => {
-  try {
-    const { salesOrderId } = req.params;
-
-    const order = await SalesOrder.findById(salesOrderId);
-    if (!order) {
-      return res.status(404).json({ message: 'Sales order not found' });
-    }
-
-    const result = await assignTasksFromRootCard(salesOrderId);
-
-    res.json({ 
-      message: result.success ? 'Tasks assigned successfully from root card' : 'No tasks to assign',
-      salesOrderId,
-      tasksCreated: result.tasksCreated,
-      details: result
-    });
-  } catch (error) {
-    console.error('Manually assign tasks error:', error);
-    res.status(500).json({ 
-      message: 'Failed to assign tasks',
-      error: error.message
-    });
-  }
-};
-
 exports.saveDesignDetails = async (req, res) => {
   try {
     const { salesOrderId } = req.params;
@@ -385,7 +356,7 @@ exports.sendToInventory = async (req, res) => {
 
     // 1. Fetch Sales Order with Design Details
     const [rows] = await pool.execute(
-      'SELECT design_details, project_name FROM sales_orders WHERE id = ?',
+      'SELECT design_details, project_name, id FROM sales_orders WHERE id = ?',
       [salesOrderId]
     );
 
@@ -396,11 +367,60 @@ exports.sendToInventory = async (req, res) => {
     const designDetails = rows[0].design_details;
     const projectName = rows[0].project_name;
 
+    // 2. Ensure project exists for this sales order
+    let projectId = null;
+    try {
+      const [existingProjects] = await pool.execute(
+        'SELECT id FROM projects WHERE sales_order_id = ? LIMIT 1',
+        [salesOrderId]
+      );
+      
+      if (existingProjects.length > 0) {
+        projectId = existingProjects[0].id;
+      } else if (projectName) {
+        // Create a project if it doesn't exist
+        const result = await Project.create({
+          name: projectName,
+          salesOrderId: salesOrderId,
+          status: 'draft'
+        });
+        projectId = result;
+      }
+    } catch (projectError) {
+      console.error('Error creating/fetching project:', projectError);
+      throw new Error(`Project creation failed: ${projectError.message}`);
+    }
+
+    // 3. Create a root card for inventory if one doesn't exist
+    if (projectId) {
+      try {
+        const [existingRootCard] = await pool.execute(
+          'SELECT id FROM root_cards WHERE project_id = ? LIMIT 1',
+          [projectId]
+        );
+        
+        if (existingRootCard.length === 0) {
+          await RootCard.create({
+            projectId: projectId,
+            salesOrderId: salesOrderId,
+            code: `RC-${projectId}-${Date.now()}`,
+            title: `Inventory Tasks for ${projectName}`,
+            status: 'planning',
+            priority: 'medium',
+            createdBy: req.user?.id
+          });
+        }
+      } catch (rootCardError) {
+        console.error('Error creating root card:', rootCardError);
+        throw new Error(`Root card creation failed: ${rootCardError.message}`);
+      }
+    }
+
     if (!designDetails) {
       return res.status(400).json({ message: 'No design details found for this project' });
     }
 
-    // 2. Extract Materials
+    // 4. Extract Materials
     const categories = {
       steelSections: 'Steel Section',
       plates: 'Plate',
@@ -459,7 +479,7 @@ exports.sendToInventory = async (req, res) => {
       }
     }
 
-    // 3. Create/Update Material Requirements Detail
+    // 5. Create/Update Material Requirements Detail
     // Force clean rebuild of requirements to fix "Unnamed Material" issues
     const existingReq = await MaterialRequirementsDetail.findBySalesOrderId(salesOrderId);
     

@@ -23,7 +23,6 @@ import {
 import Button from "@/components/ui/Button";
 import {
   INVENTORY_WORKFLOW,
-  generateWorkflowTasks,
 } from "@/constants/inventoryWorkflow";
 import { taskService } from "@/utils/taskService";
 import CheckProjectMaterialRequirementsModal from "@/components/inventory/CheckProjectMaterialRequirementsModal";
@@ -35,7 +34,6 @@ const InventoryTasksPage = () => {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [roleId, setRoleId] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [isCreatingWorkflow, setIsCreatingWorkflow] = useState(false);
@@ -43,7 +41,6 @@ const InventoryTasksPage = () => {
   const [selectedPhase, setSelectedPhase] = useState(null);
   const [selectedTasks, setSelectedTasks] = useState(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
-  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const [workflowJustCreated, setWorkflowJustCreated] = useState(false);
   const [isInitiatingWorkflow, setIsInitiatingWorkflow] = useState(false);
   const [currentTaskIndex, setCurrentTaskIndex] = useState(0);
@@ -58,24 +55,8 @@ const InventoryTasksPage = () => {
   });
 
   useEffect(() => {
-    fetchRoleId();
+    fetchRootCards();
   }, []);
-
-  useEffect(() => {
-    if (roleId) {
-      fetchRootCards();
-    }
-  }, [roleId]);
-
-  const fetchRoleId = async () => {
-    try {
-      const response = await axios.get("/department/portal/role/inventory");
-      setRoleId(response.data.roleId);
-    } catch {
-      console.warn("Inventory role not found, using default role ID");
-      setRoleId(2);
-    }
-  };
 
   const fetchRootCards = async () => {
     setLoading(true);
@@ -99,77 +80,47 @@ const InventoryTasksPage = () => {
   const fetchTasksForRootCard = useCallback(
     async (rootCard) => {
       try {
-        if (!roleId) return;
-        const response = await axios.get(`/department/portal/tasks/${roleId}`);
-        const rootCardIdNum = Number(rootCard.id);
-        const filtered = response.data.filter((t) => {
-          return (
-            Number(t.rootCard?.id) === rootCardIdNum ||
-            Number(t.rootCardId) === rootCardIdNum
-          );
-        });
-        setTasks(filtered);
+        if (!rootCard?.project?.id) {
+          console.log("[InventoryTasksPage] No project ID found");
+          setTasks([]);
+          return;
+        }
+        console.log(`[InventoryTasksPage] Fetching tasks for project ${rootCard.project.id}`);
+        const response = await axios.get(`/inventory/project-tasks/project/${rootCard.project.id}/tasks`);
+        const tasksData = response.data.tasks || [];
+        console.log(`[InventoryTasksPage] Fetched ${tasksData.length} backend tasks`, tasksData);
+        setTasks(tasksData);
       } catch (err) {
-        console.error("Error fetching tasks:", err);
+        console.error("[InventoryTasksPage] Error fetching tasks:", err);
         setTasks([]);
       }
     },
-    [roleId]
+    []
   );
 
   useEffect(() => {
-    if (selectedRootCard && roleId) {
+    if (selectedRootCard) {
       fetchTasksForRootCard(selectedRootCard);
     }
-  }, [selectedRootCard, roleId, fetchTasksForRootCard]);
+  }, [selectedRootCard, fetchTasksForRootCard]);
 
   const handleCreateTask = async (e) => {
     e.preventDefault();
-    if (!formData.title.trim()) {
-      alert("Task title is required");
-      return;
-    }
-
     setIsCreating(true);
     try {
-      const payload = {
-        title: formData.title,
-        description: formData.description,
-        priority: formData.priority,
-        status: formData.status,
-        roleId: roleId,
-        rootCardId: selectedRootCard?.id,
-        project: selectedRootCard?.project || {},
-      };
-
-      const response = await axios.post("/department/portal/tasks", payload);
-
-      if (response.status === 201) {
-        setShowCreateModal(false);
-        setFormData({
-          title: "",
-          description: "",
-          priority: "medium",
-          status: "pending",
-        });
-        await fetchTasksForRootCard(selectedRootCard);
-        handleTaskNavigation(response.data);
-      }
-    } catch (err) {
-      console.error("Error creating task:", err);
-      alert(
-        "Failed to create task: " + (err.response?.data?.message || err.message)
-      );
+      alert("Tasks are auto-initialized for each project. Use the workflow to manage inventory tasks.");
     } finally {
       setIsCreating(false);
+      setShowCreateModal(false);
     }
   };
 
   const handleTaskNavigation = (task) => {
-    const taskTitle = (task.title || "").toLowerCase();
-    const baseParams = `taskId=${task.id}&taskTitle=${encodeURIComponent(
-      task.title
-    )}&rootCardId=${selectedRootCard?.id}`;
+    const taskTitle = (task.title || task.step_name || "").toLowerCase();
+    const taskIdForUrl = task.backend_id || task.id;
+    const baseParams = `taskId=${taskIdForUrl}&taskTitle=${encodeURIComponent(
+      task.title || task.step_name
+    )}&rootCardId=${selectedRootCard?.id}&projectId=${selectedRootCard?.project?.id}`;
 
     if (taskTitle.includes("material") && taskTitle.includes("requirement")) {
       setCurrentTaskForModal(task);
@@ -223,53 +174,27 @@ const InventoryTasksPage = () => {
   };
 
   const handleCreateWorkflowTasks = async () => {
-    if (!selectedRootCard) {
-      alert("Please select a root card");
-      return;
-    }
-
     setIsCreatingWorkflow(true);
     setWorkflowProgress(0);
-
     try {
-      const workflowTasks = generateWorkflowTasks(selectedRootCard, roleId);
-      const totalTasks = workflowTasks.length;
-
-      for (let i = 0; i < workflowTasks.length; i++) {
-        await axios.post("/department/portal/tasks", workflowTasks[i]);
-        setWorkflowProgress(Math.round(((i + 1) / totalTasks) * 100));
-        await new Promise((resolve) => setTimeout(resolve, 200));
-      }
-
-      alert(
-        `Successfully created ${totalTasks} inventory workflow tasks for ${selectedRootCard.project?.name || "this project"}!`
-      );
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      await fetchTasksForRootCard(selectedRootCard);
-      setWorkflowProgress(0);
-      setWorkflowJustCreated(true);
-      setCurrentTaskIndex(0);
-    } catch (err) {
-      console.error("Error creating workflow tasks:", err);
-      alert(
-        "Workflow task creation failed: " +
-          (err.response?.data?.message || err.message)
-      );
-      setWorkflowProgress(0);
+      alert("Inventory workflow tasks are automatically created for each project. Please select a root card to view its workflow tasks.");
     } finally {
       setIsCreatingWorkflow(false);
+      setWorkflowProgress(0);
     }
   };
 
   const handleInitiateWorkflow = async () => {
     const sortedTasks = [...tasks].sort((a, b) => {
+      const taskTitleA = a.title || a.step_name;
+      const taskTitleB = b.title || b.step_name;
       const stepA = INVENTORY_WORKFLOW.steps.find(
-        (s) => s.title === a.title
+        (s) => s.title === taskTitleA
       );
       const stepB = INVENTORY_WORKFLOW.steps.find(
-        (s) => s.title === b.title
+        (s) => s.title === taskTitleB
       );
-      return (stepA?.order || 0) - (stepB?.order || 0);
+      return (stepA?.order || a.step_number || 0) - (stepB?.order || b.step_number || 0);
     });
 
     if (sortedTasks.length === 0) {
@@ -398,7 +323,6 @@ const InventoryTasksPage = () => {
       const result = await taskService.deleteTasks(taskIds);
       await fetchTasksForRootCard(selectedRootCard);
       setSelectedTasks(new Set());
-      setShowBulkDeleteConfirm(false);
       alert(
         result.message ||
           `Successfully deleted ${taskIds.length} task(s)`
@@ -474,14 +398,57 @@ const InventoryTasksPage = () => {
 
   const getTasksByPhase = () => {
     const grouped = {};
+    
+    const backendStepMap = {
+      'Create RFQ': { phase: 'quotation', workflowSteps: ['Create RFQ Quotation'] },
+      'Send RFQ to Vendor': { phase: 'quotation', workflowSteps: ['Send Quotation to Vendor', 'Receive Vendor Quotation'] },
+      'Receive & Record Quotes': { phase: 'quotation', workflowSteps: [] },
+      'Create PO': { phase: 'purchase', workflowSteps: ['Create Purchase Order'] },
+      'Approve PO': { phase: 'receipt', workflowSteps: ['Send PO to Vendor', 'Receive Material', 'Approve Purchase Order'] },
+      'GRN Processing & QC': { phase: 'quality', workflowSteps: ['GRN Processing', 'QC Inspection'] },
+      'Add to Stock': { phase: 'storage', workflowSteps: ['Stock Addition', 'Batch & Location Management', 'View Stock'] }
+    };
+    
     INVENTORY_WORKFLOW.phases.forEach((phase) => {
-      grouped[phase.id] = tasks.filter((task) => {
-        const stepInfo = INVENTORY_WORKFLOW.steps.find(
-          (step) => step.title === task.title
-        );
-        return stepInfo?.phase === phase.id;
-      });
+      grouped[phase.id] = [];
     });
+    
+    if (tasks && tasks.length > 0) {
+      console.log(`[getTasksByPhase] Processing ${tasks.length} backend tasks`);
+      let totalMapped = 0;
+      tasks.forEach((task) => {
+        const stepName = task.step_name || task.title;
+        const mapping = backendStepMap[stepName];
+        
+        if (mapping) {
+          const phaseGroup = grouped[mapping.phase];
+          if (phaseGroup) {
+            mapping.workflowSteps.forEach((workflowStepTitle) => {
+              const workflowStep = INVENTORY_WORKFLOW.steps.find(s => s.title === workflowStepTitle);
+              if (workflowStep) {
+                phaseGroup.push({
+                  ...workflowStep,
+                  backend_id: task.id,
+                  backend_status: task.status,
+                  backend_step_number: task.step_number,
+                  step_name: stepName
+                });
+                totalMapped++;
+              }
+            });
+          }
+        } else {
+          console.warn(`[getTasksByPhase] Unknown backend step: ${stepName}`);
+        }
+      });
+      console.log(`[getTasksByPhase] Mapped ${totalMapped} workflow steps from backend tasks`);
+    } else {
+      console.log(`[getTasksByPhase] No backend tasks, using default workflow (${INVENTORY_WORKFLOW.steps.length} steps)`);
+      INVENTORY_WORKFLOW.phases.forEach((phase) => {
+        grouped[phase.id] = INVENTORY_WORKFLOW.steps.filter(s => s.phase === phase.id);
+      });
+    }
+    
     return grouped;
   };
 
@@ -807,14 +774,16 @@ const InventoryTasksPage = () => {
                             <div className="space-y-2">
                               {phaseTasks
                                 .sort((a, b) => {
+                                  const taskTitleA = a.title || a.step_name;
+                                  const taskTitleB = b.title || b.step_name;
                                   const stepA = INVENTORY_WORKFLOW.steps.find(
-                                    (s) => s.title === a.title
+                                    (s) => s.title === taskTitleA
                                   );
                                   const stepB = INVENTORY_WORKFLOW.steps.find(
-                                    (s) => s.title === b.title
+                                    (s) => s.title === taskTitleB
                                   );
                                   return (
-                                    (stepA?.order || 0) - (stepB?.order || 0)
+                                    (stepA?.order || a.step_number || 0) - (stepB?.order || b.step_number || 0)
                                   );
                                 })
                                 .map((task) => (
@@ -845,7 +814,7 @@ const InventoryTasksPage = () => {
                                         <div className="flex items-start justify-between mb-1">
                                           <div className="flex-1">
                                             <h6 className="font-semibold text-slate-900 dark:text-white text-xs">
-                                              {task.title}
+                                              {task.title || task.step_name}
                                             </h6>
                                             {task.description && (
                                               <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
@@ -855,10 +824,10 @@ const InventoryTasksPage = () => {
                                           </div>
                                           <span
                                             className={`px-2 py-1 text-xs font-semibold rounded-full flex-shrink-0 ${getStatusColor(
-                                              task.status
+                                              task.backend_status || task.status
                                             )}`}
                                           >
-                                            {task.status}
+                                            {task.backend_status || task.status}
                                           </span>
                                         </div>
                                         <div className="flex gap-2 mt-2">

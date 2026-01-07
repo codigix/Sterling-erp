@@ -102,6 +102,75 @@ class ManufacturingStage {
     );
     return rows;
   }
+
+  static async update(id, data) {
+    const updates = [];
+    const params = [];
+
+    if (data.stageName !== undefined) {
+      updates.push('stage_name = ?');
+      params.push(data.stageName);
+    }
+    if (data.stageType !== undefined) {
+      updates.push('stage_type = ?');
+      params.push(data.stageType);
+    }
+    if (data.assignedWorker !== undefined) {
+      updates.push('assigned_worker = ?');
+      params.push(data.assignedWorker);
+    }
+    if (data.plannedStart !== undefined) {
+      updates.push('planned_start = ?');
+      params.push(data.plannedStart);
+    }
+    if (data.plannedEnd !== undefined) {
+      updates.push('planned_end = ?');
+      params.push(data.plannedEnd);
+    }
+    if (data.status !== undefined) {
+      updates.push('status = ?');
+      params.push(data.status);
+    }
+    if (data.notes !== undefined) {
+      updates.push('notes = ?');
+      params.push(data.notes);
+    }
+
+    if (updates.length === 0) {
+      return;
+    }
+
+    params.push(id);
+
+    await pool.execute(
+      `UPDATE manufacturing_stages SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+      params
+    );
+  }
+
+  static async findById(id) {
+    const [rows] = await pool.execute(
+      `SELECT ms.*, u.id AS worker_id, u.username AS worker_username, u.email AS worker_email
+       FROM manufacturing_stages ms
+       LEFT JOIN users u ON u.id = ms.assigned_worker
+       WHERE ms.id = ?`,
+      [id]
+    );
+    
+    if (!rows.length) return null;
+
+    const row = rows[0];
+    return {
+      ...row,
+      worker: row.worker_id
+        ? {
+            id: row.worker_id,
+            username: row.worker_username,
+            email: row.worker_email
+          }
+        : null
+    };
+  }
 }
 
 module.exports = ManufacturingStage;

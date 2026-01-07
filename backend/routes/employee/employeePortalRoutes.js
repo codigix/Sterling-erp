@@ -3,6 +3,8 @@ const router = express.Router();
 const employeePortalController = require('../../controllers/employee/employeePortalController');
 const authMiddleware = require('../../middleware/authMiddleware');
 
+router.get('/departments', authMiddleware, employeePortalController.getAllDepartments);
+router.get('/departments/:departmentId/employees', authMiddleware, employeePortalController.getEmployeesByDepartment);
 router.get('/stats/:employeeId', authMiddleware, employeePortalController.getEmployeeStats);
 router.get('/tasks/:employeeId', authMiddleware, employeePortalController.getEmployeeTasks);
 router.get('/attendance/:employeeId', authMiddleware, employeePortalController.getEmployeeAttendance);

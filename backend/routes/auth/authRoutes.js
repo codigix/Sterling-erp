@@ -11,5 +11,6 @@ router.get('/roles/active', authController.getActiveRoles);
 
 // Protected routes
 router.get('/me', authMiddleware, authController.getProfile);
+router.get('/debug/token', authMiddleware, authController.debugToken);
 
 module.exports = router;

@@ -27,6 +27,18 @@ aside::-webkit-scrollbar-thumb {
   border-radius: 3px;
 }
 
+/* Main content layout */
+main {
+  background-color: rgb(248, 250, 252);
+}
+
+/* Dark mode main background */
+@media (prefers-color-scheme: dark) {
+  main {
+    background-color: rgb(15, 23, 42);
+  }
+}
+
 /* Responsive adjustments */
 @media (max-width: 1024px) {
   aside {

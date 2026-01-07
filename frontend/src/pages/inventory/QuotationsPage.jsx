@@ -26,9 +26,11 @@ import {
   Paperclip,
 } from "lucide-react";
 import axios from "../../utils/api";
+import useProjectInventoryTask from "../../hooks/useProjectInventoryTask";
 
 const QuotationsPage = () => {
   const navigate = useNavigate();
+  const { completeCurrentTask, isFromDepartmentTasks } = useProjectInventoryTask();
   const [quotations, setQuotations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -215,6 +217,13 @@ const QuotationsPage = () => {
 
       fetchQuotations();
       fetchStats();
+      
+      if (activeTab === "outbound") {
+        await completeCurrentTask("RFQ quotation created");
+      } else if (activeTab === "inbound") {
+        await completeCurrentTask("Vendor quotation received and recorded");
+      }
+      
       Swal.fire("Success", "Quotation created successfully", "success");
     } catch (err) {
       console.error("Error creating quotation:", err);
@@ -348,6 +357,10 @@ const QuotationsPage = () => {
 
       setFormData((prev) => ({ ...prev, items }));
       setAnalysisMode(false);
+
+      if (isFromDepartmentTasks()) {
+        await completeCurrentTask("Material requirements reviewed and quotation created");
+      }
     } catch (error) {
       console.error("Error saving requirements:", error);
       Swal.fire("Error", "Failed to save requirements", "error");
@@ -550,6 +563,8 @@ const QuotationsPage = () => {
         status: "sent",
       });
 
+      await completeCurrentTask("Quotation sent to vendor via email");
+
       Swal.fire("Success", "Quotation sent successfully!", "success");
       setShowEmailModal(false);
       fetchQuotations();
@@ -728,6 +743,19 @@ const QuotationsPage = () => {
           </button>
         </div>
       </div>
+
+      {isFromDepartmentTasks() && (
+        <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-lg p-4 flex items-start gap-3">
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-blue-900 dark:text-blue-300">
+              📋 Inventory Task Context
+            </p>
+            <p className="text-xs text-blue-800 dark:text-blue-400 mt-1">
+              You're working on a task from the Department Tasks workflow. When you complete actions here, the task status will be automatically updated.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex border-b border-slate-200 dark:border-slate-700">

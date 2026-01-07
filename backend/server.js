@@ -35,10 +35,11 @@ const employeeRoutes = require('./routes/employee/employeeRoutes');
 const employeePortalRoutes = require('./routes/employee/employeePortalRoutes');
 const procurementPortalRoutes = require('./routes/procurement/procurementPortalRoutes');
 const inventoryPortalRoutes = require('./routes/inventory/inventoryPortalRoutes');
+const projectInventoryTaskRoutes = require('./routes/inventory/projectInventoryTaskRoutes');
 const qcPortalRoutes = require('./routes/qc/qcPortalRoutes');
 const productionPortalRoutes = require('./routes/production/productionPortalRoutes');
-const departmentPortalRoutes = require('./routes/department/departmentPortalRoutes');
 const designProjectRoutes = require('./routes/design/designProjectRoutes');
+const departmentPortalRoutes = require('./routes/department/departmentPortalRoutes');
 
 const app = express();
 
@@ -80,6 +81,7 @@ app.use('/api/inventory/vendors', vendorRoutes);
 app.use('/api/inventory/quotations', quotationRoutes);
 app.use('/api/inventory/grns', grnRoutes);
 app.use('/api/inventory/portal', inventoryPortalRoutes);
+app.use('/api/inventory/project-tasks', projectInventoryTaskRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/alerts', alertsRoutes);
 app.use('/api/employees', employeeRoutes);
@@ -89,8 +91,8 @@ app.use('/api/procurement/purchase-orders', purchaseOrderRoutes);
 app.use('/api/procurement/material-requests', materialRequestRoutes);
 app.use('/api/procurement/portal', procurementPortalRoutes);
 app.use('/api/qc/portal', qcPortalRoutes);
-app.use('/api/department/portal', departmentPortalRoutes);
 app.use('/api/design/projects', designProjectRoutes);
+app.use('/api/department/portal', departmentPortalRoutes);
 app.use('/api/tracking', trackingRoutes);
 
 app.get('/api/health', (req, res) => {

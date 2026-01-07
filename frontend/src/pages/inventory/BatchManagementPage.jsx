@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Package,
   Search,
@@ -11,10 +11,16 @@ import {
   Clock,
   AlertTriangle,
 } from "lucide-react";
+import useProjectInventoryTask from "../../hooks/useProjectInventoryTask";
 
 const BatchManagementPage = () => {
+  const { completeCurrentTask } = useProjectInventoryTask();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+
+  useEffect(() => {
+    completeCurrentTask("Batch and location management completed");
+  }, [completeCurrentTask]);
 
   const batchData = [
     {

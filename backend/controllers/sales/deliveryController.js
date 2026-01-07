@@ -9,6 +9,7 @@ class DeliveryController {
     try {
       const { salesOrderId } = req.params;
       const data = req.body;
+      const { assignedTo } = req.body;
 
       const validation = validateDelivery(data);
       if (!validation.isValid) {
@@ -26,11 +27,15 @@ class DeliveryController {
 
       const updated = await DeliveryDetail.findBySalesOrderId(salesOrderId);
       
-      if (data.assignedTo) {
-        await this.createOrUpdateDeliveryTask(salesOrderId, data.assignedTo);
+      if (assignedTo) {
+        await this.createOrUpdateDeliveryTask(salesOrderId, assignedTo);
       }
 
-      await SalesOrderStep.update(salesOrderId, 8, { status: 'in_progress', data: updated });
+      await SalesOrderStep.update(salesOrderId, 8, { status: 'in_progress', data: updated, assignedTo });
+      
+      if (assignedTo) {
+        await SalesOrderStep.assignEmployee(salesOrderId, 8, assignedTo);
+      }
 
       res.json(formatSuccessResponse(updated, 'Delivery details saved'));
     } catch (error) {

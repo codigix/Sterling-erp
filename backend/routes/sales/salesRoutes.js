@@ -15,7 +15,7 @@ router.get('/config/all', systemConfigController.getAllConfig);
 router.get('/config/:configType', systemConfigController.getConfigByType);
 
 router.use(authMiddleware);
-router.use(roleMiddleware('Admin', 'Management', 'Sales'));
+router.use(roleMiddleware('Admin', 'Management', 'Sales', 'Production', 'Design Engineer'));
 
 router.get('/orders/assigned', salesController.getAssignedOrders);
 router.get('/orders', salesController.getSalesOrders);
@@ -25,7 +25,6 @@ router.put('/orders/:id', salesController.updateSalesOrder);
 router.patch('/orders/:id/status', salesController.updateSalesOrderStatus);
 router.delete('/orders/:id', salesController.deleteSalesOrder);
 router.post('/orders/:id/assign', salesController.assignSalesOrder);
-router.post('/orders/:salesOrderId/assign-tasks', salesController.manuallyAssignTasks);
 
 router.get('/drafts/latest', draftController.getLatestDraft);
 router.get('/drafts/:id', draftController.getDraftById);

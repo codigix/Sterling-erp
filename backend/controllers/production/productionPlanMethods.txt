@@ -1,0 +1,181 @@
+
+
+exports.getProductionPlans = async (req, res) => {
+  try {
+    const { status, projectId, search } = req.query;
+    const ProductionPlan = require('../../models/ProductionPlan');
+
+    const filters = {};
+    if (status && status !== 'all') filters.status = status;
+    if (projectId) filters.projectId = projectId;
+    if (search) filters.search = search;
+
+    const plans = await ProductionPlan.findAll(filters);
+    res.json({ plans, total: plans.length });
+  } catch (error) {
+    console.error('Get production plans error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+exports.getProductionPlanById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const ProductionPlan = require('../../models/ProductionPlan');
+
+    const plan = await ProductionPlan.findById(id);
+    if (!plan) {
+      return res.status(404).json({ message: 'Production plan not found' });
+    }
+
+    const finishedGoods = await ProductionPlan.getFinishedGoods(id);
+    res.json({
+      ...plan,
+      finishedGoods: finishedGoods || []
+    });
+  } catch (error) {
+    console.error('Get production plan error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+exports.createProductionPlan = async (req, res) => {
+  const connection = await pool.getConnection();
+  
+  try {
+    await connection.beginTransaction();
+
+    const { projectId, salesOrderId, planName, status, startDate, endDate, estimatedCompletionDate, assignedSupervisor, notes, finishedGoods } = req.body;
+
+    if (!planName) {
+      return res.status(400).json({ message: 'Plan name is required' });
+    }
+
+    const ProductionPlan = require('../../models/ProductionPlan');
+    const planId = await ProductionPlan.create({
+      projectId,
+      salesOrderId,
+      planName,
+      status: status || 'draft',
+      startDate,
+      endDate,
+      estimatedCompletionDate,
+      createdBy: req.user.id,
+      assignedSupervisor,
+      notes
+    }, connection);
+
+    if (finishedGoods && finishedGoods.length > 0) {
+      await ProductionPlan.addFinishedGoods(planId, finishedGoods, connection);
+    }
+
+    await connection.commit();
+
+    res.status(201).json({
+      message: 'Production plan created successfully',
+      planId
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Create production plan error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  } finally {
+    connection.release();
+  }
+};
+
+exports.updateProductionPlan = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { planName, status, startDate, endDate, estimatedCompletionDate, assignedSupervisor, notes, finishedGoods } = req.body;
+    const ProductionPlan = require('../../models/ProductionPlan');
+
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+
+      await ProductionPlan.update(id, {
+        planName,
+        status,
+        startDate,
+        endDate,
+        estimatedCompletionDate,
+        assignedSupervisor,
+        notes
+      });
+
+      if (finishedGoods) {
+        await ProductionPlan.addFinishedGoods(id, finishedGoods, connection);
+      }
+
+      await connection.commit();
+      res.json({ message: 'Production plan updated successfully' });
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+  } catch (error) {
+    console.error('Update production plan error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+exports.updateProductionPlanStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!status) {
+      return res.status(400).json({ message: 'Status is required' });
+    }
+
+    const ProductionPlan = require('../../models/ProductionPlan');
+
+    const connection = await pool.getConnection();
+    try {
+      const plan = await ProductionPlan.findById(id);
+      if (!plan) {
+        return res.status(404).json({ message: 'Production plan not found' });
+      }
+
+      await ProductionPlan.updateStatus(id, status);
+      res.json({ message: 'Production plan status updated successfully' });
+    } finally {
+      connection.release();
+    }
+  } catch (error) {
+    console.error('Update production plan status error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+exports.deleteProductionPlan = async (req, res) => {
+  const connection = await pool.getConnection();
+  
+  try {
+    await connection.beginTransaction();
+
+    const { id } = req.params;
+    const ProductionPlan = require('../../models/ProductionPlan');
+
+    const plan = await ProductionPlan.findById(id);
+    if (!plan) {
+      return res.status(404).json({ message: 'Production plan not found' });
+    }
+
+    await connection.execute('DELETE FROM production_plan_fg WHERE production_plan_id = ?', [id]);
+    await connection.execute('DELETE FROM production_plans WHERE id = ?', [id]);
+
+    await connection.commit();
+
+    res.json({ message: 'Production plan deleted successfully' });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Delete production plan error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  } finally {
+    connection.release();
+  }
+};

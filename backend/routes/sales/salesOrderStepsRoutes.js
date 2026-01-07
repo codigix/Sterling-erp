@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../../middleware/authMiddleware');
+const roleMiddleware = require('../../middleware/roleMiddleware');
 const multer = require('multer');
 const path = require('path');
 const salesOrderStepController = require('../../controllers/sales/salesOrderStepController');
@@ -99,16 +100,16 @@ router.put('/:salesOrderId/material-requirements/materials/:materialId', materia
 router.delete('/:salesOrderId/material-requirements/materials/:materialId', materialRequirementsController.removeMaterial);
 router.post('/:salesOrderId/material-requirements/materials/:materialId/assign', materialRequirementsController.assignMaterial);
 
-router.post('/:salesOrderId/production-plan', productionPlanController.createOrUpdate);
-router.get('/:salesOrderId/production-plan', productionPlanController.getProductionPlan);
-router.post('/:salesOrderId/production-plan/validate-timeline', productionPlanController.validateTimeline);
-router.get('/:salesOrderId/production-plan/validate-phases', productionPlanController.validatePhases);
-router.post('/:salesOrderId/production-plan/phases', productionPlanController.addPhase);
-router.get('/:salesOrderId/production-plan/phases', productionPlanController.getPhases);
-router.get('/:salesOrderId/production-plan/phases/:phaseKey', productionPlanController.getPhase);
-router.put('/:salesOrderId/production-plan/phases/:phaseKey', productionPlanController.updatePhase);
-router.delete('/:salesOrderId/production-plan/phases/:phaseKey', productionPlanController.removePhase);
-router.post('/:salesOrderId/production-plan/phases/:phaseKey/status', productionPlanController.updatePhaseStatus);
+router.post('/:salesOrderId/production-plan', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer'), productionPlanController.createOrUpdate);
+router.get('/:salesOrderId/production-plan', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer'), productionPlanController.getProductionPlan);
+router.post('/:salesOrderId/production-plan/validate-timeline', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer'), productionPlanController.validateTimeline);
+router.get('/:salesOrderId/production-plan/validate-phases', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer'), productionPlanController.validatePhases);
+router.post('/:salesOrderId/production-plan/phases', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer'), productionPlanController.addPhase);
+router.get('/:salesOrderId/production-plan/phases', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer'), productionPlanController.getPhases);
+router.get('/:salesOrderId/production-plan/phases/:phaseKey', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer'), productionPlanController.getPhase);
+router.put('/:salesOrderId/production-plan/phases/:phaseKey', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer'), productionPlanController.updatePhase);
+router.delete('/:salesOrderId/production-plan/phases/:phaseKey', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer'), productionPlanController.removePhase);
+router.post('/:salesOrderId/production-plan/phases/:phaseKey/status', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer'), productionPlanController.updatePhaseStatus);
 
 router.post('/:salesOrderId/quality-check', qualityCheckController.createOrUpdate);
 router.get('/:salesOrderId/quality-check', qualityCheckController.getQualityCheck);

@@ -8,6 +8,7 @@ class ShipmentController {
     try {
       const { salesOrderId } = req.params;
       const data = req.body;
+      const { assignedTo } = req.body;
 
       const validation = validateShipment(data);
       if (!validation.isValid) {
@@ -24,7 +25,11 @@ class ShipmentController {
       }
 
       const updated = await ShipmentDetail.findBySalesOrderId(salesOrderId);
-      await SalesOrderStep.update(salesOrderId, 7, { status: 'in_progress', data: updated });
+      await SalesOrderStep.update(salesOrderId, 7, { status: 'in_progress', data: updated, assignedTo });
+      
+      if (assignedTo) {
+        await SalesOrderStep.assignEmployee(salesOrderId, 7, assignedTo);
+      }
 
       res.json(formatSuccessResponse(updated, 'Shipment details saved'));
     } catch (error) {

@@ -38,7 +38,8 @@ exports.login = async (req, res) => {
             email: employee.email,
             role: employee.role_name,
             designation: employee.designation,
-            department: employee.department,
+            department: employee.department_name || employee.department,
+            departmentId: employee.department_id,
             type: 'employee',
             permissions: employee.permissions
           }
@@ -178,6 +179,23 @@ exports.getActiveRoles = async (req, res) => {
     });
   } catch (error) {
     console.error('Get active roles error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+exports.debugToken = async (req, res) => {
+  try {
+    res.json({
+      tokenData: {
+        userId: req.user.id,
+        username: req.user.username,
+        role: req.user.role,
+        permissions: req.user.permissions
+      },
+      message: 'Token debug info above'
+    });
+  } catch (error) {
+    console.error('Debug token error:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 };

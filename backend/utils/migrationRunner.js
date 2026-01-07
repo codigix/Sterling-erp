@@ -1036,6 +1036,78 @@ async function runMigrations() {
       console.log('⚠️  specifications table already exists');
     }
 
+    // Migration 23: Create project_inventory_tasks table
+    try {
+      await connection.execute(`
+        CREATE TABLE IF NOT EXISTS project_inventory_tasks (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          project_id INT NOT NULL,
+          root_card_id INT,
+          step_number INT NOT NULL COMMENT '1-7 for the workflow steps',
+          step_name VARCHAR(100) NOT NULL COMMENT 'Create RFQ, Send RFQ, Receive Quotes, Create PO, Approve PO, GRN Processing, Add to Stock',
+          status ENUM('pending', 'in_progress', 'completed') DEFAULT 'pending',
+          reference_id VARCHAR(100) COMMENT 'Reference to RFQ, PO, GRN number etc',
+          reference_type VARCHAR(50) COMMENT 'Type: rfq, po, grn, quotation',
+          completed_by INT COMMENT 'User ID who marked as completed',
+          completed_at TIMESTAMP NULL,
+          notes TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          
+          UNIQUE KEY unique_project_step (project_id, step_number),
+          FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+          FOREIGN KEY (root_card_id) REFERENCES root_cards(id) ON DELETE CASCADE,
+          FOREIGN KEY (completed_by) REFERENCES users(id) ON DELETE SET NULL,
+          INDEX idx_project_id (project_id),
+          INDEX idx_status (status),
+          INDEX idx_step_number (step_number)
+        )
+      `);
+      console.log('✅ project_inventory_tasks table created/verified');
+    } catch (err) {
+      if (err.code !== 'ER_TABLE_EXISTS_ERROR') throw err;
+      console.log('⚠️  project_inventory_tasks table already exists');
+    }
+
+    // BOM Line Items table
+    try {
+      await connection.execute(`
+        CREATE TABLE IF NOT EXISTS bom_line_items (
+          id INT PRIMARY KEY AUTO_INCREMENT,
+          bom_id INT NOT NULL,
+          item_code VARCHAR(100) NOT NULL,
+          item_description VARCHAR(255) NOT NULL,
+          quantity INT NOT NULL,
+          unit VARCHAR(50),
+          unit_cost DECIMAL(12,2),
+          specification TEXT,
+          part_type ENUM('raw_material', 'component', 'assembly') DEFAULT 'raw_material',
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (bom_id) REFERENCES bill_of_materials(id) ON DELETE CASCADE,
+          INDEX idx_bom_id (bom_id)
+        )
+      `);
+      console.log('✅ bom_line_items table created/verified');
+    } catch (err) {
+      if (err.code !== 'ER_TABLE_EXISTS_ERROR') throw err;
+      console.log('⚠️  bom_line_items table already exists');
+    }
+
+    // Modify bill_of_materials.sales_order_id to be nullable
+    try {
+      await connection.execute(`
+        ALTER TABLE bill_of_materials 
+        MODIFY COLUMN sales_order_id INT NULL
+      `);
+      console.log('✅ bill_of_materials.sales_order_id modified to be nullable');
+    } catch (err) {
+      if (err.message.includes('Syntax error') || err.code === 'ER_CANT_DROP_FIELD_OR_KEY') {
+        console.log('⚠️  sales_order_id is already nullable or cannot be modified');
+      } else {
+        throw err;
+      }
+    }
+
     console.log('\n✅ All migrations completed successfully!');
   } catch (error) {
     console.error('❌ Migration failed:', error.message);

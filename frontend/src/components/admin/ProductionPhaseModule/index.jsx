@@ -1,6 +1,6 @@
-export { useProductionPhase } from "./useProductionPhase";
+import React from 'react';
 
-export function ProductionPhaseSection({
+function ProductionPhaseSection({
   productionPhaseDetails,
   error,
   successMessage,
@@ -27,3 +27,6 @@ export function ProductionPhaseSection({
     </div>
   );
 }
+
+export { ProductionPhaseSection };
+export default ProductionPhaseSection;

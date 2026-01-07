@@ -1,6 +1,8 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link, Routes, Route, Navigate } from "react-router-dom";
 import RoleDashboardLayout from "../../components/layout/RoleDashboardLayout";
+import ProductionPhasesDisplay from "../../components/production/ProductionPhasesDisplay";
+import axios from "../../utils/api";
 import ProductionPlansPage from "../production/ProductionPlansPage";
 import SchedulingPage from "../production/SchedulingPage";
 import ResourceAllocationPage from "../production/ResourceAllocationPage";
@@ -165,6 +167,33 @@ const ProductionManagerDashboard = () => {
     },
   ];
 
+  const [rootCards, setRootCards] = useState([]);
+  const [loadingRootCards, setLoadingRootCards] = useState(true);
+  const [selectedRootCard, setSelectedRootCard] = useState(null);
+
+  useEffect(() => {
+    fetchRootCards();
+  }, []);
+
+  const fetchRootCards = async () => {
+    setLoadingRootCards(true);
+    try {
+      const response = await axios.get('/production/root-cards?status=planning', {
+        __sessionGuard: true
+      });
+      setRootCards(Array.isArray(response.data) ? response.data : response.data.rootCards || []);
+      if (Array.isArray(response.data) && response.data.length > 0) {
+        setSelectedRootCard(response.data[0].id);
+      } else if (response.data.rootCards && response.data.rootCards.length > 0) {
+        setSelectedRootCard(response.data.rootCards[0].id);
+      }
+    } catch (error) {
+      console.error('Error fetching root cards:', error);
+    } finally {
+      setLoadingRootCards(false);
+    }
+  };
+
   const DashboardContent = () => (
     <div className="space-y-6">
       {/* Stats Grid */}
@@ -266,6 +295,34 @@ const ProductionManagerDashboard = () => {
           ))}
         </div>
       </div>
+
+      {/* Production Phases by Root Card */}
+      {selectedRootCard && (
+        <div className="bg-white dark:bg-slate-800 rounded-lg p-6 border border-slate-200 dark:border-slate-700">
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white text-left mb-4">
+            Production Phases
+          </h2>
+          {rootCards.length > 0 && (
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                Select Root Card
+              </label>
+              <select
+                value={selectedRootCard || ''}
+                onChange={(e) => setSelectedRootCard(parseInt(e.target.value))}
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {rootCards.map((rc) => (
+                  <option key={rc.id} value={rc.id}>
+                    {rc.title} ({rc.code || 'No Code'})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          <ProductionPhasesDisplay rootCardId={selectedRootCard} editable={false} />
+        </div>
+      )}
 
       {/* Manufacturing Stages Overview */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

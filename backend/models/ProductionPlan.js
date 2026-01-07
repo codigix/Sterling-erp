@@ -15,12 +15,10 @@ class ProductionPlan {
   static async addFinishedGoods(planId, items, externalConnection = null) {
     const connection = externalConnection || (await pool.getConnection());
     try {
-      // First delete existing items if any (for update scenario)
       await connection.execute('DELETE FROM production_plan_fg WHERE production_plan_id = ?', [planId]);
 
       if (items && items.length > 0) {
         const values = items.map(item => [planId, item.itemId, item.quantity || 1, item.notes || null]);
-        // Flatten the array for the query
         const flattenedValues = values.reduce((acc, val) => acc.concat(val), []);
         const placeholders = values.map(() => '(?, ?, ?, ?)').join(', ');
 
@@ -61,20 +59,19 @@ class ProductionPlan {
       const [result] = await connection.execute(
         `
           INSERT INTO production_plans
-          (project_id, sales_order_id, plan_name, status, start_date, end_date, 
-           estimated_completion_date, created_by, assigned_supervisor, notes)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          (sales_order_id, bom_id, plan_name, status, planned_start_date, planned_end_date, 
+           estimated_completion_date, supervisor_id, notes)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
-          data.projectId,
           data.salesOrderId || null,
+          data.bomId || null,
           data.planName,
           data.status || 'draft',
-          data.startDate || null,
-          data.endDate || null,
+          data.plannedStartDate || null,
+          data.plannedEndDate || null,
           data.estimatedCompletionDate || null,
-          data.createdBy || null,
-          data.assignedSupervisor || null,
+          data.supervisorId || null,
           data.notes || null
         ]
       );
@@ -95,15 +92,80 @@ class ProductionPlan {
   static async findById(id) {
     const [rows] = await pool.execute(
       `
-        SELECT pp.*, p.name AS project_name, so.customer AS customer_name, u.username AS created_by_username
+        SELECT pp.*, 
+               so.customer AS customer_name,
+               bom.sales_order_id,
+               u.username AS supervisor_name,
+               ppd.selected_phases
         FROM production_plans pp
-        LEFT JOIN projects p ON p.id = pp.project_id
         LEFT JOIN sales_orders so ON so.id = pp.sales_order_id
-        LEFT JOIN users u ON u.id = pp.created_by
+        LEFT JOIN bill_of_materials bom ON bom.id = pp.bom_id
+        LEFT JOIN users u ON u.id = pp.supervisor_id
+        LEFT JOIN production_plan_details ppd ON ppd.sales_order_id = pp.sales_order_id
         WHERE pp.id = ?
       `,
       [id]
     );
+    
+    if (rows[0]) {
+      try {
+        if (rows[0].selected_phases) {
+          const selectedPhases = typeof rows[0].selected_phases === 'string' 
+            ? JSON.parse(rows[0].selected_phases) 
+            : rows[0].selected_phases;
+          rows[0].phases = Object.keys(selectedPhases || {}).map(phaseName => ({
+            stage_name: phaseName,
+            stage_type: 'production'
+          }));
+        } else {
+          rows[0].phases = [];
+        }
+      } catch (parseError) {
+        console.warn(`Could not parse selected_phases for plan ${id}:`, parseError.message);
+        rows[0].phases = [];
+      }
+      delete rows[0].selected_phases;
+    }
+    
+    return rows[0];
+  }
+
+  static async findBySalesOrderId(salesOrderId) {
+    const [rows] = await pool.execute(
+      `
+        SELECT pp.*, 
+               so.customer AS customer_name,
+               u.username AS supervisor_name,
+               ppd.selected_phases
+        FROM production_plans pp
+        LEFT JOIN sales_orders so ON so.id = pp.sales_order_id
+        LEFT JOIN users u ON u.id = pp.supervisor_id
+        LEFT JOIN production_plan_details ppd ON ppd.sales_order_id = pp.sales_order_id
+        WHERE pp.sales_order_id = ?
+      `,
+      [salesOrderId]
+    );
+    
+    if (rows[0]) {
+      try {
+        if (rows[0].selected_phases) {
+          const selectedPhases = typeof rows[0].selected_phases === 'string' 
+            ? JSON.parse(rows[0].selected_phases) 
+            : rows[0].selected_phases;
+          rows[0].phases = Object.keys(selectedPhases || {}).map(phaseName => ({
+            stage_name: phaseName,
+            stage_type: 'production'
+          }));
+        } else {
+          rows[0].phases = [];
+        }
+      } catch (parseError) {
+        console.warn(`Could not parse selected_phases for sales order ${salesOrderId}:`, parseError.message);
+        rows[0].phases = [];
+      }
+      delete rows[0].selected_phases;
+    }
+    
     return rows[0];
   }
 
@@ -111,28 +173,26 @@ class ProductionPlan {
     const conditions = [];
     const params = [];
 
-    if (filters.projectId) {
-      conditions.push('pp.project_id = ?');
-      params.push(filters.projectId);
-    }
-
     if (filters.status && filters.status !== 'all') {
       conditions.push('pp.status = ?');
       params.push(filters.status);
     }
 
     if (filters.search) {
-      conditions.push('pp.plan_name LIKE ? OR p.name LIKE ?');
+      conditions.push('(pp.plan_name LIKE ? OR so.customer LIKE ?)');
       const like = `%${filters.search}%`;
       params.push(like, like);
     }
 
     let query = `
-      SELECT pp.*, p.name AS project_name, so.customer AS customer_name, u.username AS created_by_username
+      SELECT pp.*, 
+             so.customer AS customer_name,
+             u.username AS supervisor_name,
+             ppd.selected_phases
       FROM production_plans pp
-      LEFT JOIN projects p ON p.id = pp.project_id
       LEFT JOIN sales_orders so ON so.id = pp.sales_order_id
-      LEFT JOIN users u ON u.id = pp.created_by
+      LEFT JOIN users u ON u.id = pp.supervisor_id
+      LEFT JOIN production_plan_details ppd ON ppd.sales_order_id = pp.sales_order_id
     `;
 
     if (conditions.length) {
@@ -142,7 +202,31 @@ class ProductionPlan {
     query += ' ORDER BY pp.created_at DESC';
 
     const [rows] = await pool.execute(query, params);
-    return rows || [];
+    
+    const plansWithPhases = [];
+    for (const plan of rows || []) {
+      try {
+        if (plan.selected_phases) {
+          const selectedPhases = typeof plan.selected_phases === 'string' 
+            ? JSON.parse(plan.selected_phases) 
+            : plan.selected_phases;
+          plan.phases = Object.keys(selectedPhases || {}).map(phaseName => ({
+            stage_name: phaseName,
+            stage_type: 'production'
+          }));
+        } else {
+          plan.phases = [];
+        }
+      } catch (parseError) {
+        console.warn(`Could not parse selected_phases for plan ${plan.id}:`, parseError.message);
+        plan.phases = [];
+      }
+      
+      delete plan.selected_phases;
+      plansWithPhases.push(plan);
+    }
+    
+    return plansWithPhases;
   }
 
   static async updateStatus(id, status) {
@@ -156,17 +240,17 @@ class ProductionPlan {
     await pool.execute(
       `
         UPDATE production_plans
-        SET plan_name = ?, status = ?, start_date = ?, end_date = ?, 
-            estimated_completion_date = ?, assigned_supervisor = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
+        SET plan_name = ?, status = ?, planned_start_date = ?, planned_end_date = ?, 
+            estimated_completion_date = ?, supervisor_id = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `,
       [
         data.planName,
         data.status,
-        data.startDate || null,
-        data.endDate || null,
+        data.plannedStartDate || null,
+        data.plannedEndDate || null,
         data.estimatedCompletionDate || null,
-        data.assignedSupervisor || null,
+        data.supervisorId || null,
         data.notes || null,
         id
       ]

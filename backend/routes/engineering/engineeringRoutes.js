@@ -37,8 +37,12 @@ router.get('/documents', engineeringController.getDocuments);
 router.patch('/documents/:id/approve', engineeringController.approveDocument);
 
 router.post('/bom/generate', engineeringController.generateBOM);
-router.get('/bom/:id', engineeringController.getBOMDetails);
+router.get('/bom/all', engineeringController.getAllBOMs);
 router.get('/bom', engineeringController.getSalesOrderBOMs);
+router.patch('/bom/:id/line-items/:itemId', engineeringController.updateLineItem);
+router.delete('/bom/:id/line-items/:itemId', engineeringController.deleteLineItem);
+router.get('/bom/:id', engineeringController.getBOMDetails);
 router.patch('/bom/:id/status', engineeringController.updateBOMStatus);
+router.delete('/bom/:id', engineeringController.deleteBOM);
 
 module.exports = router;

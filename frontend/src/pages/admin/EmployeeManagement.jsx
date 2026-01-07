@@ -21,6 +21,7 @@ import {
 const EmployeeManagement = () => {
   const navigate = useNavigate();
   const [employees, setEmployees] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showForm, setShowForm] = useState(false);
@@ -36,6 +37,7 @@ const EmployeeManagement = () => {
     email: "",
     designation: "",
     department: "",
+    departmentId: null,
     roleId: null,
     loginId: "",
     password: "",
@@ -43,7 +45,6 @@ const EmployeeManagement = () => {
   });
 
   const designations = ["Manager", "Senior Engineer", "Engineer", "Supervisor", "Associate", "Intern", "Coordinator"];
-  const departments = ["Engineering", "Sales", "Production", "QC", "Inventory", "Procurement", "HR"];
   const availableRoles = [
     { id: 9, name: "Worker" },
     { id: 8, name: "Production Supervisor" },
@@ -54,6 +55,15 @@ const EmployeeManagement = () => {
     { id: 3, name: "Sales" },
     { id: 2, name: "Management" },
   ];
+
+  const fetchDepartments = useCallback(async () => {
+    try {
+      const response = await axios.get("/employee/portal/departments");
+      setDepartments(response.data || []);
+    } catch (err) {
+      console.error("Failed to fetch departments:", err);
+    }
+  }, []);
 
   const fallbackSampleEmployees = [
     {
@@ -119,7 +129,8 @@ const EmployeeManagement = () => {
 
   useEffect(() => {
     fetchEmployees();
-  }, [fetchEmployees]);
+    fetchDepartments();
+  }, [fetchEmployees, fetchDepartments]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -164,6 +175,7 @@ const EmployeeManagement = () => {
         email: formData.email,
         designation: formData.designation,
         department: formData.department,
+        departmentId: formData.departmentId,
         roleId: formData.roleId,
         loginId: autoLoginId,
         password: autoPassword,
@@ -192,6 +204,7 @@ const EmployeeManagement = () => {
         email: "",
         designation: "",
         department: "",
+        departmentId: null,
         roleId: null,
         loginId: "",
         password: "",
@@ -210,6 +223,7 @@ const EmployeeManagement = () => {
       email: employee.email,
       designation: employee.designation,
       department: employee.department,
+      departmentId: employee.departmentId || null,
       roleId: employee.roleId || null,
       loginId: employee.loginId,
       password: "",
@@ -264,7 +278,8 @@ const EmployeeManagement = () => {
       type: 'employee',
       email: employee.email,
       designation: employee.designation,
-      department: employee.department
+      department: employee.department,
+      departmentId: employee.departmentId
     }));
     window.location.href = "/employee/dashboard";
   };
@@ -414,6 +429,7 @@ const EmployeeManagement = () => {
               email: "",
               designation: "",
               department: "",
+              departmentId: null,
               roleId: null,
               loginId: "",
               password: "",
@@ -544,16 +560,24 @@ const EmployeeManagement = () => {
                       Department
                     </label>
                     <select
-                      name="department"
-                      value={formData.department}
-                      onChange={handleInputChange}
+                      name="departmentId"
+                      value={formData.departmentId || ""}
+                      onChange={(e) => {
+                        const deptId = parseInt(e.target.value);
+                        const selectedDept = departments.find(d => d.id === deptId);
+                        setFormData({
+                          ...formData,
+                          departmentId: deptId || null,
+                          department: selectedDept ? selectedDept.name : ""
+                        });
+                      }}
                       required
                       className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="">Select Department</option>
                       {departments.map((d) => (
-                        <option key={d} value={d}>
-                          {d}
+                        <option key={d.id} value={d.id}>
+                          {d.name}
                         </option>
                       ))}
                     </select>

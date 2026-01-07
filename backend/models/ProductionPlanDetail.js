@@ -237,15 +237,16 @@ class ProductionPlanDetail {
 
   static formatRow(row) {
     if (!row) return null;
+    const timeline = parseJsonField(row.timeline) || {};
     return {
       id: row.id,
       salesOrderId: row.sales_order_id,
-      timeline: parseJsonField(row.timeline),
+      timeline: timeline,
       selectedPhases: parseJsonField(row.selected_phases),
       phaseDetails: parseJsonField(row.phase_details),
       productionNotes: row.production_notes,
-      procurementStatus: row.procurement_status,
-      productionStartDate: row.production_start_date,
+      procurementStatus: timeline.procurementStatus,
+      productionStartDate: timeline.productionStartDate,
       estimatedCompletionDate: row.estimated_completion_date,
       createdAt: row.created_at,
       updatedAt: row.updated_at

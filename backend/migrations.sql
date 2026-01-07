@@ -200,7 +200,7 @@ CREATE TABLE IF NOT EXISTS engineering_documents (
 -- BOM (Bill of Materials) Table
 CREATE TABLE IF NOT EXISTS bill_of_materials (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    sales_order_id INT NOT NULL,
+    sales_order_id INT,
     engineering_document_id INT,
     bom_name VARCHAR(255) NOT NULL,
     description TEXT,

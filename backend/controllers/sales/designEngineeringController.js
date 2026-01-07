@@ -8,6 +8,7 @@ class DesignEngineeringController {
     try {
       const { salesOrderId } = req.params;
       const data = req.body;
+      const { assignedTo } = req.body;
 
       const SalesOrder = require('../../models/SalesOrder');
       const salesOrder = await SalesOrder.findById(salesOrderId);
@@ -30,7 +31,11 @@ class DesignEngineeringController {
       }
 
       const updated = await DesignEngineeringDetail.findBySalesOrderId(salesOrderId);
-      await SalesOrderStep.update(salesOrderId, 3, { status: 'in_progress', data: updated });
+      await SalesOrderStep.update(salesOrderId, 3, { status: 'in_progress', data: updated, assignedTo });
+      
+      if (assignedTo) {
+        await SalesOrderStep.assignEmployee(salesOrderId, 3, assignedTo);
+      }
 
       res.json(formatSuccessResponse(updated, 'Design Engineering data saved'));
     } catch (error) {

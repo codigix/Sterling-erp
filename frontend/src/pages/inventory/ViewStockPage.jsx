@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "../../utils/api";
+import taskService from "../../utils/taskService";
+import useProjectInventoryTask from "../../hooks/useProjectInventoryTask";
 import {
   Package,
   Search,
@@ -15,6 +17,7 @@ import {
 } from "lucide-react";
 
 const ViewStockPage = () => {
+  const { completeCurrentTask } = useProjectInventoryTask();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [sortBy, setSortBy] = useState("name");
@@ -24,7 +27,8 @@ const ViewStockPage = () => {
 
   useEffect(() => {
     fetchMaterials();
-  }, []);
+    completeCurrentTask("Stock levels viewed and verified");
+  }, [completeCurrentTask]);
 
   const fetchMaterials = async () => {
     try {

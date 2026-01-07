@@ -6,17 +6,15 @@ class BillOfMaterials {
     try {
       const {
         salesOrderId,
-        engineeringDocumentId,
         bomName,
-        description,
         createdBy
       } = data;
 
       const [result] = await conn.query(
         `INSERT INTO bill_of_materials 
-        (sales_order_id, engineering_document_id, bom_name, description, created_by, status)
-        VALUES (?, ?, ?, ?, ?, 'draft')`,
-        [salesOrderId, engineeringDocumentId, bomName, description, createdBy]
+        (sales_order_id, bom_number, created_by, status)
+        VALUES (?, ?, ?, 'draft')`,
+        [salesOrderId, bomName, createdBy]
       );
 
       return result.insertId;
@@ -55,7 +53,7 @@ class BillOfMaterials {
     const conn = await pool.getConnection();
     try {
       const [rows] = await conn.query(
-        `SELECT bom.*, u.name as created_by_name 
+        `SELECT bom.*, u.username as created_by_name 
         FROM bill_of_materials bom
         LEFT JOIN users u ON bom.created_by = u.id
         WHERE bom.id = ?`,
@@ -84,7 +82,7 @@ class BillOfMaterials {
     const conn = await pool.getConnection();
     try {
       const [rows] = await conn.query(
-        `SELECT bom.*, u.name as created_by_name 
+        `SELECT bom.*, u.username as created_by_name 
         FROM bill_of_materials bom
         LEFT JOIN users u ON bom.created_by = u.id
         WHERE bom.sales_order_id = ?
@@ -103,6 +101,67 @@ class BillOfMaterials {
       await conn.query(
         `UPDATE bill_of_materials SET status = ? WHERE id = ?`,
         [status, bomId]
+      );
+    } finally {
+      if (!connection) conn.release();
+    }
+  }
+
+  static async delete(bomId, connection = null) {
+    const conn = connection || await pool.getConnection();
+    try {
+      await conn.query(
+        `DELETE FROM bom_line_items WHERE bom_id = ?`,
+        [bomId]
+      );
+      await conn.query(
+        `DELETE FROM bill_of_materials WHERE id = ?`,
+        [bomId]
+      );
+    } finally {
+      if (!connection) conn.release();
+    }
+  }
+
+  static async getAll() {
+    const conn = await pool.getConnection();
+    try {
+      const [rows] = await conn.query(
+        `SELECT bom.*, u.username as created_by_name 
+        FROM bill_of_materials bom
+        LEFT JOIN users u ON bom.created_by = u.id
+        ORDER BY bom.created_at DESC`
+      );
+      return rows || [];
+    } catch (error) {
+      console.error('Error fetching all BOMs:', error);
+      throw error;
+    } finally {
+      conn.release();
+    }
+  }
+
+  static async updateLineItem(itemId, data, connection = null) {
+    const conn = connection || await pool.getConnection();
+    try {
+      const { itemCode, itemDescription, quantity, unit, unitCost, specification, partType } = data;
+      await conn.query(
+        `UPDATE bom_line_items 
+        SET item_code = ?, item_description = ?, quantity = ?, unit = ?, unit_cost = ?, specification = ?, part_type = ?
+        WHERE id = ?`,
+        [itemCode, itemDescription, quantity, unit, unitCost, specification, partType, itemId]
+      );
+    } finally {
+      if (!connection) conn.release();
+    }
+  }
+
+  static async deleteLineItem(itemId, connection = null) {
+    const conn = connection || await pool.getConnection();
+    try {
+      await conn.query(
+        `DELETE FROM bom_line_items WHERE id = ?`,
+        [itemId]
       );
     } finally {
       if (!connection) conn.release();

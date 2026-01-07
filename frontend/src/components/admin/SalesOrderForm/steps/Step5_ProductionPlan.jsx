@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Zap, AlertCircle } from "lucide-react";
 import Input from "../../../ui/Input";
 import FormSection from "../shared/FormSection";
@@ -47,6 +47,10 @@ export default function Step5_ProductionPlan({ readOnly = false }) {
 
   const [selectedPhases, setSelectedPhases] = useState(formData?.selectedPhases || {});
 
+  useEffect(() => {
+    updateField("selectedPhases", selectedPhases);
+  }, [selectedPhases, updateField]);
+
   const handlePhaseToggle = (phase) => {
     setSelectedPhases((prev) => {
       const newPhases = { ...prev };
@@ -55,7 +59,6 @@ export default function Step5_ProductionPlan({ readOnly = false }) {
       } else {
         newPhases[phase] = true;
       }
-      updateField("selectedPhases", newPhases);
       return newPhases;
     });
   };

@@ -179,6 +179,29 @@ class SalesOrderStep {
       updatedAt: row.updated_at
     };
   }
+
+  static async initializeAllSteps(salesOrderId, connection = null) {
+    const conn = connection || pool;
+    const stepDefinitions = [
+      { stepId: 1, stepKey: 'client_po', stepName: 'Client PO' },
+      { stepId: 2, stepKey: 'sales_order', stepName: 'Sales Order' },
+      { stepId: 3, stepKey: 'design_engineering', stepName: 'Design Engineering' },
+      { stepId: 4, stepKey: 'material_requirements', stepName: 'Material Requirements' },
+      { stepId: 5, stepKey: 'production_plan', stepName: 'Production Plan' },
+      { stepId: 6, stepKey: 'quality_check', stepName: 'Quality Check' },
+      { stepId: 7, stepKey: 'shipment', stepName: 'Shipment' },
+      { stepId: 8, stepKey: 'delivery', stepName: 'Delivery' }
+    ];
+
+    for (const step of stepDefinitions) {
+      await conn.execute(
+        `INSERT IGNORE INTO sales_order_steps 
+         (sales_order_id, step_id, step_key, step_name, status, created_at, updated_at)
+         VALUES (?, ?, ?, ?, 'pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+        [salesOrderId, step.stepId, step.stepKey, step.stepName]
+      );
+    }
+  }
 }
 
 module.exports = SalesOrderStep;

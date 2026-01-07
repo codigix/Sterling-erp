@@ -1,3 +1,4 @@
+const ProductionPlan = require('../../models/ProductionPlan');
 const ProductionPlanDetail = require('../../models/ProductionPlanDetail');
 const SalesOrderStep = require('../../models/SalesOrderStep');
 const { validateProductionPlan } = require('../../utils/salesOrderValidators');
@@ -8,6 +9,12 @@ class ProductionPlanController {
     try {
       const { salesOrderId } = req.params;
       const data = req.body;
+      const { assignedTo } = req.body;
+      const userId = parseInt(req.user.id);
+      const userRole = req.user.role?.toLowerCase();
+
+      console.log(`[ProductionPlanController] User ${userId} (${userRole}) saving production plan for SO ${salesOrderId}`);
+      console.log(`[ProductionPlanController] Received data:`, JSON.stringify(data, null, 2));
 
       const validation = validateProductionPlan(data);
       if (!validation.isValid) {
@@ -17,17 +24,53 @@ class ProductionPlanController {
       let detail = await ProductionPlanDetail.findBySalesOrderId(salesOrderId);
 
       if (detail) {
+        console.log(`[ProductionPlanController] Updating existing production plan detail`);
         await ProductionPlanDetail.update(salesOrderId, data);
       } else {
+        console.log(`[ProductionPlanController] Creating new production plan detail`);
         data.salesOrderId = salesOrderId;
         await ProductionPlanDetail.create(data);
       }
 
       const updated = await ProductionPlanDetail.findBySalesOrderId(salesOrderId);
-      await SalesOrderStep.update(salesOrderId, 5, { status: 'in_progress', data: updated });
+      console.log(`[ProductionPlanController] Saved production plan detail`);
+      
+      // Also create/update in production_plans table for visibility in production plans list
+      try {
+        const planData = {
+          salesOrderId: parseInt(salesOrderId),
+          planName: data.planName || 'Production Plan',
+          status: 'draft',
+          plannedStartDate: data.timeline?.startDate || null,
+          plannedEndDate: data.timeline?.endDate || null,
+          estimatedCompletionDate: data.estimatedCompletionDate || null,
+          supervisorId: data.supervisorId || null,
+          notes: data.productionNotes || null
+        };
+
+        console.log(`[ProductionPlanController] Creating/updating in production_plans table:`, planData);
+        
+        // Check if already exists in production_plans
+        const existingPlan = await ProductionPlan.findBySalesOrderId(salesOrderId);
+        if (existingPlan) {
+          console.log(`[ProductionPlanController] Production plan already exists in production_plans table`);
+        } else {
+          const planId = await ProductionPlan.create(planData);
+          console.log(`[ProductionPlanController] Created production plan in production_plans table with ID:`, planId);
+        }
+      } catch (planError) {
+        console.warn(`[ProductionPlanController] Warning - could not create in production_plans table:`, planError.message);
+      }
+      
+      await SalesOrderStep.update(salesOrderId, 5, { status: 'in_progress', data: updated, assignedTo });
+      
+      if (assignedTo) {
+        await SalesOrderStep.assignEmployee(salesOrderId, 5, assignedTo);
+      }
 
       res.json(formatSuccessResponse(updated, 'Production plan saved'));
     } catch (error) {
+      console.error(`[ProductionPlanController] Error:`, error);
       res.status(500).json(formatErrorResponse(error.message));
     }
   }
@@ -88,15 +131,23 @@ class ProductionPlanController {
       const warnings = [];
 
       if (!detail.selectedPhases || Object.keys(detail.selectedPhases).length === 0) {
-        warnings.push('No production phases selected');
+        errors.push('At least one phase must be selected');
       }
+
+      Object.entries(detail.selectedPhases || {}).forEach(([key, phase]) => {
+        if (!phase.startDate) {
+          errors.push(`Phase ${key} is missing start date`);
+        }
+        if (!phase.endDate) {
+          errors.push(`Phase ${key} is missing end date`);
+        }
+      });
 
       res.json(formatSuccessResponse({
         isValid: errors.length === 0,
         errors,
-        warnings,
-        phases: detail.selectedPhases || {}
-      }, 'Phase validation completed'));
+        warnings
+      }, 'Phases validation completed'));
     } catch (error) {
       res.status(500).json(formatErrorResponse(error.message));
     }
@@ -105,16 +156,25 @@ class ProductionPlanController {
   static async addPhase(req, res) {
     try {
       const { salesOrderId } = req.params;
-      const phaseData = req.body;
+      const { phaseKey, phase } = req.body;
 
-      if (!phaseData.phaseName) {
-        return res.status(400).json(formatErrorResponse('Phase name is required'));
+      if (!phaseKey || !phase) {
+        return res.status(400).json(formatErrorResponse('Phase key and data are required'));
       }
 
-      await ProductionPlanDetail.addPhase(salesOrderId, phaseData);
-      const updated = await ProductionPlanDetail.findBySalesOrderId(salesOrderId);
+      let detail = await ProductionPlanDetail.findBySalesOrderId(salesOrderId);
 
-      res.json(formatSuccessResponse(updated, 'Production phase added'));
+      if (!detail) {
+        return res.status(404).json(formatErrorResponse('Production plan not found'));
+      }
+
+      const selectedPhases = detail.selectedPhases || {};
+      selectedPhases[phaseKey] = phase;
+
+      await ProductionPlanDetail.update(salesOrderId, { selectedPhases });
+
+      const updated = await ProductionPlanDetail.findBySalesOrderId(salesOrderId);
+      res.json(formatSuccessResponse(updated, 'Phase added'));
     } catch (error) {
       res.status(500).json(formatErrorResponse(error.message));
     }
@@ -123,9 +183,11 @@ class ProductionPlanController {
   static async getPhases(req, res) {
     try {
       const { salesOrderId } = req.params;
-
-      const phases = await ProductionPlanDetail.getPhases(salesOrderId);
-      res.json(formatSuccessResponse(phases, 'Production phases retrieved'));
+      const detail = await ProductionPlanDetail.findBySalesOrderId(salesOrderId);
+      if (!detail) {
+        return res.status(404).json(formatErrorResponse('Production plan not found'));
+      }
+      res.json(formatSuccessResponse(detail.selectedPhases || {}, 'Phases retrieved'));
     } catch (error) {
       res.status(500).json(formatErrorResponse(error.message));
     }
@@ -134,13 +196,15 @@ class ProductionPlanController {
   static async getPhase(req, res) {
     try {
       const { salesOrderId, phaseKey } = req.params;
-
-      const phase = await ProductionPlanDetail.getPhase(salesOrderId, phaseKey);
+      const detail = await ProductionPlanDetail.findBySalesOrderId(salesOrderId);
+      if (!detail) {
+        return res.status(404).json(formatErrorResponse('Production plan not found'));
+      }
+      const phase = detail.selectedPhases?.[phaseKey];
       if (!phase) {
         return res.status(404).json(formatErrorResponse('Phase not found'));
       }
-
-      res.json(formatSuccessResponse(phase, 'Production phase retrieved'));
+      res.json(formatSuccessResponse(phase, 'Phase retrieved'));
     } catch (error) {
       res.status(500).json(formatErrorResponse(error.message));
     }
@@ -149,12 +213,20 @@ class ProductionPlanController {
   static async updatePhase(req, res) {
     try {
       const { salesOrderId, phaseKey } = req.params;
-      const updateData = req.body;
+      const phase = req.body;
 
-      await ProductionPlanDetail.updatePhase(salesOrderId, phaseKey, updateData);
+      let detail = await ProductionPlanDetail.findBySalesOrderId(salesOrderId);
+      if (!detail) {
+        return res.status(404).json(formatErrorResponse('Production plan not found'));
+      }
+
+      const selectedPhases = detail.selectedPhases || {};
+      selectedPhases[phaseKey] = { ...selectedPhases[phaseKey], ...phase };
+
+      await ProductionPlanDetail.update(salesOrderId, { selectedPhases });
+
       const updated = await ProductionPlanDetail.findBySalesOrderId(salesOrderId);
-
-      res.json(formatSuccessResponse(updated, 'Production phase updated'));
+      res.json(formatSuccessResponse(updated, 'Phase updated'));
     } catch (error) {
       res.status(500).json(formatErrorResponse(error.message));
     }
@@ -164,10 +236,18 @@ class ProductionPlanController {
     try {
       const { salesOrderId, phaseKey } = req.params;
 
-      await ProductionPlanDetail.removePhase(salesOrderId, phaseKey);
-      const updated = await ProductionPlanDetail.findBySalesOrderId(salesOrderId);
+      let detail = await ProductionPlanDetail.findBySalesOrderId(salesOrderId);
+      if (!detail) {
+        return res.status(404).json(formatErrorResponse('Production plan not found'));
+      }
 
-      res.json(formatSuccessResponse(updated, 'Production phase removed'));
+      const selectedPhases = detail.selectedPhases || {};
+      delete selectedPhases[phaseKey];
+
+      await ProductionPlanDetail.update(salesOrderId, { selectedPhases });
+
+      const updated = await ProductionPlanDetail.findBySalesOrderId(salesOrderId);
+      res.json(formatSuccessResponse(updated, 'Phase removed'));
     } catch (error) {
       res.status(500).json(formatErrorResponse(error.message));
     }
@@ -182,9 +262,21 @@ class ProductionPlanController {
         return res.status(400).json(formatErrorResponse('Status is required'));
       }
 
-      await ProductionPlanDetail.updatePhaseStatus(salesOrderId, phaseKey, status);
-      const updated = await ProductionPlanDetail.findBySalesOrderId(salesOrderId);
+      let detail = await ProductionPlanDetail.findBySalesOrderId(salesOrderId);
+      if (!detail) {
+        return res.status(404).json(formatErrorResponse('Production plan not found'));
+      }
 
+      const selectedPhases = detail.selectedPhases || {};
+      if (!selectedPhases[phaseKey]) {
+        return res.status(404).json(formatErrorResponse('Phase not found'));
+      }
+
+      selectedPhases[phaseKey].status = status;
+
+      await ProductionPlanDetail.update(salesOrderId, { selectedPhases });
+
+      const updated = await ProductionPlanDetail.findBySalesOrderId(salesOrderId);
       res.json(formatSuccessResponse(updated, 'Phase status updated'));
     } catch (error) {
       res.status(500).json(formatErrorResponse(error.message));

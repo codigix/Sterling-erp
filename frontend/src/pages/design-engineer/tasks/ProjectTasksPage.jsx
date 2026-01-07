@@ -86,7 +86,7 @@ const ProjectTasksPage = () => {
       if (!roleId) return;
       const response = await axios.get(`/department/portal/tasks/${roleId}`);
       const filtered = response.data.filter(
-        (t) => t.salesOrder?.id === salesOrder.id
+        (t) => t.sales_order_id === salesOrder.id
       );
       console.log(
         "Fetched tasks:",

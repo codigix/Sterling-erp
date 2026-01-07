@@ -11,6 +11,7 @@ import {
   Grid3x3,
 } from "lucide-react";
 import axios from "../../../utils/api";
+import Swal from "sweetalert2";
 
 const CreateBOMPage = () => {
   const [searchParams] = useSearchParams();
@@ -32,7 +33,7 @@ const CreateBOMPage = () => {
         description: "",
         quantity: 1,
         unit: "pcs",
-        supplier: "",
+        unitCost: 0,
         itemGroup: "Raw Material",
       },
     ],
@@ -82,7 +83,7 @@ const CreateBOMPage = () => {
           description: "",
           quantity: 1,
           unit: "pcs",
-          supplier: "",
+          unitCost: 0,
           itemGroup: "Raw Material",
         },
       ],
@@ -112,8 +113,12 @@ const CreateBOMPage = () => {
 
   const handleSave = async () => {
     if (!bomData.projectName.trim()) {
-      setErrorMessage("Project name is required");
-      setTimeout(() => setErrorMessage(""), 3000);
+      Swal.fire({
+        icon: "warning",
+        title: "Required Field",
+        text: "Project name is required",
+        confirmButtonColor: "#3b82f6",
+      });
       return;
     }
 
@@ -121,36 +126,55 @@ const CreateBOMPage = () => {
       (item) => item.partNumber && item.description
     );
     if (validItems.length === 0) {
-      setErrorMessage(
-        "Add at least one valid item (part number and description)"
-      );
-      setTimeout(() => setErrorMessage(""), 3000);
+      Swal.fire({
+        icon: "warning",
+        title: "No Items",
+        text: "Add at least one valid item (part number and description)",
+        confirmButtonColor: "#3b82f6",
+      });
       return;
     }
 
     try {
       setSaving(true);
+      const lineItems = validItems.map((item) => ({
+        itemCode: item.partNumber,
+        itemDescription: item.description,
+        quantity: item.quantity,
+        unit: item.unit,
+        unitCost: item.unitCost || 0,
+        specification: '',
+        partType: item.itemGroup === 'Raw Material' ? 'raw_material' : item.itemGroup === 'Component' ? 'component' : 'assembly'
+      }));
+
       const payload = {
-        salesOrderId: bomData.salesOrderId,
-        projectName: bomData.projectName,
+        salesOrderId: bomData.salesOrderId || null,
+        bomName: bomData.projectName,
         description: bomData.description,
-        items: validItems,
+        lineItems: lineItems
       };
 
       await axios.post("/production/bom", payload);
 
-      setSuccessMessage(
-        `BOM "${bomData.projectName}" saved successfully with ${validItems.length} items!`
-      );
+      Swal.fire({
+        icon: "success",
+        title: "BOM Created Successfully",
+        text: `BOM "${bomData.projectName}" saved with ${validItems.length} items!`,
+        confirmButtonColor: "#10b981",
+        timer: 2000,
+      });
+
       setTimeout(() => {
         navigate("/design-engineer/bom/view");
       }, 2000);
     } catch (error) {
       console.error("Failed to save BOM:", error);
-      setErrorMessage(
-        error.response?.data?.message || "Failed to save BOM. Please try again."
-      );
-      setTimeout(() => setErrorMessage(""), 3000);
+      Swal.fire({
+        icon: "error",
+        title: "Failed to Create BOM",
+        text: error.response?.data?.message || "Failed to save BOM. Please try again.",
+        confirmButtonColor: "#3b82f6",
+      });
     } finally {
       setSaving(false);
     }
@@ -360,8 +384,8 @@ const CreateBOMPage = () => {
                   <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                     Unit
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                    Supplier
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                    Unit Cost
                   </th>
                   <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                     Action
@@ -453,13 +477,19 @@ const CreateBOMPage = () => {
                     </td>
                     <td className="px-4 py-3">
                       <input
-                        type="text"
-                        value={item.supplier}
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={item.unitCost}
                         onChange={(e) =>
-                          handleItemChange(item.id, "supplier", e.target.value)
+                          handleItemChange(
+                            item.id,
+                            "unitCost",
+                            parseFloat(e.target.value) || 0
+                          )
                         }
-                        className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Supplier"
+                        className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="0.00"
                       />
                     </td>
                     <td className="px-4 py-3 text-center">

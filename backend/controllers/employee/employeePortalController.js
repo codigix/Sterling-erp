@@ -1,5 +1,45 @@
 const Employee = require('../../models/Employee');
 const EmployeeTask = require('../../models/EmployeeTask');
+const Department = require('../../models/Department');
+
+exports.getEmployeesByDepartment = async (req, res) => {
+  try {
+    const { departmentId } = req.params;
+
+    if (!departmentId) {
+      return res.status(400).json({ message: 'Department ID is required' });
+    }
+
+    const employees = await Employee.findByDepartmentId(departmentId);
+    
+    const formatted = employees.map(emp => ({
+      id: emp.id,
+      name: `${emp.first_name} ${emp.last_name}`,
+      email: emp.email,
+      designation: emp.designation,
+      department: emp.department_name || emp.department,
+      departmentId: emp.department_id,
+      roleId: emp.role_id,
+      role: emp.role_name,
+      status: emp.status
+    }));
+
+    res.json(formatted);
+  } catch (error) {
+    console.error('Get employees by department error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+exports.getAllDepartments = async (req, res) => {
+  try {
+    const departments = await Department.findAll();
+    res.json(departments);
+  } catch (error) {
+    console.error('Get departments error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
 
 exports.getEmployeeStats = async (req, res) => {
   try {
