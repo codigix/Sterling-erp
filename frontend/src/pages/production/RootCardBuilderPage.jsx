@@ -18,7 +18,7 @@ const RootCardBuilderPage = () => {
   const fetchRootCards = useCallback(async () => {
     setLoading(true);
     try {
-      const params = {};
+      const params = { all: 'true' };
       if (statusFilter && statusFilter !== 'all') {
         params.status = statusFilter;
       }

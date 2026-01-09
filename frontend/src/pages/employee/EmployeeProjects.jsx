@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "../../utils/api";
 import { useAuth } from "../../context/AuthContext";
-import Card, { CardContent, CardTitle, CardHeader } from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
 import { Briefcase, Users, Calendar, TrendingUp, Target } from "lucide-react";
 
@@ -49,9 +48,9 @@ const EmployeeProjects = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="w-full min-h-screen bg-white space-y-6">
       <div>
-        <h1 className="text-3xl font-bold  dark: mb-2">
+        <h1 className="text-3xl font-bold text-left dark:text-white mb-2">
           My Projects
         </h1>
         <p className="text-slate-600 dark:text-slate-400">
@@ -60,86 +59,78 @@ const EmployeeProjects = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="border-l-4 border-blue-500">
-          <CardContent className="p-6">
-            <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">Total Projects</p>
-            <p className="text-3xl font-bold  dark:">{projects.length}</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">Assigned to you</p>
-          </CardContent>
-        </Card>
+        <div className="bg-white border-2 border-blue-100 dark:border-blue-900/30 rounded-xl p-4 hover:shadow-lg transition-all hover:border-blue-300 dark:hover:border-blue-700">
+          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-2">Total Projects</p>
+          <p className="text-3xl font-bold text-slate-900 dark:text-white">{projects.length}</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">Assigned to you</p>
+        </div>
 
-        <Card className="border-l-4 border-blue-500">
-          <CardContent className="p-6">
-            <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">In Progress</p>
-            <p className="text-3xl font-bold  dark:">{projects.filter(p => p.status === 'in_progress').length}</p>
-            <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">Active projects</p>
-          </CardContent>
-        </Card>
+        <div className="bg-white border-2 border-cyan-100 dark:border-cyan-900/30 rounded-xl p-4 hover:shadow-lg transition-all hover:border-cyan-300 dark:hover:border-cyan-700">
+          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-2">In Progress</p>
+          <p className="text-3xl font-bold text-slate-900 dark:text-white">{projects.filter(p => p.status === 'in_progress').length}</p>
+          <p className="text-xs text-cyan-600 dark:text-cyan-400 mt-2">Active projects</p>
+        </div>
 
-        <Card className="border-l-4 border-green-500">
-          <CardContent className="p-6">
-            <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">Completed</p>
-            <p className="text-3xl font-bold  dark:">{projects.filter(p => p.status === 'completed').length}</p>
-            <p className="text-xs text-green-600 dark:text-green-400 mt-2">Finished</p>
-          </CardContent>
-        </Card>
+        <div className="bg-white border-2 border-green-100 dark:border-green-900/30 rounded-xl p-4 hover:shadow-lg transition-all hover:border-green-300 dark:hover:border-green-700">
+          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-2">Completed</p>
+          <p className="text-3xl font-bold text-slate-900 dark:text-white">{projects.filter(p => p.status === 'completed').length}</p>
+          <p className="text-xs text-green-600 dark:text-green-400 mt-2">Finished</p>
+        </div>
       </div>
 
       <div className="grid gap-4">
         {projects.map((project) => (
-          <Card key={project.id} className="hover:shadow-md transition group cursor-pointer">
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between gap-4 mb-4">
-                <div className="flex-1">
-                  <div className="flex items-center text-xs gap-2 mb-2">
-                    <Briefcase className="w-5 h-5 text-slate-400" />
-                    <h3 className="text-md font-semibold  dark:">
-                      {project.name}
-                    </h3>
-                  </div>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
-                    {project.startDate} to {project.endDate}
-                  </p>
+          <div key={project.id} className="bg-white border-2 border-slate-100 dark:border-slate-700 rounded-xl p-6 hover:shadow-lg transition-all group cursor-pointer">
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <Briefcase className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+                    {project.name}
+                  </h3>
                 </div>
-                <div className="flex gap-2">
-                  <Badge className={getStatusColor(project.status)}>
-                    {project.status.replace("_", " ")}
-                  </Badge>
-                  <Badge className={getPriorityColor(project.priority)}>
-                    {project.priority}
-                  </Badge>
-                </div>
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  {project.startDate} to {project.endDate}
+                </p>
               </div>
+              <div className="flex gap-2">
+                <Badge className={getStatusColor(project.status)}>
+                  {project.status.replace("_", " ")}
+                </Badge>
+                <Badge className={getPriorityColor(project.priority)}>
+                  {project.priority}
+                </Badge>
+              </div>
+            </div>
 
-              <div className="mb-4">
-                <div className="flex items-center text-xs justify-between mb-2">
-                  <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Progress</p>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">{project.progress}%</p>
-                </div>
-                <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                  <div
-                    className="bg-gradient-to-r from-primary-600 to-primary-400 h-2 rounded-full transition-all"
-                    style={{ width: `${project.progress}%` }}
-                  ></div>
-                </div>
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Progress</p>
+                <p className="text-sm text-slate-600 dark:text-slate-400">{project.progress}%</p>
               </div>
+              <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+                <div
+                  className="bg-gradient-to-r from-primary-600 to-primary-400 h-2 rounded-full transition-all"
+                  style={{ width: `${project.progress}%` }}
+                ></div>
+              </div>
+            </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-slate-200 dark:border-slate-700">
-                <div className="flex items-center text-xs gap-2 text-sm text-slate-600 dark:text-slate-400">
-                  <Users className="w-4 h-4 flex-shrink-0" />
-                  <span>{project.team} team members</span>
-                </div>
-                <div className="flex items-center text-xs gap-2 text-sm text-slate-600 dark:text-slate-400">
-                  <Target className="w-4 h-4 flex-shrink-0" />
-                  <span>{project.manager}</span>
-                </div>
-                <div className="flex items-center text-xs gap-2 text-sm text-slate-600 dark:text-slate-400">
-                  <Calendar className="w-4 h-4 flex-shrink-0" />
-                  <span>{project.endDate}</span>
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+              <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+                <Users className="w-4 h-4 flex-shrink-0" />
+                <span>{project.team} team members</span>
               </div>
-            </CardContent>
-          </Card>
+              <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+                <Target className="w-4 h-4 flex-shrink-0" />
+                <span>{project.manager}</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+                <Calendar className="w-4 h-4 flex-shrink-0" />
+                <span>{project.endDate}</span>
+              </div>
+            </div>
+          </div>
         ))}
       </div>
     </div>

@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Edit, Trash2, Calendar, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Calendar, AlertCircle, CheckCircle, Clock, User } from 'lucide-react';
 import axios from '../../utils/api';
 
 const ProductionPlanDetailPage = () => {
@@ -12,16 +12,27 @@ const ProductionPlanDetailPage = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({});
+  const pollingIntervalRef = useRef(null);
 
   useEffect(() => {
     fetchPlanDetail();
+    
+    pollingIntervalRef.current = setInterval(() => {
+      fetchPlanDetail(false);
+    }, 3000);
+
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  const fetchPlanDetail = async () => {
-    setLoading(true);
+  const fetchPlanDetail = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     try {
-      const response = await axios.get(`/production/plans/${id}`, { __sessionGuard: true });
+      const response = await axios.get(`/production/plans/${id}/with-stages`, { __sessionGuard: true });
       setPlan(response.data);
       setFormData(response.data);
       setError(null);
@@ -29,7 +40,7 @@ const ProductionPlanDetailPage = () => {
       setError(err.message || 'Failed to fetch plan details');
       console.error('Error fetching plan:', err);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
@@ -68,6 +79,8 @@ const ProductionPlanDetailPage = () => {
         return 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300';
       case 'on_hold':
         return 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300';
+      case 'pending':
+        return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300';
       default:
         return 'bg-gray-100 dark:bg-gray-900/30 text-gray-800 dark:text-gray-300';
     }
@@ -75,6 +88,19 @@ const ProductionPlanDetailPage = () => {
 
   const getStatusLabel = (status) => {
     return status?.replace(/_/g, ' ')?.toUpperCase() || 'UNKNOWN';
+  };
+
+  const getStageStatusIcon = (status) => {
+    switch (status) {
+      case 'completed':
+        return <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />;
+      case 'in_progress':
+        return <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400" />;
+      case 'pending':
+        return <Clock className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />;
+      default:
+        return <AlertCircle className="w-5 h-5 text-gray-600 dark:text-gray-400" />;
+    }
   };
 
   if (loading) {
@@ -147,200 +173,222 @@ const ProductionPlanDetailPage = () => {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-8">
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-6">Details</h2>
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                    Plan Name
-                  </label>
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={formData.planName || ''}
-                      onChange={(e) => setFormData({ ...formData, planName: e.target.value })}
-                      className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  ) : (
-                    <p className="text-slate-900 dark:text-white font-medium">{plan.plan_name}</p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                    Status
-                  </label>
-                  {isEditing ? (
-                    <select
-                      value={formData.status || ''}
-                      onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                      className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="draft">Draft</option>
-                      <option value="planning">Planning</option>
-                      <option value="approved">Approved</option>
-                      <option value="in_progress">In Progress</option>
-                      <option value="completed">Completed</option>
-                      <option value="cancelled">Cancelled</option>
-                    </select>
-                  ) : (
-                    <div>
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold inline-block ${getStatusColor(plan.status)}`}>
-                        {getStatusLabel(plan.status)}
-                      </span>
-                    </div>
-                  )}
-                </div>
+      <div className="space-y-6">
+        <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-8">
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-8">Plan Information</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 pb-8 border-b border-slate-200 dark:border-slate-700">
+            <div>
+              <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-2">Customer</p>
+              <p className="text-slate-900 dark:text-white font-medium">{plan.customer_name || 'Not assigned'}</p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-2">Status</p>
+              <div>
+                <span className={`px-3 py-1 rounded-full text-xs font-semibold inline-block ${getStatusColor(plan.status)}`}>
+                  {getStatusLabel(plan.status)}
+                </span>
               </div>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-2">Created</p>
+              <p className="text-slate-900 dark:text-white font-medium">
+                {plan.created_at ? new Date(plan.created_at).toLocaleDateString() : 'Unknown'}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-2">Supervisor</p>
+              <p className="text-slate-900 dark:text-white font-medium">{plan.supervisor_name || 'Not assigned'}</p>
+            </div>
+          </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                    Planned Start Date
-                  </label>
-                  {isEditing ? (
-                    <input
-                      type="date"
-                      value={formData.plannedStartDate ? formData.plannedStartDate.split('T')[0] : ''}
-                      onChange={(e) => setFormData({ ...formData, plannedStartDate: e.target.value })}
-                      className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  ) : (
-                    <p className="text-slate-900 dark:text-white font-medium">
-                      {plan.planned_start_date ? new Date(plan.planned_start_date).toLocaleDateString() : 'Not set'}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                    Planned End Date
-                  </label>
-                  {isEditing ? (
-                    <input
-                      type="date"
-                      value={formData.plannedEndDate ? formData.plannedEndDate.split('T')[0] : ''}
-                      onChange={(e) => setFormData({ ...formData, plannedEndDate: e.target.value })}
-                      className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  ) : (
-                    <p className="text-slate-900 dark:text-white font-medium">
-                      {plan.planned_end_date ? new Date(plan.planned_end_date).toLocaleDateString() : 'Not set'}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                    Estimated Completion Date
-                  </label>
-                  {isEditing ? (
-                    <input
-                      type="date"
-                      value={formData.estimatedCompletionDate ? formData.estimatedCompletionDate.split('T')[0] : ''}
-                      onChange={(e) => setFormData({ ...formData, estimatedCompletionDate: e.target.value })}
-                      className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  ) : (
-                    <p className="text-slate-900 dark:text-white font-medium">
-                      {plan.estimated_completion_date ? new Date(plan.estimated_completion_date).toLocaleDateString() : 'Not set'}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                    Supervisor ID
-                  </label>
-                  {isEditing ? (
-                    <input
-                      type="number"
-                      value={formData.supervisorId || ''}
-                      onChange={(e) => setFormData({ ...formData, supervisorId: e.target.value ? parseInt(e.target.value) : null })}
-                      className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  ) : (
-                    <p className="text-slate-900 dark:text-white font-medium">{plan.supervisor_name || 'Not assigned'}</p>
-                  )}
-                </div>
-              </div>
-
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  Notes
+                  Plan Name
                 </label>
                 {isEditing ? (
-                  <textarea
-                    value={formData.notes || ''}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    rows={4}
+                  <input
+                    type="text"
+                    value={formData.planName || ''}
+                    onChange={(e) => setFormData({ ...formData, planName: e.target.value })}
                     className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 ) : (
-                  <p className="text-slate-900 dark:text-white whitespace-pre-wrap">{plan.notes || 'No notes'}</p>
+                  <p className="text-slate-900 dark:text-white font-medium">{plan.plan_name}</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                  Status
+                </label>
+                {isEditing ? (
+                  <select
+                    value={formData.status || ''}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                    className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="draft">Draft</option>
+                    <option value="planning">Planning</option>
+                    <option value="approved">Approved</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                ) : (
+                  <div>
+                    <span className={`px-3 py-1 rounded-full text-xs font-semibold inline-block ${getStatusColor(plan.status)}`}>
+                      {getStatusLabel(plan.status)}
+                    </span>
+                  </div>
                 )}
               </div>
             </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                  Planned Start Date
+                </label>
+                {isEditing ? (
+                  <input
+                    type="date"
+                    value={formData.plannedStartDate ? formData.plannedStartDate.split('T')[0] : ''}
+                    onChange={(e) => setFormData({ ...formData, plannedStartDate: e.target.value })}
+                    className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                ) : (
+                  <p className="text-slate-900 dark:text-white font-medium">
+                    {plan.planned_start_date ? new Date(plan.planned_start_date).toLocaleDateString() : 'Not set'}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                  Planned End Date
+                </label>
+                {isEditing ? (
+                  <input
+                    type="date"
+                    value={formData.plannedEndDate ? formData.plannedEndDate.split('T')[0] : ''}
+                    onChange={(e) => setFormData({ ...formData, plannedEndDate: e.target.value })}
+                    className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                ) : (
+                  <p className="text-slate-900 dark:text-white font-medium">
+                    {plan.planned_end_date ? new Date(plan.planned_end_date).toLocaleDateString() : 'Not set'}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                  Estimated Completion Date
+                </label>
+                {isEditing ? (
+                  <input
+                    type="date"
+                    value={formData.estimatedCompletionDate ? formData.estimatedCompletionDate.split('T')[0] : ''}
+                    onChange={(e) => setFormData({ ...formData, estimatedCompletionDate: e.target.value })}
+                    className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                ) : (
+                  <p className="text-slate-900 dark:text-white font-medium">
+                    {plan.estimated_completion_date ? new Date(plan.estimated_completion_date).toLocaleDateString() : 'Not set'}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                Notes
+              </label>
+              {isEditing ? (
+                <textarea
+                  value={formData.notes || ''}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  rows={4}
+                  className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              ) : (
+                <p className="text-slate-900 dark:text-white whitespace-pre-wrap">{plan.notes || 'No notes'}</p>
+              )}
+            </div>
           </div>
         </div>
 
-        <div className="space-y-6">
-          <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Information</h3>
-            <div className="space-y-4">
-              <div>
-                <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide">Customer</p>
-                <p className="text-slate-900 dark:text-white mt-1 font-medium">{plan.customer_name || 'Not assigned'}</p>
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide">Status</p>
-                <div className="mt-1">
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold inline-block ${getStatusColor(plan.status)}`}>
-                    {getStatusLabel(plan.status)}
-                  </span>
+        {plan.stages && plan.stages.length > 0 && (
+          <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Production Stages</h3>
+              <div className="flex gap-6 text-sm">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-slate-900 dark:text-white">{plan.completedStages || 0}</p>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Completed</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-slate-900 dark:text-white">{plan.totalStages || 0}</p>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Total</p>
                 </div>
               </div>
-              <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
-                <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide">Created</p>
-                <p className="text-slate-900 dark:text-white mt-1 font-medium">
-                  {plan.created_at ? new Date(plan.created_at).toLocaleDateString() : 'Unknown'}
-                </p>
-              </div>
             </div>
-          </div>
-
-          {plan.phases && plan.phases.length > 0 && (
-            <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Production Phases</h3>
-              <div className="space-y-3">
-                {plan.phases.map((phase, idx) => (
-                  <div key={idx} className="p-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <p className="font-medium text-slate-900 dark:text-white">{phase.stage_name}</p>
-                        <div className="flex items-center gap-2 mt-2">
-                          <span className="inline-block px-2 py-1 text-xs font-medium rounded bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
-                            {phase.stage_type || 'manufacturing'}
-                          </span>
-                          <span className="text-xs text-slate-500 dark:text-slate-400">
-                            Status: {phase.status || 'pending'}
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-slate-50 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-700">
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Stage Name</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Root Card</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Assigned To</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Dates</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {plan.stages.map((stage) => (
+                    <tr key={stage.id} className="border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                      <td className="px-6 py-4 text-slate-900 dark:text-white">
+                        <div>
+                          <p className="font-medium">{stage.stageName}</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{stage.stageType}</p>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-900 dark:text-white">{stage.rootCardTitle || '-'}</td>
+                      <td className="px-6 py-4">
+                        {stage.workerName ? (
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+                              <User className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-slate-900 dark:text-white">{stage.workerName}</p>
+                              <p className="text-xs text-slate-500 dark:text-slate-400">{stage.workerEmail || 'No email'}</p>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-slate-500 dark:text-slate-400">Not assigned</p>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">
+                        {stage.plannedStart ? new Date(stage.plannedStart).toLocaleDateString('en-IN') : '-'} 
+                        <br />
+                        to {stage.plannedEnd ? new Date(stage.plannedEnd).toLocaleDateString('en-IN') : '-'}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          {getStageStatusIcon(stage.status)}
+                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(stage.status)}`}>
+                            {getStatusLabel(stage.status)}
                           </span>
                         </div>
-                        {(phase.planned_start_date || phase.planned_end_date) && (
-                          <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">
-                            {phase.planned_start_date ? new Date(phase.planned_start_date).toLocaleDateString() : '-'} to {phase.planned_end_date ? new Date(phase.planned_end_date).toLocaleDateString() : '-'}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

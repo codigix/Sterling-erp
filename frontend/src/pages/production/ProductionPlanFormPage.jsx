@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Zap, Calendar, User, FileText, Plus, Trash2, Loader2, Edit2, Save, X } from 'lucide-react';
 import axios from '../../utils/api';
 import Button from '../../components/ui/Button';
@@ -7,6 +7,7 @@ import Card, { CardContent, CardHeader, CardTitle } from '../../components/ui/Ca
 
 const ProductionPlanFormPage = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [rootCards, setRootCards] = useState([]);
   const [formData, setFormData] = useState({
     rootCardId: '',
@@ -26,7 +27,6 @@ const ProductionPlanFormPage = () => {
     stageType: 'in_house',
     plannedStartDate: '',
     plannedEndDate: '',
-    estimatedDurationDays: '',
     assignedEmployeeId: '',
     facilityId: '',
     notes: ''
@@ -41,7 +41,7 @@ const ProductionPlanFormPage = () => {
 
   const fetchRootCards = async () => {
     try {
-      const response = await axios.get('/production/portal/production-form/root-cards', { __sessionGuard: true });
+      const response = await axios.get('/production/portal/production-form/root-cards?all=true', { __sessionGuard: true });
       setRootCards(response.data.rootCards || []);
       console.log('Fetched root cards:', response.data.rootCards?.length || 0);
     } catch (err) {
@@ -87,7 +87,7 @@ const ProductionPlanFormPage = () => {
     }
 
     try {
-      const response = await axios.get(`/production/portal/root-cards/${rootCardId}`, { __sessionGuard: true });
+      const response = await axios.get(`/production/portal/root-cards/${rootCardId}?all=true`, { __sessionGuard: true });
       const rootCard = response.data;
 
       const step5 = rootCard.stepData?.step5_productionPlan;
@@ -106,8 +106,8 @@ const ProductionPlanFormPage = () => {
         plannedStartDate: step5?.timeline?.startDate || '',
         plannedEndDate: step5?.timeline?.endDate || '',
         estimatedDurationDays: '',
-        assignedEmployeeId: '',
-        facilityId: '',
+        assignedEmployeeId: null,
+        facilityId: null,
         notes: `Auto-created from Phase: ${phase}`
       }));
 
@@ -176,11 +176,6 @@ const ProductionPlanFormPage = () => {
       return;
     }
 
-    if (newStage.stageType === 'in_house' && !newStage.assignedEmployeeId) {
-      setError('For in-house phases, please assign an employee');
-      return;
-    }
-
     const stage = { ...newStage, id: Date.now() };
     setFormData(prev => ({
       ...prev,
@@ -192,7 +187,6 @@ const ProductionPlanFormPage = () => {
       stageType: 'in_house',
       plannedStartDate: '',
       plannedEndDate: '',
-      estimatedDurationDays: '',
       assignedEmployeeId: '',
       facilityId: '',
       notes: ''
@@ -221,20 +215,6 @@ const ProductionPlanFormPage = () => {
     }
 
     try {
-      const stageId = editingStageId;
-      const isDbStage = typeof stageId === 'number' || (typeof stageId === 'string' && !stageId.startsWith('auto_'));
-      
-      if (isDbStage) {
-        await axios.put(`/production/portal/manufacturing-stages/${stageId}`, {
-          stageName: editedStage.stageName,
-          stageType: editedStage.stageType,
-          assignedWorker: editedStage.assignedEmployeeId || null,
-          plannedStart: editedStage.plannedStartDate || null,
-          plannedEnd: editedStage.plannedEndDate || null,
-          notes: editedStage.notes || null
-        }, { __sessionGuard: true });
-      }
-
       setFormData(prev => ({
         ...prev,
         stages: prev.stages.map(s => s.id === editingStageId ? editedStage : s)
@@ -279,18 +259,28 @@ const ProductionPlanFormPage = () => {
     if (!formData.rootCardId) {
       console.warn('[handleSubmit] Root Card ID is missing');
       setError('Please select a root card/project');
+      setLoading(false);
       return;
     }
 
     if (!formData.planName) {
       console.warn('[handleSubmit] Plan name is missing');
       setError('Plan name is required');
+      setLoading(false);
       return;
     }
 
     if (!formData.salesOrderId) {
       console.warn('[handleSubmit] Sales Order ID is missing');
       setError('Sales Order ID is missing. Please select a valid root card.');
+      setLoading(false);
+      return;
+    }
+
+    if (!formData.stages || formData.stages.length === 0) {
+      console.warn('[handleSubmit] No manufacturing stages added');
+      setError('Please add at least one manufacturing stage');
+      setLoading(false);
       return;
     }
 
@@ -303,6 +293,9 @@ const ProductionPlanFormPage = () => {
 
     try {
       const payload = {
+        rootCardId: formData.rootCardId || null,
+        planName: formData.planName || 'Production Plan',
+        supervisorId: formData.supervisorId || null,
         timeline: {
           startDate: formData.productionStartDate || null,
           endDate: formData.estimatedCompletionDate || null,
@@ -318,25 +311,44 @@ const ProductionPlanFormPage = () => {
       const response = await axios.post(`/sales/steps/${formData.salesOrderId}/production-plan`, payload);
 
       console.log('[handleSubmit] ✓✓✓ SUCCESS! Response:', response.data);
-      console.log('[handleSubmit] Production plan created with ID:', response.data.data?.id);
+      console.log('[handleSubmit] Production plan created with ID:', response.data.data?.planId);
 
-      // Handle stages if any
       if (formData.stages && formData.stages.length > 0) {
         try {
-          console.log('[handleSubmit] Creating', formData.stages.length, 'manufacturing stages');
-          const stagesToCreate = formData.stages.map(stage => ({
-            rootCardId: parseInt(formData.rootCardId),
-            stageName: stage.stageName,
-            stageType: stage.stageType || 'in_house',
-            status: 'pending',
-            assignedWorker: stage.assignedEmployeeId ? parseInt(stage.assignedEmployeeId) : null,
-            plannedStart: stage.plannedStartDate || null,
-            plannedEnd: stage.plannedEndDate || null,
-            notes: stage.notes || null
-          }));
+          console.log('[handleSubmit] Creating', formData.stages.length, 'production plan stages');
+          
+          const stagesToCreate = formData.stages.map((stage) => {
+            const stageData = {
+              stageName: stage.stageName,
+              stageType: stage.stageType || 'in_house',
+              plannedStartDate: stage.plannedStartDate || null,
+              plannedEndDate: stage.plannedEndDate || null,
+              assignedVendorId: null,
+              notes: stage.notes || null
+            };
+            
+            // Only add employee ID if it has a valid value
+            const empId = stage.assignedEmployeeId ? parseInt(stage.assignedEmployeeId) : null;
+            if (empId && !isNaN(empId) && empId > 0) {
+              stageData.assignedEmployeeId = empId;
+            } else {
+              stageData.assignedEmployeeId = null;
+            }
+            
+            // Only add facility ID if it has a valid value
+            const facId = stage.facilityId ? parseInt(stage.facilityId) : null;
+            if (facId && !isNaN(facId) && facId > 0) {
+              stageData.assignedFacilityId = facId;
+            } else {
+              stageData.assignedFacilityId = null;
+            }
+            
+            return stageData;
+          });
 
-          const stagesResponse = await axios.post('/production/portal/manufacturing-stages', stagesToCreate);
-          console.log('[handleSubmit] ✓ Manufacturing stages created:', stagesResponse.data);
+          console.log('[handleSubmit] Stages to create:', JSON.stringify(stagesToCreate, null, 2));
+          const stagesResponse = await axios.post(`/production/plans/${response.data.data?.planId}/stages`, stagesToCreate);
+          console.log('[handleSubmit] ✓ Production plan stages created:', stagesResponse.data);
         } catch (stageErr) {
           console.error('[handleSubmit] Error creating stages:', stageErr.response?.data || stageErr.message);
           setError('Production plan created but failed to create stages: ' + (stageErr.response?.data?.message || stageErr.message));
@@ -360,10 +372,9 @@ const ProductionPlanFormPage = () => {
       });
       setProductionPhases([]);
 
-      console.log('[handleSubmit] Redirecting to production plans in 2 seconds...');
+      console.log('[handleSubmit] Navigating to /department/production/plans');
       setTimeout(() => {
-        console.log('[handleSubmit] Navigating to /department/production/plans');
-        window.location.href = '/department/production/plans';
+        navigate('/department/production/plans');
       }, 2000);
       
     } catch (err) {
@@ -594,7 +605,7 @@ const ProductionPlanFormPage = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                     Phase Name
@@ -622,20 +633,6 @@ const ProductionPlanFormPage = () => {
                     <option value="in_house">In House</option>
                     <option value="outsource">Outsource</option>
                   </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    Duration (days)
-                  </label>
-                  <input
-                    type="number"
-                    name="estimatedDurationDays"
-                    value={newStage.estimatedDurationDays}
-                    onChange={handleStageInputChange}
-                    className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500"
-                    min="1"
-                  />
                 </div>
               </div>
 
@@ -759,7 +756,6 @@ const ProductionPlanFormPage = () => {
                 <div className="space-y-3">
                   {formData.stages.map((stage, index) => {
                     const isEditing = editingStageId === stage.id;
-                    const displayStage = isEditing ? editedStage : stage;
 
                     return (
                       <div key={stage.id} className={`p-4 border rounded-lg ${stage.notes?.includes('Auto-created') ? 'border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20' : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50'}`}>
@@ -783,7 +779,9 @@ const ProductionPlanFormPage = () => {
                                   {stage.facilityId && <p><span className="font-medium">Facility:</span> {getFacilityName(stage.facilityId)}</p>}
                                   {stage.plannedStartDate && <p><span className="font-medium">Start:</span> {stage.plannedStartDate}</p>}
                                   {stage.plannedEndDate && <p><span className="font-medium">End:</span> {stage.plannedEndDate}</p>}
-                                  {stage.estimatedDurationDays && <p><span className="font-medium">Duration:</span> {stage.estimatedDurationDays} days</p>}
+                                  {stage.plannedStartDate && stage.plannedEndDate && (
+                                    <p><span className="font-medium">Duration:</span> {Math.ceil((new Date(stage.plannedEndDate) - new Date(stage.plannedStartDate)) / (1000 * 60 * 60 * 24))} days</p>
+                                  )}
                                 </div>
                               </div>
                               <div className="ml-4 flex gap-2">
@@ -818,22 +816,22 @@ const ProductionPlanFormPage = () => {
                                 </p>
                               </div>
 
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                    Type
-                                  </label>
-                                  <select
-                                    autoFocus
-                                    value={editedStage?.stageType || 'in_house'}
-                                    onChange={(e) => handleEditedStageChange('stageType', e.target.value)}
-                                    className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                                  >
-                                    <option value="in_house">In House</option>
-                                    <option value="outsource">Outsource</option>
-                                  </select>
-                                </div>
+                              <div>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                  Type
+                                </label>
+                                <select
+                                  autoFocus
+                                  value={editedStage?.stageType || 'in_house'}
+                                  onChange={(e) => handleEditedStageChange('stageType', e.target.value)}
+                                  className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                >
+                                  <option value="in_house">In House</option>
+                                  <option value="outsource">Outsource</option>
+                                </select>
+                              </div>
 
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                                     Assigned Employee
@@ -852,6 +850,28 @@ const ProductionPlanFormPage = () => {
                                   </select>
                                 </div>
 
+                                {editedStage?.stageType === 'in_house' && (
+                                  <div>
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                      Facility
+                                    </label>
+                                    <select
+                                      value={editedStage?.facilityId || ''}
+                                      onChange={(e) => handleEditedStageChange('facilityId', e.target.value)}
+                                      className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                    >
+                                      <option value="">Select Facility</option>
+                                      {facilities.map(fac => (
+                                        <option key={fac.id} value={fac.id}>
+                                          {fac.name}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
                                     <Calendar size={14} />
@@ -877,6 +897,19 @@ const ProductionPlanFormPage = () => {
                                     className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                                   />
                                 </div>
+                              </div>
+
+                              <div>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                  Notes
+                                </label>
+                                <textarea
+                                  value={editedStage?.notes || ''}
+                                  onChange={(e) => handleEditedStageChange('notes', e.target.value)}
+                                  className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                  placeholder="Notes for this stage"
+                                  rows="2"
+                                />
                               </div>
                             </div>
 

@@ -10,7 +10,7 @@ const authMiddleware = (req, res, next) => {
   const token = authHeader.replace('Bearer ', '');
 
   if (token === 'demo-token') {
-    req.user = { id: 1, role: 'Admin' };
+    req.user = { id: 1, role: 'Admin', type: 'user' };
     return next();
   }
 

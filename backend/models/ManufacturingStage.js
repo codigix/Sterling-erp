@@ -3,43 +3,46 @@ const pool = require('../config/database');
 class ManufacturingStage {
   static async createMany(stages, externalConnection = null) {
     if (!Array.isArray(stages) || !stages.length) {
-      return;
+      return [];
     }
 
     const connection = externalConnection || (await pool.getConnection());
+    const createdStages = [];
 
     try {
-      const placeholders = stages.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').join(', ');
-      const values = [];
-
-      stages.forEach((stage) => {
-        values.push(
-          stage.rootCardId,
-          stage.stageName,
-          stage.stageType || 'in_house',
-          stage.status || 'pending',
-          stage.assignedWorker || null,
-          stage.plannedStart || null,
-          stage.plannedEnd || null,
-          stage.startDate || null,
-          stage.endDate || null,
-          stage.progress ?? 0,
-          stage.notes || null
+      for (const stage of stages) {
+        const [result] = await connection.execute(
+          `
+            INSERT INTO manufacturing_stages
+            (root_card_id, stage_name, stage_type, status, assigned_worker, planned_start, planned_end, start_date, end_date, progress, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `,
+          [
+            stage.rootCardId,
+            stage.stageName,
+            stage.stageType || 'in_house',
+            stage.status || 'pending',
+            stage.assignedWorker || null,
+            stage.plannedStart || null,
+            stage.plannedEnd || null,
+            stage.startDate || null,
+            stage.endDate || null,
+            stage.progress ?? 0,
+            stage.notes || null
+          ]
         );
-      });
-
-      await connection.execute(
-        `
-          INSERT INTO manufacturing_stages
-          (root_card_id, stage_name, stage_type, status, assigned_worker, planned_start, planned_end, start_date, end_date, progress, notes)
-          VALUES ${placeholders}
-        `,
-        values
-      );
+        
+        createdStages.push({
+          id: result.insertId,
+          ...stage
+        });
+      }
 
       if (!externalConnection) {
         connection.release();
       }
+      
+      return createdStages;
     } catch (error) {
       if (!externalConnection) {
         connection.release();

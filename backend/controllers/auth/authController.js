@@ -3,13 +3,14 @@ const User = require('../../models/User');
 const Employee = require('../../models/Employee');
 const Role = require('../../models/Role');
 
-const generateToken = (user) => {
+const generateToken = (user, type = 'user') => {
   return jwt.sign(
     {
       id: user.id,
       username: user.username,
       role: user.role_name,
-      permissions: user.permissions
+      permissions: user.permissions,
+      type: type
     },
     process.env.JWT_SECRET,
     { expiresIn: '24h' }
@@ -28,7 +29,7 @@ exports.login = async (req, res) => {
     if (employee) {
       const isValidPassword = await Employee.verifyPassword(password, employee.password);
       if (isValidPassword) {
-        const token = generateToken(employee);
+        const token = generateToken(employee, 'employee');
         return res.json({
           token,
           user: {
@@ -110,20 +111,43 @@ exports.register = async (req, res) => {
 
 exports.getProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    res.json({
-      user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        role: user.role_name,
-        permissions: user.permissions
+    if (req.user.type === 'employee') {
+      const employee = await Employee.findById(req.user.id);
+      if (!employee) {
+        return res.status(404).json({ message: 'Employee not found' });
       }
-    });
+
+      res.json({
+        user: {
+          id: employee.id,
+          username: employee.login_id,
+          name: `${employee.first_name} ${employee.last_name}`,
+          email: employee.email,
+          role: employee.role_name,
+          designation: employee.designation,
+          department: employee.department_name || employee.department,
+          departmentId: employee.department_id,
+          type: 'employee',
+          permissions: employee.permissions
+        }
+      });
+    } else {
+      const user = await User.findById(req.user.id);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      res.json({
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          role: user.role_name,
+          type: 'user',
+          permissions: user.permissions
+        }
+      });
+    }
   } catch (error) {
     console.error('Get profile error:', error);
     res.status(500).json({ message: 'Internal server error' });

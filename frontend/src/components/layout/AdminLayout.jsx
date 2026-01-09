@@ -17,6 +17,7 @@ import {
   ChevronDown,
   BarChart3,
   ShoppingCart,
+  CheckSquare,
 } from "lucide-react";
 
 const AdminLayout = () => {
@@ -57,6 +58,12 @@ const AdminLayout = () => {
       title: "Analytics & Reports",
       path: "/admin/analytics-reports",
       icon: BarChart3,
+      badge: null,
+    },
+    {
+      title: "Task Assignment",
+      path: "/admin/task-assignment",
+      icon: CheckSquare,
       badge: null,
     },
     {

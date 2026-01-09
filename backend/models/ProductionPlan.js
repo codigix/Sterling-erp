@@ -59,12 +59,13 @@ class ProductionPlan {
       const [result] = await connection.execute(
         `
           INSERT INTO production_plans
-          (sales_order_id, bom_id, plan_name, status, planned_start_date, planned_end_date, 
+          (sales_order_id, root_card_id, bom_id, plan_name, status, planned_start_date, planned_end_date, 
            estimated_completion_date, supervisor_id, notes)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
           data.salesOrderId || null,
+          data.rootCardId || null,
           data.bomId || null,
           data.planName,
           data.status || 'draft',
@@ -240,13 +241,14 @@ class ProductionPlan {
     await pool.execute(
       `
         UPDATE production_plans
-        SET plan_name = ?, status = ?, planned_start_date = ?, planned_end_date = ?, 
+        SET plan_name = ?, status = ?, root_card_id = ?, planned_start_date = ?, planned_end_date = ?, 
             estimated_completion_date = ?, supervisor_id = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `,
       [
         data.planName,
         data.status,
+        data.rootCardId || null,
         data.plannedStartDate || null,
         data.plannedEndDate || null,
         data.estimatedCompletionDate || null,
@@ -275,6 +277,111 @@ class ProductionPlan {
       FROM production_plans
     `);
     return rows[0];
+  }
+
+  static async addStages(planId, stages, externalConnection = null) {
+    const connection = externalConnection || (await pool.getConnection());
+    
+    try {
+      if (!stages || stages.length === 0) {
+        if (!externalConnection) connection.release();
+        return;
+      }
+
+      const toSafeId = (val) => {
+        if (val === null || val === undefined || val === '' || val === 0 || val === '0') {
+          return null;
+        }
+        const num = parseInt(val);
+        return (num && num > 0 && !isNaN(num)) ? num : null;
+      };
+
+      const values = [];
+      
+      for (let idx = 0; idx < stages.length; idx++) {
+        const stage = stages[idx];
+        let employeeId = toSafeId(stage.assignedEmployeeId);
+        let facilityId = toSafeId(stage.assignedFacilityId);
+        const vendorId = toSafeId(stage.assignedVendorId);
+        
+        // Calculate duration from start and end dates
+        let durationDays = null;
+        if (stage.plannedStartDate && stage.plannedEndDate) {
+          const startDate = new Date(stage.plannedStartDate);
+          const endDate = new Date(stage.plannedEndDate);
+          const timeDiff = endDate - startDate;
+          durationDays = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+          console.log(`[ProductionPlan.addStages] Calculated duration: ${durationDays} days (${stage.plannedStartDate} to ${stage.plannedEndDate})`);
+        }
+        
+        // Validate that employee exists if provided
+        if (employeeId) {
+          const [empCheck] = await connection.execute('SELECT id FROM employees WHERE id = ? AND status = "active"', [employeeId]);
+          if (empCheck.length === 0) {
+            console.log(`[ProductionPlan.addStages] Employee ID ${employeeId} does not exist or is inactive, setting to NULL`);
+            employeeId = null;
+          } else {
+            console.log(`[ProductionPlan.addStages] ✓ Employee ID ${employeeId} validated successfully`);
+          }
+        }
+        
+        // Validate that facility exists if provided
+        if (facilityId) {
+          const [facCheck] = await connection.execute('SELECT id FROM manufacturing_facilities WHERE id = ?', [facilityId]);
+          if (facCheck.length === 0) {
+            console.log(`[ProductionPlan.addStages] Facility ID ${facilityId} does not exist, setting to NULL`);
+            facilityId = null;
+          }
+        }
+        
+        values.push([
+          planId,
+          stage.stageName,
+          idx + 1,
+          stage.stageType || 'in_house',
+          durationDays,
+          stage.estimatedDelayDays || null,
+          stage.plannedStartDate || null,
+          stage.plannedEndDate || null,
+          employeeId,
+          facilityId,
+          vendorId,
+          stage.notes || null
+        ]);
+      }
+
+      console.log('[ProductionPlan.addStages] Inserting stages with values:', JSON.stringify(values, null, 2));
+
+      const flattenedValues = values.reduce((acc, val) => acc.concat(val), []);
+      const placeholders = values.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').join(', ');
+
+      const query = `INSERT INTO production_plan_stages 
+         (production_plan_id, stage_name, sequence, stage_type, duration_days, estimated_delay_days, 
+          planned_start_date, planned_end_date, assigned_employee_id, assigned_facility_id, assigned_vendor_id, notes)
+         VALUES ${placeholders}`;
+      
+      console.log('[ProductionPlan.addStages] Query:', query);
+      console.log('[ProductionPlan.addStages] Values:', flattenedValues);
+
+      await connection.execute(query, flattenedValues);
+
+      if (!externalConnection) {
+        connection.release();
+      }
+    } catch (error) {
+      if (!externalConnection) {
+        connection.release();
+      }
+      console.error('[ProductionPlan.addStages] Error:', error);
+      throw error;
+    }
+  }
+
+  static async delete(id) {
+    await pool.execute(
+      'DELETE FROM production_plans WHERE id = ?',
+      [id]
+    );
   }
 }
 

@@ -6,6 +6,7 @@ const roleMiddleware = require('../../middleware/roleMiddleware');
 // Import controllers
 const userController = require('../../controllers/admin/userController');
 const roleController = require('../../controllers/admin/roleController');
+const designationController = require('../../controllers/admin/designationController');
 const reportsController = require('../../controllers/admin/reportsController');
 const auditController = require('../../controllers/admin/auditController');
 const dashboardController = require('../../controllers/admin/dashboardController');
@@ -30,6 +31,14 @@ router.post('/roles', roleController.createRole);
 router.put('/roles/:id', roleController.updateRole);
 router.patch('/roles/:id/status', roleController.setRoleStatus);
 router.delete('/roles/:id', roleController.deleteRole);
+
+// Designation management routes
+router.get('/designations', designationController.getDesignations);
+router.get('/designations/:id', designationController.getDesignationById);
+router.post('/designations', designationController.createDesignation);
+router.put('/designations/:id', designationController.updateDesignation);
+router.patch('/designations/:id/status', designationController.setDesignationStatus);
+router.delete('/designations/:id', designationController.deleteDesignation);
 
 // Reports routes
 router.get('/stats', reportsController.getSystemStats);

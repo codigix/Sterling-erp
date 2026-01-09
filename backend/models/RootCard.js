@@ -130,11 +130,12 @@ class RootCard {
       const [result] = await connection.execute(
         `
           INSERT INTO root_cards
-          (project_id, code, title, status, priority, planned_start, planned_end, created_by, assigned_supervisor, notes, stages)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          (project_id, sales_order_id, code, title, status, priority, planned_start, planned_end, created_by, assigned_supervisor, notes, stages)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
           data.projectId,
+          data.salesOrderId || null,
           data.code || null,
           data.title,
           data.status || "planning",

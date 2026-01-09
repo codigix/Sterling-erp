@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import axios from '../../utils/api';
+import { AlertCircle } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import Card, { CardContent } from '../../components/ui/Card';
 import DataTable from '../../components/ui/DataTable/DataTable';
@@ -19,6 +21,8 @@ import {
 
 const RoleManagement = () => {
   const [roles, setRoles] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [permissions] = useState([
     { id: 1, name: 'Manage Users', description: 'Create, edit, delete users' },
     { id: 2, name: 'Manage Roles', description: 'Create and manage system roles' },
@@ -39,48 +43,24 @@ const RoleManagement = () => {
     permissions: []
   });
 
-  const initialRoles = [
-    {
-      id: 1,
-      name: 'Admin',
-      description: 'Full system access',
-      userCount: 2,
-      permissions: [1, 2, 3, 4, 5, 6, 7, 8],
-      is_active: true,
-      created_at: '2025-01-01'
-    },
-    {
-      id: 2,
-      name: 'Manager',
-      description: 'Management access',
-      userCount: 5,
-      permissions: [2, 3, 4, 5],
-      is_active: true,
-      created_at: '2025-01-05'
-    },
-    {
-      id: 3,
-      name: 'Supervisor',
-      description: 'Team supervision',
-      userCount: 8,
-      permissions: [3, 4, 5],
-      is_active: true,
-      created_at: '2025-01-10'
-    },
-    {
-      id: 4,
-      name: 'Employee',
-      description: 'Regular employee access',
-      userCount: 50,
-      permissions: [5, 6],
-      is_active: true,
-      created_at: '2025-01-15'
+  const fetchRoles = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await axios.get('/admin/roles');
+      const rolesData = response.data.roles || response.data || [];
+      setRoles(rolesData);
+    } catch (err) {
+      console.error('Failed to fetch roles:', err);
+      setError('Failed to fetch roles');
+    } finally {
+      setLoading(false);
     }
-  ];
+  }, []);
 
   useEffect(() => {
-    setRoles(initialRoles);
-  }, []);
+    fetchRoles();
+  }, [fetchRoles]);
 
   const openCreateModal = () => {
     setEditingRole(null);
@@ -130,7 +110,7 @@ const RoleManagement = () => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!formData.name.trim()) {
@@ -138,48 +118,47 @@ const RoleManagement = () => {
       return;
     }
 
-    let updatedRoles;
-    if (editingRole) {
-      updatedRoles = roles.map(role =>
-        role.id === editingRole.id
-          ? { ...role, ...formData }
-          : role
-      );
-      setSuccess('Role updated successfully');
-    } else {
-      const newRole = {
-        id: Math.max(...roles.map(r => r.id), 0) + 1,
-        ...formData,
-        userCount: 0,
-        is_active: true,
-        created_at: new Date().toISOString().split('T')[0]
-      };
-      updatedRoles = [...roles, newRole];
-      setSuccess('Role created successfully');
-    }
+    try {
+      if (editingRole) {
+        await axios.put(`/admin/roles/${editingRole.id}`, {
+          name: formData.name,
+          description: formData.description,
+          permissions: formData.permissions
+        });
+        setSuccess('Role updated successfully');
+      } else {
+        await axios.post('/admin/roles', {
+          name: formData.name,
+          description: formData.description,
+          permissions: formData.permissions
+        });
+        setSuccess('Role created successfully');
+      }
 
-    setRoles(updatedRoles);
-    closeModal();
-    setTimeout(() => setSuccess(null), 3000);
+      await fetchRoles();
+      closeModal();
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to save role');
+    }
   };
 
-  const handleDelete = (roleId, roleName) => {
-    const role = roles.find(r => r.id === roleId);
-    if (role?.userCount > 0) {
-      alert(`Cannot delete role "${roleName}" because it has ${role.userCount} users assigned`);
-      return;
-    }
-
+  const handleDelete = async (roleId, roleName) => {
     if (!window.confirm(`Are you sure you want to delete role "${roleName}"?`)) {
       return;
     }
 
-    setRoles(roles.filter(r => r.id !== roleId));
-    setSuccess('Role deleted successfully');
-    setTimeout(() => setSuccess(null), 3000);
+    try {
+      await axios.delete(`/admin/roles/${roleId}`);
+      setSuccess('Role deleted successfully');
+      await fetchRoles();
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to delete role');
+    }
   };
 
-  const handleToggleRoleStatus = (roleId, currentStatus, roleName) => {
+  const handleToggleRoleStatus = async (roleId, currentStatus, roleName) => {
     const newStatus = !currentStatus;
     const action = newStatus ? 'activate' : 'deactivate';
     
@@ -187,11 +166,16 @@ const RoleManagement = () => {
       return;
     }
 
-    setRoles(roles.map(role =>
-      role.id === roleId ? { ...role, is_active: newStatus } : role
-    ));
-    setSuccess(`Role ${action}d successfully`);
-    setTimeout(() => setSuccess(null), 3000);
+    try {
+      await axios.patch(`/admin/roles/${roleId}/status`, {
+        is_active: newStatus
+      });
+      setSuccess(`Role ${action}d successfully`);
+      await fetchRoles();
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(err.response?.data?.message || `Failed to ${action} role`);
+    }
   };
 
   const getPermissionName = (permissionId) => {
@@ -445,6 +429,14 @@ const RoleManagement = () => {
         <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3 flex items-center gap-3">
           <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
           <p className="text-sm text-green-800 dark:text-green-300">{success}</p>
+        </div>
+      )}
+
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 flex items-center gap-3">
+          <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-red-800 dark:text-red-300">{error}</p>
         </div>
       )}
 

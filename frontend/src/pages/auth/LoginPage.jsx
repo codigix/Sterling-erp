@@ -26,7 +26,7 @@ const ROLE_MAP = {
 };
 
 const DEPARTMENT_USERS = {
-  admin: { username: "accountant", password: "password", label: "Admin" },
+  admin: { username: "admin", password: "password", label: "Admin" },
   inventory: { username: "inventory.manager", password: "password", label: "Inventory" },
   design_engineer: { username: "design.engineer", password: "password", label: "Design Engineer" },
   production: { username: "production.manager", password: "password", label: "Production" },
@@ -170,9 +170,23 @@ const LoginPage = () => {
                 <button 
                   type="button" 
                   className="quick-btn"
+                  onClick={() => setFormData({ username: "admin", password: "password" })}
+                >
+                  Admin
+                </button>
+                <button 
+                  type="button" 
+                  className="quick-btn"
                   onClick={() => setFormData({ username: "inventory.manager", password: "password" })}
                 >
                   Inventory
+                </button>
+                <button 
+                  type="button" 
+                  className="quick-btn"
+                  onClick={() => setFormData({ username: "production.manager", password: "password" })}
+                >
+                  Production
                 </button>
                 <button 
                   type="button" 

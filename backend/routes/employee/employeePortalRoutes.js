@@ -12,4 +12,14 @@ router.get('/projects/:employeeId', authMiddleware, employeePortalController.get
 router.get('/alerts/:employeeId', authMiddleware, employeePortalController.getEmployeeAlerts);
 router.get('/company-updates', authMiddleware, employeePortalController.getCompanyUpdates);
 
+router.post('/assign-task', authMiddleware, employeePortalController.assignTaskToEmployee);
+router.get('/assigned-tasks/:employeeId', authMiddleware, employeePortalController.getAssignedTasks);
+router.get('/assigned-tasks-stats/:employeeId', authMiddleware, employeePortalController.getAssignedTasksStats);
+router.put('/tasks/:taskId/status', authMiddleware, employeePortalController.updateTaskStatus);
+router.delete('/tasks/:taskId', authMiddleware, employeePortalController.deleteAssignedTask);
+router.delete('/worker-tasks/:taskId', authMiddleware, employeePortalController.deleteWorkerTask);
+
+router.put('/profile/:employeeId', authMiddleware, employeePortalController.updateEmployeeProfile);
+router.put('/change-password/:employeeId', authMiddleware, employeePortalController.changePassword);
+
 module.exports = router;

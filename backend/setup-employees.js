@@ -100,6 +100,64 @@ async function setup() {
       }
     }
 
+    console.log('\nUpdating manufacturing_stages foreign key to reference employees table...');
+    try {
+      await pool.execute(`
+        ALTER TABLE manufacturing_stages 
+        DROP FOREIGN KEY manufacturing_stages_ibfk_2
+      `);
+      console.log('✓ Old foreign key dropped from manufacturing_stages');
+    } catch (error) {
+      if (error.code === 'ER_CANT_DROP_FIELD_OR_KEY') {
+        console.log('✓ Foreign key does not exist, skipping drop');
+      } else {
+        console.error('Error dropping foreign key:', error.message);
+      }
+    }
+
+    try {
+      await pool.execute(`
+        ALTER TABLE manufacturing_stages 
+        ADD FOREIGN KEY (assigned_worker) REFERENCES employees(id) ON DELETE SET NULL
+      `);
+      console.log('✓ Foreign key added to manufacturing_stages to reference employees table');
+    } catch (error) {
+      if (error.code === 'ER_DUP_KEYNAME' || error.code === 'ER_KEY_COLUMN_DOES_NOT_EXIST') {
+        console.log('✓ Foreign key already exists for manufacturing_stages');
+      } else {
+        console.error('Error adding foreign key:', error.message);
+      }
+    }
+
+    console.log('\nUpdating worker_tasks foreign key to reference employees table...');
+    try {
+      await pool.execute(`
+        ALTER TABLE worker_tasks 
+        DROP FOREIGN KEY worker_tasks_ibfk_2
+      `);
+      console.log('✓ Old foreign key dropped from worker_tasks');
+    } catch (error) {
+      if (error.code === 'ER_CANT_DROP_FIELD_OR_KEY') {
+        console.log('✓ Foreign key does not exist in worker_tasks, skipping drop');
+      } else {
+        console.error('Error dropping foreign key:', error.message);
+      }
+    }
+
+    try {
+      await pool.execute(`
+        ALTER TABLE worker_tasks 
+        ADD FOREIGN KEY (worker_id) REFERENCES employees(id) ON DELETE CASCADE
+      `);
+      console.log('✓ Foreign key added to worker_tasks to reference employees table');
+    } catch (error) {
+      if (error.code === 'ER_DUP_KEYNAME' || error.code === 'ER_KEY_COLUMN_DOES_NOT_EXIST') {
+        console.log('✓ Foreign key already exists for worker_tasks');
+      } else {
+        console.error('Error adding foreign key:', error.message);
+      }
+    }
+
     console.log('\nInserting default departments...');
     const defaultDepartments = [
       { name: 'Engineering', code: 'ENG', description: 'Engineering Department' },

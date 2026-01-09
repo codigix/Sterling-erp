@@ -1,6 +1,7 @@
 const ProductionPlan = require('../../models/ProductionPlan');
 const ProductionPlanDetail = require('../../models/ProductionPlanDetail');
 const SalesOrderStep = require('../../models/SalesOrderStep');
+const pool = require('../../config/database');
 const { validateProductionPlan } = require('../../utils/salesOrderValidators');
 const { formatSuccessResponse, formatErrorResponse } = require('../../utils/salesOrderHelpers');
 
@@ -35,16 +36,30 @@ class ProductionPlanController {
       const updated = await ProductionPlanDetail.findBySalesOrderId(salesOrderId);
       console.log(`[ProductionPlanController] Saved production plan detail`);
       
+      let productionPlanId = null;
+      
       // Also create/update in production_plans table for visibility in production plans list
       try {
+        let supervisorId = data.supervisorId ? parseInt(data.supervisorId) : null;
+        
+        // Validate supervisor exists if provided (check employees table)
+        if (supervisorId && supervisorId > 0) {
+          const [supervisorCheck] = await pool.execute('SELECT id FROM employees WHERE id = ? AND status = "active"', [supervisorId]);
+          if (supervisorCheck.length === 0) {
+            console.log(`[ProductionPlanController] Supervisor ID ${supervisorId} does not exist, setting to NULL`);
+            supervisorId = null;
+          }
+        }
+
         const planData = {
           salesOrderId: parseInt(salesOrderId),
+          rootCardId: data.rootCardId ? parseInt(data.rootCardId) : null,
           planName: data.planName || 'Production Plan',
           status: 'draft',
           plannedStartDate: data.timeline?.startDate || null,
           plannedEndDate: data.timeline?.endDate || null,
           estimatedCompletionDate: data.estimatedCompletionDate || null,
-          supervisorId: data.supervisorId || null,
+          supervisorId: supervisorId,
           notes: data.productionNotes || null
         };
 
@@ -53,10 +68,13 @@ class ProductionPlanController {
         // Check if already exists in production_plans
         const existingPlan = await ProductionPlan.findBySalesOrderId(salesOrderId);
         if (existingPlan) {
-          console.log(`[ProductionPlanController] Production plan already exists in production_plans table`);
+          console.log(`[ProductionPlanController] Production plan already exists in production_plans table with ID:`, existingPlan.id);
+          await ProductionPlan.update(existingPlan.id, planData);
+          console.log(`[ProductionPlanController] Updated production plan with ID:`, existingPlan.id);
+          productionPlanId = existingPlan.id;
         } else {
-          const planId = await ProductionPlan.create(planData);
-          console.log(`[ProductionPlanController] Created production plan in production_plans table with ID:`, planId);
+          productionPlanId = await ProductionPlan.create(planData);
+          console.log(`[ProductionPlanController] Created production plan in production_plans table with ID:`, productionPlanId);
         }
       } catch (planError) {
         console.warn(`[ProductionPlanController] Warning - could not create in production_plans table:`, planError.message);
@@ -68,7 +86,12 @@ class ProductionPlanController {
         await SalesOrderStep.assignEmployee(salesOrderId, 5, assignedTo);
       }
 
-      res.json(formatSuccessResponse(updated, 'Production plan saved'));
+      const responseData = {
+        ...updated,
+        planId: productionPlanId
+      };
+      
+      res.json(formatSuccessResponse(responseData, 'Production plan saved'));
     } catch (error) {
       console.error(`[ProductionPlanController] Error:`, error);
       res.status(500).json(formatErrorResponse(error.message));

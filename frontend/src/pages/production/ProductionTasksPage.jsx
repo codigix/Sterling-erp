@@ -25,7 +25,7 @@ const ProductionTasksPage = () => {
       try {
         setLoading(true);
         const [rcRes, stageRes] = await Promise.all([
-          axios.get("/production/portal/root-cards"),
+          axios.get("/production/portal/root-cards?all=true"),
           axios.get("/production/portal/stages"),
         ]);
         setRootCards(rcRes.data.rootCards || []);

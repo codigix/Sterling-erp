@@ -27,7 +27,8 @@ const Badge = ({
     lg: 'px-3 py-1 text-sm rounded-full'
   };
 
-  const classes = `${baseClasses} ${variants[variant]} ${sizes[size]} ${className}`;
+  const variantClasses = !className ? variants[variant] : '';
+  const classes = `${baseClasses} ${variantClasses} ${sizes[size]} ${className}`;
 
   return (
     <span className={classes} {...props}>

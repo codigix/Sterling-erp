@@ -981,12 +981,12 @@ exports.deleteProductionPlan = async (req, res) => {
     const { id } = req.params;
     const ProductionPlan = require('../../models/ProductionPlan');
 
-    const deleted = await ProductionPlan.delete(id);
-
-    if (!deleted) {
+    const plan = await ProductionPlan.findById(id);
+    if (!plan) {
       return res.status(404).json({ message: 'Production plan not found' });
     }
 
+    await ProductionPlan.delete(id);
     res.json({ message: 'Production plan deleted successfully' });
   } catch (error) {
     console.error('Delete production plan error:', error);

@@ -4,7 +4,34 @@ exports.getRootCards = async (req, res) => {
     const SalesOrderStep = require('../../models/SalesOrderStep');
     const pool = require('../../config/database');
     const userId = parseInt(req.user.id);
-    const { status, search } = req.query;
+    const { status, search, all } = req.query;
+
+    let filters = {};
+    if (status && status !== 'all') {
+      filters.status = status;
+    }
+    if (search) {
+      filters.search = search;
+    }
+
+    const allRootCards = await RootCard.findAll(filters);
+
+    if (all === 'true' || req.user.role === 'Admin' || req.user.role === 'Production') {
+      const rootCardsWithStats = allRootCards.map(card => ({
+        ...card,
+        assignedSteps: []
+      }));
+
+      const stats = {
+        totalRootCards: rootCardsWithStats.length,
+        inProgressRootCards: rootCardsWithStats.filter(rc => rc.status === 'in_progress').length,
+        pendingRootCards: rootCardsWithStats.filter(rc => rc.status === 'pending').length,
+        completedRootCards: rootCardsWithStats.filter(rc => rc.status === 'completed').length,
+        planningRootCards: rootCardsWithStats.filter(rc => rc.status === 'planning').length
+      };
+
+      return res.json({ rootCards: rootCardsWithStats, stats });
+    }
 
     const [assignedSteps] = await pool.execute(
       'SELECT DISTINCT sales_order_id FROM sales_order_steps WHERE assigned_to = ? AND step_id >= 3 AND step_id <= 8',
@@ -22,16 +49,6 @@ exports.getRootCards = async (req, res) => {
     }
 
     const assignedSalesOrderIds = assignedSteps.map(s => s.sales_order_id);
-    
-    const filters = {};
-    if (status && status !== 'all') {
-      filters.status = status;
-    }
-    if (search) {
-      filters.search = search;
-    }
-
-    const allRootCards = await RootCard.findAll(filters);
     
     const filteredCards = allRootCards.filter(card => 
       card.sales_order_id && assignedSalesOrderIds.includes(card.sales_order_id)
@@ -82,6 +99,7 @@ exports.getRootCardById = async (req, res) => {
     const DeliveryDetail = require('../../models/DeliveryDetail');
     
     const { id } = req.params;
+    const { all } = req.query;
     const userId = parseInt(req.user.id);
 
     const rootCard = await RootCard.findById(id);
@@ -92,6 +110,8 @@ exports.getRootCardById = async (req, res) => {
 
     let userAssignedSteps = [];
     let allSteps = [];
+    const isAdmin = req.user.role === 'Admin' || req.user.role === 'Production';
+    const bypassAuth = all === 'true' || isAdmin;
     
     if (rootCard.sales_order_id) {
       allSteps = await SalesOrderStep.findBySalesOrderId(rootCard.sales_order_id);
@@ -110,7 +130,7 @@ exports.getRootCardById = async (req, res) => {
       return !isNaN(workerUserId) && workerUserId === userId;
     });
     
-    if (userAssignedSteps.length === 0 && userAssignedStages.length === 0) {
+    if (!bypassAuth && userAssignedSteps.length === 0 && userAssignedStages.length === 0) {
       console.log(`[RC ${id}] Access Denied. User ${userId}: Steps=${userAssignedSteps.length}, Stages=${userAssignedStages.length}`);
       console.log(`[RC ${id}] All Steps: ${allSteps.map(s => `${s.id}:${s.assignedTo}`).join(', ')}`);
       return res.status(403).json({ message: 'Access denied: Not assigned to any step or stage in this project' });
@@ -183,33 +203,45 @@ exports.getProductionStages = async (req, res) => {
 
 exports.getEmployees = async (req, res) => {
   try {
-    const Employee = require('../../models/Employee');
+    const pool = require('../../config/database');
     
-    const productionEmployees = await Employee.findByDepartmentName('Production');
+    const [rows] = await pool.execute(`
+      SELECT e.id, CONCAT(e.first_name, ' ', e.last_name) as username, e.email, e.designation, d.name as department_name
+      FROM employees e 
+      LEFT JOIN departments d ON e.department_id = d.id 
+      WHERE e.status = 'active' AND d.name = 'Production'
+      ORDER BY e.first_name ASC
+    `);
     
-    const employees = productionEmployees.map(emp => ({
+    const employees = rows.map(emp => ({
       id: emp.id,
-      username: `${emp.first_name} ${emp.last_name}`,
+      username: emp.username,
       email: emp.email,
-      role_name: emp.role_name,
       designation: emp.designation,
-      department: emp.department_name || emp.department,
-      departmentId: emp.department_id
+      department: emp.department_name
     }));
 
+    console.log('[getEmployees] Returning Production employees:', employees);
     res.json(employees);
   } catch (error) {
-    console.error('Get employees error:', error);
-    const User = require('../../models/User');
-    const users = await User.findAll();
+    console.error('[getEmployees] Error:', error);
+    const pool = require('../../config/database');
+    const [rows] = await pool.execute(`
+      SELECT e.id, CONCAT(e.first_name, ' ', e.last_name) as username, e.email, e.designation, d.name as department_name
+      FROM employees e 
+      LEFT JOIN departments d ON e.department_id = d.id 
+      WHERE e.status = 'active'
+      ORDER BY e.first_name ASC
+    `);
     
-    const employees = users.map(user => ({
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      role_name: user.role_name
+    const employees = rows.map(emp => ({
+      id: emp.id,
+      username: emp.username,
+      email: emp.email,
+      designation: emp.designation,
+      department: emp.department_name
     }));
-
+    
     res.json(employees);
   }
 };
@@ -217,7 +249,12 @@ exports.getEmployees = async (req, res) => {
 exports.createManufacturingStages = async (req, res) => {
   try {
     const ManufacturingStage = require('../../models/ManufacturingStage');
+    const RootCard = require('../../models/RootCard');
+    const EmployeeTask = require('../../models/EmployeeTask');
+    const pool = require('../../config/database');
     const stages = req.body;
+
+    console.log('[createManufacturingStages] Received stages:', JSON.stringify(stages, null, 2));
 
     if (!Array.isArray(stages) || stages.length === 0) {
       return res.status(400).json({ message: 'Stages array is required' });
@@ -227,17 +264,44 @@ exports.createManufacturingStages = async (req, res) => {
       if (!stage.rootCardId || !stage.stageName) {
         return res.status(400).json({ message: 'Each stage must have rootCardId and stageName' });
       }
+      
+      const rootCard = await RootCard.findById(stage.rootCardId);
+      if (!rootCard) {
+        return res.status(400).json({ message: `Root card ${stage.rootCardId} not found` });
+      }
     }
 
-    await ManufacturingStage.createMany(stages);
+    console.log('[createManufacturingStages] Creating', stages.length, 'stages...');
+    const createdStages = await ManufacturingStage.createMany(stages);
+    console.log('[createManufacturingStages] ✓ Successfully created', stages.length, 'stages');
+
+    console.log('[createManufacturingStages] Creating worker tasks for assigned stages...');
+    let tasksCreated = 0;
+    for (const createdStage of createdStages) {
+      if (createdStage.assignedWorker) {
+        try {
+          await EmployeeTask.create(createdStage.id, createdStage.assignedWorker, `${createdStage.stageName} - Production Stage`);
+          tasksCreated++;
+          console.log(`[createManufacturingStages] ✓ Created task for stage: ${createdStage.stageName} (worker: ${createdStage.assignedWorker}, stageId: ${createdStage.id})`);
+        } catch (taskError) {
+          console.error(`[createManufacturingStages] Error creating task for stage ${createdStage.stageName}:`, taskError.message);
+        }
+      }
+    }
+
+    console.log(`[createManufacturingStages] ✓ Created ${tasksCreated} worker tasks`);
 
     res.json({ 
       message: 'Manufacturing stages created successfully',
-      createdCount: stages.length
+      createdCount: stages.length,
+      tasksCreated: tasksCreated
     });
   } catch (error) {
-    console.error('Create manufacturing stages error:', error);
-    res.status(500).json({ message: 'Failed to create manufacturing stages' });
+    console.error('[createManufacturingStages] Error:', error.message);
+    console.error('[createManufacturingStages] Code:', error.code);
+    console.error('[createManufacturingStages] SQL State:', error.sqlState);
+    console.error('[createManufacturingStages] Stack:', error.stack);
+    res.status(500).json({ message: 'Failed to create manufacturing stages: ' + error.message });
   }
 };
 
@@ -246,7 +310,21 @@ exports.getProductionFormRootCards = async (req, res) => {
     const RootCard = require('../../models/RootCard');
     const pool = require('../../config/database');
     const userId = parseInt(req.user.id);
-    const { status, search } = req.query;
+    const { status, search, all } = req.query;
+
+    const filters = {};
+    if (status && status !== 'all') {
+      filters.status = status;
+    }
+    if (search) {
+      filters.search = search;
+    }
+
+    const allRootCards = await RootCard.findAll(filters);
+
+    if (all === 'true' || req.user.role === 'Admin' || req.user.role === 'Production') {
+      return res.json({ rootCards: allRootCards });
+    }
 
     const [assignedSteps] = await pool.execute(
       'SELECT DISTINCT sales_order_id FROM sales_order_steps WHERE assigned_to = ? AND step_id >= 3 AND step_id <= 8',
@@ -258,16 +336,6 @@ exports.getProductionFormRootCards = async (req, res) => {
     }
 
     const assignedSalesOrderIds = assignedSteps.map(s => s.sales_order_id);
-    
-    const filters = {};
-    if (status && status !== 'all') {
-      filters.status = status;
-    }
-    if (search) {
-      filters.search = search;
-    }
-
-    const allRootCards = await RootCard.findAll(filters);
     
     const filteredCards = allRootCards.filter(card => 
       card.sales_order_id && assignedSalesOrderIds.includes(card.sales_order_id)

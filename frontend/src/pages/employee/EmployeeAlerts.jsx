@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "../../utils/api";
 import { useAuth } from "../../context/AuthContext";
-import Card, { CardContent, CardTitle, CardHeader } from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
 import { AlertCircle, X, CheckCircle, Bell, Trash2 } from "lucide-react";
@@ -67,10 +66,10 @@ const EmployeeAlerts = () => {
   const unreadCount = alerts.filter(a => !a.read).length;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center text-xs justify-between">
+    <div className="w-full min-h-screen bg-white space-y-6">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold  dark: mb-2">
+          <h1 className="text-3xl font-bold text-left dark:text-white mb-2">
             Alerts & Notifications
           </h1>
           <p className="text-slate-600 dark:text-slate-400">
@@ -78,80 +77,76 @@ const EmployeeAlerts = () => {
           </p>
         </div>
         {unreadCount > 0 && (
-          <div className="px-4 py-2 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-full font-semibold">
+          <div className="px-4 py-2 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 rounded-full font-semibold border border-red-200 dark:border-red-900/50">
             {unreadCount} new
           </div>
         )}
       </div>
 
       {alerts.length === 0 ? (
-        <Card>
-          <CardContent className="p-12 text-center">
-            <CheckCircle className="w-12 h-12 mx-auto text-green-600 mb-3" />
-            <p className="text-slate-600 dark:text-slate-400 font-medium">
-              You're all caught up! No new alerts.
-            </p>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Check back soon for updates
-            </p>
-          </CardContent>
-        </Card>
+        <div className="bg-white border-2 border-slate-100 dark:border-slate-700 rounded-xl p-12 text-center hover:shadow-lg transition-all">
+          <CheckCircle className="w-12 h-12 mx-auto text-green-600 dark:text-green-400 mb-3" />
+          <p className="text-slate-600 dark:text-slate-400 font-medium">
+            You're all caught up! No new alerts.
+          </p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            Check back soon for updates
+          </p>
+        </div>
       ) : (
         <div className="space-y-3">
           {alerts.map((alert) => (
-            <Card 
+            <div 
               key={alert.id} 
-              className={`border ${getAlertColor(alert.type)} ${!alert.read ? 'ring-2 ring-primary-500' : ''}`}
+              className={`bg-white border-2 rounded-xl p-4 hover:shadow-lg transition-all ${getAlertColor(alert.type)} ${!alert.read ? 'ring-2 ring-primary-500' : ''}`}
             >
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-center gap-3 flex-1">
-                    <div className="mt-1 flex-shrink-0">
-                      {getAlertIcon(alert.type)}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center text-xs gap-2 mb-1">
-                        <h4 className="font-semibold  dark:">{alert.title}</h4>
-                        <Badge className={getAlertBadgeColor(alert.type)}>
-                          {alert.type}
-                        </Badge>
-                        {!alert.read && (
-                          <span className="w-2 h-2 bg-primary-600 rounded-full"></span>
-                        )}
-                      </div>
-                      <p className="text-sm text-slate-700 dark:text-slate-300 mb-2">
-                        {alert.message}
-                      </p>
-                      <p className="text-xs text-slate-600 dark:text-slate-400">
-                        {alert.timestamp}
-                      </p>
-                    </div>
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="mt-1 flex-shrink-0">
+                    {getAlertIcon(alert.type)}
                   </div>
-                  <div className="flex gap-2">
-                    {!alert.read && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => markAsRead(alert.id)}
-                        className="text-slate-400 hover:text-slate-600"
-                        title="Mark as read"
-                      >
-                        <CheckCircle className="w-5 h-5" />
-                      </Button>
-                    )}
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <h4 className="font-semibold text-slate-900 dark:text-white">{alert.title}</h4>
+                      <Badge className={getAlertBadgeColor(alert.type)}>
+                        {alert.type}
+                      </Badge>
+                      {!alert.read && (
+                        <span className="w-2 h-2 bg-primary-600 rounded-full"></span>
+                      )}
+                    </div>
+                    <p className="text-sm text-slate-700 dark:text-slate-300 mb-2">
+                      {alert.message}
+                    </p>
+                    <p className="text-xs text-slate-600 dark:text-slate-400">
+                      {alert.timestamp}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  {!alert.read && (
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => dismissAlert(alert.id)}
-                      className="text-slate-400 hover:text-slate-600"
-                      title="Dismiss"
+                      onClick={() => markAsRead(alert.id)}
+                      className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                      title="Mark as read"
                     >
-                      <X className="w-5 h-5" />
+                      <CheckCircle className="w-5 h-5" />
                     </Button>
-                  </div>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => dismissAlert(alert.id)}
+                    className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                    title="Dismiss"
+                  >
+                    <X className="w-5 h-5" />
+                  </Button>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           ))}
         </div>
       )}

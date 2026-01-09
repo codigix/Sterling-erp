@@ -41,157 +41,210 @@ const EmployeeDashboardHome = () => {
   }, [user?.id]);
 
   return (
-    <div className="space-y-6">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold  dark: mb-2">
+    <div className="w-full min-h-screen bg-white space-y-6 p-4">
+      {/* Header */}
+      <div>
+        <h1 className="text-xl text-left font-bold">
           Welcome back, {user?.name || 'Employee'}!
         </h1>
-        <p className="text-slate-600 dark:text-slate-400">
+        <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 text-left">
           {user?.designation} • {user?.department}
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <Card className="hover:shadow-lg transition-all border-l-4 border-green-500">
-          <CardContent className="p-6">
-            <div className="flex items-center text-xs justify-between">
-              <div>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">Tasks Completed</p>
-                <p className="text-3xl font-bold  dark:">{stats.tasksCompleted}</p>
-                <p className="text-xs text-green-600 dark:text-green-400 mt-1">↑ 2 this week</p>
-              </div>
-              <div className="w-14 h-14 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center text-xs justify-center">
-                <CheckCircle className="w-7 h-7 text-green-600 dark:text-green-400" />
+      {/* KPI Cards Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Tasks Completed */}
+        <div className="bg-white border-2 border-green-100 dark:border-green-900/30 rounded-xl p-4 hover:shadow-lg transition-all hover:border-green-300 dark:hover:border-green-700">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1">
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase text-left mb-2">
+                Tasks Completed
+              </p>
+              <p className="text-xl text-left font-bold dark:text-white">
+                {stats.tasksCompleted}
+              </p>
+              <p className="text-xs text-left text-green-600 dark:text-green-400 mt-2 font-medium">
+                ↑ 2 this week
+              </p>
+            </div>
+            <div className="flex-shrink-0">
+              <div className="w-12 h-12 bg-gradient-to-br from-green-50 dark:from-green-900/20 to-green-100 dark:to-green-900/30 rounded-xl flex items-center justify-center border border-green-200 dark:border-green-900/50">
+                <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card className="hover:shadow-lg transition-all border-l-4 border-blue-500">
-          <CardContent className="p-6">
-            <div className="flex items-center text-xs justify-between">
-              <div>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">In Progress</p>
-                <p className="text-3xl font-bold  dark:">{stats.tasksInProgress}</p>
-                <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">2 due this week</p>
-              </div>
-              <div className="w-14 h-14 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center text-xs justify-center">
-                <TrendingUp className="w-7 h-7 text-blue-600 dark:text-blue-400" />
+        {/* In Progress */}
+        <div className="bg-white border-2 border-blue-100 dark:border-blue-900/30 rounded-xl p-4 hover:shadow-lg transition-all hover:border-blue-300 dark:hover:border-blue-700">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1">
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase text-left mb-2">
+                In Progress
+              </p>
+              <p className="text-xl text-left font-bold dark:text-white">
+                {stats.tasksInProgress}
+              </p>
+              <p className="text-xs text-left text-blue-600 dark:text-blue-400 mt-2 font-medium">
+                2 due this week
+              </p>
+            </div>
+            <div className="flex-shrink-0">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-50 dark:from-blue-900/20 to-blue-100 dark:to-blue-900/30 rounded-xl flex items-center justify-center border border-blue-200 dark:border-blue-900/50">
+                <TrendingUp className="w-6 h-6 text-blue-600 dark:text-blue-400" />
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card className="hover:shadow-lg transition-all border-l-4 border-amber-500">
-          <CardContent className="p-6">
-            <div className="flex items-center text-xs justify-between">
-              <div>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">Attendance Rate</p>
-                <p className="text-3xl font-bold  dark:">{stats.attendanceRate}%</p>
-                <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">On track</p>
-              </div>
-              <div className="w-14 h-14 bg-amber-100 dark:bg-amber-900/30 rounded-lg flex items-center text-xs justify-center">
-                <Clock className="w-7 h-7 text-amber-600 dark:text-amber-400" />
+        {/* Attendance Rate */}
+        <div className="bg-white border-2 border-amber-100 dark:border-amber-900/30 rounded-xl p-4 hover:shadow-lg transition-all hover:border-amber-300 dark:hover:border-amber-700">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1">
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase text-left mb-2">
+                Attendance Rate
+              </p>
+              <p className="text-xl text-left font-bold dark:text-white">
+                {stats.attendanceRate}%
+              </p>
+              <p className="text-xs text-left text-amber-600 dark:text-amber-400 mt-2 font-medium">
+                On track
+              </p>
+            </div>
+            <div className="flex-shrink-0">
+              <div className="w-12 h-12 bg-gradient-to-br from-amber-50 dark:from-amber-900/20 to-amber-100 dark:to-amber-900/30 rounded-xl flex items-center justify-center border border-amber-200 dark:border-amber-900/50">
+                <Clock className="w-6 h-6 text-amber-600 dark:text-amber-400" />
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card className="hover:shadow-lg transition-all border-l-4 border-purple-500">
-          <CardContent className="p-6">
-            <div className="flex items-center text-xs justify-between">
-              <div>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">Upcoming Tasks</p>
-                <p className="text-3xl font-bold  dark:">{stats.upcomingTasks}</p>
-                <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">Next 7 days</p>
-              </div>
-              <div className="w-14 h-14 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center text-xs justify-center">
-                <AlertCircle className="w-7 h-7 text-purple-600 dark:text-purple-400" />
+        {/* Upcoming Tasks */}
+        <div className="bg-white border-2 border-purple-100 dark:border-purple-900/30 rounded-xl p-4 hover:shadow-lg transition-all hover:border-purple-300 dark:hover:border-purple-700">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1">
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase text-left mb-2">
+                Upcoming Tasks
+              </p>
+              <p className="text-xl text-left font-bold dark:text-white">
+                {stats.upcomingTasks}
+              </p>
+              <p className="text-xs text-left text-purple-600 dark:text-purple-400 mt-2 font-medium">
+                Next 7 days
+              </p>
+            </div>
+            <div className="flex-shrink-0">
+              <div className="w-12 h-12 bg-gradient-to-br from-purple-50 dark:from-purple-900/20 to-purple-100 dark:to-purple-900/30 rounded-xl flex items-center justify-center border border-purple-200 dark:border-purple-900/50">
+                <AlertCircle className="w-6 h-6 text-purple-600 dark:text-purple-400" />
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card className="hover:shadow-lg transition-all border-l-4 border-orange-500">
-          <CardContent className="p-6">
-            <div className="flex items-center text-xs justify-between">
-              <div>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">Active Projects</p>
-                <p className="text-3xl font-bold  dark:">{stats.projectsActive}</p>
-                <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">Running smoothly</p>
-              </div>
-              <div className="w-14 h-14 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center text-xs justify-center">
-                <BarChart3 className="w-7 h-7 text-orange-600 dark:text-orange-400" />
+        {/* Active Projects */}
+        <div className="bg-white border-2 border-orange-100 dark:border-orange-900/30 rounded-xl p-4 hover:shadow-lg transition-all hover:border-orange-300 dark:hover:border-orange-700">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1">
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase text-left mb-2">
+                Active Projects
+              </p>
+              <p className="text-xl text-left font-bold dark:text-white">
+                {stats.projectsActive}
+              </p>
+              <p className="text-xs text-left text-orange-600 dark:text-orange-400 mt-2 font-medium">
+                Running smoothly
+              </p>
+            </div>
+            <div className="flex-shrink-0">
+              <div className="w-12 h-12 bg-gradient-to-br from-orange-50 dark:from-orange-900/20 to-orange-100 dark:to-orange-900/30 rounded-xl flex items-center justify-center border border-orange-200 dark:border-orange-900/50">
+                <BarChart3 className="w-6 h-6 text-orange-600 dark:text-orange-400" />
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card className="hover:shadow-lg transition-all border-l-4 border-cyan-500">
-          <CardContent className="p-6">
-            <div className="flex items-center text-xs justify-between">
-              <div>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">Hours Logged</p>
-                <p className="text-3xl font-bold  dark:">{stats.hoursLogged}h</p>
-                <p className="text-xs text-cyan-600 dark:text-cyan-400 mt-1">This month</p>
-              </div>
-              <div className="w-14 h-14 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg flex items-center text-xs justify-center">
-                <Clock className="w-7 h-7 text-cyan-600 dark:text-cyan-400" />
+        {/* Hours Logged */}
+        <div className="bg-white border-2 border-cyan-100 dark:border-cyan-900/30 rounded-xl p-4 hover:shadow-lg transition-all hover:border-cyan-300 dark:hover:border-cyan-700">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1">
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase text-left mb-2">
+                Hours Logged
+              </p>
+              <p className="text-xl text-left font-bold dark:text-white">
+                {stats.hoursLogged}h
+              </p>
+              <p className="text-xs text-left text-cyan-600 dark:text-cyan-400 mt-2 font-medium">
+                This month
+              </p>
+            </div>
+            <div className="flex-shrink-0">
+              <div className="w-12 h-12 bg-gradient-to-br from-cyan-50 dark:from-cyan-900/20 to-cyan-100 dark:to-cyan-900/30 rounded-xl flex items-center justify-center border border-cyan-200 dark:border-cyan-900/50">
+                <Clock className="w-6 h-6 text-cyan-600 dark:text-cyan-400" />
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
+      {/* Recent Tasks & Events Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center text-xs gap-2">
-              <CheckSquare className="w-5 h-5" />
+        {/* Recent Tasks */}
+        <div className="bg-white border-2 border-slate-100 dark:border-slate-700 rounded-xl p-4 hover:shadow-lg transition-all">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+              <CheckSquare className="w-5 h-5 text-blue-600 dark:text-blue-400" />
               Recent Tasks
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
+            </h2>
+          </div>
+          <div className="space-y-3">
             {[
               { title: "Fix Login Bug", status: "In Progress", priority: "High" },
               { title: "Database Migration", status: "Pending", priority: "Medium" },
               { title: "API Documentation", status: "In Progress", priority: "Low" }
             ].map((task, i) => (
-              <div key={i} className="flex items-center text-xs justify-between p-3 rounded bg-slate-50 dark:bg-slate-700/50">
-                <div>
-                  <p className="font-medium  dark: text-sm">{task.title}</p>
-                  <p className="text-xs text-slate-600 dark:text-slate-400">{task.status}</p>
+              <div key={i} className="flex items-start justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                <div className="flex-1">
+                  <p className="font-medium text-sm text-slate-900 dark:text-white">{task.title}</p>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">{task.status}</p>
                 </div>
-                <span className={`text-xs px-2 py-1 rounded ${task.priority === 'High' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'}`}>
+                <span className={`text-xs font-medium px-2 py-1 rounded-md whitespace-nowrap ml-2 ${
+                  task.priority === 'High' 
+                    ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' 
+                    : task.priority === 'Medium'
+                    ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
+                    : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                }`}>
                   {task.priority}
                 </span>
               </div>
             ))}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center text-xs gap-2">
-              <Calendar className="w-5 h-5" />
+        {/* Upcoming Events */}
+        <div className="bg-white border-2 border-slate-100 dark:border-slate-700 rounded-xl p-4 hover:shadow-lg transition-all">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-purple-600 dark:text-purple-400" />
               Upcoming Events
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
+            </h2>
+          </div>
+          <div className="space-y-3">
             {[
               { event: "Team Standup", date: "Today, 10:00 AM" },
               { event: "Project Review", date: "Tomorrow, 2:00 PM" },
               { event: "Sprint Planning", date: "Friday, 11:00 AM" }
             ].map((item, i) => (
-              <div key={i} className="flex items-center text-xs justify-between p-3 rounded bg-slate-50 dark:bg-slate-700/50">
-                <div>
-                  <p className="font-medium  dark: text-sm">{item.event}</p>
-                  <p className="text-xs text-slate-600 dark:text-slate-400">{item.date}</p>
+              <div key={i} className="flex items-start justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                <div className="flex-1">
+                  <p className="font-medium text-sm text-slate-900 dark:text-white">{item.event}</p>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">{item.date}</p>
                 </div>
               </div>
             ))}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -1,7 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "../../utils/api";
-import Card, { CardContent, CardTitle, CardHeader } from "../../components/ui/Card";
+import Card, {
+  CardContent,
+  CardTitle,
+  CardHeader,
+} from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import DataTable from "../../components/ui/DataTable/DataTable";
 import {
@@ -44,17 +48,8 @@ const EmployeeManagement = () => {
     actions: [],
   });
 
-  const designations = ["Manager", "Senior Engineer", "Engineer", "Supervisor", "Associate", "Intern", "Coordinator"];
-  const availableRoles = [
-    { id: 9, name: "Worker" },
-    { id: 8, name: "Production Supervisor" },
-    { id: 7, name: "Inventory Manager" },
-    { id: 6, name: "QC Inspector" },
-    { id: 5, name: "Procurement Officer" },
-    { id: 4, name: "Engineering" },
-    { id: 3, name: "Sales" },
-    { id: 2, name: "Management" },
-  ];
+  const [designations, setDesignations] = useState([]);
+  const [availableRoles, setAvailableRoles] = useState([]);
 
   const fetchDepartments = useCallback(async () => {
     try {
@@ -65,63 +60,38 @@ const EmployeeManagement = () => {
     }
   }, []);
 
-  const fallbackSampleEmployees = [
-    {
-      id: 1,
-      firstName: "Rajesh",
-      lastName: "Kumar",
-      email: "rajesh.kumar@sterling.com",
-      designation: "Senior Engineer",
-      department: "Engineering",
-      role: "Engineering",
-      loginId: "rajesh.kumar",
-      status: "active",
-    },
-    {
-      id: 2,
-      firstName: "Priya",
-      lastName: "Sharma",
-      email: "priya.sharma@sterling.com",
-      designation: "Production Manager",
-      department: "Production",
-      role: "Production Supervisor",
-      loginId: "priya.sharma",
-      status: "active",
-    },
-    {
-      id: 3,
-      firstName: "Amit",
-      lastName: "Patel",
-      email: "amit.patel@sterling.com",
-      designation: "QC Inspector",
-      department: "QC",
-      role: "QC Inspector",
-      loginId: "amit.patel",
-      status: "active",
-    },
-    {
-      id: 4,
-      firstName: "Neha",
-      lastName: "Singh",
-      email: "neha.singh@sterling.com",
-      designation: "Inventory Manager",
-      department: "Inventory",
-      role: "Inventory Manager",
-      loginId: "neha.singh",
-      status: "active",
-    },
-  ];
+  const fetchDesignations = useCallback(async () => {
+    try {
+      const response = await axios.get("/admin/designations");
+      const designationsData = response.data.designations || response.data || [];
+      setDesignations(designationsData);
+    } catch (err) {
+      console.error("Failed to fetch designations:", err);
+    }
+  }, []);
+
+  const fetchRoles = useCallback(async () => {
+    try {
+      const response = await axios.get("/admin/roles");
+      const rolesData = response.data.roles || response.data || [];
+      setAvailableRoles(rolesData);
+    } catch (err) {
+      console.error("Failed to fetch roles:", err);
+    }
+  }, []);
+
+  const fallbackSampleEmployees = [];
 
   const fetchEmployees = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.get("/employees");
+      const response = await axios.get("/admin/employee-list");
       setEmployees(response.data || []);
     } catch (err) {
       console.error("API Error:", err);
-      setError("API unavailable. Using sample data.");
-      setEmployees(fallbackSampleEmployees);
+      setError("Failed to fetch employees. Please try again.");
+      setEmployees([]);
     } finally {
       setLoading(false);
     }
@@ -130,7 +100,9 @@ const EmployeeManagement = () => {
   useEffect(() => {
     fetchEmployees();
     fetchDepartments();
-  }, [fetchEmployees, fetchDepartments]);
+    fetchRoles();
+    fetchDesignations();
+  }, [fetchEmployees, fetchDepartments, fetchRoles, fetchDesignations]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -166,7 +138,8 @@ const EmployeeManagement = () => {
       }
 
       const autoLoginId =
-        formData.loginId || generateLoginId(formData.firstName, formData.lastName);
+        formData.loginId ||
+        generateLoginId(formData.firstName, formData.lastName);
       const autoPassword = formData.password || generatePassword();
 
       const data = {
@@ -183,14 +156,14 @@ const EmployeeManagement = () => {
       };
 
       if (editingEmployee) {
-        await axios.put(`/employees/${editingEmployee.id}`, data);
+        await axios.put(`/admin/employee-list/${editingEmployee.id}`, data);
       } else {
-        const response = await axios.post("/employees", data);
+        const response = await axios.post("/admin/employee-list", data);
         setSelectedCredentials({
           name: `${formData.firstName} ${formData.lastName}`,
           loginId: autoLoginId,
           password: autoPassword,
-          email: formData.email
+          email: formData.email,
         });
         setShowCredentialsDialog(true);
       }
@@ -235,7 +208,7 @@ const EmployeeManagement = () => {
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this employee?")) {
       try {
-        await axios.delete(`/employees/${id}`);
+        await axios.delete(`/admin/employee-list/${id}`);
         await fetchEmployees();
       } catch (err) {
         setError("Failed to delete employee");
@@ -254,12 +227,15 @@ const EmployeeManagement = () => {
 
   const sendRegistrationEmail = async () => {
     try {
-      await axios.post(`/employees/${registeringEmployee.id}/send-credentials`, {
-        email: registeringEmployee.email,
-        loginId: registeringEmployee.loginId,
-        password: registeringEmployee.password,
-        name: `${registeringEmployee.firstName} ${registeringEmployee.lastName}`
-      });
+      await axios.post(
+        `/admin/employee-list/${registeringEmployee.id}/send-credentials`,
+        {
+          email: registeringEmployee.email,
+          loginId: registeringEmployee.loginId,
+          password: registeringEmployee.password,
+          name: `${registeringEmployee.firstName} ${registeringEmployee.lastName}`,
+        }
+      );
       setError(null);
       setShowRegisterDialog(false);
       alert(`Registration email sent to ${registeringEmployee.email}`);
@@ -270,17 +246,20 @@ const EmployeeManagement = () => {
 
   const handleLogin = (employee) => {
     localStorage.setItem("token", "demo-token");
-    localStorage.setItem("demoUser", JSON.stringify({
-      id: `demo-${employee.loginId}`,
-      username: employee.loginId,
-      role: employee.role || "Employee",
-      name: `${employee.firstName} ${employee.lastName}`,
-      type: 'employee',
-      email: employee.email,
-      designation: employee.designation,
-      department: employee.department,
-      departmentId: employee.departmentId
-    }));
+    localStorage.setItem(
+      "demoUser",
+      JSON.stringify({
+        id: employee.id,
+        username: employee.loginId,
+        role: employee.role || "Employee",
+        name: `${employee.firstName} ${employee.lastName}`,
+        type: "employee",
+        email: employee.email,
+        designation: employee.designation,
+        department: employee.department,
+        departmentId: employee.departmentId,
+      })
+    );
     window.location.href = "/employee/dashboard";
   };
 
@@ -293,8 +272,8 @@ const EmployeeManagement = () => {
 
   const columns = [
     {
-      key: 'firstName',
-      label: 'Name',
+      key: "firstName",
+      label: "Name",
       sortable: true,
       render: (value, row) => (
         <span className="font-medium  dark:">
@@ -303,8 +282,8 @@ const EmployeeManagement = () => {
       ),
     },
     {
-      key: 'email',
-      label: 'Email',
+      key: "email",
+      label: "Email",
       sortable: true,
       render: (value) => (
         <span className="text-slate-600 dark:text-slate-400 text-sm">
@@ -313,18 +292,14 @@ const EmployeeManagement = () => {
       ),
     },
     {
-      key: 'designation',
-      label: 'Designation',
+      key: "designation",
+      label: "Designation",
       sortable: true,
-      render: (value) => (
-        <span className=" dark: text-sm">
-          {value}
-        </span>
-      ),
+      render: (value) => <span className=" dark: text-sm">{value}</span>,
     },
     {
-      key: 'department',
-      label: 'Department',
+      key: "department",
+      label: "Department",
       sortable: true,
       render: (value) => (
         <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
@@ -333,18 +308,18 @@ const EmployeeManagement = () => {
       ),
     },
     {
-      key: 'roleId',
-      label: 'Role',
+      key: "roleId",
+      label: "Role",
       sortable: true,
       render: (value) => (
         <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
-          {availableRoles.find(r => r.id === value)?.name || 'N/A'}
+          {availableRoles.find((r) => r.id === value)?.name || "N/A"}
         </span>
       ),
     },
     {
-      key: 'loginId',
-      label: 'Login ID',
+      key: "loginId",
+      label: "Login ID",
       sortable: true,
       render: (value) => (
         <span className="font-mono text-xs text-slate-600 dark:text-slate-400">
@@ -353,8 +328,8 @@ const EmployeeManagement = () => {
       ),
     },
     {
-      key: 'status',
-      label: 'Credentials',
+      key: "status",
+      label: "Credentials",
       sortable: false,
       render: (value, row) => (
         <button
@@ -368,8 +343,8 @@ const EmployeeManagement = () => {
       ),
     },
     {
-      key: 'loginId',
-      label: 'Quick Login',
+      key: "quickLogin",
+      label: "Quick Login",
       sortable: false,
       render: (value, row) => (
         <button
@@ -383,8 +358,8 @@ const EmployeeManagement = () => {
       ),
     },
     {
-      key: 'id',
-      label: 'Manage',
+      key: "id",
+      label: "Manage",
       sortable: false,
       render: (value, row) => (
         <div className="flex items-center text-xs gap-1">
@@ -412,9 +387,7 @@ const EmployeeManagement = () => {
       {/* Header */}
       <div className="flex items-end justify-between">
         <div>
-          <h1 className="text-xl font-bold  text-left">
-            Employee Management
-          </h1>
+          <h1 className="text-xl font-bold  text-left">Employee Management</h1>
           <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5 text-left">
             Create and manage employees with role-based access controls
           </p>
@@ -446,7 +419,9 @@ const EmployeeManagement = () => {
       {error && (
         <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700/50 rounded flex items-center text-xs gap-2">
           <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
-          <span className="text-sm text-red-700 dark:text-red-300">{error}</span>
+          <span className="text-sm text-red-700 dark:text-red-300">
+            {error}
+          </span>
         </div>
       )}
 
@@ -549,8 +524,8 @@ const EmployeeManagement = () => {
                     >
                       <option value="">Select Designation</option>
                       {designations.map((d) => (
-                        <option key={d} value={d}>
-                          {d}
+                        <option key={d.id} value={d.name}>
+                          {d.name}
                         </option>
                       ))}
                     </select>
@@ -564,11 +539,13 @@ const EmployeeManagement = () => {
                       value={formData.departmentId || ""}
                       onChange={(e) => {
                         const deptId = parseInt(e.target.value);
-                        const selectedDept = departments.find(d => d.id === deptId);
+                        const selectedDept = departments.find(
+                          (d) => d.id === deptId
+                        );
                         setFormData({
                           ...formData,
                           departmentId: deptId || null,
-                          department: selectedDept ? selectedDept.name : ""
+                          department: selectedDept ? selectedDept.name : "",
                         });
                       }}
                       required
@@ -594,7 +571,12 @@ const EmployeeManagement = () => {
                 <select
                   name="roleId"
                   value={formData.roleId || ""}
-                  onChange={(e) => setFormData({ ...formData, roleId: parseInt(e.target.value) })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      roleId: parseInt(e.target.value),
+                    })
+                  }
                   required
                   className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
@@ -682,14 +664,19 @@ const EmployeeManagement = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-slate-600 dark:text-slate-400">
-                Employee "{selectedCredentials.name}" has been created. Share these credentials:
+                Employee "{selectedCredentials.name}" has been created. Share
+                these credentials:
               </p>
 
               <div className="space-y-3 bg-slate-50 dark:bg-slate-800 p-3 rounded">
                 <div>
-                  <p className="text-xs text-slate-600 dark:text-slate-400">Email</p>
+                  <p className="text-xs text-slate-600 dark:text-slate-400">
+                    Email
+                  </p>
                   <div className="flex items-center justify-between mt-1">
-                    <p className="font-mono text-sm">{selectedCredentials.email}</p>
+                    <p className="font-mono text-sm">
+                      {selectedCredentials.email}
+                    </p>
                     <button
                       onClick={() => copyToClipboard(selectedCredentials.email)}
                       className="text-xs px-2 py-1 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 rounded hover:bg-blue-200"
@@ -699,11 +686,17 @@ const EmployeeManagement = () => {
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-600 dark:text-slate-400">Login ID</p>
+                  <p className="text-xs text-slate-600 dark:text-slate-400">
+                    Login ID
+                  </p>
                   <div className="flex items-center justify-between mt-1">
-                    <p className="font-mono text-sm">{selectedCredentials.loginId}</p>
+                    <p className="font-mono text-sm">
+                      {selectedCredentials.loginId}
+                    </p>
                     <button
-                      onClick={() => copyToClipboard(selectedCredentials.loginId)}
+                      onClick={() =>
+                        copyToClipboard(selectedCredentials.loginId)
+                      }
                       className="text-xs px-2 py-1 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 rounded hover:bg-blue-200"
                     >
                       Copy
@@ -711,11 +704,17 @@ const EmployeeManagement = () => {
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-600 dark:text-slate-400">Temporary Password</p>
+                  <p className="text-xs text-slate-600 dark:text-slate-400">
+                    Temporary Password
+                  </p>
                   <div className="flex items-center justify-between mt-1">
-                    <p className="font-mono text-sm">{selectedCredentials.password}</p>
+                    <p className="font-mono text-sm">
+                      {selectedCredentials.password}
+                    </p>
                     <button
-                      onClick={() => copyToClipboard(selectedCredentials.password)}
+                      onClick={() =>
+                        copyToClipboard(selectedCredentials.password)
+                      }
                       className="text-xs px-2 py-1 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 rounded hover:bg-blue-200"
                     >
                       Copy
@@ -752,19 +751,31 @@ const EmployeeManagement = () => {
             <CardContent className="space-y-4">
               <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-700/50">
                 <p className="text-sm text-blue-900 dark:text-blue-300">
-                  Send registration credentials to <strong>{registeringEmployee.firstName} {registeringEmployee.lastName}</strong>
+                  Send registration credentials to{" "}
+                  <strong>
+                    {registeringEmployee.firstName}{" "}
+                    {registeringEmployee.lastName}
+                  </strong>
                 </p>
               </div>
 
               <div className="space-y-2">
-                <p className="text-xs text-slate-600 dark:text-slate-400">Email Address</p>
-                <p className="text-sm font-medium text-slate-900 text-left dark:text-slate-100">{registeringEmployee.email}</p>
+                <p className="text-xs text-slate-600 dark:text-slate-400">
+                  Email Address
+                </p>
+                <p className="text-sm font-medium text-slate-900 text-left dark:text-slate-100">
+                  {registeringEmployee.email}
+                </p>
               </div>
 
               <div className="space-y-2">
-                <p className="text-xs text-slate-600 dark:text-slate-400">Login ID</p>
+                <p className="text-xs text-slate-600 dark:text-slate-400">
+                  Login ID
+                </p>
                 <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-800 p-2 rounded border border-slate-200 dark:border-slate-700">
-                  <p className="font-mono text-sm text-slate-900 dark:text-slate-100">{registeringEmployee.loginId}</p>
+                  <p className="font-mono text-sm text-slate-900 dark:text-slate-100">
+                    {registeringEmployee.loginId}
+                  </p>
                   <button
                     onClick={() => copyToClipboard(registeringEmployee.loginId)}
                     className="text-xs px-2 py-1 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 rounded hover:bg-blue-200"
@@ -775,11 +786,17 @@ const EmployeeManagement = () => {
               </div>
 
               <div className="space-y-2">
-                <p className="text-xs text-slate-600 dark:text-slate-400">Temporary Password</p>
+                <p className="text-xs text-slate-600 dark:text-slate-400">
+                  Temporary Password
+                </p>
                 <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-800 p-2 rounded border border-slate-200 dark:border-slate-700">
-                  <p className="font-mono text-sm text-slate-900 dark:text-slate-100">{registeringEmployee.password}</p>
+                  <p className="font-mono text-sm text-slate-900 dark:text-slate-100">
+                    {registeringEmployee.password}
+                  </p>
                   <button
-                    onClick={() => copyToClipboard(registeringEmployee.password)}
+                    onClick={() =>
+                      copyToClipboard(registeringEmployee.password)
+                    }
                     className="text-xs px-2 py-1 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 rounded hover:bg-blue-200"
                   >
                     Copy
@@ -820,7 +837,9 @@ const EmployeeManagement = () => {
             No employees found
           </h3>
           <p className="text-sm text-slate-600 dark:text-slate-400">
-            {searchTerm ? "Try adjusting your search filters" : "Create your first employee to get started"}
+            {searchTerm
+              ? "Try adjusting your search filters"
+              : "Create your first employee to get started"}
           </p>
         </div>
       )}

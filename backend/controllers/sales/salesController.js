@@ -404,7 +404,7 @@ exports.sendToInventory = async (req, res) => {
             projectId: projectId,
             salesOrderId: salesOrderId,
             code: `RC-${projectId}-${Date.now()}`,
-            title: `Inventory Tasks for ${projectName}`,
+            title: projectName,
             status: 'planning',
             priority: 'medium',
             createdBy: req.user?.id

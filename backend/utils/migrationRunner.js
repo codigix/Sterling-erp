@@ -1108,6 +1108,107 @@ async function runMigrations() {
       }
     }
 
+    // Migration 27: Fix production_plan_stages foreign key to reference employees table
+    try {
+      await connection.execute(`
+        ALTER TABLE production_plan_stages 
+        DROP FOREIGN KEY production_plan_stages_ibfk_2
+      `);
+      console.log('✅ Old foreign key constraint removed from production_plan_stages');
+    } catch (err) {
+      console.log('⚠️  Could not drop foreign key (may not exist):', err.code);
+    }
+
+    try {
+      await connection.execute(`
+        ALTER TABLE production_plan_stages 
+        ADD CONSTRAINT production_plan_stages_ibfk_2 
+        FOREIGN KEY (assigned_employee_id) REFERENCES employees(id) ON DELETE SET NULL
+      `);
+      console.log('✅ New foreign key constraint added - references employees(id)');
+    } catch (err) {
+      console.log('⚠️  Could not add foreign key constraint:', err.code);
+    }
+
+    // Migration 28: Add manufacturing_stage_id to employee_tasks table
+    try {
+      const [columns] = await connection.execute(`
+        SELECT COLUMN_NAME 
+        FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_NAME = 'employee_tasks' 
+        AND TABLE_SCHEMA = DATABASE()
+      `);
+      
+      const columnNames = columns.map(c => c.COLUMN_NAME);
+      
+      // Drop old manufacturing_stage_id if it exists (wrong column)
+      if (columnNames.includes('manufacturing_stage_id')) {
+        console.log('Dropping incorrect manufacturing_stage_id column...');
+        try {
+          await connection.execute(`ALTER TABLE employee_tasks DROP FOREIGN KEY employee_tasks_ibfk_manufacturing_stage`);
+        } catch (err) {
+          console.log('⚠️  Foreign key not found, continuing...');
+        }
+        try {
+          await connection.execute(`ALTER TABLE employee_tasks DROP COLUMN manufacturing_stage_id`);
+          console.log('✓ Dropped manufacturing_stage_id column');
+        } catch (err) {
+          console.log('⚠️  Could not drop manufacturing_stage_id');
+        }
+      }
+      
+      // Add correct production_plan_stage_id column
+      if (!columnNames.includes('production_plan_stage_id')) {
+        console.log('Adding production_plan_stage_id column to employee_tasks...');
+        await connection.execute(`
+          ALTER TABLE employee_tasks 
+          ADD COLUMN production_plan_stage_id INT NULL AFTER type
+        `);
+        console.log('✓ production_plan_stage_id column added');
+        
+        try {
+          await connection.execute(`
+            ALTER TABLE employee_tasks 
+            ADD FOREIGN KEY (production_plan_stage_id) REFERENCES production_plan_stages(id) ON DELETE SET NULL
+          `);
+          console.log('✓ Foreign key constraint added to production_plan_stage_id');
+        } catch (fkErr) {
+          if (fkErr.code === 'ER_DUP_KEYNAME') {
+            console.log('⚠️  Foreign key already exists');
+          } else {
+            throw fkErr;
+          }
+        }
+      } else {
+        console.log('⚠️  production_plan_stage_id column already exists');
+      }
+    } catch (err) {
+      console.error('Error adding manufacturing_stage_id column:', err.message);
+      throw err;
+    }
+
+    console.log('\n--- Running backfill migrations ---');
+    try {
+      const backfillMigration = require('../migrations/031_backfill_manufacturing_stage_id.js');
+      await backfillMigration();
+    } catch (err) {
+      console.error('Backfill migration 031 failed:', err.message);
+    }
+
+    try {
+      const backfillMigration2 = require('../migrations/032_backfill_production_plan_stage_id.js');
+      await backfillMigration2();
+    } catch (err) {
+      console.error('Backfill migration 032 failed:', err.message);
+    }
+
+    try {
+      const syncMigration = require('../migrations/033_sync_existing_task_statuses.js');
+      await syncMigration();
+    } catch (err) {
+      console.error('Sync migration 033 failed:', err.message);
+    }
+
     console.log('\n✅ All migrations completed successfully!');
   } catch (error) {
     console.error('❌ Migration failed:', error.message);

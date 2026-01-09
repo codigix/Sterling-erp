@@ -25,22 +25,11 @@ const ProductionPlansPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [deleting, setDeleting] = useState(null);
-  const [openPhaseDropdown, setOpenPhaseDropdown] = useState(null);
 
   useEffect(() => {
     fetchPlans();
     fetchReadyForProduction();
   }, []);
-
-  useEffect(() => {
-    const handleClickOutside = () => {
-      setOpenPhaseDropdown(null);
-    };
-    if (openPhaseDropdown) {
-      document.addEventListener('click', handleClickOutside);
-      return () => document.removeEventListener('click', handleClickOutside);
-    }
-  }, [openPhaseDropdown]);
 
   const fetchPlans = async () => {
     try {
@@ -298,9 +287,6 @@ const ProductionPlansPage = () => {
                     Timeline
                   </th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-slate-900 dark:text-white">
-                    Production Phases
-                  </th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-900 dark:text-white">
                     Status
                   </th>
                   <th className="px-6 py-4 text-center text-sm font-semibold text-slate-900 dark:text-white">
@@ -323,39 +309,6 @@ const ProductionPlansPage = () => {
                     <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
                       {plan.planned_start_date ? new Date(plan.planned_start_date).toLocaleDateString() : "-"} to{" "}
                       {plan.planned_end_date ? new Date(plan.planned_end_date).toLocaleDateString() : "-"}
-                    </td>
-                    <td className="px-6 py-4 text-sm relative">
-                      {plan.phases && plan.phases.length > 0 ? (
-                        <div className="relative">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setOpenPhaseDropdown(openPhaseDropdown === plan.id ? null : plan.id);
-                            }}
-                            className="flex items-center gap-2 px-3 py-2 bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-200 dark:hover:bg-blue-900/50 text-blue-800 dark:text-blue-300 rounded-lg transition-colors"
-                          >
-                            <span className="text-xs font-medium">{plan.phases.length} phases</span>
-                            <ChevronDown size={16} className={`transform transition-transform ${openPhaseDropdown === plan.id ? 'rotate-180' : ''}`} />
-                          </button>
-                          
-                          {openPhaseDropdown === plan.id && (
-                            <div onClick={(e) => e.stopPropagation()} className="absolute top-full left-0 mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg z-10 min-w-max">
-                              {plan.phases.map((phase, idx) => (
-                                <div key={idx} className="px-4 py-2 border-b border-slate-100 dark:border-slate-700 last:border-0 flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                                  <span className="inline-block px-2 py-1 text-xs font-medium rounded bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
-                                    {phase.stage_name}
-                                  </span>
-                                  <span className="text-xs text-slate-500 dark:text-slate-400">
-                                    ({phase.stage_type || 'production'})
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-slate-400 dark:text-slate-600 italic">No phases defined</span>
-                      )}
                     </td>
                     <td className="px-6 py-4 text-sm">
                       <span

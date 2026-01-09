@@ -31,6 +31,7 @@ import AuditLogs from "./pages/admin/AuditLogs";
 import SystemSettings from "./pages/admin/SystemSettings";
 import RoleManagement from "./pages/admin/RoleManagement";
 import EmployeeManagement from "./pages/admin/EmployeeManagement";
+import TaskAssignmentPage from "./pages/admin/TaskAssignmentPage";
 
 // Sales Pages
 import SalesDashboard from "./pages/sales/SalesDashboard";
@@ -141,6 +142,7 @@ function App() {
               <Route path="resources" element={<ResourcesPage />} />
               <Route path="roles" element={<RoleManagement />} />
               <Route path="employee-management" element={<EmployeeManagement />} />
+              <Route path="task-assignment" element={<TaskAssignmentPage />} />
               <Route path="analytics-reports" element={<AnalyticsReportsPage />} />
               <Route path="reports" element={<ReportsAnalytics />} />
               <Route path="audit-logs" element={<AuditLogs />} />

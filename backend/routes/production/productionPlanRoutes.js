@@ -9,8 +9,12 @@ router.use(authMiddleware);
 router.post('/', productionPlanController.createPlan);
 router.get('/', productionPlanController.getAllPlans);
 router.get('/stats', productionPlanController.getPlansStats);
+router.post('/:id/stages', productionPlanController.createPlanStages);
+router.put('/:id/stages/:stageId', productionPlanController.updatePlanStage);
+router.get('/:id/with-stages', productionPlanController.getPlanWithStages);
 router.get('/:id', productionPlanController.getPlan);
 router.put('/:id', productionPlanController.updatePlan);
 router.patch('/:id/status', productionPlanController.updatePlanStatus);
+router.delete('/:id', productionPlanController.deletePlan);
 
 module.exports = router;

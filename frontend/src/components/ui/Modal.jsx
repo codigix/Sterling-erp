@@ -44,11 +44,11 @@ const Modal = ({
 
   return (
     <div 
-      className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 transition-all duration-300" 
+      className="fixed inset-0 bg-black/5 backdrop-blur-md flex items-center justify-center p-4 z-50 transition-all duration-300" 
       onClick={handleOverlayClick}
     >
       <div 
-        className={`rounded-2xl shadow-2xl w-full ${sizes[size]} max-h-[90vh] overflow-hidden border border-white/10 bg-white animate-in fade-in scale-95 duration-300`}
+        className={`rounded-2xl shadow-2xl w-full ${sizes[size]} max-h-[90vh] overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 animate-in fade-in scale-95 duration-300`}
       >
         {title && (
           <div className="flex items-center justify-between p-3 border-b border-slate-700/50">

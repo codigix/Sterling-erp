@@ -1,25 +1,29 @@
 import React, { useState, useEffect } from "react";
 import axios from "../../utils/api";
 import { useAuth } from "../../context/AuthContext";
-import Card, { CardContent, CardTitle, CardHeader } from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
-import Button from "../../components/ui/Button";
-import { CheckSquare, Clock, AlertCircle, Trash2, Edit2, Filter, Plus } from "lucide-react";
+import TaskDetailModal from "../../components/modals/TaskDetailModal";
+import { CheckSquare, Clock, AlertCircle, Filter, RotateCw, CheckCircle2 } from "lucide-react";
 
 const EmployeeTasks = () => {
   const { user } = useAuth();
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
   const [filterStatus, setFilterStatus] = useState("all");
+  const [updatingTaskId, setUpdatingTaskId] = useState(null);
+  const [selectedTask, setSelectedTask] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
 
   useEffect(() => {
     const fetchTasks = async () => {
       try {
         setLoading(true);
         if (user?.id) {
-          const response = await axios.get(`/employee/portal/tasks/${user.id}`);
-          setTasks(response.data || []);
+          const tasksResponse = await axios.get(`/employee/portal/tasks/${user.id}`);
+          setTasks(tasksResponse.data || []);
         }
       } catch (err) {
         setError('Failed to load tasks');
@@ -34,7 +38,7 @@ const EmployeeTasks = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case "completed": return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
+      case "completed": return "bg-green-200 text-green-900 dark:bg-green-800 dark:text-green-100";
       case "in_progress": return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
       case "pending": return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
       default: return "bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-200";
@@ -65,6 +69,44 @@ const EmployeeTasks = () => {
     pending: tasks.filter(t => t.status === "pending").length
   };
 
+  const handleUpdateTaskStatus = async (taskId, newStatus) => {
+    try {
+      setUpdatingTaskId(taskId);
+      await axios.put(`/employee/portal/tasks/${taskId}/status`, {
+        status: newStatus
+      });
+      
+      const updatedTasks = tasks.map(t => 
+        t.id === taskId ? { ...t, status: newStatus } : t
+      );
+      setTasks(updatedTasks);
+
+      if (selectedTask && selectedTask.id === taskId) {
+        setSelectedTask({ ...selectedTask, status: newStatus });
+      }
+
+      setSuccessMessage(`Task marked as ${newStatus.replace('_', ' ')}`);
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err) {
+      console.error('Update task error:', err);
+      setError('Failed to update task status');
+    } finally {
+      setUpdatingTaskId(null);
+    }
+  };
+
+  const handleOpenTaskDetail = (task) => {
+    setSelectedTask(task);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedTask(null);
+  };
+
+
+
   if (loading) {
     return (
       <div className="flex items-center text-xs justify-center py-12">
@@ -76,167 +118,121 @@ const EmployeeTasks = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center text-xs justify-between">
+    <div className="w-full min-h-screen bg-white space-y-6">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold  dark: mb-2">
+          <h1 className="text-3xl font-bold text-left dark:text-white mb-2">
             My Tasks
           </h1>
           <p className="text-slate-600 dark:text-slate-400">
-            Manage and track your assigned tasks
+            Manage and track your project and assigned tasks
           </p>
         </div>
-        <Button className="flex items-center text-xs gap-2">
-          <Plus className="w-4 h-4" />
-          New Task
-        </Button>
       </div>
 
-      {error && <div className="bg-red-100 text-red-800 p-4 rounded-lg">{error}</div>}
+      {error && <div className="bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 p-4 rounded-xl border border-red-200 dark:border-red-900/50">{error}</div>}
+      {successMessage && <div className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 p-4 rounded-xl border border-green-200 dark:border-green-900/50 flex items-center gap-2"><CheckCircle2 className="w-5 h-5" />{successMessage}</div>}
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="border-l-4 border-purple-500">
-          <CardContent className="p-6">
-            <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">Total Tasks</p>
-            <p className="text-3xl font-bold  dark:">{stats.total}</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">All assignments</p>
-          </CardContent>
-        </Card>
+        <div className="bg-white border-2 border-purple-100 dark:border-purple-900/30 rounded-xl p-4 hover:shadow-lg transition-all hover:border-purple-300 dark:hover:border-purple-700">
+          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-2">Total Tasks</p>
+          <p className="text-3xl font-bold text-slate-900 dark:text-white">{stats.total}</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">All assignments</p>
+        </div>
 
-        <Card className="border-l-4 border-green-500">
-          <CardContent className="p-6">
-            <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">Completed</p>
-            <p className="text-3xl font-bold  dark:">{stats.completed}</p>
-            <p className="text-xs text-green-600 dark:text-green-400 mt-2">{Math.round((stats.completed/stats.total)*100)}% done</p>
-          </CardContent>
-        </Card>
+        <div className="bg-white border-2 border-green-100 dark:border-green-900/30 rounded-xl p-4 hover:shadow-lg transition-all hover:border-green-300 dark:hover:border-green-700">
+          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-2">Completed</p>
+          <p className="text-3xl font-bold text-slate-900 dark:text-white">{stats.completed}</p>
+          <p className="text-xs text-green-600 dark:text-green-400 mt-2">{stats.total > 0 ? Math.round((stats.completed/stats.total)*100) : 0}% done</p>
+        </div>
 
-        <Card className="border-l-4 border-blue-500">
-          <CardContent className="p-6">
-            <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">In Progress</p>
-            <p className="text-3xl font-bold  dark:">{stats.inProgress}</p>
-            <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">Active work</p>
-          </CardContent>
-        </Card>
+        <div className="bg-white border-2 border-blue-100 dark:border-blue-900/30 rounded-xl p-4 hover:shadow-lg transition-all hover:border-blue-300 dark:hover:border-blue-700">
+          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-2">In Progress</p>
+          <p className="text-3xl font-bold text-slate-900 dark:text-white">{stats.inProgress}</p>
+          <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">Active work</p>
+        </div>
 
-        <Card className="border-l-4 border-yellow-500">
-          <CardContent className="p-6">
-            <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">Pending</p>
-            <p className="text-3xl font-bold  dark:">{stats.pending}</p>
-            <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-2">Not started</p>
-          </CardContent>
-        </Card>
+        <div className="bg-white border-2 border-yellow-100 dark:border-yellow-900/30 rounded-xl p-4 hover:shadow-lg transition-all hover:border-yellow-300 dark:hover:border-yellow-700">
+          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-2">Pending</p>
+          <p className="text-3xl font-bold text-slate-900 dark:text-white">{stats.pending}</p>
+          <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-2">Not started</p>
+        </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center text-xs justify-between">
-            <CardTitle className="flex items-center text-xs space-x-2">
-              <CheckSquare className="w-5 h-5" />
-              <span>Task List</span>
-            </CardTitle>
-            <div className="flex items-center text-xs gap-2">
-              <Filter className="w-4 h-4 text-slate-400" />
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="px-3 py-1 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-sm  dark:"
-              >
-                <option value="all">All Tasks</option>
-                <option value="pending">Pending</option>
-                <option value="in_progress">In Progress</option>
-                <option value="completed">Completed</option>
-              </select>
-            </div>
+      <div className="bg-white border-2 border-slate-100 dark:border-slate-700 rounded-xl p-6 hover:shadow-lg transition-all">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <CheckSquare className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Task List</h2>
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {filteredTasks.length === 0 ? (
-              <div className="text-center py-8 text-slate-600 dark:text-slate-400">
-                <p>No tasks found</p>
-              </div>
-            ) : (
-              filteredTasks.map((task) => (
-                <div key={task.id} className="flex items-start justify-between p-4 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 transition group">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center text-xs gap-2 mb-2">
-                      <h4 className="font-semibold  dark:">{task.title}</h4>
-                      <Badge className={getStatusColor(task.status)}>
-                        {task.status.replace("_", " ")}
-                      </Badge>
-                      <Badge className={getPriorityColor(task.priority)} title={task.priority}>
-                        {getPriorityIcon(task.priority)} {task.priority}
-                      </Badge>
-                    </div>
-                    
-                    <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">{task.description}</p>
-                    
-                    <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded mb-3 border border-slate-200 dark:border-slate-700">
-                      <div className="grid grid-cols-2 gap-3 text-xs">
-                        {task.rootCard?.id && (
-                          <>
-                            <div>
-                              <span className="text-slate-500 dark:text-slate-400">Root Card:</span>
-                              <p className="font-medium  dark:">{task.rootCard.title}</p>
-                            </div>
-                            <div>
-                              <span className="text-slate-500 dark:text-slate-400">Stage:</span>
-                              <p className="font-medium  dark:">{task.stageName || 'N/A'}</p>
-                            </div>
-                          </>
-                        )}
-                        {task.project?.id && (
-                          <>
-                            <div>
-                              <span className="text-slate-500 dark:text-slate-400">Project:</span>
-                              <p className="font-medium  dark:">{task.project.name} ({task.project.code})</p>
-                            </div>
-                          </>
-                        )}
-                        {task.salesOrder?.id && (
-                          <>
-                            <div>
-                              <span className="text-slate-500 dark:text-slate-400">PO Number:</span>
-                              <p className="font-medium  dark:">{task.salesOrder.poNumber}</p>
-                            </div>
-                            <div>
-                              <span className="text-slate-500 dark:text-slate-400">Customer:</span>
-                              <p className="font-medium  dark:">{task.salesOrder.customer}</p>
-                            </div>
-                            <div>
-                              <span className="text-slate-500 dark:text-slate-400">Order Amount:</span>
-                              <p className="font-medium  dark:">₹{parseInt(task.salesOrder.total).toLocaleString('en-IN')}</p>
-                            </div>
-                            <div>
-                              <span className="text-slate-500 dark:text-slate-400">Due Date:</span>
-                              <p className="font-medium  dark:">{new Date(task.salesOrder.dueDate).toLocaleDateString('en-IN')}</p>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <div className="flex flex-wrap gap-2 text-xs text-slate-500 dark:text-slate-400">
-                      <span>📋 {task.stageName || 'Project'}</span>
-                      <span>👤 {task.assignedBy}</span>
-                      <span>📅 Created: {new Date(task.createdAt).toLocaleDateString('en-IN')}</span>
-                    </div>
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-slate-400" />
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="px-3 py-1 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-sm text-slate-900 dark:text-white"
+            >
+              <option value="all">All Tasks</option>
+              <option value="pending">Pending</option>
+              <option value="in_progress">In Progress</option>
+              <option value="completed">Completed</option>
+            </select>
+          </div>
+        </div>
+        
+        <div className="space-y-3">
+          {filteredTasks.length === 0 ? (
+            <div className="text-center py-8 text-slate-600 dark:text-slate-400">
+              <p>No tasks found</p>
+            </div>
+          ) : (
+            filteredTasks.map((task) => (
+              <div
+                key={task.id}
+                className="flex items-start p-4 border border-slate-200 dark:border-slate-700 rounded-lg transition hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer"
+              >
+                <div
+                  onClick={() => handleOpenTaskDetail(task)}
+                  className="flex-1 min-w-0"
+                >
+                  <div className="flex items-center gap-2 mb-2 flex-wrap">
+                    <h4 className="font-semibold text-slate-900 dark:text-white">{task.title}</h4>
+                    <Badge className={getStatusColor(task.status)}>
+                      {task.status === 'completed' ? (
+                        <>
+                          <CheckCircle2 className="w-4 h-4" /> COMPLETED
+                        </>
+                      ) : (
+                        task.status.replace("_", " ")
+                      )}
+                    </Badge>
+                    <Badge className={getPriorityColor(task.priority)} title={task.priority}>
+                      {getPriorityIcon(task.priority)} {task.priority}
+                    </Badge>
                   </div>
-                  <div className="flex gap-2 ml-4 opacity-0 group-hover:opacity-100 transition">
-                    <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">
-                      <Edit2 className="w-4 h-4" />
-                    </Button>
-                    <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                  
+                  <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">{task.description}</p>
+                  
+                  <div className="flex flex-wrap gap-3 text-xs text-slate-500 dark:text-slate-400">
+                    <span>📅 Created: {new Date(task.created_at).toLocaleDateString('en-IN')}</span>
+                    {task.project_name && (
+                      <span className="text-blue-600 dark:text-blue-400 font-medium">📦 {task.project_name}</span>
+                    )}
                   </div>
                 </div>
-              ))
-            )}
-          </div>
-        </CardContent>
-      </Card>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      <TaskDetailModal
+        task={selectedTask}
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        onTaskComplete={handleUpdateTaskStatus}
+        isUpdating={updatingTaskId === selectedTask?.id}
+      />
     </div>
   );
 };
