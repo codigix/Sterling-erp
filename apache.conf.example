@@ -1,0 +1,104 @@
+# Apache configuration for Sterling ERP
+# Location: /etc/apache2/sites-available/sterling-erp.conf
+
+# Enable required modules (run before enabling site):
+# a2enmod proxy
+# a2enmod proxy_http
+# a2enmod rewrite
+# a2enmod ssl
+# a2enmod headers
+
+# HTTP to HTTPS redirect
+<VirtualHost *:80>
+    ServerName your_domain.com
+    ServerAlias www.your_domain.com
+    
+    RewriteEngine On
+    RewriteCond %{HTTPS} off
+    RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+</VirtualHost>
+
+# HTTPS VirtualHost
+<VirtualHost *:443>
+    ServerName your_domain.com
+    ServerAlias www.your_domain.com
+    ServerAdmin admin@your_domain.com
+
+    # SSL Configuration
+    SSLEngine on
+    SSLCertificateFile /etc/letsencrypt/live/your_domain.com/fullchain.pem
+    SSLCertificateKeyFile /etc/letsencrypt/live/your_domain.com/privkey.pem
+    SSLCertificateChainFile /etc/letsencrypt/live/your_domain.com/chain.pem
+
+    # SSL Protocol Configuration
+    SSLProtocol -all +TLSv1.2 +TLSv1.3
+    SSLCipherSuite HIGH:!aNULL:!MD5
+    SSLHonorCipherOrder on
+    SSLCompression off
+    SSLSession CacheTimeout 300
+
+    # Security Headers
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "no-referrer-when-downgrade"
+
+    # Logging
+    ErrorLog ${APACHE_LOG_DIR}/sterling-error.log
+    CustomLog ${APACHE_LOG_DIR}/sterling-access.log combined
+
+    # Enable Rewrite Engine
+    RewriteEngine On
+    RewriteBase /
+
+    # API Proxy Configuration
+    ProxyPreserveHost On
+    ProxyPass /api http://localhost:5001/api
+    ProxyPassReverse /api http://localhost:5001/api
+    <Location /api>
+        Order allow,deny
+        Allow from all
+    </Location>
+
+    # Frontend Proxy Configuration
+    ProxyPass / http://localhost:3000/
+    ProxyPassReverse / http://localhost:3000/
+    
+    # Proxy settings
+    <Proxy *>
+        Order deny,allow
+        Allow from all
+    </Proxy>
+
+    # Cache configuration for static files
+    <FilesMatch "\.(jpg|jpeg|png|gif|ico|css|js|svg|woff|woff2|ttf|eot)$">
+        Header set Cache-Control "max-age=31536000, public"
+    </FilesMatch>
+
+    # Deny access to sensitive files
+    <Files ~ "^\.|~$">
+        Require all denied
+    </Files>
+
+    <FilesMatch "\.php$">
+        Require all denied
+    </FilesMatch>
+
+    # Directory settings
+    <Directory /path/to/sterling-erp/backend/uploads>
+        Require all granted
+        Header set Cache-Control "max-age=2592000, public"
+    </Directory>
+
+    # Disable directory listing
+    <Directory /path/to/sterling-erp/backend>
+        Options -Indexes
+    </Directory>
+
+    DocumentRoot /path/to/sterling-erp
+</VirtualHost>
+
+# Enable HSTS preload (after SSL is working)
+# Add to apache2.conf or virtual host:
+# Header set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"

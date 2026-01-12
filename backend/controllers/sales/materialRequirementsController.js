@@ -20,6 +20,14 @@ class MaterialRequirementsController {
       const data = req.body;
       const { assignedTo } = req.body;
 
+      console.log('[MaterialRequirements] Received data:');
+      console.log('  materials type:', typeof data.materials);
+      console.log('  materials value:', data.materials);
+      if (data.materials) {
+        console.log('  is array?', Array.isArray(data.materials));
+        console.log('  length:', data.materials.length);
+      }
+
       const validation = validateMaterialRequirements(data);
       if (!validation.isValid) {
         console.warn('Material Requirements validation warnings:', validation.errors);

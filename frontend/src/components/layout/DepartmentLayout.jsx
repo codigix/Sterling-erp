@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import NotificationBell from "../common/NotificationBell";
 import {
   Menu,
-  Bell,
   Search,
   User,
   LogOut,
@@ -132,15 +132,7 @@ const DepartmentLayout = () => {
           {/* Right side */}
           <div className="flex items-center text-xs space-x-4">
             {/* Notifications */}
-            <Link
-              to="/notifications"
-              className="relative p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-            >
-              <Bell size={20} />
-              <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center text-xs justify-center">
-                2
-              </span>
-            </Link>
+            <NotificationBell />
 
             {/* User Menu */}
             <div className="relative">
@@ -378,6 +370,19 @@ const DepartmentLayout = () => {
                     >
                       <Activity size={18} className="flex-shrink-0" />
                       {!sidebarCollapsed && <span className="ml-3">Task Tracking</span>}
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      to="/department/production/outsource-tasks"
+                      className={`flex items-center text-xs px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                        isActive("/department/production/outsource-tasks")
+                          ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"
+                          : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+                      }`}
+                    >
+                      <Package size={18} className="flex-shrink-0" />
+                      {!sidebarCollapsed && <span className="ml-3">Outsource Tasks</span>}
                     </Link>
                   </li>
                 </ul>

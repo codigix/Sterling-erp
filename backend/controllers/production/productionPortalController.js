@@ -380,3 +380,152 @@ exports.updateManufacturingStage = async (req, res) => {
     res.status(500).json({ message: 'Failed to update manufacturing stage' });
   }
 };
+
+exports.getOutsourceTasks = async (req, res) => {
+  try {
+    const pool = require('../../config/database');
+    
+    console.log('[ProductionPortalController.getOutsourceTasks] Fetching outsource tasks for production department');
+    
+    const [outsourceTasks] = await pool.execute(`
+      SELECT 
+        pps.id as stage_id,
+        pps.stage_name,
+        pps.stage_type,
+        COALESCE(ot.status, pps.status) as status,
+        pps.planned_start_date,
+        pps.planned_end_date,
+        pps.notes,
+        pps.created_at,
+        pps.updated_at,
+        pp.id as plan_id,
+        pp.plan_name,
+        rc.id as root_card_id,
+        rc.title as project_name,
+        p.code as project_code,
+        ot.id as outsourcing_task_id
+      FROM production_plan_stages pps
+      LEFT JOIN production_plans pp ON pps.production_plan_id = pp.id
+      LEFT JOIN root_cards rc ON pp.root_card_id = rc.id
+      LEFT JOIN projects p ON rc.project_id = p.id
+      LEFT JOIN outsourcing_tasks ot ON pps.id = ot.production_plan_stage_id
+      WHERE pps.stage_type = 'outsource'
+      ORDER BY pps.created_at DESC
+    `);
+    
+    console.log(`[ProductionPortalController.getOutsourceTasks] Found ${outsourceTasks.length} outsource tasks`);
+    
+    res.json(outsourceTasks);
+  } catch (error) {
+    console.error('Get outsource tasks error:', error);
+    res.status(500).json({ message: 'Failed to fetch outsource tasks', error: error.message });
+  }
+};
+
+exports.updateOutsourceTaskStatus = async (req, res) => {
+  try {
+    const { stageId } = req.params;
+    const { status, notes } = req.body;
+    const pool = require('../../config/database');
+    
+    if (!['pending', 'in_progress', 'completed', 'on_hold', 'cancelled'].includes(status)) {
+      return res.status(400).json({ message: 'Invalid status' });
+    }
+    
+    console.log(`[ProductionPortalController.updateOutsourceTaskStatus] Updating stage ${stageId} to status ${status}`);
+    
+    // Update the stage status
+    await pool.execute(
+      `UPDATE production_plan_stages SET status = ?, notes = ? WHERE id = ?`,
+      [status, notes || null, stageId]
+    );
+    
+    console.log(`[ProductionPortalController.updateOutsourceTaskStatus] ✓ Stage ${stageId} updated to ${status}`);
+    
+    // If completed, unlock the next stage
+    if (status === 'completed') {
+      const [nextStages] = await pool.execute(
+        `SELECT id, stage_name, stage_type, assigned_employee_id, production_plan_id FROM production_plan_stages WHERE blocked_by_stage_id = ? LIMIT 1`,
+        [stageId]
+      );
+      
+      if (nextStages.length > 0) {
+        const nextStageId = nextStages[0].id;
+        const nextStageName = nextStages[0].stage_name;
+        const nextStageType = nextStages[0].stage_type;
+        const nextStageEmployeeId = nextStages[0].assigned_employee_id;
+        const planId = nextStages[0].production_plan_id;
+        
+        console.log(`[ProductionPortalController.updateOutsourceTaskStatus] Stage completion detected. Next stage: ${nextStageId}, Type: ${nextStageType}`);
+        
+        // Unlock the next stage
+        await pool.execute(
+          `UPDATE production_plan_stages SET is_blocked = FALSE WHERE id = ?`,
+          [nextStageId]
+        );
+        console.log(`[ProductionPortalController.updateOutsourceTaskStatus] ✓ Stage ${nextStageId} unlocked`);
+        
+        // Create task for the unlocked stage
+        if (nextStageType === 'outsource') {
+          // Outsource stage - notify Production Department
+          try {
+            const AlertsNotification = require('../../models/AlertsNotification');
+            
+            // Get all employees in Production Department
+            const [deptMembers] = await pool.execute(`
+              SELECT DISTINCT e.id 
+              FROM employees e
+              WHERE e.department = 'Production' OR e.department_name = 'Production'
+              LIMIT 20
+            `);
+            
+            // Send notification to each department member
+            for (const member of deptMembers) {
+              try {
+                await AlertsNotification.create({
+                  userId: member.id,
+                  alertType: 'outsource_task_created',
+                  message: `Outsource task "${nextStageName}" is now ready for production. Previous stage completed!`,
+                  relatedTable: 'production_plan_stages',
+                  relatedId: nextStageId,
+                  priority: 'high'
+                });
+                console.log(`[ProductionPortalController.updateOutsourceTaskStatus] ✓ Notification sent to employee ${member.id}`);
+              } catch (notifErr) {
+                console.warn(`[ProductionPortalController.updateOutsourceTaskStatus] Warning - could not send notification:`, notifErr.message);
+              }
+            }
+          } catch (outsourceError) {
+            console.error(`[ProductionPortalController.updateOutsourceTaskStatus] Error handling outsource stage:`, outsourceError.message);
+          }
+        } else if (nextStageEmployeeId) {
+          // In-house stage - create task for employee
+          try {
+            const EmployeeTask = require('../../models/EmployeeTask');
+            const newTaskId = await EmployeeTask.createAssignedTask(nextStageEmployeeId, {
+              title: `Production Stage: ${nextStageName}`,
+              description: `Assigned to production plan stage`,
+              type: 'production_stage',
+              priority: 'medium',
+              dueDate: null,
+              notes: `Production Plan ID: ${planId}`,
+              productionPlanStageId: nextStageId
+            });
+            console.log(`[ProductionPortalController.updateOutsourceTaskStatus] ✓ Task ${newTaskId} created for employee ${nextStageEmployeeId}`);
+          } catch (createTaskError) {
+            console.error(`[ProductionPortalController.updateOutsourceTaskStatus] Error creating task:`, createTaskError.message);
+          }
+        }
+      }
+    }
+    
+    res.json({ 
+      message: 'Outsource task status updated successfully',
+      stageId,
+      status
+    });
+  } catch (error) {
+    console.error('[ProductionPortalController.updateOutsourceTaskStatus] Error:', error);
+    res.status(500).json({ message: 'Failed to update outsource task status', error: error.message });
+  }
+};

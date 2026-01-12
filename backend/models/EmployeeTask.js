@@ -161,7 +161,56 @@ class EmployeeTask {
         data.notes || null
       ]
     );
-    return result.insertId;
+
+    const taskId = result.insertId;
+    
+    if (data.productionPlanStageId) {
+      try {
+        const [stageRows] = await pool.execute(
+          'SELECT is_blocked FROM production_plan_stages WHERE id = ?',
+          [data.productionPlanStageId]
+        );
+        
+        const isStageBlocked = stageRows.length > 0 && stageRows[0].is_blocked;
+        
+        if (!isStageBlocked) {
+          try {
+            const [existingNotif] = await pool.execute(
+              `SELECT id FROM alerts_notifications 
+               WHERE user_id = ? AND alert_type = 'task_assigned' AND related_id = ? AND is_read = FALSE
+               LIMIT 1`,
+              [employeeId, taskId]
+            );
+            
+            if (existingNotif.length > 0) {
+              console.log(`[EmployeeTask] ℹ️ Notification already exists for this task assignment (${taskId})`);
+            } else {
+              await pool.execute(
+                `INSERT INTO alerts_notifications (user_id, alert_type, message, related_table, related_id, priority)
+                 VALUES (?, ?, ?, ?, ?, ?)`,
+                [
+                  employeeId,
+                  'task_assigned',
+                  `You have been assigned a new task: ${data.title}`,
+                  'employee_tasks',
+                  taskId,
+                  'high'
+                ]
+              );
+              console.log(`[EmployeeTask] ✓ Notification created for employee ${employeeId} (task assignment)`);
+            }
+          } catch (createError) {
+            console.error(`[EmployeeTask] Error creating task_assigned notification:`, createError.message);
+          }
+        } else {
+          console.log(`[EmployeeTask] ℹ️ Task created for employee ${employeeId} but stage is blocked, no notification sent`);
+        }
+      } catch (notifError) {
+        console.error(`[EmployeeTask] Error checking stage or sending notification:`, notifError.message);
+      }
+    }
+
+    return taskId;
   }
 
   static async getAssignedTasks(employeeId, filters = {}) {
@@ -175,7 +224,7 @@ class EmployeeTask {
                  LEFT JOIN production_plans pp ON pps.production_plan_id = pp.id
                  LEFT JOIN root_cards rc ON pp.root_card_id = rc.id
                  LEFT JOIN projects p ON rc.project_id = p.id
-                 WHERE et.employee_id = ?`;
+                 WHERE et.employee_id = ? AND (pps.id IS NULL OR pps.is_blocked = FALSE)`;
     const params = [employeeId];
 
     if (filters.status && filters.status !== 'all') {
@@ -217,7 +266,6 @@ class EmployeeTask {
   }
 
   static async updateAssignedTaskStatus(taskId, status, notes = null) {
-    // First get the task to find its production_plan_stage_id
     const [taskRows] = await pool.execute(
       `SELECT id, production_plan_stage_id FROM employee_tasks WHERE id = ?`,
       [taskId]
@@ -252,13 +300,88 @@ class EmployeeTask {
       values
     );
 
-    // Sync status directly to production plan stage
     if (task.production_plan_stage_id) {
       await pool.execute(
         `UPDATE production_plan_stages SET status = ? WHERE id = ?`,
         [status, task.production_plan_stage_id]
       );
-      console.log(`[EmployeeTask] ✓ Task ${taskId} status changed to '${status}' - Stage ${task.production_plan_stage_id} updated to '${status}'`);
+      console.log(`[EmployeeTask] ✓ Task ${taskId} status changed to '${status}' - Stage ${task.production_plan_stage_id} updated`);
+      
+      if (status === 'completed') {
+        const [nextStages] = await pool.execute(
+          `SELECT id, stage_name, stage_type, assigned_employee_id, production_plan_id FROM production_plan_stages WHERE blocked_by_stage_id = ? LIMIT 1`,
+          [task.production_plan_stage_id]
+        );
+        
+        if (nextStages.length > 0) {
+          const nextStageId = nextStages[0].id;
+          const nextStageName = nextStages[0].stage_name;
+          const nextStageType = nextStages[0].stage_type;
+          const nextStageEmployeeId = nextStages[0].assigned_employee_id;
+          const planId = nextStages[0].production_plan_id;
+          
+          console.log(`[EmployeeTask] Stage completion detected. Next stage: ${nextStageId}, Type: ${nextStageType}, Employee: ${nextStageEmployeeId}`);
+          
+          await pool.execute(
+            `UPDATE production_plan_stages SET is_blocked = FALSE WHERE id = ?`,
+            [nextStageId]
+          );
+          console.log(`[EmployeeTask] ✓ Stage ${nextStageId} unlocked`);
+          
+          // Create task for the unlocked stage
+          if (nextStageType === 'outsource') {
+            // Outsource stage - notify Production Department
+            try {
+              const AlertsNotification = require('./AlertsNotification');
+              
+              // Get all employees in Production Department
+              const [deptMembers] = await pool.execute(`
+                SELECT DISTINCT e.id 
+                FROM employees e
+                WHERE e.department = 'Production' OR e.department_name = 'Production'
+                LIMIT 20
+              `);
+              
+              // Send notification to each department member
+              for (const member of deptMembers) {
+                try {
+                  await AlertsNotification.create({
+                    userId: member.id,
+                    alertType: 'outsource_task_created',
+                    message: `Outsource task "${nextStageName}" is now ready for production. Previous stage completed!`,
+                    relatedTable: 'production_plan_stages',
+                    relatedId: nextStageId,
+                    priority: 'high'
+                  });
+                  console.log(`[EmployeeTask] ✓ Outsource notification sent to employee ${member.id}`);
+                } catch (notifErr) {
+                  console.warn(`[EmployeeTask] Warning - could not send notification to employee ${member.id}:`, notifErr.message);
+                }
+              }
+            } catch (outsourceError) {
+              console.error(`[EmployeeTask] Error handling outsource stage unlocking:`, outsourceError.message);
+            }
+          } else if (nextStageEmployeeId) {
+            // In-house stage - create task for employee
+            try {
+              const newTaskId = await this.createAssignedTask(nextStageEmployeeId, {
+                title: `Production Stage: ${nextStageName}`,
+                description: `Assigned to production plan stage`,
+                type: 'production_stage',
+                priority: 'medium',
+                dueDate: null,
+                notes: `Production Plan ID: ${planId}`,
+                productionPlanStageId: nextStageId
+              });
+              console.log(`[EmployeeTask] ✓ New task ${newTaskId} created for employee ${nextStageEmployeeId} for stage ${nextStageName}`);
+            } catch (createTaskError) {
+              console.error(`[EmployeeTask] Error creating task for next stage:`, createTaskError.message);
+            }
+          }
+        } else {
+          console.log(`[EmployeeTask] No dependent stages found for stage ${task.production_plan_stage_id}`);
+        }
+      }
     }
   }
 

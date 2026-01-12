@@ -1,6 +1,10 @@
 const http = require('http');
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
-const BASE_URL = 'http://localhost:5000/api/sales/steps';
+const API_HOST = process.env.API_HOST || 'localhost';
+const API_PORT = process.env.PORT || 5000;
+const BASE_URL = `http://${API_HOST}:${API_PORT}/api/sales/steps`;
 const SALES_ORDER_ID = 1;
 
 const testEndpoints = [

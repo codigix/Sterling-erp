@@ -1,6 +1,7 @@
 const pool = require('./config/database');
 const axios = require('axios');
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
 async function generateWorkflowTasksForSalesOrder(salesOrderId) {
   let connection;
@@ -48,7 +49,9 @@ async function generateWorkflowTasksForSalesOrder(salesOrderId) {
     // Make API call to generate workflow tasks
     console.log(`\n🚀 Generating workflow tasks via API...\n`);
     
-    const apiUrl = process.env.API_URL || 'http://localhost:3000';
+    const API_HOST = process.env.API_HOST || 'localhost';
+    const API_PORT = process.env.PORT || 5000;
+    const apiUrl = `http://${API_HOST}:${API_PORT}`;
     const endpoint = `/api/production/root-cards/${salesOrderId}/workflow-tasks`;
     
     console.log(`   Endpoint: POST ${apiUrl}${endpoint}`);

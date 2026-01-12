@@ -8,6 +8,12 @@
 
 ### Database Setup
 - Setup demo users: `npm run setup-demo`
+- Initialize database: `node backend/initDb.js`
+
+### Database Verification Tools
+- Verify all database tables exist: `node backend/verify-db-tables.js`
+- Check data persistence for a sales order: `node backend/verify-data-persistence.js <salesOrderId>`
+- Test all Root Card Wizard API endpoints: `node backend/test-api-endpoints.js <salesOrderId> [authToken]`
 
 ### Employee Dashboard Backend
 - Create Attendance table: `node backend/migrations/024_create_attendance_table.js`
@@ -24,3 +30,44 @@
 - GET `/employee/portal/projects/:employeeId` - Get employee projects
 - GET `/employee/portal/alerts/:employeeId` - Get employee alerts
 - GET `/employee/portal/company-updates` - Get company announcements and updates
+
+## Root Card Wizard Data Persistence
+
+### Step-by-Step Data Flow
+1. **Step 1**: Client PO Details → `client_po_details` table
+2. **Step 2**: Sales Order Details (3 tabs) → `sales_order_details` table
+3. **Step 3**: Design Engineering → `design_engineering_details` table
+4. **Step 4**: Material Requirements → `material_requirements_details` table
+5. **Step 5**: Production Plan → `production_plan_details` table
+6. **Step 6**: Quality Check → `quality_check_details` table
+7. **Step 7**: Shipment → `shipment_details` table
+8. **Step 8**: Delivery → `delivery_details` table
+
+### Auto-Created Resources
+- Root Card: Created automatically in `root_cards` table
+- Project: Created automatically in `projects` table
+
+### Advanced Field Validation
+- Validate all fields per step: `node backend/validate-step-fields.js <salesOrderId>`
+- Validate specific step: `node backend/validate-step-fields.js <salesOrderId> <stepNumber>`
+- Comprehensive form data verification: `node backend/comprehensive-form-data-verification.js <salesOrderId>`
+- Examples:
+  ```bash
+  node backend/validate-step-fields.js 5        # Check all steps for SO#5
+  node backend/validate-step-fields.js 5 1      # Check only Step 1 for SO#5
+  node backend/comprehensive-form-data-verification.js 5        # Full verification for SO#5
+  node backend/comprehensive-form-data-verification.js 5 2      # Check Step 2 only
+  ```
+
+### Documentation Files
+
+**Quick Start:**
+- **Step-by-Step Verification**: `STEP_BY_STEP_DATA_VERIFICATION.md` - Complete guide for verifying each form step
+- **Data Storage Checklist**: `DATA_STORAGE_CHECKLIST.md` - Visual checklist for testing all 8 steps
+
+**Detailed Reference:**
+- **Form Field Mapping**: `FORM_FIELD_TO_DATABASE_MAPPING.md` - Every form field → database column mapping
+- **Complete Data Flow**: `COMPLETE_DATA_FLOW_VERIFICATION.md` - Full system architecture and verification
+- **Field-by-Field Mapping**: `FIELD_BY_FIELD_DB_MAPPING.md` - Original comprehensive mapping document
+- **Data Persistence Guide**: `DATA_PERSISTENCE_CHECKLIST.md` - Step-by-step verification guide
+- **Troubleshooting Guide**: `ROOT_CARD_DATA_FIX.md` - Common issues and solutions

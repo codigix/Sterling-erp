@@ -1,5 +1,6 @@
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 const Employee = require('./models/Employee');
-require('dotenv').config({ path: './../.env' });
 
 async function checkProductionEmployee() {
   try {

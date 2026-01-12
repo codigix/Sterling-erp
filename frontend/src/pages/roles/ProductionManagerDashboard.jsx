@@ -18,6 +18,7 @@ import ChallanListPage from "../production/ChallanListPage";
 import TrackChallanPage from "../production/TrackChallanPage";
 import PerformanceMetricsPage from "../production/PerformanceMetricsPage";
 import ProductionTasksPage from "../department/ProductionTasksPage";
+import OutsourceTasksPage from "../production/OutsourceTasksPage";
 import {
   Factory,
   Clock,
@@ -132,6 +133,11 @@ const ProductionManagerDashboard = () => {
     {
       title: "Department Tasks",
       path: "/production-manager/department-tasks",
+      icon: CheckCircle,
+    },
+    {
+      title: "Outsource Tasks",
+      path: "/production-manager/outsource-tasks",
       icon: CheckCircle,
     },
   ];
@@ -473,6 +479,18 @@ const ProductionManagerDashboard = () => {
               Dept. Tasks
             </p>
           </Link>
+          <Link
+            to="/production-manager/outsource-tasks"
+            className="p-4 bg-cyan-50 dark:bg-cyan-900 rounded-lg hover:bg-cyan-100 dark:hover:bg-cyan-800 transition-colors"
+          >
+            <ShoppingCart
+              size={24}
+              className="text-cyan-600 dark:text-cyan-300 mb-2"
+            />
+            <p className="font-medium text-cyan-900 dark:text-cyan-100">
+              Outsource Tasks
+            </p>
+          </Link>
         </div>
       </div>
     </div>
@@ -508,6 +526,7 @@ const ProductionManagerDashboard = () => {
         <Route path="/challan/track" element={<TrackChallanPage />} />
         <Route path="/metrics" element={<PerformanceMetricsPage />} />
         <Route path="/department-tasks" element={<ProductionTasksPage />} />
+        <Route path="/outsource-tasks" element={<OutsourceTasksPage />} />
         <Route
           path="*"
           element={<Navigate to="/production-manager/dashboard" replace />}

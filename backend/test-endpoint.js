@@ -1,9 +1,13 @@
 const axios = require('axios');
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+
+const API_URL = process.env.VITE_API_URL || 'http://localhost:5001';
 
 async function testEndpoint() {
   try {
     console.log('Testing API endpoint for employee ID 18...');
-    const response = await axios.get('http://localhost:5001/employee/portal/tasks/18', {
+    const response = await axios.get(`${API_URL}/employee/portal/tasks/18`, {
       headers: {
         'Authorization': 'Bearer test-token'
       }

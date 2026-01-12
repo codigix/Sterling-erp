@@ -334,6 +334,9 @@ class ProductionPlan {
           }
         }
         
+        const isFirstStage = idx === 0;
+        const isBlocked = !isFirstStage;
+        
         values.push([
           planId,
           stage.stageName,
@@ -346,24 +349,43 @@ class ProductionPlan {
           employeeId,
           facilityId,
           vendorId,
-          stage.notes || null
+          stage.notes || null,
+          isBlocked ? 1 : 0,
+          null
         ]);
       }
 
       console.log('[ProductionPlan.addStages] Inserting stages with values:', JSON.stringify(values, null, 2));
 
       const flattenedValues = values.reduce((acc, val) => acc.concat(val), []);
-      const placeholders = values.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').join(', ');
+      const placeholders = values.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').join(', ');
 
       const query = `INSERT INTO production_plan_stages 
          (production_plan_id, stage_name, sequence, stage_type, duration_days, estimated_delay_days, 
-          planned_start_date, planned_end_date, assigned_employee_id, assigned_facility_id, assigned_vendor_id, notes)
+          planned_start_date, planned_end_date, assigned_employee_id, assigned_facility_id, assigned_vendor_id, notes, is_blocked, blocked_by_stage_id)
          VALUES ${placeholders}`;
       
       console.log('[ProductionPlan.addStages] Query:', query);
       console.log('[ProductionPlan.addStages] Values:', flattenedValues);
 
       await connection.execute(query, flattenedValues);
+      
+      const [createdStages] = await connection.execute(
+        `SELECT id, sequence FROM production_plan_stages WHERE production_plan_id = ? ORDER BY sequence ASC`,
+        [planId]
+      );
+      
+      for (let i = 1; i < createdStages.length; i++) {
+        const currentStage = createdStages[i];
+        const previousStage = createdStages[i - 1];
+        
+        await connection.execute(
+          `UPDATE production_plan_stages SET blocked_by_stage_id = ? WHERE id = ?`,
+          [previousStage.id, currentStage.id]
+        );
+        
+        console.log(`[ProductionPlan.addStages] Stage ${currentStage.sequence} blocked by stage ${previousStage.sequence}`);
+      }
 
       if (!externalConnection) {
         connection.release();

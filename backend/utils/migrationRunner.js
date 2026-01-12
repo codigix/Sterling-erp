@@ -1209,6 +1209,41 @@ async function runMigrations() {
       console.error('Sync migration 033 failed:', err.message);
     }
 
+    try {
+      const migration034 = require('../migrations/034_add_sequential_workflow_fields.js');
+      await migration034();
+    } catch (err) {
+      console.error('Migration 034 failed:', err.message);
+    }
+
+    try {
+      const migration035 = require('../migrations/035_create_alerts_notifications_table.js');
+      await migration035();
+    } catch (err) {
+      console.error('Migration 035 failed:', err.message);
+    }
+
+    try {
+      const migration036 = require('../migrations/036_fix_alerts_notifications_fk.js');
+      await migration036();
+    } catch (err) {
+      console.error('Migration 036 failed:', err.message);
+    }
+
+    try {
+      const migration037 = require('../migrations/037_fix_alert_type_column.js');
+      await migration037();
+    } catch (err) {
+      console.error('Migration 037 failed:', err.message);
+    }
+
+    try {
+      const migration038 = require('../migrations/038_add_stage_type_to_production_plan_stages.js');
+      await migration038();
+    } catch (err) {
+      console.error('Migration 038 failed:', err.message);
+    }
+
     console.log('\n✅ All migrations completed successfully!');
   } catch (error) {
     console.error('❌ Migration failed:', error.message);

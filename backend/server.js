@@ -40,6 +40,7 @@ const qcPortalRoutes = require('./routes/qc/qcPortalRoutes');
 const productionPortalRoutes = require('./routes/production/productionPortalRoutes');
 const designProjectRoutes = require('./routes/design/designProjectRoutes');
 const departmentPortalRoutes = require('./routes/department/departmentPortalRoutes');
+const outsourcingRoutes = require('./routes/production/outsourcingRoutes');
 
 const app = express();
 
@@ -75,6 +76,7 @@ app.use('/api/production/plans', productionPlanRoutes);
 app.use('/api/production/stage-tasks', productionStageTaskRoutes);
 app.use('/api/production/stages', productionStageRoutes);
 app.use('/api/production/portal', productionPortalRoutes);
+app.use('/api/production/outsourcing', outsourcingRoutes);
 app.use('/api/inventory/materials', materialRoutes);
 app.use('/api/inventory/facilities', facilityRoutes);
 app.use('/api/inventory/vendors', vendorRoutes);

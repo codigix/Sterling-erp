@@ -1,7 +1,8 @@
-require('dotenv').config({ path: '../.env' });
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 const axios = require('axios');
 
-const API_URL = 'http://localhost:5001/api';
+const API_URL = (process.env.VITE_API_URL || 'http://localhost:5001') + '/api';
 
 async function testDesignEngineerFlow() {
   try {

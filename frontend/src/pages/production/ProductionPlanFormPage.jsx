@@ -678,6 +678,14 @@ const ProductionPlanFormPage = () => {
                 </div>
               )}
 
+              {newStage.stageType === 'outsource' && (
+                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                  <p className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                    ✓ This task will be assigned to the Production Department for outsourcing
+                  </p>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
@@ -831,26 +839,26 @@ const ProductionPlanFormPage = () => {
                                 </select>
                               </div>
 
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                    Assigned Employee
-                                  </label>
-                                  <select
-                                    value={editedStage?.assignedEmployeeId || ''}
-                                    onChange={(e) => handleEditedStageChange('assignedEmployeeId', e.target.value)}
-                                    className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                                  >
-                                    <option value="">Select Employee</option>
-                                    {employees.map(emp => (
-                                      <option key={emp.id} value={emp.id}>
-                                        {emp.username}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </div>
+                              {editedStage?.stageType === 'in_house' && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <div>
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                      Assigned Employee
+                                    </label>
+                                    <select
+                                      value={editedStage?.assignedEmployeeId || ''}
+                                      onChange={(e) => handleEditedStageChange('assignedEmployeeId', e.target.value)}
+                                      className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                    >
+                                      <option value="">Select Employee</option>
+                                      {employees.map(emp => (
+                                        <option key={emp.id} value={emp.id}>
+                                          {emp.username}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </div>
 
-                                {editedStage?.stageType === 'in_house' && (
                                   <div>
                                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                                       Facility
@@ -868,8 +876,16 @@ const ProductionPlanFormPage = () => {
                                       ))}
                                     </select>
                                   </div>
-                                )}
-                              </div>
+                                </div>
+                              )}
+
+                              {editedStage?.stageType === 'outsource' && (
+                                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                                  <p className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                                    ✓ This task will be assigned to the Production Department for outsourcing
+                                  </p>
+                                </div>
+                              )}
 
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>

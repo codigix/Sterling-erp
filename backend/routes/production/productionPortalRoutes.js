@@ -9,6 +9,8 @@ router.get('/production-form/root-cards', authMiddleware, productionPortalContro
 router.get('/root-cards/:id', authMiddleware, productionPortalController.getRootCardById);
 router.get('/stages', authMiddleware, productionPortalController.getProductionStages);
 router.get('/employees', authMiddleware, productionPortalController.getEmployees);
+router.get('/outsource-tasks', authMiddleware, productionPortalController.getOutsourceTasks);
+router.put('/outsource-tasks/:stageId', authMiddleware, productionPortalController.updateOutsourceTaskStatus);
 router.post('/manufacturing-stages', authMiddleware, productionPortalController.createManufacturingStages);
 router.put('/manufacturing-stages/:id', authMiddleware, productionPortalController.updateManufacturingStage);
 

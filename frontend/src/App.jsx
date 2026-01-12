@@ -69,6 +69,7 @@ import TrackChallanPage from "./pages/production/TrackChallanPage";
 import PerformancePage from "./pages/production/PerformancePage";
 import PerformanceMetricsPage from "./pages/production/PerformanceMetricsPage";
 import ProductionPlanFormPage from "./pages/production/ProductionPlanFormPage";
+import OutsourceTasksPage from "./pages/production/OutsourceTasksPage";
 
 // Employee Portal
 import EmployeePortalPage from "./pages/employee/EmployeePortalPage";
@@ -92,7 +93,6 @@ import NotificationsPage from "./pages/notifications/NotificationsPage";
 // Role-Based Dashboards
 import InventoryManagerDashboard from "./pages/roles/InventoryManagerDashboard";
 import QCManagerDashboard from "./pages/roles/QCManagerDashboard";
-import ProductionManagerDashboard from "./pages/roles/ProductionManagerDashboard";
 import AccountantDashboard from "./pages/roles/AccountantDashboard";
 import WorkerDashboard from "./pages/roles/WorkerDashboard";
 
@@ -178,6 +178,7 @@ function App() {
               <Route path="production/challans/track" element={<TrackChallanPage />} />
               <Route path="production/performance" element={<PerformancePage />} />
               <Route path="production/performance/metrics" element={<PerformanceMetricsPage />} />
+              <Route path="production/outsource-tasks" element={<OutsourceTasksPage />} />
             </Route>
 
             {/* Employee Routes */}
@@ -216,7 +217,6 @@ function App() {
             <Route path="/inventory-manager/*" element={<InventoryManagerDashboard />} />
             <Route path="/design-engineer/*" element={<DesignEngineerLayout />} />
             <Route path="/qc-manager/*" element={<QCManagerDashboard />} />
-            <Route path="/production-manager/*" element={<ProductionManagerDashboard />} />
             <Route path="/accountant/*" element={<AccountantDashboard />} />
             <Route path="/worker/*" element={<WorkerDashboard />} />
 

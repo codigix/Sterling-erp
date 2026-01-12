@@ -63,18 +63,62 @@ const formatSuccessResponse = (data, message = 'Operation successful') => {
   };
 };
 
-const parseJsonField = (value, defaultValue = null) => {
+const parseJsonField = (value, defaultValue = {}) => {
   if (!value) return defaultValue;
+  
+  // If it's already an object, return it
+  if (typeof value === 'object') {
+    return value;
+  }
+  
+  // If it's the corrupted "[object Object]" string, return default
+  if (value === '[object Object]') {
+    console.warn('Detected corrupted JSON string "[object Object]", returning default value');
+    return defaultValue;
+  }
+  
   try {
     return typeof value === 'string' ? JSON.parse(value) : value;
   } catch (error) {
+    console.error('Failed to parse JSON field:', value, error);
     return defaultValue;
   }
 };
 
 const stringifyJsonField = (value) => {
   if (!value) return null;
-  return typeof value === 'string' ? value : JSON.stringify(value);
+  
+  // If it's the corrupted "[object Object]" string, return it as-is (it's already bad)
+  // but log it for debugging
+  if (value === '[object Object]') {
+    console.error('Warning: Attempting to save corrupted "[object Object]" string');
+    return value;
+  }
+  
+  // If it's already a valid JSON string, verify it's actually valid
+  if (typeof value === 'string') {
+    try {
+      JSON.parse(value);
+      return value; // It's valid JSON string
+    } catch (error) {
+      // It's a string but not valid JSON - assume it's corrupted and needs fixing
+      console.error('Received invalid JSON string, attempting to serialize:', value);
+      return null;
+    }
+  }
+  
+  // If it's an object, properly stringify it
+  if (typeof value === 'object') {
+    try {
+      return JSON.stringify(value);
+    } catch (error) {
+      console.error('Failed to stringify object:', value, error);
+      return null;
+    }
+  }
+  
+  // Fallback for other types
+  return null;
 };
 
 const generateDocumentFileName = (stepKey, projectCode, originalFileName) => {

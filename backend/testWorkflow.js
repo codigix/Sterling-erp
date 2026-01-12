@@ -1,6 +1,10 @@
 const axios = require('axios');
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
-const API_URL = 'http://localhost:5000/api';
+const API_HOST = process.env.API_HOST || 'localhost';
+const API_PORT = process.env.PORT || 5000;
+const API_URL = `http://${API_HOST}:${API_PORT}/api`;
 
 async function testWorkflow() {
   try {

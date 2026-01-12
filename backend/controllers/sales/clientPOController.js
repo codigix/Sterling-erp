@@ -13,6 +13,10 @@ class ClientPOController {
       const { salesOrderId } = req.params;
       const data = req.body;
 
+      console.log('[ClientPO] Received data:', JSON.stringify(data, null, 2));
+      console.log('[ClientPO] projectRequirements type:', typeof data.projectRequirements);
+      console.log('[ClientPO] projectRequirements:', data.projectRequirements);
+
       const validation = validateClientPO(data);
       if (!validation.isValid) {
         console.warn('Client PO validation warnings:', validation.errors);

@@ -1,6 +1,11 @@
 const pool = require('./config/database');
 const bcrypt = require('bcryptjs');
 const http = require('http');
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+
+const API_HOST = process.env.API_HOST || 'localhost';
+const API_PORT = process.env.PORT || 5001;
 
 async function testLogin() {
   try {
@@ -25,8 +30,8 @@ async function testLogin() {
       });
 
       const options = {
-        hostname: 'localhost',
-        port: 5001,
+        hostname: API_HOST,
+        port: API_PORT,
         path: '/api/auth/login',
         method: 'POST',
         headers: {

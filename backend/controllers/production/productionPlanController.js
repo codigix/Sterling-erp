@@ -269,33 +269,82 @@ const productionPlanController = {
 
       await ProductionPlan.addStages(id, stages);
       
-      // Fetch the created stages to get their IDs for employee task creation
+      // Fetch the created stages to get their IDs for employee/department task creation
       const [createdStages] = await pool.execute(
-        `SELECT id, stage_name, assigned_employee_id FROM production_plan_stages WHERE production_plan_id = ? ORDER BY sequence ASC`,
+        `SELECT id, stage_name, assigned_employee_id, stage_type, sequence, is_blocked FROM production_plan_stages WHERE production_plan_id = ? ORDER BY sequence ASC`,
         [id]
       );
       
-      // Create employee tasks for assigned employees
+      // Create employee tasks ONLY for the first stage (Stage 1)
       const EmployeeTask = require('../../models/EmployeeTask');
-      for (const createdStage of createdStages) {
-        if (createdStage.assigned_employee_id) {
+      const Department = require('../../models/Department');
+      
+      // Process only the first stage
+      if (createdStages.length > 0) {
+        const firstStage = createdStages[0];
+        console.log(`[ProductionPlanController] Processing first stage: ${firstStage.stage_name} (ID: ${firstStage.id})`);
+        
+        // Check if this is an outsourced stage
+        if (firstStage.stage_type === 'outsource') {
           try {
-            console.log(`[ProductionPlanController] Creating employee task for employee ${createdStage.assigned_employee_id} for stage ${createdStage.stage_name}`);
-            await EmployeeTask.createAssignedTask(createdStage.assigned_employee_id, {
-              title: `Production Stage: ${createdStage.stage_name}`,
+            console.log(`[ProductionPlanController] ✓ First stage ${firstStage.stage_name} is outsourced`);
+            
+            // Send notification to Production Department about new outsource task
+            try {
+              const AlertsNotification = require('../../models/AlertsNotification');
+              
+              // Get all employees in Production Department
+              const [deptMembers] = await pool.execute(`
+                SELECT DISTINCT e.id 
+                FROM employees e
+                WHERE e.department = 'Production' OR e.department_name = 'Production'
+                LIMIT 20
+              `);
+              
+              // Send notification to each department member
+              for (const member of deptMembers) {
+                try {
+                  await AlertsNotification.create({
+                    userId: member.id,
+                    alertType: 'outsource_task_created',
+                    message: `New outsource task "${firstStage.stage_name}" is ready for production. Previous stage completed!`,
+                    relatedTable: 'production_plan_stages',
+                    relatedId: firstStage.id,
+                    priority: 'high'
+                  });
+                  console.log(`[ProductionPlanController] ✓ Notification sent to employee ${member.id} for outsource task`);
+                } catch (notifErr) {
+                  console.warn(`[ProductionPlanController] Warning - could not send notification to employee ${member.id}:`, notifErr.message);
+                }
+              }
+            } catch (notificationError) {
+              console.warn(`[ProductionPlanController] Warning - could not send notifications:`, notificationError.message);
+            }
+          } catch (taskError) {
+            console.warn(`[ProductionPlanController] Warning - error handling outsource stage:`, taskError.message);
+          }
+        } else if (firstStage.assigned_employee_id) {
+          // In-house task - assign to employee
+          try {
+            console.log(`[ProductionPlanController] Creating employee task for employee ${firstStage.assigned_employee_id} for stage ${firstStage.stage_name}`);
+            await EmployeeTask.createAssignedTask(firstStage.assigned_employee_id, {
+              title: `Production Stage: ${firstStage.stage_name}`,
               description: `Assigned to production plan stage`,
               type: 'production_stage',
               priority: 'medium',
               dueDate: null,
               notes: `Production Plan ID: ${id}`,
-              productionPlanStageId: createdStage.id
+              productionPlanStageId: firstStage.id
             });
-            console.log(`[ProductionPlanController] ✓ Employee task created for employee ${createdStage.assigned_employee_id}`);
+            console.log(`[ProductionPlanController] ✓ Employee task created for employee ${firstStage.assigned_employee_id}`);
           } catch (taskError) {
             console.warn(`[ProductionPlanController] Warning - could not create employee task:`, taskError.message);
           }
         }
       }
+      
+      // All other stages remain blocked until the previous one is completed
+      console.log(`[ProductionPlanController] ✓ Stages 2+ are blocked until Stage 1 is completed`);
       
       res.status(201).json({ 
         message: 'Production plan stages created successfully',

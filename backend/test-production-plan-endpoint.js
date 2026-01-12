@@ -1,7 +1,11 @@
 const jwt = require('jsonwebtoken');
 const http = require('http');
 const User = require('./models/User');
-require('dotenv').config({ path: './../.env' });
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+
+const API_HOST = process.env.API_HOST || 'localhost';
+const API_PORT = process.env.PORT || 5001;
 
 const generateToken = (user) => {
   return jwt.sign(
@@ -38,8 +42,8 @@ async function testEndpoint() {
     });
 
     const options = {
-      hostname: 'localhost',
-      port: 5001,
+      hostname: API_HOST,
+      port: API_PORT,
       path: '/api/sales/steps/1/production-plan',
       method: 'POST',
       headers: {

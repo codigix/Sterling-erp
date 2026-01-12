@@ -2,6 +2,24 @@ const pool = require('../config/database');
 
 class AlertsNotification {
   static async create(data) {
+    const checkQuery = `
+      SELECT id FROM alerts_notifications 
+      WHERE user_id = ? AND alert_type = ? AND related_id = ? AND is_read = FALSE
+      LIMIT 1
+    `;
+    const checkParams = [
+      data.userId,
+      data.alertType || 'other',
+      data.relatedId || null
+    ];
+    
+    const [existing] = await pool.execute(checkQuery, checkParams);
+    
+    if (existing.length > 0) {
+      console.log(`[AlertsNotification] ℹ️ Notification already exists, skipping creation`);
+      return existing[0].id;
+    }
+    
     const [result] = await pool.execute(
       `
         INSERT INTO alerts_notifications

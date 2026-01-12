@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import NotificationBell from "../common/NotificationBell";
 import {
   LayoutDashboard,
   Users,
@@ -9,7 +10,6 @@ import {
   Settings,
   Home,
   Menu,
-  Bell,
   Search,
   User,
   LogOut,
@@ -111,14 +111,7 @@ const EmployeeDashboardLayout = () => {
           {/* Right side */}
           <div className="flex items-center space-x-4">
             {/* Notifications */}
-            <div className="relative">
-              <button className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors relative">
-                <Bell size={20} className="text-slate-600 dark:text-slate-400" />
-                <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-semibold">
-                  1
-                </span>
-              </button>
-            </div>
+            <NotificationBell />
 
             {/* User Menu */}
             <div className="relative">

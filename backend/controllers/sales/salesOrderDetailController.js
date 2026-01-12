@@ -61,6 +61,10 @@ class SalesOrderDetailController {
       const { salesOrderId } = req.params;
       const data = req.body;
 
+      console.log('[SalesOrderDetail] Sales & Product data received:');
+      console.log('  productDetails type:', typeof data.productDetails);
+      console.log('  productDetails value:', data.productDetails);
+
       const salesOrder = await SalesOrder.findById(salesOrderId);
       if (!salesOrder) {
         return res.status(404).json(formatErrorResponse('Sales Order not found'));
@@ -107,6 +111,12 @@ class SalesOrderDetailController {
     try {
       const { salesOrderId } = req.params;
       const data = req.body;
+
+      console.log('[SalesOrderDetail] Quality & Compliance data received:');
+      console.log('  qualityCompliance type:', typeof data.qualityCompliance);
+      console.log('  qualityCompliance value:', data.qualityCompliance);
+      console.log('  warrantySupport type:', typeof data.warrantySupport);
+      console.log('  warrantySupport value:', data.warrantySupport);
 
       const salesOrder = await SalesOrder.findById(salesOrderId);
       if (!salesOrder) {
