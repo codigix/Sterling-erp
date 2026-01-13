@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Trash2, AlertCircle, Loader } from 'lucide-react';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import axios from '../../utils/api';
 
 const OutwardChallanForm = ({ task, materials, vendors = [], onChallanCreated }) => {
@@ -13,6 +15,66 @@ const OutwardChallanForm = ({ task, materials, vendors = [], onChallanCreated })
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  const loadImage = (url) => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.src = url;
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+    });
+  };
+
+  const generatePDF = async (challanData) => {
+    const doc = new jsPDF();
+    const vendor = vendors.find(v => v.id === parseInt(formData.vendorId));
+
+    try {
+      const logo = await loadImage("/logo.png");
+      doc.addImage(logo, "PNG", 14, 5, 50, 15);
+    } catch (error) {
+      console.warn("Logo not found or failed to load:", error);
+    }
+
+    // Header
+    doc.setFontSize(20);
+    doc.text("OUTWARD CHALLAN", 105, 30, { align: "center" });
+
+    doc.setFontSize(10);
+    doc.text(`Date: ${new Date().toLocaleDateString('en-IN')}`, 14, 45);
+    doc.text(`Vendor: ${vendor?.name || 'N/A'}`, 14, 50);
+    doc.text(`Project: ${task?.project_name || 'N/A'}`, 14, 55);
+    doc.text(`Product: ${task?.product_name || 'N/A'}`, 14, 60);
+    doc.text(`Task: ${task?.stage_name || 'N/A'}`, 14, 65);
+    doc.text(`Expected Return: ${new Date(formData.expectedReturnDate).toLocaleDateString('en-IN')}`, 14, 70);
+
+    // Items Table
+    const tableColumn = ["Item Code", "Material Name", "Quantity", "Unit", "Remarks"];
+    const tableRows = selectedItems.map(item => [
+      item.itemCode,
+      item.itemName,
+      item.quantity,
+      item.unit,
+      item.remarks || ""
+    ]);
+
+    autoTable(doc, {
+      startY: 80,
+      head: [tableColumn],
+      body: tableRows,
+      theme: "grid",
+      headStyles: { fillColor: [79, 70, 229] }, // Purple/Indigo color matching the theme
+    });
+
+    if (formData.notes) {
+      const finalY = doc.lastAutoTable.finalY + 10;
+      doc.setFontSize(10);
+      doc.text("Notes:", 14, finalY);
+      doc.text(formData.notes, 14, finalY + 5);
+    }
+
+    return doc;
+  };
 
   const handleAddMaterialRow = () => {
     setSelectedItems([
@@ -34,6 +96,7 @@ const OutwardChallanForm = ({ task, materials, vendors = [], onChallanCreated })
       materialId: material.id,
       itemCode: material.item_code,
       itemName: material.item_name,
+      availableQuantity: material.quantity || 0,
       quantity: updated[index].quantity || 1,
       unit: material.unit || 'piece',
       remarks: updated[index].remarks || ''
@@ -74,16 +137,26 @@ const OutwardChallanForm = ({ task, materials, vendors = [], onChallanCreated })
       return;
     }
 
+    if (selectedItems.some(item => item.quantity > item.availableQuantity)) {
+      setError('One or more items exceed available inventory');
+      return;
+    }
+
     try {
       setLoading(true);
       setError('');
+
+      // Generate PDF
+      const doc = await generatePDF();
+      const pdfBase64 = doc.output('datauristring');
 
       await axios.post(`/production/outsourcing/tasks/${task.id}/outward-challan`, {
         vendorId: parseInt(formData.vendorId),
         materialSentDate: formData.materialSentDate,
         expectedReturnDate: formData.expectedReturnDate,
         notes: formData.notes,
-        items: selectedItems
+        items: selectedItems,
+        pdfBase64: pdfBase64
       });
 
       setSuccess('Outward challan created successfully!');
@@ -279,7 +352,7 @@ const OutwardChallanForm = ({ task, materials, vendors = [], onChallanCreated })
                     </div>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
                     <div>
                       <p className="text-xs font-medium text-slate-600 dark:text-slate-400 uppercase mb-1">Material</p>
                       <p className="font-medium text-slate-900 dark:text-white">{item.itemName}</p>
@@ -287,18 +360,27 @@ const OutwardChallanForm = ({ task, materials, vendors = [], onChallanCreated })
                     </div>
 
                     <div>
+                      <p className="text-xs font-medium text-slate-600 dark:text-slate-400 uppercase mb-1">Available</p>
+                      <p className="font-medium text-slate-900 dark:text-white">{item.availableQuantity} {item.unit}</p>
+                    </div>
+
+                    <div>
                       <label className="text-xs font-medium text-slate-600 dark:text-slate-400 uppercase mb-1 block">
-                        Quantity *
+                        Issue Qty *
                       </label>
                       <input
                         type="number"
                         min="0.1"
                         step="0.1"
+                        max={item.availableQuantity}
                         value={item.quantity}
                         onChange={(e) => handleUpdateItem(index, 'quantity', parseFloat(e.target.value))}
-                        className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm"
+                        className={`w-full px-2 py-1 border rounded text-sm ${item.quantity > item.availableQuantity ? 'border-red-500 bg-red-50' : 'border-slate-300 dark:border-slate-600'}`}
                         disabled={loading}
                       />
+                      {item.quantity > item.availableQuantity && (
+                        <p className="text-[10px] text-red-500 mt-1">Exceeds available stock</p>
+                      )}
                     </div>
 
                     <div>

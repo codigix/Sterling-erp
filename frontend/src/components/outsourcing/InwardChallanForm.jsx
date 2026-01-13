@@ -45,6 +45,8 @@ const InwardChallanForm = ({ task, onChallanCreated }) => {
           itemCode: item.item_code,
           expectedQuantity: item.quantity,
           quantityReceived: item.quantity,
+          quantityRejected: 0,
+          quantityScrap: 0,
           unit: item.unit,
           qualityStatus: 'pending_inspection',
           remarks: ''
@@ -213,16 +215,16 @@ const InwardChallanForm = ({ task, onChallanCreated }) => {
                 key={index}
                 className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 bg-slate-50 dark:bg-slate-800"
               >
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-                  <div>
+                <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
+                  <div className="md:col-span-1">
                     <p className="text-xs font-medium text-slate-600 dark:text-slate-400 uppercase mb-1">Material</p>
                     <p className="font-medium text-slate-900 dark:text-white">{item.itemName}</p>
                     <p className="text-xs text-slate-500 dark:text-slate-400">{item.itemCode}</p>
                   </div>
 
                   <div>
-                    <p className="text-xs font-medium text-slate-600 dark:text-slate-400 uppercase mb-1">Expected</p>
-                    <p className="text-slate-900 dark:text-white">
+                    <p className="text-xs font-medium text-slate-600 dark:text-slate-400 uppercase mb-1">Issued</p>
+                    <p className="text-slate-900 dark:text-white font-medium">
                       {item.expectedQuantity} {item.unit}
                     </p>
                   </div>
@@ -231,18 +233,45 @@ const InwardChallanForm = ({ task, onChallanCreated }) => {
                     <label className="text-xs font-medium text-slate-600 dark:text-slate-400 uppercase mb-1 block">
                       Received *
                     </label>
-                    <div className="flex items-center gap-1">
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.1"
-                        value={item.quantityReceived}
-                        onChange={(e) => handleUpdateItem(index, 'quantityReceived', parseFloat(e.target.value))}
-                        className="flex-1 px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm"
-                        disabled={submitting}
-                      />
-                      <span className="text-sm text-slate-600 dark:text-slate-400">{item.unit}</span>
-                    </div>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      value={item.quantityReceived}
+                      onChange={(e) => handleUpdateItem(index, 'quantityReceived', parseFloat(e.target.value))}
+                      className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm"
+                      disabled={submitting}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-medium text-slate-600 dark:text-slate-400 uppercase mb-1 block">
+                      Rejected
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      value={item.quantityRejected}
+                      onChange={(e) => handleUpdateItem(index, 'quantityRejected', parseFloat(e.target.value))}
+                      className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm"
+                      disabled={submitting}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-medium text-slate-600 dark:text-slate-400 uppercase mb-1 block">
+                      Scrap
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      value={item.quantityScrap}
+                      onChange={(e) => handleUpdateItem(index, 'quantityScrap', parseFloat(e.target.value))}
+                      className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm"
+                      disabled={submitting}
+                    />
                   </div>
 
                   <div>
@@ -260,19 +289,19 @@ const InwardChallanForm = ({ task, onChallanCreated }) => {
                       <option value="rejected">Rejected</option>
                     </select>
                   </div>
-
-                  <div>
-                    <label className="text-xs font-medium text-slate-600 dark:text-slate-400 uppercase mb-1 block">
-                      Remarks
-                    </label>
-                    <input
-                      type="text"
-                      value={item.remarks}
-                      onChange={(e) => handleUpdateItem(index, 'remarks', e.target.value)}
-                      className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm"
-                      disabled={submitting}
-                    />
-                  </div>
+                </div>
+                <div className="mt-3">
+                  <label className="text-xs font-medium text-slate-600 dark:text-slate-400 uppercase mb-1 block">
+                    Remarks
+                  </label>
+                  <input
+                    type="text"
+                    value={item.remarks}
+                    onChange={(e) => handleUpdateItem(index, 'remarks', e.target.value)}
+                    className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm"
+                    placeholder="Add any remarks..."
+                    disabled={submitting}
+                  />
                 </div>
               </div>
             ))}

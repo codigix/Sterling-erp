@@ -47,15 +47,30 @@ class ProductionStage {
               u.username as assigned_employee_name,
               v.name as assigned_vendor_name,
               pp.plan_name,
-              so.customer
+              so.customer,
+              sod.product_details
        FROM production_stages ps
        LEFT JOIN users u ON u.id = ps.assigned_employee_id
        LEFT JOIN vendors v ON v.id = ps.assigned_vendor_id
        LEFT JOIN production_plans pp ON pp.id = ps.production_plan_id
        LEFT JOIN sales_orders so ON so.id = pp.sales_order_id
+       LEFT JOIN sales_order_details sod ON sod.sales_order_id = so.id
        WHERE ps.id = ?`,
       [id]
     );
+    
+    if (rows[0] && rows[0].product_details) {
+      try {
+        const productDetails = typeof rows[0].product_details === 'string'
+          ? JSON.parse(rows[0].product_details)
+          : rows[0].product_details;
+        rows[0].product_name = productDetails?.itemName || null;
+      } catch (e) {
+        console.error('Error parsing product_details in ProductionStage.findById:', e);
+      }
+      delete rows[0].product_details;
+    }
+    
     return rows[0] || null;
   }
 
@@ -63,15 +78,32 @@ class ProductionStage {
     const [rows] = await pool.execute(
       `SELECT ps.*, 
               u.username as assigned_employee_name,
-              v.name as assigned_vendor_name
+              v.name as assigned_vendor_name,
+              sod.product_details
        FROM production_stages ps
        LEFT JOIN users u ON u.id = ps.assigned_employee_id
        LEFT JOIN vendors v ON v.id = ps.assigned_vendor_id
+       LEFT JOIN production_plans pp ON pp.id = ps.production_plan_id
+       LEFT JOIN sales_order_details sod ON sod.sales_order_id = pp.sales_order_id
        WHERE ps.production_plan_id = ?
        ORDER BY ps.stage_sequence ASC`,
       [productionPlanId]
     );
-    return rows || [];
+    
+    return (rows || []).map(row => {
+      if (row.product_details) {
+        try {
+          const productDetails = typeof row.product_details === 'string'
+            ? JSON.parse(row.product_details)
+            : row.product_details;
+          row.product_name = productDetails?.itemName || null;
+        } catch (e) {
+          console.error('Error parsing product_details in findByProductionPlan:', e);
+        }
+        delete row.product_details;
+      }
+      return row;
+    });
   }
 
   static async findAll(filters = {}) {
@@ -79,12 +111,14 @@ class ProductionStage {
                         u.username as assigned_employee_name,
                         v.name as assigned_vendor_name,
                         pp.plan_name,
-                        so.customer
+                        so.customer,
+                        sod.product_details
                  FROM production_stages ps
                  LEFT JOIN users u ON u.id = ps.assigned_employee_id
                  LEFT JOIN vendors v ON v.id = ps.assigned_vendor_id
                  LEFT JOIN production_plans pp ON pp.id = ps.production_plan_id
                  LEFT JOIN sales_orders so ON so.id = pp.sales_order_id
+                 LEFT JOIN sales_order_details sod ON sod.sales_order_id = so.id
                  WHERE 1=1`;
     const params = [];
 
@@ -111,7 +145,21 @@ class ProductionStage {
     query += ' ORDER BY ps.production_plan_id, ps.stage_sequence ASC';
 
     const [rows] = await pool.execute(query, params);
-    return rows || [];
+    
+    return (rows || []).map(row => {
+      if (row.product_details) {
+        try {
+          const productDetails = typeof row.product_details === 'string'
+            ? JSON.parse(row.product_details)
+            : row.product_details;
+          row.product_name = productDetails?.itemName || null;
+        } catch (e) {
+          console.error('Error parsing product_details in ProductionStage.findAll:', e);
+        }
+        delete row.product_details;
+      }
+      return row;
+    });
   }
 
   static async update(id, data) {

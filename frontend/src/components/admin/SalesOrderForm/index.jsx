@@ -362,8 +362,8 @@ function SalesOrderFormContent({ onSubmit, onCancel, mode = 'create', initialDat
         priority: formData.projectPriority || "medium",
         status: formData.status || "pending",
         items: [{
-          name: formData.projectName || "Project Item",
-          description: formData.projectRequirements?.specifications || "",
+          name: formData.productDetails?.itemName || formData.projectName || "Project Item",
+          description: formData.productDetails?.itemDescription || formData.projectRequirements?.specifications || "",
           quantity: 1,
           unitPrice: parseFloat(formData.totalAmount || 0)
         }],

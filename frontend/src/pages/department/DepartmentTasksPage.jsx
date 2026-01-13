@@ -224,13 +224,12 @@ const DepartmentTasksPage = ({ departmentName }) => {
                         </Badge>
                       </div>
 
-                      {task.rootCard && (
-                        <div className="text-xs text-gray-600 space-y-1">
-                          <p><strong>Card:</strong> {task.rootCard.title}</p>
-                          {task.project && <p><strong>Project:</strong> {task.project.name}</p>}
-                          {task.salesOrder && <p><strong>Customer:</strong> {task.salesOrder.customer}</p>}
-                        </div>
-                      )}
+                      <div className="text-xs text-gray-600 space-y-1">
+                        {task.root_card_title && <p><strong>Card:</strong> {task.root_card_title}</p>}
+                        {task.product_name && <p><strong className="text-purple-600">Product:</strong> {task.product_name}</p>}
+                        {task.project_name && <p><strong>Project:</strong> {task.project_name}</p>}
+                        {task.customer && <p><strong>Customer:</strong> {task.customer}</p>}
+                      </div>
                     </div>
                     
                     <div className="flex gap-2 ml-4">

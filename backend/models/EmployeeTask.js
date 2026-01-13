@@ -218,12 +218,14 @@ class EmployeeTask {
                         et.assigned_by, et.due_date, et.notes, et.started_at, et.completed_at, 
                         et.created_at, et.updated_at, et.production_plan_stage_id,
                         pps.stage_name, rc.title as root_card_title,
-                        p.id as project_id, p.name as project_name, p.code as project_code
+                        p.id as project_id, p.name as project_name, p.code as project_code,
+                        sod.product_details
                  FROM employee_tasks et
                  LEFT JOIN production_plan_stages pps ON et.production_plan_stage_id = pps.id
                  LEFT JOIN production_plans pp ON pps.production_plan_id = pp.id
                  LEFT JOIN root_cards rc ON pp.root_card_id = rc.id
                  LEFT JOIN projects p ON rc.project_id = p.id
+                 LEFT JOIN sales_order_details sod ON sod.sales_order_id = pp.sales_order_id
                  WHERE et.employee_id = ? AND (pps.id IS NULL OR pps.is_blocked = FALSE)`;
     const params = [employeeId];
 
@@ -244,7 +246,19 @@ class EmployeeTask {
 
     query += ' ORDER BY et.priority DESC, et.due_date ASC, et.created_at DESC';
     const [rows] = await pool.execute(query, params);
-    return rows || [];
+    
+    return (rows || []).map(row => {
+      let product_name = null;
+      if (row.product_details) {
+        try {
+          const details = typeof row.product_details === 'string' ? JSON.parse(row.product_details) : row.product_details;
+          product_name = details.itemName || null;
+        } catch (e) {
+          console.warn('Error parsing product_details for task:', row.id);
+        }
+      }
+      return { ...row, product_name };
+    });
   }
 
   static async getAssignedTaskById(taskId) {
@@ -253,16 +267,31 @@ class EmployeeTask {
               et.assigned_by, et.due_date, et.notes, et.started_at, et.completed_at, 
               et.created_at, et.updated_at, et.production_plan_stage_id,
               pps.stage_name, rc.title as root_card_title,
-              p.id as project_id, p.name as project_name, p.code as project_code
+              p.id as project_id, p.name as project_name, p.code as project_code,
+              sod.product_details
        FROM employee_tasks et
        LEFT JOIN production_plan_stages pps ON et.production_plan_stage_id = pps.id
        LEFT JOIN production_plans pp ON pps.production_plan_id = pp.id
        LEFT JOIN root_cards rc ON pp.root_card_id = rc.id
        LEFT JOIN projects p ON rc.project_id = p.id
+       LEFT JOIN sales_order_details sod ON sod.sales_order_id = pp.sales_order_id
        WHERE et.id = ?`,
       [taskId]
     );
-    return rows[0];
+    
+    if (rows[0]) {
+      let product_name = null;
+      if (rows[0].product_details) {
+        try {
+          const details = typeof rows[0].product_details === 'string' ? JSON.parse(rows[0].product_details) : rows[0].product_details;
+          product_name = details.itemName || null;
+        } catch (e) {
+          console.warn('Error parsing product_details for task:', taskId);
+        }
+      }
+      return { ...rows[0], product_name };
+    }
+    return null;
   }
 
   static async updateAssignedTaskStatus(taskId, status, notes = null) {
@@ -309,7 +338,12 @@ class EmployeeTask {
       
       if (status === 'completed') {
         const [nextStages] = await pool.execute(
-          `SELECT id, stage_name, stage_type, assigned_employee_id, production_plan_id FROM production_plan_stages WHERE blocked_by_stage_id = ? LIMIT 1`,
+          `SELECT pps.id, pps.stage_name, pps.stage_type, pps.assigned_employee_id, pps.production_plan_id,
+                  sod.product_details
+           FROM production_plan_stages pps
+           JOIN production_plans pp ON pps.production_plan_id = pp.id
+           LEFT JOIN sales_order_details sod ON sod.sales_order_id = pp.sales_order_id
+           WHERE pps.blocked_by_stage_id = ? LIMIT 1`,
           [task.production_plan_stage_id]
         );
         
@@ -319,6 +353,18 @@ class EmployeeTask {
           const nextStageType = nextStages[0].stage_type;
           const nextStageEmployeeId = nextStages[0].assigned_employee_id;
           const planId = nextStages[0].production_plan_id;
+          
+          let productName = null;
+          if (nextStages[0].product_details) {
+            try {
+              const details = typeof nextStages[0].product_details === 'string' 
+                ? JSON.parse(nextStages[0].product_details) 
+                : nextStages[0].product_details;
+              productName = details.itemName || null;
+            } catch (e) {
+              console.warn('Error parsing product_details for next stage');
+            }
+          }
           
           console.log(`[EmployeeTask] Stage completion detected. Next stage: ${nextStageId}, Type: ${nextStageType}, Employee: ${nextStageEmployeeId}`);
           
@@ -342,13 +388,17 @@ class EmployeeTask {
                 LIMIT 20
               `);
               
+              const notifMessage = productName 
+                ? `Outsource task "${nextStageName}" for ${productName} is now ready for production.`
+                : `Outsource task "${nextStageName}" is now ready for production. Previous stage completed!`;
+
               // Send notification to each department member
               for (const member of deptMembers) {
                 try {
                   await AlertsNotification.create({
                     userId: member.id,
                     alertType: 'outsource_task_created',
-                    message: `Outsource task "${nextStageName}" is now ready for production. Previous stage completed!`,
+                    message: notifMessage,
                     relatedTable: 'production_plan_stages',
                     relatedId: nextStageId,
                     priority: 'high'
@@ -364,8 +414,12 @@ class EmployeeTask {
           } else if (nextStageEmployeeId) {
             // In-house stage - create task for employee
             try {
+              const taskTitle = productName 
+                ? `Task for ${productName}: ${nextStageName}`
+                : `Production Stage: ${nextStageName}`;
+
               const newTaskId = await this.createAssignedTask(nextStageEmployeeId, {
-                title: `Production Stage: ${nextStageName}`,
+                title: taskTitle,
                 description: `Assigned to production plan stage`,
                 type: 'production_stage',
                 priority: 'medium',

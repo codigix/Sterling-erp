@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingCart, Calendar, AlertCircle, CheckCircle, Clock, Eye, Package, X, Inbox, FileText } from 'lucide-react';
+import { ShoppingCart, Calendar, AlertCircle, CheckCircle, Clock, Eye, Package, X, Inbox } from 'lucide-react';
 import axios from '../../utils/api';
 import Card, { CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
@@ -57,6 +57,23 @@ const OutsourceTasksPage = () => {
   const handleViewTaskDetails = (task) => {
     setSelectedTaskDetails(task);
     setShowTaskDetails(true);
+  };
+
+  const handleMarkAsCompleted = async (taskId) => {
+    if (!window.confirm('Are you sure you want to mark this task as completed?')) return;
+    
+    try {
+      setUpdatingStatus(true);
+      await axios.post(`/production/outsourcing/tasks/${taskId}/complete`);
+      setSuccessMessage('Task marked as completed!');
+      fetchOutsourceTasks();
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (err) {
+      console.error('Failed to complete task:', err);
+      setError('Failed to mark task as completed');
+    } finally {
+      setUpdatingStatus(false);
+    }
   };
 
   const handleCreateInwardChallan = async (stageId) => {
@@ -260,9 +277,16 @@ const OutsourceTasksPage = () => {
                           <span className="ml-1">{task.status.replace('_', ' ')}</span>
                         </Badge>
                       </div>
-                      <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
-                        {task.project_name} {task.project_code && `(${task.project_code})`}
-                      </p>
+                      <div className="flex flex-wrap gap-2 mb-2 text-sm">
+                        <span className="text-slate-600 dark:text-slate-400">
+                          {task.project_name} {task.project_code && `(${task.project_code})`}
+                        </span>
+                        {task.product_name && (
+                          <span className="text-purple-600 dark:text-purple-400 font-medium flex items-center gap-1">
+                            <Package size={14} /> {task.product_name}
+                          </span>
+                        )}
+                      </div>
                       <div className="flex flex-wrap gap-4 text-xs text-slate-500 dark:text-slate-400">
                         {task.planned_start_date && (
                           <div className="flex items-center gap-1">
@@ -303,6 +327,18 @@ const OutsourceTasksPage = () => {
                           <Inbox className="w-5 h-5" />
                         </button>
                       )}
+                      {task.status === 'inward_challan_generated' && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMarkAsCompleted(task.outsourcing_task_id || task.id);
+                          }}
+                          className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                          title="Mark as Completed"
+                        >
+                          <CheckCircle className="w-5 h-5" />
+                        </button>
+                      )}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -323,7 +359,7 @@ const OutsourceTasksPage = () => {
       </Card>
 
       {successMessage && (
-        <div className="fixed top-4 right-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4 rounded-lg text-green-700 dark:text-green-400 z-50 animate-pulse">
+        <div className="fixed top-4 right-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-red-800 p-4 rounded-lg text-green-700 dark:text-green-400 z-50 animate-pulse">
           {successMessage}
         </div>
       )}
@@ -427,6 +463,17 @@ const OutsourceTasksPage = () => {
                 </p>
               )}
             </div>
+
+            {selectedTaskDetails.product_name && (
+              <div>
+                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-2">
+                  Product
+                </p>
+                <p className="font-semibold text-purple-600 dark:text-purple-400">
+                  {selectedTaskDetails.product_name}
+                </p>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4">
               {selectedTaskDetails.planned_start_date && (

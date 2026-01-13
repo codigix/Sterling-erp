@@ -149,7 +149,7 @@ require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
         assigned_employee_id INT,
         assigned_facility_id INT,
         assigned_vendor_id INT,
-        status ENUM('pending', 'in_progress', 'completed', 'on_hold', 'cancelled') DEFAULT 'pending',
+        status ENUM('pending', 'in_progress', 'completed', 'on_hold', 'cancelled', 'outward_challan_generated', 'inward_challan_generated') DEFAULT 'pending',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         FOREIGN KEY (production_plan_id) REFERENCES production_plans(id) ON DELETE CASCADE,

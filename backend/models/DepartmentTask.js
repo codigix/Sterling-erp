@@ -17,11 +17,13 @@ class DepartmentTask {
                     so.order_date,
                     so.due_date,
                     r.name as role_name,
-                    u.username as assigned_by_name
+                    u.username as assigned_by_name,
+                    sod.product_details
                  FROM department_tasks dt
                  LEFT JOIN root_cards rc ON dt.root_card_id = rc.id
                  LEFT JOIN projects p ON rc.project_id = p.id
                  LEFT JOIN sales_orders so ON COALESCE(dt.sales_order_id, rc.sales_order_id, p.sales_order_id) = so.id
+                 LEFT JOIN sales_order_details sod ON so.id = sod.sales_order_id
                  LEFT JOIN roles r ON dt.role_id = r.id
                  LEFT JOIN users u ON dt.assigned_by = u.id
                  WHERE dt.role_id = ?`;
@@ -39,7 +41,27 @@ class DepartmentTask {
 
     query += ' ORDER BY dt.priority DESC, dt.created_at DESC';
     const [rows] = await pool.execute(query, params);
-    return rows || [];
+    
+    // Format rows to include product_name
+    const formattedRows = (rows || []).map(row => {
+      if (row.product_details) {
+        try {
+          const productDetails = typeof row.product_details === 'string'
+            ? JSON.parse(row.product_details)
+            : row.product_details;
+          row.product_name = productDetails?.itemName || null;
+        } catch (e) {
+          console.error('Error parsing product_details in getDepartmentTasks:', e);
+          row.product_name = null;
+        }
+      } else {
+        row.product_name = null;
+      }
+      delete row.product_details;
+      return row;
+    });
+
+    return formattedRows;
   }
 
   static async getDepartmentTaskById(taskId) {
@@ -59,16 +81,36 @@ class DepartmentTask {
           so.order_date,
           so.due_date,
           r.name as role_name,
-          u.username as assigned_by_name
+          u.username as assigned_by_name,
+          sod.product_details
        FROM department_tasks dt
        LEFT JOIN root_cards rc ON dt.root_card_id = rc.id
        LEFT JOIN projects p ON rc.project_id = p.id
        LEFT JOIN sales_orders so ON COALESCE(dt.sales_order_id, rc.sales_order_id, p.sales_order_id) = so.id
+       LEFT JOIN sales_order_details sod ON so.id = sod.sales_order_id
        LEFT JOIN roles r ON dt.role_id = r.id
        LEFT JOIN users u ON dt.assigned_by = u.id
        WHERE dt.id = ?`,
       [taskId]
     );
+    
+    if (rows[0]) {
+      if (rows[0].product_details) {
+        try {
+          const productDetails = typeof rows[0].product_details === 'string'
+            ? JSON.parse(rows[0].product_details)
+            : rows[0].product_details;
+          rows[0].product_name = productDetails?.itemName || null;
+        } catch (e) {
+          console.error('Error parsing product_details in getDepartmentTaskById:', e);
+          rows[0].product_name = null;
+        }
+      } else {
+        rows[0].product_name = null;
+      }
+      delete rows[0].product_details;
+    }
+
     return rows[0] || null;
   }
 

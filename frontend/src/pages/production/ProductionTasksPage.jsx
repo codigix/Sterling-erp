@@ -252,6 +252,11 @@ const ProductionTasksPage = () => {
                     <p className="text-sm text-slate-600 dark:text-slate-400">
                       {rc.projectDetails?.name || rc.project_name || 'N/A'}
                     </p>
+                    {rc.product_name && (
+                      <p className="text-xs text-purple-600 dark:text-purple-400 font-medium mt-1">
+                        📦 {rc.product_name}
+                      </p>
+                    )}
                   </div>
                   <Badge className={getStatusColor(rc.status)}>
                     {rc.status.charAt(0).toUpperCase() + rc.status.slice(1)}
@@ -338,6 +343,9 @@ const ProductionTasksPage = () => {
                     Stage Name
                   </th>
                   <th className="px-6 py-3 text-left text-sm font-semibold">
+                    Product
+                  </th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold">
                     Type
                   </th>
                   <th className="px-6 py-3 text-center text-sm font-semibold">
@@ -363,6 +371,9 @@ const ProductionTasksPage = () => {
                     </td>
                     <td className="p-1 text-sm text-slate-700 dark:text-slate-300">
                       {stage.stageName}
+                    </td>
+                    <td className="p-1 text-sm text-purple-600 dark:text-purple-400 font-medium">
+                      {stage.product_name || '-'}
                     </td>
                     <td className="p-1 text-sm">
                       <Badge

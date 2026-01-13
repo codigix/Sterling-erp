@@ -272,7 +272,7 @@ async function initDatabase() {
         root_card_id INT,
         stage_name VARCHAR(255) NOT NULL,
         stage_type ENUM('in_house', 'outsource') DEFAULT 'in_house',
-        status ENUM('pending', 'in_progress', 'completed', 'on_hold', 'cancelled') DEFAULT 'pending',
+        status ENUM('pending', 'in_progress', 'completed', 'on_hold', 'cancelled', 'outward_challan_generated', 'inward_challan_generated') DEFAULT 'pending',
         planned_start_date DATE,
         planned_end_date DATE,
         notes TEXT,

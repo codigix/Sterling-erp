@@ -17,6 +17,7 @@ const ProductionPlanFormPage = () => {
     estimatedCompletionDate: '',
     procurementStatus: '',
     supervisorId: '',
+    productName: '',
     notes: '',
     stages: []
   });
@@ -116,6 +117,7 @@ const ProductionPlanFormPage = () => {
         ...formData,
         rootCardId: rootCardId,
         salesOrderId: rootCard.sales_order_id || '',
+        productName: rootCard.product_name || '',
         planName: projectName ? `${projectName} - Production Plan` : '',
         productionStartDate: step5?.timeline?.startDate || '',
         estimatedCompletionDate: step5?.timeline?.endDate || '',
@@ -490,6 +492,14 @@ const ProductionPlanFormPage = () => {
                   />
                 </div>
               </div>
+
+              {formData.productName && (
+                <div className="p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 rounded-lg">
+                  <p className="text-sm font-medium text-purple-700 dark:text-purple-300">
+                    <span className="font-bold">Product:</span> {formData.productName}
+                  </p>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
