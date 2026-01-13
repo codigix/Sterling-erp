@@ -253,6 +253,15 @@ const RootCardDetailPage = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                    Product
+                  </label>
+                  <p className="text-slate-900 dark:text-white font-medium">{card.product_name || '-'}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                     Code
                   </label>
                   <p className="text-slate-900 dark:text-white font-medium">{card.code || '-'}</p>

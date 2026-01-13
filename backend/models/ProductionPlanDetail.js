@@ -22,7 +22,10 @@ class ProductionPlanDetail {
 
   static async findBySalesOrderId(salesOrderId) {
     const [rows] = await pool.execute(
-      `SELECT * FROM production_plan_details WHERE sales_order_id = ?`,
+      `SELECT ppd.*, sod.product_details 
+       FROM production_plan_details ppd
+       LEFT JOIN sales_order_details sod ON sod.sales_order_id = ppd.sales_order_id
+       WHERE ppd.sales_order_id = ?`,
       [salesOrderId]
     );
     return rows[0] ? this.formatRow(rows[0]) : null;
@@ -238,9 +241,23 @@ class ProductionPlanDetail {
   static formatRow(row) {
     if (!row) return null;
     const timeline = parseJsonField(row.timeline) || {};
+    
+    let productName = null;
+    if (row.product_details) {
+      try {
+        const details = typeof row.product_details === 'string' 
+          ? JSON.parse(row.product_details) 
+          : row.product_details;
+        productName = details.itemName || null;
+      } catch (e) {
+        console.warn('Error parsing product_details');
+      }
+    }
+
     return {
       id: row.id,
       salesOrderId: row.sales_order_id,
+      productName: productName,
       timeline: timeline,
       selectedPhases: parseJsonField(row.selected_phases),
       phaseDetails: parseJsonField(row.phase_details),

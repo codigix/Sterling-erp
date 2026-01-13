@@ -27,31 +27,94 @@ class OutsourcingTask {
               p.name as project_name,
               pps.stage_name,
               pp.plan_name,
-              v.name as vendor_name
+              v.name as vendor_name,
+              so.items as so_items,
+              sod.product_details
        FROM outsourcing_tasks ot
        LEFT JOIN root_cards rc ON ot.root_card_id = rc.id
        LEFT JOIN projects p ON ot.project_id = p.id
        LEFT JOIN production_plan_stages pps ON ot.production_plan_stage_id = pps.id
        LEFT JOIN production_plans pp ON ot.production_plan_id = pp.id
+       LEFT JOIN sales_orders so ON pp.sales_order_id = so.id
+       LEFT JOIN sales_order_details sod ON pp.sales_order_id = sod.sales_order_id
        LEFT JOIN vendors v ON ot.selected_vendor_id = v.id
        WHERE ot.id = ?`,
       [id]
     );
-    return rows[0] || null;
+    
+    if (!rows[0]) return null;
+    
+    const task = rows[0];
+    if (!task.product_name || task.product_name === '-') {
+      // Try sod.product_details.itemName
+      if (task.product_details) {
+        try {
+          const pd = typeof task.product_details === 'string' ? JSON.parse(task.product_details) : task.product_details;
+          if (pd?.itemName) task.product_name = pd.itemName;
+        } catch (e) {}
+      }
+      // Try so.items[0].name
+      if ((!task.product_name || task.product_name === '-') && task.so_items) {
+        try {
+          const items = typeof task.so_items === 'string' ? JSON.parse(task.so_items) : task.so_items;
+          if (Array.isArray(items) && items.length > 0) {
+            task.product_name = items[0].name || items[0].itemName || task.product_name;
+          }
+        } catch (e) {}
+      }
+      // Fallback to root card title
+      if (!task.product_name || task.product_name === '-') {
+        task.product_name = task.root_card_title || '-';
+      }
+    }
+    
+    return task;
   }
 
   static async findByProductionPlanStageId(stageId) {
     const [rows] = await pool.execute(
       `SELECT ot.*, 
               rc.title as root_card_title,
-              v.name as vendor_name
+              v.name as vendor_name,
+              so.items as so_items,
+              sod.product_details
        FROM outsourcing_tasks ot
        LEFT JOIN root_cards rc ON ot.root_card_id = rc.id
+       LEFT JOIN production_plans pp ON ot.production_plan_id = pp.id
+       LEFT JOIN sales_orders so ON pp.sales_order_id = so.id
+       LEFT JOIN sales_order_details sod ON pp.sales_order_id = sod.sales_order_id
        LEFT JOIN vendors v ON ot.selected_vendor_id = v.id
        WHERE ot.production_plan_stage_id = ?`,
       [stageId]
     );
-    return rows[0] || null;
+    
+    if (!rows[0]) return null;
+    
+    const task = rows[0];
+    if (!task.product_name || task.product_name === '-') {
+      // Try sod.product_details.itemName
+      if (task.product_details) {
+        try {
+          const pd = typeof task.product_details === 'string' ? JSON.parse(task.product_details) : task.product_details;
+          if (pd?.itemName) task.product_name = pd.itemName;
+        } catch (e) {}
+      }
+      // Try so.items[0].name
+      if ((!task.product_name || task.product_name === '-') && task.so_items) {
+        try {
+          const items = typeof task.so_items === 'string' ? JSON.parse(task.so_items) : task.so_items;
+          if (Array.isArray(items) && items.length > 0) {
+            task.product_name = items[0].name || items[0].itemName || task.product_name;
+          }
+        } catch (e) {}
+      }
+      // Fallback to root card title
+      if (!task.product_name || task.product_name === '-') {
+        task.product_name = task.root_card_title || '-';
+      }
+    }
+    
+    return task;
   }
 
   static async findByProductionPlanId(planId) {

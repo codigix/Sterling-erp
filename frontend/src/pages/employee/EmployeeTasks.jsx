@@ -215,8 +215,11 @@ const EmployeeTasks = () => {
                   
                   <div className="flex flex-wrap gap-3 text-xs text-slate-500 dark:text-slate-400">
                     <span>📅 Created: {new Date(task.created_at).toLocaleDateString('en-IN')}</span>
+                    {task.product_name && (
+                      <span className="text-purple-600 dark:text-purple-400 font-medium">📦 {task.product_name}</span>
+                    )}
                     {task.project_name && (
-                      <span className="text-blue-600 dark:text-blue-400 font-medium">📦 {task.project_name}</span>
+                      <span className="text-blue-600 dark:text-blue-400 font-medium">🏢 {task.project_name}</span>
                     )}
                   </div>
                 </div>

@@ -26,6 +26,39 @@ class SalesOrderDetailController {
         await SalesOrderDetail.create(data);
       }
 
+      // Sync product name to main Sales Order items if available
+      if (data.productDetails && data.productDetails.itemName) {
+        try {
+          const salesOrder = await SalesOrder.findById(salesOrderId);
+          if (salesOrder) {
+            let items = [];
+            try {
+              items = typeof salesOrder.items === 'string' ? JSON.parse(salesOrder.items) : (salesOrder.items || []);
+            } catch (e) {
+              items = [];
+            }
+            
+            if (items.length === 0) {
+              items.push({
+                name: data.productDetails.itemName,
+                quantity: 1,
+                unitPrice: 0,
+                description: data.productDetails.itemDescription || ''
+              });
+            } else {
+              items[0].name = data.productDetails.itemName;
+              if (data.productDetails.itemDescription) {
+                items[0].description = data.productDetails.itemDescription;
+              }
+            }
+            
+            await SalesOrder.update(salesOrderId, { items });
+          }
+        } catch (syncError) {
+          console.error('[SalesOrderDetail] Failed to sync product name to Sales Order:', syncError);
+        }
+      }
+
       const updatedDetail = await SalesOrderDetail.findBySalesOrderId(salesOrderId);
 
       await SalesOrderStep.update(salesOrderId, 2, {
@@ -80,6 +113,40 @@ class SalesOrderDetailController {
         await SalesOrderDetail.create(initData);
       } else {
         await SalesOrderDetail.updateSalesAndProduct(salesOrderId, data);
+      }
+
+      // Sync product name to main Sales Order items if available
+      if (data.productDetails && data.productDetails.itemName) {
+        try {
+          const salesOrder = await SalesOrder.findById(salesOrderId);
+          if (salesOrder) {
+            let items = [];
+            try {
+              items = typeof salesOrder.items === 'string' ? JSON.parse(salesOrder.items) : (salesOrder.items || []);
+            } catch (e) {
+              items = [];
+            }
+            
+            if (items.length === 0) {
+              items.push({
+                name: data.productDetails.itemName,
+                quantity: 1,
+                unitPrice: 0,
+                description: data.productDetails.itemDescription || ''
+              });
+            } else {
+              items[0].name = data.productDetails.itemName;
+              if (data.productDetails.itemDescription) {
+                items[0].description = data.productDetails.itemDescription;
+              }
+            }
+            
+            await SalesOrder.update(salesOrderId, { items });
+            console.log(`[SalesOrderDetail] Synced product name "${data.productDetails.itemName}" to Sales Order #${salesOrderId}`);
+          }
+        } catch (syncError) {
+          console.error('[SalesOrderDetail] Failed to sync product name to Sales Order:', syncError);
+        }
       }
 
       const salesAndProduct = await SalesOrderDetail.getSalesAndProduct(salesOrderId);

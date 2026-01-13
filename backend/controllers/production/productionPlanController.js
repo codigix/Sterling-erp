@@ -326,9 +326,13 @@ const productionPlanController = {
         } else if (firstStage.assigned_employee_id) {
           // In-house task - assign to employee
           try {
+            const taskTitle = plan.product_name 
+              ? `Task for ${plan.product_name}: ${firstStage.stage_name}`
+              : `Production Stage: ${firstStage.stage_name}`;
+              
             console.log(`[ProductionPlanController] Creating employee task for employee ${firstStage.assigned_employee_id} for stage ${firstStage.stage_name}`);
             await EmployeeTask.createAssignedTask(firstStage.assigned_employee_id, {
-              title: `Production Stage: ${firstStage.stage_name}`,
+              title: taskTitle,
               description: `Assigned to production plan stage`,
               type: 'production_stage',
               priority: 'medium',
@@ -424,6 +428,68 @@ const productionPlanController = {
       ]);
 
       console.log('[ProductionPlanController.updatePlanStage] ✓ Stage updated successfully');
+
+      // If updated to outsource, ensure an outsourcing task exists
+      if (stageType === 'outsource') {
+        const [existingTasks] = await pool.execute(
+          'SELECT id FROM outsourcing_tasks WHERE production_plan_stage_id = ?',
+          [stageId]
+        );
+
+        if (existingTasks.length === 0) {
+          console.log('[ProductionPlanController.updatePlanStage] Creating missing outsourcing_task for stage:', stageId);
+          
+          // Get details for the new task
+          const [stageDetails] = await pool.execute(
+            `SELECT pps.production_plan_id, pp.root_card_id, pp.sales_order_id, rc.project_id, so.items as so_items, sod.product_details
+             FROM production_plan_stages pps
+             JOIN production_plans pp ON pps.production_plan_id = pp.id
+             LEFT JOIN root_cards rc ON pp.root_card_id = rc.id
+             LEFT JOIN sales_orders so ON pp.sales_order_id = so.id
+             LEFT JOIN sales_order_details sod ON pp.sales_order_id = sod.sales_order_id
+             WHERE pps.id = ?`,
+            [stageId]
+          );
+
+          if (stageDetails.length > 0) {
+            const details = stageDetails[0];
+            let productName = '-';
+            
+            // Extract product name
+            if (details.product_details) {
+              try {
+                const pd = typeof details.product_details === 'string' ? JSON.parse(details.product_details) : details.product_details;
+                if (pd?.itemName) productName = pd.itemName;
+              } catch (e) {}
+            }
+            if (productName === '-' && details.so_items) {
+              try {
+                const items = typeof details.so_items === 'string' ? JSON.parse(details.so_items) : details.so_items;
+                if (Array.isArray(items) && items.length > 0) {
+                  productName = items[0].name || items[0].itemName || productName;
+                }
+              } catch (e) {}
+            }
+            if (productName === '-') {
+              const [rcDetails] = await pool.execute('SELECT title FROM root_cards WHERE id = ?', [details.root_card_id]);
+              if (rcDetails.length > 0) productName = rcDetails[0].title;
+            }
+
+            await pool.execute(
+              `INSERT INTO outsourcing_tasks 
+               (production_plan_stage_id, production_plan_id, project_id, root_card_id, product_name, status)
+               VALUES (?, ?, ?, ?, ?, 'pending')`,
+              [
+                stageId,
+                details.production_plan_id,
+                details.project_id || null,
+                details.root_card_id || null,
+                productName,
+              ]
+            );
+          }
+        }
+      }
 
       res.json({ 
         message: 'Production plan stage updated successfully',

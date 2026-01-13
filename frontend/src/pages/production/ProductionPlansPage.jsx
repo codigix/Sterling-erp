@@ -281,6 +281,9 @@ const ProductionPlansPage = () => {
                     Plan Name
                   </th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-slate-900 dark:text-white">
+                    Product
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-900 dark:text-white">
                     Customer
                   </th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-slate-900 dark:text-white">
@@ -302,6 +305,9 @@ const ProductionPlansPage = () => {
                   >
                     <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">
                       {plan.plan_name}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
+                      {plan.product_name || "-"}
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
                       {plan.customer_name || "-"}

@@ -97,12 +97,14 @@ class ProductionPlan {
                so.customer AS customer_name,
                bom.sales_order_id,
                u.username AS supervisor_name,
-               ppd.selected_phases
+               ppd.selected_phases,
+               sod.product_details
         FROM production_plans pp
         LEFT JOIN sales_orders so ON so.id = pp.sales_order_id
         LEFT JOIN bill_of_materials bom ON bom.id = pp.bom_id
         LEFT JOIN users u ON u.id = pp.supervisor_id
         LEFT JOIN production_plan_details ppd ON ppd.sales_order_id = pp.sales_order_id
+        LEFT JOIN sales_order_details sod ON sod.sales_order_id = pp.sales_order_id
         WHERE pp.id = ?
       `,
       [id]
@@ -110,6 +112,16 @@ class ProductionPlan {
     
     if (rows[0]) {
       try {
+        if (rows[0].product_details) {
+          const productDetails = typeof rows[0].product_details === 'string'
+            ? JSON.parse(rows[0].product_details)
+            : rows[0].product_details;
+          rows[0].product_name = productDetails.itemName || null;
+        } else {
+          rows[0].product_name = null;
+        }
+        delete rows[0].product_details;
+
         if (rows[0].selected_phases) {
           const selectedPhases = typeof rows[0].selected_phases === 'string' 
             ? JSON.parse(rows[0].selected_phases) 
@@ -137,11 +149,13 @@ class ProductionPlan {
         SELECT pp.*, 
                so.customer AS customer_name,
                u.username AS supervisor_name,
-               ppd.selected_phases
+               ppd.selected_phases,
+               sod.product_details
         FROM production_plans pp
         LEFT JOIN sales_orders so ON so.id = pp.sales_order_id
         LEFT JOIN users u ON u.id = pp.supervisor_id
         LEFT JOIN production_plan_details ppd ON ppd.sales_order_id = pp.sales_order_id
+        LEFT JOIN sales_order_details sod ON sod.sales_order_id = pp.sales_order_id
         WHERE pp.sales_order_id = ?
       `,
       [salesOrderId]
@@ -149,6 +163,16 @@ class ProductionPlan {
     
     if (rows[0]) {
       try {
+        if (rows[0].product_details) {
+          const productDetails = typeof rows[0].product_details === 'string'
+            ? JSON.parse(rows[0].product_details)
+            : rows[0].product_details;
+          rows[0].product_name = productDetails.itemName || null;
+        } else {
+          rows[0].product_name = null;
+        }
+        delete rows[0].product_details;
+
         if (rows[0].selected_phases) {
           const selectedPhases = typeof rows[0].selected_phases === 'string' 
             ? JSON.parse(rows[0].selected_phases) 
@@ -189,11 +213,13 @@ class ProductionPlan {
       SELECT pp.*, 
              so.customer AS customer_name,
              u.username AS supervisor_name,
-             ppd.selected_phases
+             ppd.selected_phases,
+             sod.product_details
       FROM production_plans pp
       LEFT JOIN sales_orders so ON so.id = pp.sales_order_id
       LEFT JOIN users u ON u.id = pp.supervisor_id
       LEFT JOIN production_plan_details ppd ON ppd.sales_order_id = pp.sales_order_id
+      LEFT JOIN sales_order_details sod ON sod.sales_order_id = pp.sales_order_id
     `;
 
     if (conditions.length) {
@@ -207,6 +233,16 @@ class ProductionPlan {
     const plansWithPhases = [];
     for (const plan of rows || []) {
       try {
+        if (plan.product_details) {
+          const productDetails = typeof plan.product_details === 'string'
+            ? JSON.parse(plan.product_details)
+            : plan.product_details;
+          plan.product_name = productDetails.itemName || null;
+        } else {
+          plan.product_name = null;
+        }
+        delete plan.product_details;
+
         if (plan.selected_phases) {
           const selectedPhases = typeof plan.selected_phases === 'string' 
             ? JSON.parse(plan.selected_phases) 
@@ -370,21 +406,73 @@ class ProductionPlan {
 
       await connection.execute(query, flattenedValues);
       
+      // Fetch the created stages to get their IDs
       const [createdStages] = await connection.execute(
-        `SELECT id, sequence FROM production_plan_stages WHERE production_plan_id = ? ORDER BY sequence ASC`,
+        `SELECT id, stage_name, stage_type, sequence FROM production_plan_stages WHERE production_plan_id = ? ORDER BY sequence ASC`,
         [planId]
       );
       
-      for (let i = 1; i < createdStages.length; i++) {
+      // Fetch plan details to get project_id, sales_order_id, root_card_id and product name for outsourcing_tasks
+      const [planDetails] = await connection.execute(
+        `SELECT pp.root_card_id, pp.sales_order_id, rc.project_id, so.items as so_items, sod.product_details
+         FROM production_plans pp
+         LEFT JOIN root_cards rc ON pp.root_card_id = rc.id
+         LEFT JOIN sales_orders so ON pp.sales_order_id = so.id
+         LEFT JOIN sales_order_details sod ON pp.sales_order_id = sod.sales_order_id
+         WHERE pp.id = ?`,
+        [planId]
+      );
+
+      let productName = '-';
+      if (planDetails.length > 0) {
+        const details = planDetails[0];
+        // Try product details first
+        if (details.product_details) {
+          try {
+            const pd = typeof details.product_details === 'string' ? JSON.parse(details.product_details) : details.product_details;
+            if (pd?.itemName) productName = pd.itemName;
+          } catch (e) {}
+        }
+        // Try so items next
+        if (productName === '-' && details.so_items) {
+          try {
+            const items = typeof details.so_items === 'string' ? JSON.parse(details.so_items) : details.so_items;
+            if (Array.isArray(items) && items.length > 0) {
+              productName = items[0].name || items[0].itemName || productName;
+            }
+          } catch (e) {}
+        }
+      }
+
+      for (let i = 0; i < createdStages.length; i++) {
         const currentStage = createdStages[i];
-        const previousStage = createdStages[i - 1];
         
-        await connection.execute(
-          `UPDATE production_plan_stages SET blocked_by_stage_id = ? WHERE id = ?`,
-          [previousStage.id, currentStage.id]
-        );
-        
-        console.log(`[ProductionPlan.addStages] Stage ${currentStage.sequence} blocked by stage ${previousStage.sequence}`);
+        // Link stages for blocking
+        if (i > 0) {
+          const previousStage = createdStages[i - 1];
+          await connection.execute(
+            `UPDATE production_plan_stages SET blocked_by_stage_id = ? WHERE id = ?`,
+            [previousStage.id, currentStage.id]
+          );
+          console.log(`[ProductionPlan.addStages] Stage ${currentStage.sequence} blocked by stage ${previousStage.sequence}`);
+        }
+
+        // Create outsourcing_tasks entry for outsource stages
+        if (currentStage.stage_type === 'outsource') {
+          console.log(`[ProductionPlan.addStages] Creating outsourcing_task for stage: ${currentStage.stage_name}`);
+          await connection.execute(
+            `INSERT INTO outsourcing_tasks 
+             (production_plan_stage_id, production_plan_id, project_id, root_card_id, product_name, status)
+             VALUES (?, ?, ?, ?, ?, 'pending')`,
+            [
+              currentStage.id,
+              planId,
+              planDetails[0]?.project_id || null,
+              planDetails[0]?.root_card_id || null,
+              productName,
+            ]
+          );
+        }
       }
 
       if (!externalConnection) {

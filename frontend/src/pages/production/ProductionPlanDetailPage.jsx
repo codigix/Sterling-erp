@@ -177,7 +177,11 @@ const ProductionPlanDetailPage = () => {
         <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-8">
           <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-8">Plan Information</h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 pb-8 border-b border-slate-200 dark:border-slate-700">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8 pb-8 border-b border-slate-200 dark:border-slate-700">
+            <div>
+              <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-2">Product</p>
+              <p className="text-slate-900 dark:text-white font-medium">{plan.product_name || '-'}</p>
+            </div>
             <div>
               <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-2">Customer</p>
               <p className="text-slate-900 dark:text-white font-medium">{plan.customer_name || 'Not assigned'}</p>

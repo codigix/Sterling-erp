@@ -5,6 +5,9 @@ const parseJson = (value, fallback = []) => {
   if (!value) {
     return fallback;
   }
+  if (typeof value === "object") {
+    return value;
+  }
   try {
     return JSON.parse(value);
   } catch (_error) {
@@ -20,6 +23,7 @@ class RootCard {
     return {
       ...row,
       stages: parseJson(row.stages, []),
+      product_name: row.product_details ? parseJson(row.product_details).itemName : null,
       project: row.project_id
         ? {
             id: row.project_id,
@@ -41,10 +45,12 @@ class RootCard {
              p.client_name,
              p.sales_order_id,
              so.customer AS customer_name,
+             sod.product_details,
              u.username AS assigned_supervisor_name
       FROM root_cards rc
       LEFT JOIN projects p ON p.id = rc.project_id
       LEFT JOIN sales_orders so ON so.id = p.sales_order_id
+      LEFT JOIN sales_order_details sod ON sod.sales_order_id = so.id
       LEFT JOIN users u ON u.id = rc.assigned_supervisor
     `;
 
@@ -90,10 +96,12 @@ class RootCard {
                p.client_name,
                p.sales_order_id,
                so.customer AS customer_name,
+               sod.product_details,
                u.username AS assigned_supervisor_name
         FROM root_cards rc
         LEFT JOIN projects p ON p.id = rc.project_id
         LEFT JOIN sales_orders so ON so.id = p.sales_order_id
+        LEFT JOIN sales_order_details sod ON sod.sales_order_id = so.id
         LEFT JOIN users u ON u.id = rc.assigned_supervisor
         WHERE rc.id = ?
       `,
@@ -111,10 +119,12 @@ class RootCard {
                p.client_name,
                p.sales_order_id,
                so.customer AS customer_name,
+               sod.product_details,
                u.username AS assigned_supervisor_name
         FROM root_cards rc
         LEFT JOIN projects p ON p.id = rc.project_id
         LEFT JOIN sales_orders so ON so.id = p.sales_order_id
+        LEFT JOIN sales_order_details sod ON sod.sales_order_id = so.id
         LEFT JOIN users u ON u.id = rc.assigned_supervisor
         WHERE so.id = ?
       `,

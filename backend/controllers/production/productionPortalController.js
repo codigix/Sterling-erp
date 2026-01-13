@@ -401,21 +401,74 @@ exports.getOutsourceTasks = async (req, res) => {
         pp.id as plan_id,
         pp.plan_name,
         rc.id as root_card_id,
-        rc.title as project_name,
+        p.name as project_name,
         p.code as project_code,
-        ot.id as outsourcing_task_id
+        rc.title as root_card_title,
+        ot.id as outsourcing_task_id,
+        ot.product_name as ot_product_name,
+        so.items as so_items,
+        sod.product_details,
+        JSON_UNQUOTE(JSON_EXTRACT(cpd.project_requirements, '$.numberOfUnits')) as planned_quantity
       FROM production_plan_stages pps
       LEFT JOIN production_plans pp ON pps.production_plan_id = pp.id
       LEFT JOIN root_cards rc ON pp.root_card_id = rc.id
       LEFT JOIN projects p ON rc.project_id = p.id
+      LEFT JOIN sales_orders so ON so.id = COALESCE(pp.sales_order_id, p.sales_order_id, rc.sales_order_id)
       LEFT JOIN outsourcing_tasks ot ON pps.id = ot.production_plan_stage_id
+      LEFT JOIN sales_order_details sod ON sod.sales_order_id = COALESCE(pp.sales_order_id, p.sales_order_id, rc.sales_order_id)
+      LEFT JOIN client_po_details cpd ON cpd.sales_order_id = COALESCE(pp.sales_order_id, p.sales_order_id, rc.sales_order_id)
       WHERE pps.stage_type = 'outsource'
       ORDER BY pps.created_at DESC
     `);
     
-    console.log(`[ProductionPortalController.getOutsourceTasks] Found ${outsourceTasks.length} outsource tasks`);
+    // Parse product details and add product name
+    const formattedTasks = outsourceTasks.map(task => {
+      let product_name = task.ot_product_name;
+      
+      // 1. Try product details from sod
+      if (!product_name || product_name === '-') {
+        try {
+          if (task.product_details) {
+            const productDetails = typeof task.product_details === 'string' 
+              ? JSON.parse(task.product_details) 
+              : task.product_details;
+            
+            if (productDetails?.itemName && productDetails.itemName !== '-') {
+              product_name = productDetails.itemName;
+            }
+          }
+        } catch (e) {}
+      }
+
+      // 2. Try items from sales order
+      if (!product_name || product_name === '-') {
+        try {
+          if (task.so_items) {
+            const items = typeof task.so_items === 'string' ? JSON.parse(task.so_items) : task.so_items;
+            if (Array.isArray(items) && items.length > 0) {
+              product_name = items[0].name || items[0].itemName;
+            }
+          }
+        } catch (e) {}
+      }
+
+      // 3. Fallback to root card title
+      if (!product_name || product_name === '-') {
+        product_name = task.root_card_title || '-';
+      }
+
+      return { 
+        ...task, 
+        product_name, 
+        product_details: undefined, 
+        so_items: undefined,
+        ot_product_name: undefined 
+      };
+    });
     
-    res.json(outsourceTasks);
+    console.log(`[ProductionPortalController.getOutsourceTasks] Found ${formattedTasks.length} outsource tasks`);
+    
+    res.json(formattedTasks);
   } catch (error) {
     console.error('Get outsource tasks error:', error);
     res.status(500).json({ message: 'Failed to fetch outsource tasks', error: error.message });
@@ -428,7 +481,7 @@ exports.updateOutsourceTaskStatus = async (req, res) => {
     const { status, notes } = req.body;
     const pool = require('../../config/database');
     
-    if (!['pending', 'in_progress', 'completed', 'on_hold', 'cancelled'].includes(status)) {
+    if (!['pending', 'in_progress', 'completed', 'on_hold', 'cancelled', 'outward_challan_generated', 'inward_challan_generated'].includes(status)) {
       return res.status(400).json({ message: 'Invalid status' });
     }
     

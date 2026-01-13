@@ -88,6 +88,13 @@ const TaskDetailModal = ({ task, isOpen, onClose, onTaskComplete, isUpdating }) 
               </div>
             )}
 
+            {task.product_name && (
+              <div>
+                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-2">Product</p>
+                <p className="text-sm font-medium text-slate-900 dark:text-white">{task.product_name}</p>
+              </div>
+            )}
+
             {task.project_name && (
               <div>
                 <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-2">Project</p>

@@ -1,0 +1,2 @@
+#!/bin/bash
+rm -rf node_modules backend/node_modules frontend/node_modules
