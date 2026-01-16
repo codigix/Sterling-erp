@@ -317,7 +317,7 @@ const DailyTasksPage = () => {
                       onChange={(e) =>
                         handleStatusChange(task.id, e.target.value)
                       }
-                      className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm font-medium"
+                      className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs font-medium"
                     >
                       <option value="pending">Pending</option>
                       <option value="in-progress">In Progress</option>

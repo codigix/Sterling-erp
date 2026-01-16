@@ -1244,6 +1244,13 @@ async function runMigrations() {
       console.error('Migration 038 failed:', err.message);
     }
 
+    try {
+      const migration046 = require('../migrations/046_add_sales_order_id_to_employee_tasks.js');
+      await migration046();
+    } catch (err) {
+      console.error('Migration 046 failed:', err.message);
+    }
+
     console.log('\n✅ All migrations completed successfully!');
   } catch (error) {
     console.error('❌ Migration failed:', error.message);

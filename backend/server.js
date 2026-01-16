@@ -41,6 +41,7 @@ const productionPortalRoutes = require('./routes/production/productionPortalRout
 const designProjectRoutes = require('./routes/design/designProjectRoutes');
 const departmentPortalRoutes = require('./routes/department/departmentPortalRoutes');
 const outsourcingRoutes = require('./routes/production/outsourcingRoutes');
+const comprehensiveBOMRoutes = require('./routes/engineering/comprehensiveBOMRoutes');
 
 const app = express();
 
@@ -96,6 +97,7 @@ app.use('/api/qc/portal', qcPortalRoutes);
 app.use('/api/design/projects', designProjectRoutes);
 app.use('/api/department/portal', departmentPortalRoutes);
 app.use('/api/tracking', trackingRoutes);
+app.use('/api/engineering/bom/comprehensive', comprehensiveBOMRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });

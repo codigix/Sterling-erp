@@ -340,7 +340,7 @@ const CreateProjectPage = () => {
                     <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
                       Project Code
                     </label>
-                    <div className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-sm font-mono">
+                    <div className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-xs font-mono">
                       {projectData.projectCode || "N/A"}
                     </div>
                   </div>
@@ -348,7 +348,7 @@ const CreateProjectPage = () => {
                     <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
                       PO Number
                     </label>
-                    <div className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-sm font-mono">
+                    <div className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-xs font-mono">
                       {projectData.poNumber || "N/A"}
                     </div>
                   </div>
@@ -364,7 +364,7 @@ const CreateProjectPage = () => {
                     <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
                       Priority
                     </label>
-                    <div className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-sm capitalize">
+                    <div className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-xs capitalize">
                       <span
                         className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
                           projectData.priority === "critical"
@@ -384,7 +384,7 @@ const CreateProjectPage = () => {
                     <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
                       Status
                     </label>
-                    <div className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-sm capitalize">
+                    <div className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-xs capitalize">
                       <span
                         className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
                           projectData.status === "completed"

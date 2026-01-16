@@ -533,7 +533,7 @@ const DrawingsPage = () => {
                         drawingType: e.target.value,
                       })
                     }
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="2D">2D</option>
                     <option value="3D">3D</option>
@@ -572,7 +572,7 @@ const DrawingsPage = () => {
                       drawingStatus: e.target.value,
                     })
                   }
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="Draft">Draft</option>
                   <option value="Approved">Approved</option>
@@ -607,7 +607,7 @@ const DrawingsPage = () => {
                   type="file"
                   onChange={handleFileChange}
                   accept=".pdf,.dwg,.dxf,.step,.stp,.iges,.igs"
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 {uploadFormData.file && (
                   <p className="text-xs text-green-600 dark:text-green-400 mt-2">

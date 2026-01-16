@@ -1,166 +1,247 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import {
   Plus,
   Trash2,
   Save,
-  AlertCircle,
-  CheckCircle,
   ChevronLeft,
-  Package,
-  Grid3x3,
+  ChevronDown,
 } from "lucide-react";
 import axios from "../../../utils/api";
 import Swal from "sweetalert2";
+import SearchableSelect from "../../../components/ui/SearchableSelect";
 
 const CreateBOMPage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-
-  const projectName = searchParams.get("projectName") || "";
-  const poNumber = searchParams.get("poNumber") || "";
-  const customer = searchParams.get("customer") || "";
-  const salesOrderId = searchParams.get("salesOrderId");
+  const [saving, setSaving] = useState(false);
+  const [materials, setMaterials] = useState([]);
+  const [loadingMaterials, setLoadingMaterials] = useState(true);
+  const [workstations, setWorkstations] = useState([]);
+  const [warehouses, setWarehouses] = useState([]);
+  const [operations, setOperations] = useState([]);
+  const [expandedSections, setExpandedSections] = useState({
+    product: true,
+    components: true,
+    materials: true,
+    operations: true,
+    scrap: true,
+    costs: true,
+  });
 
   const [bomData, setBomData] = useState({
-    projectName: projectName || "",
-    description: "",
-    salesOrderId: salesOrderId || null,
-    items: [
-      {
-        id: 1,
-        partNumber: "",
-        description: "",
-        quantity: 1,
-        unit: "pcs",
-        unitCost: 0,
-        itemGroup: "Raw Material",
-      },
-    ],
+    productInfo: {
+      productName: "",
+      itemCode: "",
+      itemGroup: "",
+      quantity: 1,
+      uom: "Kg",
+      revision: 1,
+      description: "",
+      isActive: true,
+      isDefault: false,
+      salesOrderId: searchParams.get("salesOrderId") || null,
+    },
+    components: [],
+    materials: [],
+    operations: [],
+    scrapLoss: [],
   });
-  const [successMessage, setSuccessMessage] = useState("");
-  const [errorMessage, setErrorMessage] = useState("");
-  const [saving, setSaving] = useState(false);
 
-  const itemGroups = [
-    "Finished Good",
-    "Sub-assembly",
-    "Raw Material",
-    "Component",
-    "Consumable",
+  const [costs, setCosts] = useState({
+    materialCost: 0,
+    operationCost: 0,
+    scrapLossCost: 0,
+    materialCostAfterScrap: 0,
+    totalBOMCost: 0,
+  });
+
+  const UOMOptions = ["Kg", "pcs", "m", "l", "set", "Box"];
+  const ItemGroupOptions = ["Raw Material", "Component", "Sub-assembly", "Finished Good"];
+  const OperationOptions = [
+    "Cutting",
+    "Welding",
+    "Bending",
+    "Grinding",
+    "Drilling",
+    "Turning",
+    "Milling",
+    "Assembly",
+    "Painting",
+    "Heat Treatment",
+    "Plating",
+    "Stamping",
+    "Casting",
+    "Forging",
+    "Testing",
+    "Packaging"
   ];
 
-  const getCategoryColor = (category) => {
-    const colors = {
-      "Finished Good":
-        "bg-purple-50 dark:bg-purple-900/30 border-purple-200 dark:border-purple-700",
-      "Sub-assembly":
-        "bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700",
-      "Raw Material":
-        "bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-700",
-      Component:
-        "bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-700",
-      Consumable:
-        "bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-700",
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoadingMaterials(true);
+        const [materialsRes, facilitiesRes] = await Promise.all([
+          axios.get("/inventory/materials"),
+          axios.get("/inventory/facilities")
+        ]);
+        
+        setMaterials(materialsRes.data.materials || []);
+        const facilitiesList = facilitiesRes.data.facilities || [];
+        setWorkstations(facilitiesList);
+        
+        // Extract unique warehouses from materials or use default
+        const uniqueWarehouses = [...new Set(materialsRes.data.materials?.map(m => m.warehouse).filter(Boolean) || [])];
+        setWarehouses(uniqueWarehouses.length > 0 ? uniqueWarehouses : ["Main Warehouse", "Secondary Warehouse"]);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        setMaterials([]);
+        setWorkstations([]);
+        setWarehouses(["Main Warehouse", "Secondary Warehouse"]);
+      } finally {
+        setLoadingMaterials(false);
+      }
     };
-    return colors[category] || colors["Raw Material"];
+
+    fetchData();
+  }, []);
+
+  const productNameOptions = materials.map((m) => ({
+    label: m.itemName,
+    value: m.itemName,
+  }));
+
+  const itemCodeOptions = materials.map((m) => ({
+    label: m.itemCode,
+    value: m.itemCode,
+  }));
+
+  const itemGroupSelectOptions = ItemGroupOptions.map((group) => ({
+    label: group,
+    value: group,
+  }));
+
+  const workstationOptions = workstations.map((w) => ({
+    label: w.name,
+    value: w.name,
+  }));
+
+  const warehouseOptions = warehouses.map((w) => ({
+    label: w,
+    value: w,
+  }));
+
+  const operationTypeOptions = [
+    { label: "In-house", value: "in-house" },
+    { label: "Outsource", value: "outsource" }
+  ];
+
+  const operationSelectOptions = OperationOptions.map((op) => ({
+    label: op,
+    value: op,
+  }));
+
+  const UOMSelectOptions = UOMOptions.map((uom) => ({
+    label: uom,
+    value: uom,
+  }));
+
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
   };
 
-  const handleAddItem = () => {
-    if (bomData.items.length >= 50) {
-      setErrorMessage("Maximum 50 items per BOM");
-      setTimeout(() => setErrorMessage(""), 3000);
-      return;
-    }
-    const newId = Math.max(...bomData.items.map((i) => i.id), 0) + 1;
+  const addTableRow = (section) => {
+    const newRow =
+      section === "components"
+        ? { id: Date.now(), componentCode: "", quantity: 1, uom: "Kg", rate: 0, lossPercent: 0, notes: "" }
+        : section === "materials"
+        ? { id: Date.now(), itemName: "", quantity: 1, uom: "Kg", itemGroup: "", rate: 0, warehouse: "", operation: "" }
+        : section === "operations"
+        ? { id: Date.now(), operationName: "", workstation: "", cycleTime: 0, setupTime: 0, hourlyRate: 0, cost: 0, type: "in-house", targetWarehouse: "" }
+        : { id: Date.now(), itemCode: "", name: "", inputQty: 0, lossPercent: 0, rate: 0 };
+
     setBomData({
       ...bomData,
-      items: [
-        ...bomData.items,
-        {
-          id: newId,
-          partNumber: "",
-          description: "",
-          quantity: 1,
-          unit: "pcs",
-          unitCost: 0,
-          itemGroup: "Raw Material",
-        },
-      ],
+      [section]: [...bomData[section], newRow],
     });
   };
 
-  const handleRemoveItem = (id) => {
-    if (bomData.items.length === 1) {
-      setErrorMessage("BOM must have at least one item");
-      setTimeout(() => setErrorMessage(""), 3000);
-      return;
-    }
+  const removeTableRow = (section, id) => {
     setBomData({
       ...bomData,
-      items: bomData.items.filter((item) => item.id !== id),
+      [section]: bomData[section].filter((row) => row.id !== id),
     });
   };
 
-  const handleItemChange = (id, field, value) => {
+  const updateTableRow = (section, id, field, value) => {
     setBomData({
       ...bomData,
-      items: bomData.items.map((item) =>
-        item.id === id ? { ...item, [field]: value } : item
+      [section]: bomData[section].map((row) =>
+        row.id === id ? { ...row, [field]: value } : row
       ),
     });
   };
 
+  const calculateCosts = () => {
+    let materialCost = 0;
+    let operationCost = 0;
+    let scrapLossCost = 0;
+
+    bomData.materials.forEach((m) => {
+      materialCost += (m.quantity || 0) * (m.rate || 0);
+    });
+
+    bomData.operations.forEach((o) => {
+      operationCost += o.cost || 0;
+    });
+
+    bomData.scrapLoss.forEach((s) => {
+      scrapLossCost += ((s.inputQty || 0) * (s.rate || 0) * (s.lossPercent || 0)) / 100;
+    });
+
+    const materialCostAfterScrap = materialCost - scrapLossCost;
+    const totalBOMCost = materialCostAfterScrap + operationCost;
+
+    setCosts({
+      materialCost,
+      operationCost,
+      scrapLossCost,
+      materialCostAfterScrap,
+      totalBOMCost,
+    });
+  };
+
   const handleSave = async () => {
-    if (!bomData.projectName.trim()) {
+    if (!bomData.productInfo.productName.trim()) {
       Swal.fire({
         icon: "warning",
         title: "Required Field",
-        text: "Project name is required",
-        confirmButtonColor: "#3b82f6",
-      });
-      return;
-    }
-
-    const validItems = bomData.items.filter(
-      (item) => item.partNumber && item.description
-    );
-    if (validItems.length === 0) {
-      Swal.fire({
-        icon: "warning",
-        title: "No Items",
-        text: "Add at least one valid item (part number and description)",
-        confirmButtonColor: "#3b82f6",
+        text: "Product name is required",
       });
       return;
     }
 
     try {
       setSaving(true);
-      const lineItems = validItems.map((item) => ({
-        itemCode: item.partNumber,
-        itemDescription: item.description,
-        quantity: item.quantity,
-        unit: item.unit,
-        unitCost: item.unitCost || 0,
-        specification: '',
-        partType: item.itemGroup === 'Raw Material' ? 'raw_material' : item.itemGroup === 'Component' ? 'component' : 'assembly'
-      }));
+      calculateCosts();
 
       const payload = {
-        salesOrderId: bomData.salesOrderId || null,
-        bomName: bomData.projectName,
-        description: bomData.description,
-        lineItems: lineItems
+        productInfo: bomData.productInfo,
+        components: bomData.components.filter((c) => c.componentCode),
+        materials: bomData.materials.filter((m) => m.itemName),
+        operations: bomData.operations.filter((o) => o.operationName),
+        scrapLoss: bomData.scrapLoss.filter((s) => s.itemCode),
       };
 
-      await axios.post("/production/bom", payload);
+      await axios.post("/engineering/bom/comprehensive", payload);
 
       Swal.fire({
         icon: "success",
         title: "BOM Created Successfully",
-        text: `BOM "${bomData.projectName}" saved with ${validItems.length} items!`,
-        confirmButtonColor: "#10b981",
+        text: "Your BOM has been saved!",
         timer: 2000,
       });
 
@@ -168,361 +249,620 @@ const CreateBOMPage = () => {
         navigate("/design-engineer/bom/view");
       }, 2000);
     } catch (error) {
-      console.error("Failed to save BOM:", error);
       Swal.fire({
         icon: "error",
-        title: "Failed to Create BOM",
-        text: error.response?.data?.message || "Failed to save BOM. Please try again.",
-        confirmButtonColor: "#3b82f6",
+        title: "Failed",
+        text: error.response?.data?.message || "Failed to save BOM",
       });
     } finally {
       setSaving(false);
     }
   };
 
-  const totalItems = bomData.items.length;
-  const validItems = bomData.items.filter(
-    (item) => item.partNumber && item.description
+  const AccordionSection = ({ title, section, children, itemCount = 0, addButton = null }) => (
+    <div className="border border-slate-200 dark:border-slate-700 rounded-lg mb-2">
+      <button
+        onClick={() => toggleSection(section)}
+        className="w-full flex items-center justify-between px-4 py-2 bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 transition"
+      >
+        <div className="flex items-center gap-2">
+          <ChevronDown
+            size={16}
+            className={`transition-transform ${expandedSections[section] ? "" : "-rotate-90"}`}
+          />
+          <h3 className="text-xs font-semibold text-slate-900 dark:text-white">
+            {title}
+          </h3>
+          {itemCount > 0 && (
+            <span className="ml-2 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full">
+              {itemCount}
+            </span>
+          )}
+        </div>
+        {addButton && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              addButton.onClick();
+            }}
+            className={`flex items-center gap-1 px-2 py-1 ${addButton.className} text-white rounded text-xs hover:opacity-90 transition`}
+          >
+            <Plus size={14} /> {addButton.label}
+          </button>
+        )}
+      </button>
+      {expandedSections[section] && (
+        <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+          {children}
+        </div>
+      )}
+    </div>
   );
-  const itemsByCategory = itemGroups.reduce((acc, group) => {
-    acc[group] = bomData.items.filter(
-      (item) => item.itemGroup === group
-    ).length;
-    return acc;
-  }, {});
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        {/* Top Navigation */}
-        <div className="flex items-center gap-2 mb-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-3">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-4">
           <button
             onClick={() => navigate("/design-engineer/dashboard")}
-            className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition text-slate-600 dark:text-slate-400"
+            className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg"
           >
-            <ChevronLeft size={20} />
+            <ChevronLeft size={18} />
           </button>
-          <h1 className="text-xl font-bold text-slate-900 dark:text-white text-xs">
-            Bill of Materials
-          </h1>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Create BOM</h1>
+            <p className="text-xs text-slate-600 dark:text-slate-400">Bill of Materials</p>
+          </div>
         </div>
 
-        {/* Project Context Card */}
-        {(projectName || poNumber || customer) && (
-          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-3 mb-6 shadow-sm">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* Accordions Container */}
+        <div className=" p-3">
+          {/* Product Information Section */}
+          <AccordionSection title="Product Information" section="product">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
               <div>
-                <p className="text-xs text-slate-600 dark:text-slate-400 font-semibold tracking-wide">
-                  Project
-                </p>
-                <p className="text-md font-semibold text-slate-900 dark:text-white mt-1">
-                  {projectName}
-                </p>
+                <SearchableSelect
+                  label="Product Name *"
+                  options={productNameOptions}
+                  value={bomData.productInfo.productName}
+                  onChange={(value) =>
+                    setBomData({
+                      ...bomData,
+                      productInfo: { ...bomData.productInfo, productName: value },
+                    })
+                  }
+                  placeholder="Select or type product name"
+                  disabled={loadingMaterials}
+                />
               </div>
-              {poNumber && (
-                <div>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 font-semibold tracking-wide">
-                    PO Number
-                  </p>
-                  <p className="text-md font-semibold text-slate-900 dark:text-white mt-1">
-                    {poNumber}
-                  </p>
+              <div>
+                <SearchableSelect
+                  label="Item Code"
+                  options={itemCodeOptions}
+                  value={bomData.productInfo.itemCode}
+                  onChange={(value) =>
+                    setBomData({
+                      ...bomData,
+                      productInfo: { ...bomData.productInfo, itemCode: value },
+                    })
+                  }
+                  placeholder="Select or type item code"
+                  disabled={loadingMaterials}
+                />
+              </div>
+              <div>
+                <SearchableSelect
+                  label="Item Group"
+                  options={itemGroupSelectOptions}
+                  value={bomData.productInfo.itemGroup}
+                  onChange={(value) =>
+                    setBomData({
+                      ...bomData,
+                      productInfo: { ...bomData.productInfo, itemGroup: value },
+                    })
+                  }
+                  placeholder="Select or type item group"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Qty / UOM
+                </label>
+                <div className="flex gap-1">
+                  <input
+                    type="number"
+                    value={bomData.productInfo.quantity}
+                    onChange={(e) =>
+                      setBomData({
+                        ...bomData,
+                        productInfo: { ...bomData.productInfo, quantity: parseFloat(e.target.value) },
+                      })
+                    }
+                    className="w-1/2 px-2 py-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs"
+                  />
+                  <div className="w-1/2">
+                    <SearchableSelect
+                      options={UOMSelectOptions}
+                      value={bomData.productInfo.uom}
+                      onChange={(value) =>
+                        setBomData({
+                          ...bomData,
+                          productInfo: { ...bomData.productInfo, uom: value },
+                        })
+                      }
+                      placeholder="Select UOM"
+                    />
+                  </div>
                 </div>
-              )}
-              {customer && (
-                <div>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 font-semibold tracking-wide">
-                    Customer
-                  </p>
-                  <p className="text-md font-semibold text-slate-900 dark:text-white mt-1">
-                    {customer}
-                  </p>
-                </div>
-              )}
-              {salesOrderId && (
-                <div>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 font-semibold tracking-wide">
-                    Sales Order
-                  </p>
-                  <p className="text-md font-semibold text-slate-900 dark:text-white mt-1">
-                    #{salesOrderId}
-                  </p>
-                </div>
-              )}
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Revision
+                </label>
+                <input
+                  type="number"
+                  value={bomData.productInfo.revision}
+                  onChange={(e) =>
+                    setBomData({
+                      ...bomData,
+                      productInfo: { ...bomData.productInfo, revision: parseInt(e.target.value) },
+                    })
+                  }
+                  className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs"
+                />
+              </div>
+              <div className="md:col-span-3">
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Description
+                </label>
+                <textarea
+                  value={bomData.productInfo.description}
+                  onChange={(e) =>
+                    setBomData({
+                      ...bomData,
+                      productInfo: { ...bomData.productInfo, description: e.target.value },
+                    })
+                  }
+                  className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs"
+                  rows="2"
+                />
+              </div>
             </div>
-          </div>
-        )}
-
-        {/* Messages */}
-        {successMessage && (
-          <div className="flex items-center text-xs gap-3 p-4 rounded-lg bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800">
-            <CheckCircle
-              size={20}
-              className="text-green-600 dark:text-green-400"
-            />
-            <p className="text-sm font-medium text-green-800 dark:text-green-300">
-              {successMessage}
-            </p>
-          </div>
-        )}
-        {errorMessage && (
-          <div className="flex items-center text-xs gap-3 p-4 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800">
-            <AlertCircle size={20} className="text-red-600 dark:text-red-400" />
-            <p className="text-sm font-medium text-red-800 dark:text-red-300">
-              {errorMessage}
-            </p>
-          </div>
-        )}
-
-        {/* BOM Details Card */}
-        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-3 mb-6 shadow-sm">
-          <h2 className="text-lg font-bold text-slate-900 dark:text-white text-xs mb-4">
-            BOM Details
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                BOM Name <span className="text-red-600">*</span>
+            <div className="mt-2 flex gap-3">
+              <label className="flex items-center gap-1 cursor-pointer text-xs">
+                <input
+                  type="checkbox"
+                  checked={bomData.productInfo.isActive}
+                  onChange={(e) =>
+                    setBomData({
+                      ...bomData,
+                      productInfo: { ...bomData.productInfo, isActive: e.target.checked },
+                    })
+                  }
+                />
+                <span className="text-slate-700 dark:text-slate-300">Active</span>
               </label>
-              <input
-                type="text"
-                value={bomData.projectName}
-                onChange={(e) =>
-                  setBomData({ ...bomData, projectName: e.target.value })
-                }
-                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-xs"
-                placeholder="e.g., Assembly Unit A1"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                Description
+              <label className="flex items-center gap-1 cursor-pointer text-xs">
+                <input
+                  type="checkbox"
+                  checked={bomData.productInfo.isDefault}
+                  onChange={(e) =>
+                    setBomData({
+                      ...bomData,
+                      productInfo: { ...bomData.productInfo, isDefault: e.target.checked },
+                    })
+                  }
+                />
+                <span className="text-slate-700 dark:text-slate-300">Default</span>
               </label>
-              <input
-                type="text"
-                value={bomData.description}
-                onChange={(e) =>
-                  setBomData({ ...bomData, description: e.target.value })
-                }
-                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-xs"
-                placeholder="e.g., Main assembly for this project"
-              />
             </div>
-          </div>
-        </div>
+          </AccordionSection>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6">
-          <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4 text-center shadow-sm">
-            <p className="text-xs text-slate-600 dark:text-slate-400 font-semibold">
-              Total Items
-            </p>
-            <p className="text-xl font-bold text-slate-900 dark:text-white text-xs mt-1">
-              {totalItems}
-            </p>
-          </div>
-          <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4 text-center shadow-sm">
-            <p className="text-xs text-slate-600 dark:text-slate-400 font-semibold">
-              Valid Items
-            </p>
-            <p className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">
-              {validItems.length}
-            </p>
-          </div>
-          {itemGroups.map((group) => (
-            <div
-              key={group}
-              className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4 text-center shadow-sm"
-            >
-              <p className="text-xs text-slate-600 dark:text-slate-400 font-semibold truncate">
-                {group.split(" ")[0]}
-              </p>
-              <p className="text-xl font-bold text-slate-900 dark:text-white text-xs mt-1">
-                {itemsByCategory[group] || 0}
-              </p>
-            </div>
-          ))}
-        </div>
-
-        {/* BOM Items Section */}
-        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden mb-6">
-          <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white text-xs flex items-center gap-2">
-                <Package size={20} />
-                BOM Items
-              </h2>
-              <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 text-xs">
-                {bomData.items.length} total items
-              </p>
-            </div>
-            <button
-              onClick={handleAddItem}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all duration-200 font-medium text-sm"
-            >
-              <Plus size={18} />
-              Add Item
-            </button>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700">
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                    Category
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                    Part Number
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                    Description
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                    Qty
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                    Unit
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                    Unit Cost
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                    Action
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                {bomData.items.map((item) => (
-                  <tr
-                    key={item.id}
-                    className={`hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors ${getCategoryColor(
-                      item.itemGroup
-                    )}`}
-                  >
-                    <td className="px-4 py-3">
-                      <select
-                        value={item.itemGroup || "Raw Material"}
-                        onChange={(e) =>
-                          handleItemChange(item.id, "itemGroup", e.target.value)
-                        }
-                        className="w-full px-3 py-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        {itemGroups.map((group) => (
-                          <option key={group} value={group}>
-                            {group}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="px-4 py-3">
-                      <input
-                        type="text"
-                        value={item.partNumber}
-                        onChange={(e) =>
-                          handleItemChange(
-                            item.id,
-                            "partNumber",
-                            e.target.value
-                          )
-                        }
-                        className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="PN-001"
-                      />
-                    </td>
-                    <td className="px-4 py-3">
-                      <input
-                        type="text"
-                        value={item.description}
-                        onChange={(e) =>
-                          handleItemChange(
-                            item.id,
-                            "description",
-                            e.target.value
-                          )
-                        }
-                        className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Item description"
-                      />
-                    </td>
-                    <td className="px-4 py-3">
-                      <input
-                        type="number"
-                        min="1"
-                        value={item.quantity}
-                        onChange={(e) =>
-                          handleItemChange(
-                            item.id,
-                            "quantity",
-                            parseInt(e.target.value) || 1
-                          )
-                        }
-                        className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </td>
-                    <td className="px-4 py-3">
-                      <select
-                        value={item.unit}
-                        onChange={(e) =>
-                          handleItemChange(item.id, "unit", e.target.value)
-                        }
-                        className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="pcs">pcs</option>
-                        <option value="kg">kg</option>
-                        <option value="m">m</option>
-                        <option value="l">l</option>
-                        <option value="set">set</option>
-                      </select>
-                    </td>
-                    <td className="px-4 py-3">
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={item.unitCost}
-                        onChange={(e) =>
-                          handleItemChange(
-                            item.id,
-                            "unitCost",
-                            parseFloat(e.target.value) || 0
-                          )
-                        }
-                        className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="0.00"
-                      />
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <button
-                        onClick={() => handleRemoveItem(item.id)}
-                        className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-colors text-red-600 dark:text-red-400"
-                        title="Delete"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </td>
+          {/* Components Section */}
+          <AccordionSection 
+            title="Components" 
+            section="components" 
+            itemCount={bomData.components.length}
+            addButton={{ label: "Add", onClick: () => addTableRow("components"), className: "bg-blue-600 hover:bg-blue-700" }}
+          >
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="bg-slate-100 dark:bg-slate-700">
+                    <th className="px-2 py-1 text-left font-semibold">Code</th>
+                    <th className="px-2 py-1 text-left font-semibold w-auto">Qty</th>
+                    <th className="px-2 py-1 text-left font-semibold w-auto">UOM</th>
+                    <th className="px-2 py-1 text-left font-semibold w-auto">Rate</th>
+                    <th className="px-2 py-1 text-left font-semibold w-auto">Loss%</th>
+                    <th className="px-2 py-1 text-left font-semibold">Notes</th>
+                    <th className="px-2 py-1 text-center font-semibold w-auto"></th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {bomData.components.map((row) => (
+                    <tr key={row.id} className="border-b border-slate-200 dark:border-slate-700">
+                      <td className="px-2 py-1">
+                        <SearchableSelect
+                          options={itemCodeOptions}
+                          value={row.componentCode}
+                          onChange={(value) => updateTableRow("components", row.id, "componentCode", value)}
+                          placeholder="Select code"
+                        />
+                      </td>
+                      <td className="px-2 py-1">
+                        <input
+                          type="number"
+                          value={row.quantity}
+                          onChange={(e) => updateTableRow("components", row.id, "quantity", parseFloat(e.target.value))}
+                          className="w-auto p-2  border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs text-left"
+                        />
+                      </td>
+                      <td className="px-2 py-1">
+                        <SearchableSelect
+                          options={UOMSelectOptions}
+                          value={row.uom}
+                          onChange={(value) => updateTableRow("components", row.id, "uom", value)}
+                          placeholder="Select UOM"
+                        />
+                      </td>
+                      <td className="px-2 py-1">
+                        <input
+                          type="number"
+                          value={row.rate}
+                          onChange={(e) => updateTableRow("components", row.id, "rate", parseFloat(e.target.value))}
+                          className="w-fit p-2 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs text-right"
+                        />
+                      </td>
+                      <td className="px-2 py-1">
+                        <input
+                          type="number"
+                          value={row.lossPercent}
+                          onChange={(e) => updateTableRow("components", row.id, "lossPercent", parseFloat(e.target.value))}
+                          className="w-fit p-2 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs text-right"
+                        />
+                      </td>
+                      <td className="px-2 py-1">
+                        <input
+                          type="text"
+                          value={row.notes}
+                          onChange={(e) => updateTableRow("components", row.id, "notes", e.target.value)}
+                          className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs"
+                        />
+                      </td>
+                      <td className="px-2 py-1 text-center">
+                        <button
+                          onClick={() => removeTableRow("components", row.id)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {bomData.components.length === 0 && (
+              <p className="text-center text-slate-500 text-xs py-2">No components added</p>
+            )}
+          </AccordionSection>
+
+          {/* Materials Section */}
+          <AccordionSection 
+            title="Materials" 
+            section="materials" 
+            itemCount={bomData.materials.length}
+            addButton={{ label: "Add", onClick: () => addTableRow("materials"), className: "bg-green-600 hover:bg-green-700" }}
+          >
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="bg-slate-100 dark:bg-slate-700">
+                    <th className="px-2 py-1 text-left font-semibold">Item Name</th>
+                    <th className="px-2 py-1 text-left font-semibold w-auto">Qty</th>
+                    <th className="px-2 py-1 text-left font-semibold w-auto">UOM</th>
+                    <th className="px-2 py-1 text-left font-semibold w-auto">Group</th>
+                    <th className="px-2 py-1 text-left font-semibold w-auto">Rate</th>
+                    <th className="px-2 py-1 text-left font-semibold w-auto">Warehouse</th>
+                    <th className="px-2 py-1 text-center font-semibold w-auto"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bomData.materials.map((row) => (
+                    <tr key={row.id} className="border-b border-slate-200 dark:border-slate-700">
+                      <td className="px-2 py-1">
+                        <SearchableSelect
+                          options={productNameOptions}
+                          value={row.itemName}
+                          onChange={(value) => updateTableRow("materials", row.id, "itemName", value)}
+                          placeholder="Select item"
+                        />
+                      </td>
+                      <td className="px-2 py-1">
+                        <input
+                          type="number"
+                          value={row.quantity}
+                          onChange={(e) => updateTableRow("materials", row.id, "quantity", parseFloat(e.target.value))}
+                          className="w-auto p-2  border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs text-left"
+                        />
+                      </td>
+                      <td className="px-2 py-1">
+                        <SearchableSelect
+                          options={UOMSelectOptions}
+                          value={row.uom}
+                          onChange={(value) => updateTableRow("materials", row.id, "uom", value)}
+                          placeholder="Select UOM"
+                        />
+                      </td>
+                      <td className="px-2 py-1">
+                        <SearchableSelect
+                          options={itemGroupSelectOptions}
+                          value={row.itemGroup}
+                          onChange={(value) => updateTableRow("materials", row.id, "itemGroup", value)}
+                          placeholder="Select group"
+                        />
+                      </td>
+                      <td className="px-2 py-1">
+                        <input
+                          type="number"
+                          value={row.rate}
+                          onChange={(e) => updateTableRow("materials", row.id, "rate", parseFloat(e.target.value))}
+                          className="w-fit p-2 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs text-right"
+                        />
+                      </td>
+                      <td className="px-2 py-1">
+                        <SearchableSelect
+                          options={warehouseOptions}
+                          value={row.warehouse}
+                          onChange={(value) => updateTableRow("materials", row.id, "warehouse", value)}
+                          placeholder="Select warehouse"
+                        />
+                      </td>
+                      <td className="px-2 py-1 text-center">
+                        <button
+                          onClick={() => removeTableRow("materials", row.id)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {bomData.materials.length === 0 && (
+              <p className="text-center text-slate-500 text-xs py-2">No materials added</p>
+            )}
+          </AccordionSection>
+
+          {/* Operations Section */}
+          <AccordionSection 
+            title="Operations" 
+            section="operations" 
+            itemCount={bomData.operations.length}
+            addButton={{ label: "Add", onClick: () => addTableRow("operations"), className: "bg-purple-600 hover:bg-purple-700" }}
+          >
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="bg-slate-100 dark:bg-slate-700">
+                    <th className="px-2 py-1 text-left font-semibold">Operation</th>
+                    <th className="px-2 py-1 text-left font-semibold w-auto">Workstation</th>
+                    <th className="px-2 py-1 text-center font-semibold w-auto">Cycle Time</th>
+                    <th className="px-2 py-1 text-center font-semibold w-auto">Setup Time</th>
+                    <th className="px-2 py-1 text-left font-semibold w-auto">Rate</th>
+                    <th className="px-2 py-1 text-left font-semibold w-auto">Cost</th>
+                    <th className="px-2 py-1 text-left font-semibold w-auto">Type</th>
+                    <th className="px-2 py-1 text-center font-semibold w-auto"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bomData.operations.map((row) => (
+                    <tr key={row.id} className="border-b border-slate-200 dark:border-slate-700">
+                      <td className="px-2 py-1">
+                        <SearchableSelect
+                          options={operationSelectOptions}
+                          value={row.operationName}
+                          onChange={(value) => updateTableRow("operations", row.id, "operationName", value)}
+                          placeholder="Select operation"
+                        />
+                      </td>
+                      <td className="px-2 py-1">
+                        <SearchableSelect
+                          options={workstationOptions}
+                          value={row.workstation}
+                          onChange={(value) => updateTableRow("operations", row.id, "workstation", value)}
+                          placeholder="Select workstation"
+                        />
+                      </td>
+                      <td className="px-2 py-1">
+                        <input
+                          type="number"
+                          value={row.cycleTime}
+                          onChange={(e) => updateTableRow("operations", row.id, "cycleTime", parseFloat(e.target.value))}
+                          className="w-auto p-2  border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs text-left"
+                        />
+                      </td>
+                      <td className="px-2 py-1">
+                        <input
+                          type="number"
+                          value={row.setupTime}
+                          onChange={(e) => updateTableRow("operations", row.id, "setupTime", parseFloat(e.target.value))}
+                          className="w-auto p-2  border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs text-left"
+                        />
+                      </td>
+                      <td className="px-2 py-1">
+                        <input
+                          type="number"
+                          value={row.hourlyRate}
+                          onChange={(e) => updateTableRow("operations", row.id, "hourlyRate", parseFloat(e.target.value))}
+                          className="w-fit p-2 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs text-right"
+                        />
+                      </td>
+                      <td className="px-2 py-1">
+                        <input
+                          type="number"
+                          value={row.cost}
+                          onChange={(e) => updateTableRow("operations", row.id, "cost", parseFloat(e.target.value))}
+                          className="w-fit p-2 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs text-right"
+                        />
+                      </td>
+                      <td className="px-2 py-1">
+                        <SearchableSelect
+                          options={operationTypeOptions}
+                          value={row.type}
+                          onChange={(value) => updateTableRow("operations", row.id, "type", value)}
+                          placeholder="Select type"
+                        />
+                      </td>
+                      <td className="px-2 py-1 text-center">
+                        <button
+                          onClick={() => removeTableRow("operations", row.id)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {bomData.operations.length === 0 && (
+              <p className="text-center text-slate-500 text-xs py-2">No operations added</p>
+            )}
+          </AccordionSection>
+
+          {/* Scrap & Loss Section */}
+          <AccordionSection 
+            title="Scrap & Loss" 
+            section="scrap" 
+            itemCount={bomData.scrapLoss.length}
+            addButton={{ label: "Add", onClick: () => addTableRow("scrapLoss"), className: "bg-orange-600 hover:bg-orange-700" }}
+          >
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="bg-slate-100 dark:bg-slate-700">
+                    <th className="px-2 py-1 text-left font-semibold">Code</th>
+                    <th className="px-2 py-1 text-left font-semibold">Name</th>
+                    <th className="px-2 py-1 text-center font-semibold w-auto">Input Qty</th>
+                    <th className="px-2 py-1 text-left font-semibold w-auto">Loss %</th>
+                    <th className="px-2 py-1 text-left font-semibold w-auto">Rate</th>
+                    <th className="px-2 py-1 text-center font-semibold w-auto"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bomData.scrapLoss.map((row) => (
+                    <tr key={row.id} className="border-b border-slate-200 dark:border-slate-700">
+                      <td className="px-2 py-1">
+                        <SearchableSelect
+                          options={itemCodeOptions}
+                          value={row.itemCode}
+                          onChange={(value) => updateTableRow("scrapLoss", row.id, "itemCode", value)}
+                          placeholder="Select code"
+                        />
+                      </td>
+                      <td className="px-2 py-1">
+                        <SearchableSelect
+                          options={productNameOptions}
+                          value={row.name}
+                          onChange={(value) => updateTableRow("scrapLoss", row.id, "name", value)}
+                          placeholder="Select name"
+                        />
+                      </td>
+                      <td className="px-2 py-1">
+                        <input
+                          type="number"
+                          value={row.inputQty}
+                          onChange={(e) => updateTableRow("scrapLoss", row.id, "inputQty", parseFloat(e.target.value))}
+                          className="w-auto p-2  border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs text-left"
+                        />
+                      </td>
+                      <td className="px-2 py-1">
+                        <input
+                          type="number"
+                          value={row.lossPercent}
+                          onChange={(e) => updateTableRow("scrapLoss", row.id, "lossPercent", parseFloat(e.target.value))}
+                          className="w-fit p-2 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs text-right"
+                        />
+                      </td>
+                      <td className="px-2 py-1">
+                        <input
+                          type="number"
+                          value={row.rate}
+                          onChange={(e) => updateTableRow("scrapLoss", row.id, "rate", parseFloat(e.target.value))}
+                          className="w-fit p-2 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs text-right"
+                        />
+                      </td>
+                      <td className="px-2 py-1 text-center">
+                        <button
+                          onClick={() => removeTableRow("scrapLoss", row.id)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {bomData.scrapLoss.length === 0 && (
+              <p className="text-center text-slate-500 text-xs py-2">No scrap items added</p>
+            )}
+          </AccordionSection>
+
+          {/* Costs Section */}
+          <AccordionSection title="Cost Summary" section="costs">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
+              <div className="bg-blue-50 dark:bg-blue-900/30 p-2 rounded border border-blue-200 dark:border-blue-700">
+                <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">Material</p>
+                <p className="text-sm font-bold text-blue-900 dark:text-blue-100">₹{costs.materialCost.toFixed(2)}</p>
+              </div>
+              <div className="bg-purple-50 dark:bg-purple-900/30 p-2 rounded border border-purple-200 dark:border-purple-700">
+                <p className="text-xs text-purple-600 dark:text-purple-400 font-medium">Labour</p>
+                <p className="text-sm font-bold text-purple-900 dark:text-purple-100">₹{costs.operationCost.toFixed(2)}</p>
+              </div>
+              <div className="bg-red-50 dark:bg-red-900/30 p-2 rounded border border-red-200 dark:border-red-700">
+                <p className="text-xs text-red-600 dark:text-red-400 font-medium">Scrap Loss</p>
+                <p className="text-sm font-bold text-red-900 dark:text-red-100">-₹{costs.scrapLossCost.toFixed(2)}</p>
+              </div>
+              <div className="bg-green-50 dark:bg-green-900/30 p-2 rounded border border-green-200 dark:border-green-700">
+                <p className="text-xs text-green-600 dark:text-green-400 font-medium">Total</p>
+                <p className="text-sm font-bold text-green-900 dark:text-green-100">₹{costs.totalBOMCost.toFixed(2)}</p>
+              </div>
+            </div>
+            <div className="text-xs space-y-1 bg-slate-50 dark:bg-slate-700/30 p-2 rounded">
+              <div className="flex justify-between">
+                <span className="text-slate-600 dark:text-slate-400">Material Cost After Scrap:</span>
+                <span className="font-medium">₹{costs.materialCostAfterScrap.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between border-t border-slate-200 dark:border-slate-600 pt-1 font-semibold">
+                <span>Cost Per Unit:</span>
+                <span className="text-green-600 dark:text-green-400">₹{(costs.totalBOMCost / (bomData.productInfo.quantity || 1)).toFixed(2)}</span>
+              </div>
+            </div>
+          </AccordionSection>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-4">
+        <div className="flex gap-2 justify-end mt-4">
+          <button
+            onClick={() => navigate("/design-engineer/bom/view")}
+            className="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded text-slate-700 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-700 text-sm"
+          >
+            Cancel
+          </button>
           <button
             onClick={handleSave}
             disabled={saving}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 hover:shadow-lg transition-all duration-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded font-semibold disabled:opacity-50 text-sm"
           >
-            <Save size={18} />
-            {saving ? "Saving..." : "Save BOM"}
-          </button>
-          <button
-            onClick={() => navigate("/design-engineer/bom/view")}
-            className="inline-flex items-center gap-2 px-6 py-3 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all duration-200 font-medium"
-          >
-            Cancel
+            <Save size={16} />
+            {saving ? "Saving..." : "Create BOM"}
           </button>
         </div>
       </div>

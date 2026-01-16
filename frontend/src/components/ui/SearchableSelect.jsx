@@ -15,6 +15,8 @@ const SearchableSelect = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredOptions, setFilteredOptions] = useState(options);
   const wrapperRef = useRef(null);
+  const triggerRef = useRef(null);
+  const [dropdownStyle, setDropdownStyle] = useState({});
 
   useEffect(() => {
     setFilteredOptions(
@@ -23,6 +25,34 @@ const SearchableSelect = ({
       )
     );
   }, [searchTerm, options]);
+
+  const updateDropdownPosition = () => {
+    if (isOpen && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      setDropdownStyle({
+        position: 'fixed',
+        top: `${rect.bottom + 4}px`,
+        left: `${rect.left}px`,
+        width: `${rect.width}px`,
+        zIndex: 9999
+      });
+    }
+  };
+
+  useEffect(() => {
+    updateDropdownPosition();
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen) {
+      window.addEventListener('scroll', updateDropdownPosition);
+      window.addEventListener('resize', updateDropdownPosition);
+      return () => {
+        window.removeEventListener('scroll', updateDropdownPosition);
+        window.removeEventListener('resize', updateDropdownPosition);
+      };
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -51,9 +81,10 @@ const SearchableSelect = ({
       )}
       
       <div
+        ref={triggerRef}
         className={`
           w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-700 
-          text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500
+          text-slate-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-blue-500
           flex items-center justify-between cursor-pointer
           ${error ? 'border-red-500' : 'border-slate-300 dark:border-slate-600'}
           ${disabled ? 'opacity-60 cursor-not-allowed' : ''}
@@ -67,7 +98,10 @@ const SearchableSelect = ({
       </div>
 
       {isOpen && !disabled && (
-        <div className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg max-h-60 overflow-hidden flex flex-col">
+        <div 
+          style={dropdownStyle}
+          className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg max-h-60 overflow-hidden flex flex-col"
+        >
           <div className="p-2 border-b border-slate-100 dark:border-slate-700">
             <div className="relative">
               <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />

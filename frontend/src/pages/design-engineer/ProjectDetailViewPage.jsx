@@ -1017,7 +1017,7 @@ const ProjectDetailViewPage = () => {
                       placeholder="Detailed technical specifications and design features"
                       rows="3"
                       readOnly={!editMode}
-                      className={`w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-900 dark:text-white text-sm ${
+                      className={`w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-900 dark:text-white text-xs ${
                         !editMode
                           ? "bg-slate-100 opacity-60 cursor-not-allowed"
                           : ""
@@ -1039,7 +1039,7 @@ const ProjectDetailViewPage = () => {
                       placeholder="Special instructions for fabrication, assembly, and testing"
                       rows="3"
                       readOnly={!editMode}
-                      className={`w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-900 dark:text-white text-sm ${
+                      className={`w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-900 dark:text-white text-xs ${
                         !editMode
                           ? "bg-slate-100 opacity-60 cursor-not-allowed"
                           : ""
@@ -1058,7 +1058,7 @@ const ProjectDetailViewPage = () => {
                       placeholder="QC checkpoints, safety standards, and testing requirements"
                       rows="3"
                       readOnly={!editMode}
-                      className={`w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-900 dark:text-white text-sm ${
+                      className={`w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-900 dark:text-white text-xs ${
                         !editMode
                           ? "bg-slate-100 opacity-60 cursor-not-allowed"
                           : ""
@@ -1077,7 +1077,7 @@ const ProjectDetailViewPage = () => {
                       placeholder="Any additional information or special requirements"
                       rows="3"
                       readOnly={!editMode}
-                      className={`w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-900 dark:text-white text-sm ${
+                      className={`w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-900 dark:text-white text-xs ${
                         !editMode
                           ? "bg-slate-100 opacity-60 cursor-not-allowed"
                           : ""

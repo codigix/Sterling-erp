@@ -338,7 +338,7 @@ const AdminLayout = () => {
           sidebarCollapsed ? "lg:ml-16" : "lg:ml-64"
         } pt-16`}
       >
-        <div className="p-6">
+        <div className="">
           {/* Breadcrumbs */}
           <div className="mb-6">
             <nav className="flex items-center text-xs space-x-2 text-xs text-slate-600 dark:text-slate-400">
