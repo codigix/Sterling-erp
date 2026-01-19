@@ -9,7 +9,8 @@ const SearchableSelect = ({
   placeholder = "Select option...",
   disabled = false,
   className = "",
-  error
+  error,
+  allowCustom = false
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -21,7 +22,7 @@ const SearchableSelect = ({
   useEffect(() => {
     setFilteredOptions(
       options.filter(option =>
-        option.label.toLowerCase().includes(searchTerm.toLowerCase())
+        (option?.label || '').toLowerCase().includes(searchTerm.toLowerCase())
       )
     );
   }, [searchTerm, options]);
@@ -91,8 +92,8 @@ const SearchableSelect = ({
         `}
         onClick={() => !disabled && setIsOpen(!isOpen)}
       >
-        <span className={!selectedOption ? 'text-slate-500' : ''}>
-          {selectedOption ? selectedOption.label : placeholder}
+        <span className={(!selectedOption && !value) ? 'text-slate-500' : ''}>
+          {selectedOption ? selectedOption.label : (value || placeholder)}
         </span>
         <ChevronDown size={16} className={`text-slate-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </div>
@@ -118,21 +119,37 @@ const SearchableSelect = ({
           
           <div className="overflow-y-auto flex-1">
             {filteredOptions.length > 0 ? (
-              filteredOptions.map((option) => (
+              filteredOptions.map((option, index) => (
                 <div
-                  key={option.value}
+                  key={option.value || `option-${index}`}
                   onClick={() => handleSelect(option)}
                   className={`
                     px-3 py-2 text-sm cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700
                     ${value === option.value ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-slate-700 dark:text-slate-300'}
                   `}
                 >
-                  {option.label}
+                  {option.label || option.value || `Option ${index + 1}`}
                 </div>
               ))
+            ) : allowCustom && searchTerm ? (
+              <div
+                onClick={() => handleSelect({ label: searchTerm, value: searchTerm })}
+                className="px-3 py-2 text-sm cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 text-blue-600 dark:text-blue-400 font-medium italic"
+              >
+                Use custom: "{searchTerm}"
+              </div>
             ) : (
               <div className="px-3 py-4 text-center text-xs text-slate-500 dark:text-slate-400">
                 No results found
+              </div>
+            )}
+            
+            {allowCustom && searchTerm && filteredOptions.length > 0 && !filteredOptions.some(opt => opt.label?.toLowerCase() === searchTerm.toLowerCase()) && (
+              <div
+                onClick={() => handleSelect({ label: searchTerm, value: searchTerm })}
+                className="px-3 py-2 text-sm cursor-pointer border-t border-slate-100 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 text-blue-600 dark:text-blue-400 font-medium italic"
+              >
+                Use custom: "{searchTerm}"
               </div>
             )}
           </div>

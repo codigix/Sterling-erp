@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from '../../utils/api';
+import Swal from 'sweetalert2';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
 import Card, { CardHeader, CardTitle, CardContent } from '../ui/Card';
@@ -108,7 +109,23 @@ const SalesOrderWizard = ({ salesOrderId, onComplete, onCancel }) => {
         setCurrentStep(currentStep + 1);
       }
     } catch (err) {
-      setError('Failed to update step status');
+      if (err.response?.data?.requiresBOM) {
+        const result = await Swal.fire({
+          title: 'ACTIVE BOM Required',
+          text: err.response.data.message + ' Would you like to create one now?',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: 'Yes, Create BOM',
+          cancelButtonText: 'Not now'
+        });
+
+        if (result.isConfirmed) {
+          // Redirect to Create BOM page with context
+          window.open(`/design-engineer/bom/create?salesOrderId=${salesOrderId}`, '_blank');
+        }
+      } else {
+        setError('Failed to update step status');
+      }
       console.error(err);
     } finally {
       setLoading(false);

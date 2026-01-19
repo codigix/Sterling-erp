@@ -16,6 +16,11 @@ router.get('/',
   comprehensiveBOMController.getComprehensiveBOMList
 );
 
+router.get('/root-card/:rootCardId',
+  roleMiddleware('Admin', 'Management', 'Design Engineer', 'Engineering', 'Production'),
+  comprehensiveBOMController.getComprehensiveBOMByRootCard
+);
+
 router.get('/:id',
   roleMiddleware('Admin', 'Management', 'Design Engineer', 'Engineering', 'Production'),
   comprehensiveBOMController.getComprehensiveBOM

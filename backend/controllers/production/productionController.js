@@ -59,7 +59,7 @@ exports.getRootCardById = async (req, res) => {
 
       res.json({
         ...rootCard,
-        stages: stages || [],
+        stages: (stages && stages.length > 0) ? stages : (rootCard.stages || []),
         designEngineering: designEngineeringDetails || null
       });
     } finally {

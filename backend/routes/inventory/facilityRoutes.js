@@ -2,15 +2,17 @@ const express = require('express');
 const facilityController = require('../../controllers/inventory/facilityController');
 const authMiddleware = require('../../middleware/authMiddleware');
 
+const roleMiddleware = require('../../middleware/roleMiddleware');
+
 const router = express.Router();
 
 router.use(authMiddleware);
 
-router.post('/', facilityController.createFacility);
-router.get('/', facilityController.getAllFacilities);
-router.get('/available', facilityController.getAvailableFacilities);
-router.get('/:id', facilityController.getFacility);
-router.put('/:id', facilityController.updateFacility);
-router.delete('/:id', facilityController.deleteFacility);
+router.post('/', roleMiddleware('Admin', 'Inventory Manager'), facilityController.createFacility);
+router.get('/', roleMiddleware('Admin', 'Inventory Manager', 'Design Engineer', 'Engineering', 'Production'), facilityController.getAllFacilities);
+router.get('/available', roleMiddleware('Admin', 'Inventory Manager', 'Design Engineer', 'Engineering', 'Production'), facilityController.getAvailableFacilities);
+router.get('/:id', roleMiddleware('Admin', 'Inventory Manager', 'Design Engineer', 'Engineering', 'Production'), facilityController.getFacility);
+router.put('/:id', roleMiddleware('Admin', 'Inventory Manager'), facilityController.updateFacility);
+router.delete('/:id', roleMiddleware('Admin', 'Inventory Manager'), facilityController.deleteFacility);
 
 module.exports = router;

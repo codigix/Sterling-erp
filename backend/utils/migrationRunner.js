@@ -1245,6 +1245,13 @@ async function runMigrations() {
     }
 
     try {
+      const { createComprehensiveBOMTables } = require('../migrations/045_create_comprehensive_bom_tables.js');
+      await createComprehensiveBOMTables();
+    } catch (err) {
+      console.error('Migration 045 failed:', err.message);
+    }
+
+    try {
       const migration046 = require('../migrations/046_add_sales_order_id_to_employee_tasks.js');
       await migration046();
     } catch (err) {

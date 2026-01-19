@@ -15,18 +15,20 @@ class ComprehensiveBOM {
         isActive,
         isDefault,
         salesOrderId,
+        projectId,
+        rootCardId,
         createdBy
       } = data;
 
       const [result] = await conn.execute(
         `INSERT INTO bill_of_materials 
         (product_name, item_code, item_group, quantity, uom, revision, description, 
-         is_active, is_default, sales_order_id, created_by, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft')`,
+         is_active, is_default, sales_order_id, project_id, root_card_id, created_by, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft')`,
         [
           productName, itemCode, itemGroup, quantity, uom, revision || 1, 
           description, isActive ? 1 : 0, isDefault ? 1 : 0, 
-          salesOrderId || null, createdBy
+          salesOrderId || null, projectId || null, rootCardId || null, createdBy
         ]
       );
 
@@ -139,6 +141,22 @@ class ComprehensiveBOM {
     }
   }
 
+  static async findByProductAndRevision(itemCode, revision) {
+    const [rows] = await pool.execute(
+      'SELECT id FROM bill_of_materials WHERE item_code = ? AND revision = ?',
+      [itemCode, revision]
+    );
+    return rows[0];
+  }
+
+  static async findByRootCardId(rootCardId) {
+    const [rows] = await pool.execute(
+      'SELECT id FROM bill_of_materials WHERE root_card_id = ? ORDER BY revision DESC LIMIT 1',
+      [rootCardId]
+    );
+    return rows[0];
+  }
+
   static async findById(id) {
     const conn = await pool.getConnection();
     try {
@@ -197,6 +215,56 @@ class ComprehensiveBOM {
     }
   }
 
+  static async update(id, data, connection = null) {
+    const conn = connection || await pool.getConnection();
+    try {
+      const {
+        productName,
+        itemCode,
+        itemGroup,
+        quantity,
+        uom,
+        revision,
+        description,
+        isActive,
+        isDefault,
+        salesOrderId,
+        projectId,
+        rootCardId,
+        status
+      } = data;
+
+      await conn.execute(
+        `UPDATE bill_of_materials 
+        SET product_name = ?, item_code = ?, item_group = ?, quantity = ?, 
+            uom = ?, revision = ?, description = ?, is_active = ?, 
+            is_default = ?, sales_order_id = ?, project_id = ?, root_card_id = ?,
+            status = ?
+        WHERE id = ?`,
+        [
+          productName, itemCode, itemGroup, quantity, uom, revision, 
+          description, isActive ? 1 : 0, isDefault ? 1 : 0, 
+          salesOrderId || null, projectId || null, rootCardId || null,
+          status || 'draft', id
+        ]
+      );
+    } finally {
+      if (!connection) conn.release();
+    }
+  }
+
+  static async clearSubTables(bomId, connection = null) {
+    const conn = connection || await pool.getConnection();
+    try {
+      await conn.execute('DELETE FROM bom_components WHERE bom_id = ?', [bomId]);
+      await conn.execute('DELETE FROM bom_materials WHERE bom_id = ?', [bomId]);
+      await conn.execute('DELETE FROM bom_operations WHERE bom_id = ?', [bomId]);
+      await conn.execute('DELETE FROM bom_scrap_loss WHERE bom_id = ?', [bomId]);
+    } finally {
+      if (!connection) conn.release();
+    }
+  }
+
   static async updateStatus(bomId, status, connection = null) {
     const conn = connection || await pool.getConnection();
     try {
@@ -225,6 +293,11 @@ class ComprehensiveBOM {
   static async calculateCosts(bomId) {
     const conn = await pool.getConnection();
     try {
+      const [components] = await conn.execute(
+        'SELECT COALESCE(SUM(quantity * rate), 0) as total FROM bom_components WHERE bom_id = ?',
+        [bomId]
+      );
+
       const [materials] = await conn.execute(
         'SELECT COALESCE(SUM(quantity * rate), 0) as total FROM bom_materials WHERE bom_id = ?',
         [bomId]
@@ -242,17 +315,27 @@ class ComprehensiveBOM {
         [bomId]
       );
 
+      const componentCost = components[0]?.total || 0;
       const materialCost = materials[0]?.total || 0;
       const operationCost = operations[0]?.total || 0;
       const scrapLossCost = scrapLoss[0]?.total || 0;
-      const materialCostAfterScrap = materialCost - scrapLossCost;
+      
+      // Follow point 123: total_bom_cost = material_cost + labor_cost - scrap_loss_cost
+      // We include componentCost in material_cost sum
+      const totalBOMCost = (materialCost + componentCost + operationCost) - scrapLossCost;
+
+      // Update total_cost in database
+      await conn.execute(
+        'UPDATE bill_of_materials SET total_cost = ? WHERE id = ?',
+        [totalBOMCost, bomId]
+      );
 
       return {
+        componentCost,
         materialCost,
         operationCost,
         scrapLossCost,
-        materialCostAfterScrap,
-        totalBOMCost: materialCostAfterScrap + operationCost
+        totalBOMCost
       };
     } finally {
       conn.release();

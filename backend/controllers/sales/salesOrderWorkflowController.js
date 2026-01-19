@@ -241,7 +241,7 @@ exports.updateStepStatus = async (req, res) => {
     // Get current step details
     const [steps] = await connection.execute(
       `SELECT 
-        id, sales_order_id, step_number, step_name, status as old_status, 
+        id, sales_order_id, step_number, step_name, step_type, status as old_status, 
         assigned_employee_id
       FROM sales_order_workflow_steps
       WHERE id = ?`,
@@ -253,6 +253,24 @@ exports.updateStepStatus = async (req, res) => {
     }
 
     const step = steps[0];
+
+    // Point 146: Block completion of material_request (Step 5) or start of production_plan (Step 6) 
+    // if no ACTIVE BOM exists for the sales order.
+    const isStep5Completion = status === 'completed' && step.step_type === 'material_request';
+    const isStep6Start = status === 'in_progress' && step.step_type === 'production_plan';
+
+    if (isStep5Completion || isStep6Start) {
+      const [boms] = await connection.execute(
+        'SELECT id FROM bill_of_materials WHERE sales_order_id = ? AND status = "active"',
+        [step.sales_order_id]
+      );
+      if (boms.length === 0) {
+        return res.status(400).json({ 
+          message: `Cannot ${isStep5Completion ? 'complete Material Requirements' : 'start Production Planning'} step: No ACTIVE BOM found for this sales order.`,
+          requiresBOM: true 
+        });
+      }
+    }
 
     await connection.query('START TRANSACTION');
 

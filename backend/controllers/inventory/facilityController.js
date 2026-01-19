@@ -56,7 +56,7 @@ const facilityController = {
       }
 
       const facilities = await Facility.findAll(filters);
-      res.json(facilities);
+      res.json({ facilities, total: facilities.length });
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: 'Error fetching facilities', error: error.message });
@@ -108,7 +108,7 @@ const facilityController = {
   async getAvailableFacilities(req, res) {
     try {
       const facilities = await Facility.getAvailableFacilities();
-      res.json(facilities);
+      res.json({ facilities, total: facilities.length });
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: 'Error fetching available facilities', error: error.message });

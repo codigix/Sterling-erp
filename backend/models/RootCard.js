@@ -23,6 +23,8 @@ class RootCard {
     return {
       ...row,
       stages: parseJson(row.stages, []),
+      product_details: row.product_details ? parseJson(row.product_details, null) : null,
+      sales_order_items: row.sales_order_items ? parseJson(row.sales_order_items, []) : [],
       product_name: row.product_details ? parseJson(row.product_details).itemName : null,
       project: row.project_id
         ? {
@@ -96,6 +98,7 @@ class RootCard {
                p.client_name,
                p.sales_order_id,
                so.customer AS customer_name,
+               so.items AS sales_order_items,
                sod.product_details,
                u.username AS assigned_supervisor_name
         FROM root_cards rc
@@ -119,6 +122,7 @@ class RootCard {
                p.client_name,
                p.sales_order_id,
                so.customer AS customer_name,
+               so.items AS sales_order_items,
                sod.product_details,
                u.username AS assigned_supervisor_name
         FROM root_cards rc

@@ -81,23 +81,33 @@ async function createComprehensiveBOMTables() {
     `);
     console.log('✅ bom_scrap_loss table created/verified');
 
-    const alterQueries = [
-      'ALTER TABLE bill_of_materials ADD COLUMN IF NOT EXISTS product_name VARCHAR(255)',
-      'ALTER TABLE bill_of_materials ADD COLUMN IF NOT EXISTS item_code VARCHAR(255)',
-      'ALTER TABLE bill_of_materials ADD COLUMN IF NOT EXISTS item_group VARCHAR(100)',
-      'ALTER TABLE bill_of_materials ADD COLUMN IF NOT EXISTS quantity DECIMAL(12, 4)',
-      'ALTER TABLE bill_of_materials ADD COLUMN IF NOT EXISTS uom VARCHAR(50)',
-      'ALTER TABLE bill_of_materials ADD COLUMN IF NOT EXISTS revision INT DEFAULT 1',
-      'ALTER TABLE bill_of_materials ADD COLUMN IF NOT EXISTS is_active TINYINT DEFAULT 1',
-      'ALTER TABLE bill_of_materials ADD COLUMN IF NOT EXISTS is_default TINYINT DEFAULT 0'
-    ];
+    const [columns] = await connection.execute(`
+      SELECT COLUMN_NAME 
+      FROM INFORMATION_SCHEMA.COLUMNS 
+      WHERE TABLE_NAME = 'bill_of_materials' 
+      AND TABLE_SCHEMA = DATABASE()
+    `);
     
-    for (const query of alterQueries) {
-      try {
-        await connection.execute(query);
-      } catch (err) {
-        if (!err.message.includes('Duplicate column name')) {
-          throw err;
+    const columnNames = columns.map(c => c.COLUMN_NAME);
+    
+    const alterNeeded = [
+      { name: 'product_name', query: 'ALTER TABLE bill_of_materials ADD COLUMN product_name VARCHAR(255)' },
+      { name: 'item_code', query: 'ALTER TABLE bill_of_materials ADD COLUMN item_code VARCHAR(255)' },
+      { name: 'item_group', query: 'ALTER TABLE bill_of_materials ADD COLUMN item_group VARCHAR(100)' },
+      { name: 'quantity', query: 'ALTER TABLE bill_of_materials ADD COLUMN quantity DECIMAL(12, 4)' },
+      { name: 'uom', query: 'ALTER TABLE bill_of_materials ADD COLUMN uom VARCHAR(50)' },
+      { name: 'revision', query: 'ALTER TABLE bill_of_materials ADD COLUMN revision INT DEFAULT 1' },
+      { name: 'is_active', query: 'ALTER TABLE bill_of_materials ADD COLUMN is_active TINYINT DEFAULT 1' },
+      { name: 'is_default', query: 'ALTER TABLE bill_of_materials ADD COLUMN is_default TINYINT DEFAULT 0' }
+    ];
+
+    for (const alter of alterNeeded) {
+      if (!columnNames.includes(alter.name)) {
+        try {
+          await connection.execute(alter.query);
+          console.log(`✓ Added ${alter.name} column to bill_of_materials`);
+        } catch (err) {
+          console.error(`Error adding ${alter.name}:`, err.message);
         }
       }
     }

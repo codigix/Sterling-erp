@@ -31,8 +31,9 @@ module.exports = async () => {
         const [stages] = await connection.execute(`
           SELECT ms.id
           FROM manufacturing_stages ms
-          WHERE ms.production_plan_id = ? 
-          AND ms.assigned_employee_id = ?
+          JOIN production_plans pp ON ms.root_card_id = pp.root_card_id
+          WHERE pp.id = ? 
+          AND ms.assigned_worker = ?
           LIMIT 1
         `, [planId, task.employee_id]);
 

@@ -38,11 +38,4 @@ async function addSalesOrderIdToEmployeeTasks() {
   }
 }
 
-addSalesOrderIdToEmployeeTasks()
-  .then(() => process.exit(0))
-  .catch(err => {
-    console.error('❌ Error:', err.message);
-    process.exit(1);
-  });
-
 module.exports = addSalesOrderIdToEmployeeTasks;

@@ -11,13 +11,40 @@ import axios from "../../../utils/api";
 import Swal from "sweetalert2";
 import SearchableSelect from "../../../components/ui/SearchableSelect";
 
+const initialBOMState = {
+  productInfo: {
+    productName: "",
+    itemCode: "",
+    itemGroup: "",
+    quantity: 1,
+    uom: "Kg",
+    revision: 1,
+    description: "",
+    isActive: true,
+    isDefault: false,
+    status: "draft",
+    salesOrderId: null,
+    projectId: null,
+    rootCardId: null,
+  },
+  components: [],
+  materials: [],
+  operations: [],
+  scrapLoss: [],
+};
+
 const CreateBOMPage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [saving, setSaving] = useState(false);
   const [materials, setMaterials] = useState([]);
+  const [requirementMaterials, setRequirementMaterials] = useState([]);
+  const [rootCards, setRootCards] = useState([]);
   const [loadingMaterials, setLoadingMaterials] = useState(true);
+  const [editMode, setEditMode] = useState(false);
+  const [bomId, setBomId] = useState(null);
   const [workstations, setWorkstations] = useState([]);
+  const [rootCardStages, setRootCardStages] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
   const [operations, setOperations] = useState([]);
   const [expandedSections, setExpandedSections] = useState({
@@ -30,26 +57,18 @@ const CreateBOMPage = () => {
   });
 
   const [bomData, setBomData] = useState({
+    ...initialBOMState,
     productInfo: {
-      productName: "",
-      itemCode: "",
-      itemGroup: "",
-      quantity: 1,
-      uom: "Kg",
-      revision: 1,
-      description: "",
-      isActive: true,
-      isDefault: false,
+      ...initialBOMState.productInfo,
       salesOrderId: searchParams.get("salesOrderId") || null,
-    },
-    components: [],
-    materials: [],
-    operations: [],
-    scrapLoss: [],
+      projectId: searchParams.get("projectId") || null,
+      rootCardId: searchParams.get("rootCardId") || null,
+    }
   });
 
   const [costs, setCosts] = useState({
     materialCost: 0,
+    componentCost: 0,
     operationCost: 0,
     scrapLossCost: 0,
     materialCostAfterScrap: 0,
@@ -58,6 +77,11 @@ const CreateBOMPage = () => {
 
   const UOMOptions = ["Kg", "pcs", "m", "l", "set", "Box"];
   const ItemGroupOptions = ["Raw Material", "Component", "Sub-assembly", "Finished Good"];
+  const StatusOptions = [
+    { label: "Draft", value: "draft" },
+    { label: "Active", value: "active" },
+    { label: "Approved", value: "approved" }
+  ];
   const OperationOptions = [
     "Cutting",
     "Welding",
@@ -81,18 +105,24 @@ const CreateBOMPage = () => {
     const fetchData = async () => {
       try {
         setLoadingMaterials(true);
-        const [materialsRes, facilitiesRes] = await Promise.all([
-          axios.get("/inventory/materials"),
-          axios.get("/inventory/facilities")
+        const [facilitiesRes, rootCardsRes] = await Promise.all([
+          axios.get("/inventory/facilities"),
+          axios.get("/production/root-cards")
         ]);
         
-        setMaterials(materialsRes.data.materials || []);
+        setMaterials([]);
+        setRootCards(rootCardsRes.data.rootCards || []);
         const facilitiesList = facilitiesRes.data.facilities || [];
         setWorkstations(facilitiesList);
         
-        // Extract unique warehouses from materials or use default
-        const uniqueWarehouses = [...new Set(materialsRes.data.materials?.map(m => m.warehouse).filter(Boolean) || [])];
-        setWarehouses(uniqueWarehouses.length > 0 ? uniqueWarehouses : ["Main Warehouse", "Secondary Warehouse"]);
+        // Use default warehouses since we're not fetching from inventory
+        setWarehouses(["Main Warehouse", "Secondary Warehouse"]);
+
+        // Handle initial rootCardId from URL
+        const urlRootCardId = searchParams.get("rootCardId");
+        if (urlRootCardId) {
+          handleRootCardSelect(urlRootCardId);
+        }
       } catch (error) {
         console.error("Error fetching data:", error);
         setMaterials([]);
@@ -106,12 +136,39 @@ const CreateBOMPage = () => {
     fetchData();
   }, []);
 
-  const productNameOptions = materials.map((m) => ({
+  const allAvailableMaterials = React.useMemo(() => {
+    const combined = [...materials];
+    
+    requirementMaterials.forEach(req => {
+      const name = req.itemName || req.name;
+      if (!name) return; // Skip if no name found
+
+      const exists = combined.some(m => 
+        (m.itemName && m.itemName === name) || 
+        (req.itemCode && m.itemCode === req.itemCode)
+      );
+
+      if (!exists) {
+        combined.push({
+          itemName: name,
+          itemCode: req.itemCode || `REQ-${name.substring(0, 3).toUpperCase()}`,
+          category: req.itemGroup || req.category,
+          unit: req.uom || req.unit,
+          unit_cost: req.rate || req.unitCost || 0,
+          isRequirement: true
+        });
+      }
+    });
+    
+    return combined.filter(m => m.itemName); // Ensure all have names
+  }, [materials, requirementMaterials]);
+
+  const productNameOptions = allAvailableMaterials.map((m) => ({
     label: m.itemName,
     value: m.itemName,
   }));
 
-  const itemCodeOptions = materials.map((m) => ({
+  const itemCodeOptions = allAvailableMaterials.map((m) => ({
     label: m.itemCode,
     value: m.itemCode,
   }));
@@ -121,10 +178,24 @@ const CreateBOMPage = () => {
     value: group,
   }));
 
-  const workstationOptions = workstations.map((w) => ({
-    label: w.name,
-    value: w.name,
-  }));
+  const workstationOptions = React.useMemo(() => {
+    const options = workstations.map((w) => ({
+      label: w.name,
+      value: w.name,
+    }));
+
+    // Add assigned workers from root card stages if not already in workstations
+    rootCardStages.forEach(stage => {
+      if (stage.assigned_worker && !workstations.some(w => w.name === stage.assigned_worker)) {
+        options.push({
+          label: stage.assigned_worker,
+          value: stage.assigned_worker
+        });
+      }
+    });
+
+    return options;
+  }, [workstations, rootCardStages]);
 
   const warehouseOptions = warehouses.map((w) => ({
     label: w,
@@ -136,15 +207,335 @@ const CreateBOMPage = () => {
     { label: "Outsource", value: "outsource" }
   ];
 
-  const operationSelectOptions = OperationOptions.map((op) => ({
-    label: op,
-    value: op,
-  }));
+  const operationSelectOptions = React.useMemo(() => {
+    // Start with stages from the production plan (Root Card / Project)
+    const options = rootCardStages.map(stage => ({
+      label: stage.stage_name,
+      value: stage.stage_name
+    })).filter(opt => opt.label);
+
+    // Add standard operations, but only if they're not already in the plan
+    OperationOptions.forEach(op => {
+      if (!options.some(opt => opt.label === op)) {
+        options.push({
+          label: op,
+          value: op
+        });
+      }
+    });
+
+    return options;
+  }, [rootCardStages]);
 
   const UOMSelectOptions = UOMOptions.map((uom) => ({
     label: uom,
     value: uom,
   }));
+
+  const rootCardOptions = rootCards.map((rc) => ({
+    label: `${rc.code} - ${rc.title}`,
+    value: rc.id,
+  }));
+
+  const handleRootCardSelect = async (rootCardId) => {
+    try {
+      // Clear previous requirement materials and data
+      setRequirementMaterials([]);
+      setRootCardStages([]);
+      setBomData(prev => ({
+        ...initialBOMState,
+        productInfo: {
+          ...initialBOMState.productInfo,
+          salesOrderId: prev.productInfo.salesOrderId,
+          projectId: prev.productInfo.projectId,
+          rootCardId: rootCardId
+        }
+      }));
+
+      const response = await axios.get(`/production/root-cards/${rootCardId}`);
+      const rootCard = response.data;
+      
+      if (rootCard) {
+        // 1. Check if Design Engineering step is completed (Point 17 & 19)
+        if (!rootCard.designEngineering) {
+          Swal.fire({
+            icon: 'warning',
+            title: 'Design Missing',
+            text: 'BOM cannot be created because Design Engineering details are missing for this root card.'
+          });
+          return;
+        }
+
+        // Set stages for dropdown options
+        if (rootCard.stages) {
+          setRootCardStages(rootCard.stages);
+        }
+
+        // 2. Check if a BOM already exists for this root card (Point 20)
+        try {
+          const bomResponse = await axios.get(`/engineering/bom/root-card/${rootCardId}`);
+          if (bomResponse.data && bomResponse.data.id) {
+            const result = await Swal.fire({
+              title: 'BOM Already Exists',
+              text: 'An existing BOM was found for this root card. Would you like to load and edit it?',
+              icon: 'info',
+              showCancelButton: true,
+              confirmButtonText: 'Yes, load it',
+              cancelButtonText: 'No, stay here'
+            });
+
+            if (result.isConfirmed) {
+              const existingBOM = bomResponse.data;
+              setBomData({
+                productInfo: {
+                  productName: existingBOM.product_name,
+                  itemCode: existingBOM.item_code,
+                  itemGroup: existingBOM.item_group,
+                  quantity: existingBOM.quantity,
+                  uom: existingBOM.uom,
+                  revision: existingBOM.revision,
+                  description: existingBOM.description,
+                  isActive: existingBOM.is_active === 1,
+                  isDefault: existingBOM.is_default === 1,
+                  status: existingBOM.status || 'draft',
+                  salesOrderId: existingBOM.sales_order_id,
+                  projectId: existingBOM.project_id,
+                  rootCardId: existingBOM.root_card_id,
+                },
+                components: existingBOM.components || [],
+                materials: existingBOM.materials || [],
+                operations: existingBOM.operations || [],
+                scrapLoss: existingBOM.scrapLoss || [],
+              });
+              setEditMode(true);
+              setBomId(existingBOM.id);
+
+              // Fetch requirements for the dropdown even when editing
+              if (existingBOM.sales_order_id) {
+                try {
+                  const reqRes = await axios.get(`/sales/requirements/${existingBOM.sales_order_id}`);
+                  if (reqRes.data?.success && reqRes.data?.data?.materials) {
+                    setRequirementMaterials(reqRes.data.data.materials);
+                  }
+                } catch (e) {
+                  console.error("Error fetching requirements in edit mode:", e);
+                }
+              }
+              return;
+            }
+          }
+        } catch (bomErr) {
+          // If 404, it means no BOM exists, which is fine
+          if (bomErr.response?.status !== 404) {
+            console.error("Error checking for existing BOM:", bomErr);
+          }
+        }
+
+        let productInfo = { ...bomData.productInfo };
+        
+        // Auto-fill from root card details
+        productInfo.productName = rootCard.title || "";
+        productInfo.salesOrderId = rootCard.sales_order_id || productInfo.salesOrderId;
+        productInfo.projectId = rootCard.project_id || productInfo.projectId;
+        productInfo.rootCardId = rootCard.id;
+        productInfo.description = rootCard.notes || "";
+        
+        // Try to get more details from product_details if available
+        let details = null;
+        if (rootCard.product_details) {
+          try {
+            details = typeof rootCard.product_details === 'string' 
+              ? JSON.parse(rootCard.product_details) 
+              : rootCard.product_details;
+          } catch (e) {
+            console.error("Error parsing product details:", e);
+          }
+        }
+
+        if (details) {
+          productInfo.productName = details.itemName || productInfo.productName;
+          productInfo.itemCode = details.itemCode || productInfo.itemCode;
+          productInfo.uom = details.unit || productInfo.uom;
+          productInfo.quantity = details.quantity || productInfo.quantity;
+          productInfo.description = details.specification || productInfo.description;
+          productInfo.itemGroup = details.category || productInfo.itemGroup;
+        } else if (rootCard.sales_order_items && Array.isArray(rootCard.sales_order_items) && rootCard.sales_order_items.length > 0) {
+          // Fallback to the first item in sales order items
+          const firstItem = rootCard.sales_order_items[0];
+          productInfo.productName = firstItem.description || firstItem.itemName || productInfo.productName;
+          productInfo.itemCode = firstItem.itemCode || productInfo.itemCode;
+          productInfo.uom = firstItem.uom || firstItem.unit || productInfo.uom;
+          productInfo.quantity = firstItem.quantity || productInfo.quantity;
+        } else if (rootCard.product_name) {
+          // Fallback to the formatted product_name from backend
+          productInfo.productName = rootCard.product_name;
+        }
+
+        let materialsList = [];
+        let operationsList = [];
+        let combinedStages = [];
+
+        // 1. Get stages from Root Card manufacturing_stages (if already defined)
+        if (rootCard.stages && Array.isArray(rootCard.stages)) {
+          combinedStages = [...rootCard.stages];
+        }
+
+        // 2. Fetch Production Plan from Sales Order (selected during project creation)
+        if (productInfo.salesOrderId) {
+          try {
+            const planResponse = await axios.get(`/sales/steps/${productInfo.salesOrderId}/production-plan`);
+            if (planResponse.data?.success && planResponse.data?.data) {
+              const planData = planResponse.data.data;
+              const phases = planData.selectedPhases || planData.phaseDetails || planData.phases || {};
+              
+              // Convert object-based phases to array if necessary
+              const planStages = Array.isArray(phases) 
+                ? phases.map(p => ({
+                    stage_name: p.phase || p.stageName || p.name || p.stage_name,
+                    stage_type: p.type || p.stage_type || 'in-house',
+                    assigned_worker: p.assignee || p.assigned_worker || ""
+                  }))
+                : Object.entries(phases).map(([key, phase]) => ({
+                    stage_name: phase.phase || phase.stageName || phase.name || key,
+                    stage_type: phase.type || phase.stage_type || 'in-house',
+                    assigned_worker: phase.assignee || phase.assigned_worker || ""
+                  }));
+
+              // Merge with root card stages, avoiding duplicates by stage_name
+              planStages.forEach(ps => {
+                if (!combinedStages.some(cs => cs.stage_name === ps.stage_name)) {
+                  combinedStages.push(ps);
+                }
+              });
+            }
+          } catch (planErr) {
+            console.error("Error fetching project production plan:", planErr);
+          }
+        }
+
+        setRootCardStages(combinedStages);
+
+        // Map operations from combined stages
+        operationsList = combinedStages.map(stage => ({
+          id: Date.now() + Math.random(),
+          operationName: stage.stage_name || "",
+          workstation: stage.assigned_worker || "",
+          cycleTime: 0,
+          setupTime: 0,
+          hourlyRate: 0,
+          cost: 0,
+          type: stage.stage_type === 'outsource' ? 'outsource' : 'in-house',
+          targetWarehouse: ""
+        }));
+
+        // Fetch Material Requirements for the sales order
+        if (productInfo.salesOrderId) {
+          try {
+            const reqResponse = await axios.get(`/sales/requirements/${productInfo.salesOrderId}`);
+            if (reqResponse.data && reqResponse.data.success && reqResponse.data.data) {
+              const requirements = reqResponse.data.data.materials || [];
+              setRequirementMaterials(requirements);
+              materialsList = requirements.map(req => ({
+                id: Date.now() + Math.random(),
+                itemName: req.itemName || req.name || "",
+                quantity: parseFloat(req.requiredQuantity || req.quantity || 1),
+                uom: req.uom || req.unit || "Kg",
+                itemGroup: req.category || "",
+                rate: parseFloat(req.unitCost || req.rate || 0),
+                warehouse: req.warehouse || "",
+                operation: ""
+              }));
+            }
+          } catch (reqErr) {
+            console.error("Error fetching material requirements:", reqErr);
+          }
+        }
+
+        setBomData(prev => ({
+          ...prev,
+          productInfo,
+          materials: materialsList,
+          operations: operationsList
+        }));
+      }
+    } catch (error) {
+      console.error("Error fetching root card details:", error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Failed to fetch root card details'
+      });
+    }
+  };
+
+  const handleProductSelect = (value, type) => {
+    const selectedMaterial = allAvailableMaterials.find(m => 
+      type === 'name' ? m.itemName === value : m.itemCode === value
+    );
+
+    if (selectedMaterial) {
+      setBomData(prev => ({
+        ...prev,
+        productInfo: {
+          ...prev.productInfo,
+          productName: selectedMaterial.itemName,
+          itemCode: selectedMaterial.itemCode,
+          itemGroup: selectedMaterial.category || prev.productInfo.itemGroup,
+          uom: selectedMaterial.unit || prev.productInfo.uom,
+          description: selectedMaterial.specification || prev.productInfo.description
+        }
+      }));
+    } else {
+      setBomData(prev => ({
+        ...prev,
+        productInfo: {
+          ...prev.productInfo,
+          [type === 'name' ? 'productName' : 'itemCode']: value
+        }
+      }));
+    }
+  };
+
+  const handleComponentSelect = (id, value) => {
+    const selectedMaterial = allAvailableMaterials.find(m => m.itemCode === value);
+    if (selectedMaterial) {
+      setBomData(prev => ({
+        ...prev,
+        components: prev.components.map(c => 
+          c.id === id ? {
+            ...c,
+            componentCode: selectedMaterial.itemCode,
+            uom: selectedMaterial.unit || c.uom,
+            rate: selectedMaterial.unit_cost || c.rate,
+            notes: (selectedMaterial.specification || selectedMaterial.description) || c.notes
+          } : c
+        )
+      }));
+    } else {
+      updateTableRow("components", id, "componentCode", value);
+    }
+  };
+
+  const handleMaterialSelect = (id, value) => {
+    const selectedMaterial = allAvailableMaterials.find(m => m.itemName === value);
+    if (selectedMaterial) {
+      setBomData(prev => ({
+        ...prev,
+        materials: prev.materials.map(m => 
+          m.id === id ? {
+            ...m,
+            itemName: selectedMaterial.itemName,
+            itemGroup: selectedMaterial.category || m.itemGroup,
+            uom: selectedMaterial.unit || m.uom,
+            rate: selectedMaterial.unit_cost || m.rate,
+            warehouse: selectedMaterial.location || m.warehouse
+          } : m
+        )
+      }));
+    } else {
+      updateTableRow("materials", id, "itemName", value);
+    }
+  };
 
   const toggleSection = (section) => {
     setExpandedSections(prev => ({
@@ -187,11 +578,16 @@ const CreateBOMPage = () => {
 
   const calculateCosts = () => {
     let materialCost = 0;
+    let componentCost = 0;
     let operationCost = 0;
     let scrapLossCost = 0;
 
     bomData.materials.forEach((m) => {
       materialCost += (m.quantity || 0) * (m.rate || 0);
+    });
+
+    bomData.components.forEach((c) => {
+      componentCost += (c.quantity || 0) * (c.rate || 0);
     });
 
     bomData.operations.forEach((o) => {
@@ -202,11 +598,12 @@ const CreateBOMPage = () => {
       scrapLossCost += ((s.inputQty || 0) * (s.rate || 0) * (s.lossPercent || 0)) / 100;
     });
 
-    const materialCostAfterScrap = materialCost - scrapLossCost;
+    const materialCostAfterScrap = (materialCost + componentCost) - scrapLossCost;
     const totalBOMCost = materialCostAfterScrap + operationCost;
 
     setCosts({
       materialCost,
+      componentCost,
       operationCost,
       scrapLossCost,
       materialCostAfterScrap,
@@ -236,12 +633,16 @@ const CreateBOMPage = () => {
         scrapLoss: bomData.scrapLoss.filter((s) => s.itemCode),
       };
 
-      await axios.post("/engineering/bom/comprehensive", payload);
+      if (editMode && bomId) {
+        await axios.put(`/engineering/bom/comprehensive/${bomId}`, payload);
+      } else {
+        await axios.post("/engineering/bom/comprehensive", payload);
+      }
 
       Swal.fire({
         icon: "success",
-        title: "BOM Created Successfully",
-        text: "Your BOM has been saved!",
+        title: `BOM ${editMode ? "Updated" : "Created"} Successfully`,
+        text: `Your BOM has been ${editMode ? "updated" : "saved"}!`,
         timer: 2000,
       });
 
@@ -261,11 +662,11 @@ const CreateBOMPage = () => {
 
   const AccordionSection = ({ title, section, children, itemCount = 0, addButton = null }) => (
     <div className="border border-slate-200 dark:border-slate-700 rounded-lg mb-2">
-      <button
-        onClick={() => toggleSection(section)}
-        className="w-full flex items-center justify-between px-4 py-2 bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 transition"
-      >
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between px-4 py-2 bg-slate-50 dark:bg-slate-700/50">
+        <button
+          onClick={() => toggleSection(section)}
+          className="flex-1 flex items-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-700 transition py-2"
+        >
           <ChevronDown
             size={16}
             className={`transition-transform ${expandedSections[section] ? "" : "-rotate-90"}`}
@@ -278,7 +679,7 @@ const CreateBOMPage = () => {
               {itemCount}
             </span>
           )}
-        </div>
+        </button>
         {addButton && (
           <button
             onClick={(e) => {
@@ -290,7 +691,7 @@ const CreateBOMPage = () => {
             <Plus size={14} /> {addButton.label}
           </button>
         )}
-      </button>
+      </div>
       {expandedSections[section] && (
         <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
           {children}
@@ -311,7 +712,9 @@ const CreateBOMPage = () => {
             <ChevronLeft size={18} />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Create BOM</h1>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+              {editMode ? "Edit BOM" : "Create BOM"}
+            </h1>
             <p className="text-xs text-slate-600 dark:text-slate-400">Bill of Materials</p>
           </div>
         </div>
@@ -320,20 +723,30 @@ const CreateBOMPage = () => {
         <div className=" p-3">
           {/* Product Information Section */}
           <AccordionSection title="Product Information" section="product">
+            <div className="mb-4 pb-4 border-b border-slate-200 dark:border-slate-700">
+              <div className="max-w-md">
+                <SearchableSelect
+                  label="Fetch from Root Card"
+                  options={rootCardOptions}
+                  onChange={handleRootCardSelect}
+                  placeholder="Select a root card to auto-fill details"
+                  disabled={loadingMaterials}
+                />
+                <p className="text-[10px] text-slate-500 mt-1">
+                  Selecting a root card will automatically populate product information and link this BOM to its project.
+                </p>
+              </div>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
               <div>
                 <SearchableSelect
                   label="Product Name *"
                   options={productNameOptions}
                   value={bomData.productInfo.productName}
-                  onChange={(value) =>
-                    setBomData({
-                      ...bomData,
-                      productInfo: { ...bomData.productInfo, productName: value },
-                    })
-                  }
+                  onChange={(value) => handleProductSelect(value, 'name')}
                   placeholder="Select or type product name"
                   disabled={loadingMaterials}
+                  allowCustom={true}
                 />
               </div>
               <div>
@@ -341,14 +754,10 @@ const CreateBOMPage = () => {
                   label="Item Code"
                   options={itemCodeOptions}
                   value={bomData.productInfo.itemCode}
-                  onChange={(value) =>
-                    setBomData({
-                      ...bomData,
-                      productInfo: { ...bomData.productInfo, itemCode: value },
-                    })
-                  }
+                  onChange={(value) => handleProductSelect(value, 'code')}
                   placeholder="Select or type item code"
                   disabled={loadingMaterials}
+                  allowCustom={true}
                 />
               </div>
               <div>
@@ -363,6 +772,7 @@ const CreateBOMPage = () => {
                     })
                   }
                   placeholder="Select or type item group"
+                  allowCustom={true}
                 />
               </div>
               <div>
@@ -429,33 +839,35 @@ const CreateBOMPage = () => {
                 />
               </div>
             </div>
-            <div className="mt-2 flex gap-3">
-              <label className="flex items-center gap-1 cursor-pointer text-xs">
-                <input
-                  type="checkbox"
-                  checked={bomData.productInfo.isActive}
-                  onChange={(e) =>
+            <div className="mt-2 flex gap-6 items-end">
+              <div className="w-40">
+                <SearchableSelect
+                  label="Status"
+                  options={StatusOptions}
+                  value={bomData.productInfo.status}
+                  onChange={(value) =>
                     setBomData({
                       ...bomData,
-                      productInfo: { ...bomData.productInfo, isActive: e.target.checked },
+                      productInfo: { ...bomData.productInfo, status: value },
                     })
                   }
                 />
-                <span className="text-slate-700 dark:text-slate-300">Active</span>
-              </label>
-              <label className="flex items-center gap-1 cursor-pointer text-xs">
-                <input
-                  type="checkbox"
-                  checked={bomData.productInfo.isDefault}
-                  onChange={(e) =>
-                    setBomData({
-                      ...bomData,
-                      productInfo: { ...bomData.productInfo, isDefault: e.target.checked },
-                    })
-                  }
-                />
-                <span className="text-slate-700 dark:text-slate-300">Default</span>
-              </label>
+              </div>
+              <div className="flex gap-3 mb-2">
+                <label className="flex items-center gap-1 cursor-pointer text-xs">
+                  <input
+                    type="checkbox"
+                    checked={bomData.productInfo.isDefault}
+                    onChange={(e) =>
+                      setBomData({
+                        ...bomData,
+                        productInfo: { ...bomData.productInfo, isDefault: e.target.checked },
+                      })
+                    }
+                  />
+                  <span className="text-slate-700 dark:text-slate-300">Set as Default</span>
+                </label>
+              </div>
             </div>
           </AccordionSection>
 
@@ -486,8 +898,9 @@ const CreateBOMPage = () => {
                         <SearchableSelect
                           options={itemCodeOptions}
                           value={row.componentCode}
-                          onChange={(value) => updateTableRow("components", row.id, "componentCode", value)}
+                          onChange={(value) => handleComponentSelect(row.id, value)}
                           placeholder="Select code"
+                          allowCustom={true}
                         />
                       </td>
                       <td className="px-2 py-1">
@@ -575,8 +988,9 @@ const CreateBOMPage = () => {
                         <SearchableSelect
                           options={productNameOptions}
                           value={row.itemName}
-                          onChange={(value) => updateTableRow("materials", row.id, "itemName", value)}
+                          onChange={(value) => handleMaterialSelect(row.id, value)}
                           placeholder="Select item"
+                          allowCustom={true}
                         />
                       </td>
                       <td className="px-2 py-1">
@@ -667,6 +1081,7 @@ const CreateBOMPage = () => {
                           value={row.operationName}
                           onChange={(value) => updateTableRow("operations", row.id, "operationName", value)}
                           placeholder="Select operation"
+                          allowCustom={true}
                         />
                       </td>
                       <td className="px-2 py-1">
@@ -675,6 +1090,7 @@ const CreateBOMPage = () => {
                           value={row.workstation}
                           onChange={(value) => updateTableRow("operations", row.id, "workstation", value)}
                           placeholder="Select workstation"
+                          allowCustom={true}
                         />
                       </td>
                       <td className="px-2 py-1">
@@ -817,10 +1233,14 @@ const CreateBOMPage = () => {
 
           {/* Costs Section */}
           <AccordionSection title="Cost Summary" section="costs">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-3">
               <div className="bg-blue-50 dark:bg-blue-900/30 p-2 rounded border border-blue-200 dark:border-blue-700">
                 <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">Material</p>
                 <p className="text-sm font-bold text-blue-900 dark:text-blue-100">₹{costs.materialCost.toFixed(2)}</p>
+              </div>
+              <div className="bg-cyan-50 dark:bg-cyan-900/30 p-2 rounded border border-cyan-200 dark:border-cyan-700">
+                <p className="text-xs text-cyan-600 dark:text-cyan-400 font-medium">Component</p>
+                <p className="text-sm font-bold text-cyan-900 dark:text-cyan-100">₹{costs.componentCost.toFixed(2)}</p>
               </div>
               <div className="bg-purple-50 dark:bg-purple-900/30 p-2 rounded border border-purple-200 dark:border-purple-700">
                 <p className="text-xs text-purple-600 dark:text-purple-400 font-medium">Labour</p>
@@ -862,7 +1282,7 @@ const CreateBOMPage = () => {
             className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded font-semibold disabled:opacity-50 text-sm"
           >
             <Save size={16} />
-            {saving ? "Saving..." : "Create BOM"}
+            {saving ? "Saving..." : editMode ? "Update BOM" : "Create BOM"}
           </button>
         </div>
       </div>

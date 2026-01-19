@@ -1,6 +1,27 @@
 const pool = require('../config/database');
 
 class Material {
+  static formatRow(row) {
+    if (!row) return null;
+    return {
+      id: row.id,
+      itemCode: row.item_code,
+      itemName: row.item_name,
+      batch: row.batch,
+      specification: row.specification,
+      unit: row.unit,
+      category: row.category,
+      quantity: row.quantity,
+      reorderLevel: row.reorder_level,
+      location: row.location,
+      vendorId: row.vendor_id,
+      unitCost: row.unit_cost,
+      warehouse: row.warehouse,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    };
+  }
+
   static async findAll(filters = {}) {
     let query = 'SELECT * FROM inventory WHERE 1=1';
     const params = [];
@@ -20,7 +41,7 @@ class Material {
     }
 
     const [rows] = await pool.execute(query, params);
-    return rows || [];
+    return (rows || []).map(Material.formatRow);
   }
 
   static async findById(id) {
@@ -28,7 +49,7 @@ class Material {
       'SELECT * FROM inventory WHERE id = ?',
       [id]
     );
-    return rows[0];
+    return Material.formatRow(rows[0]);
   }
 
   static async findByItemCode(itemCode) {
@@ -36,7 +57,7 @@ class Material {
       'SELECT * FROM inventory WHERE item_code = ?',
       [itemCode]
     );
-    return rows[0];
+    return Material.formatRow(rows[0]);
   }
 
   static async findByName(itemName) {
@@ -44,7 +65,7 @@ class Material {
       'SELECT * FROM inventory WHERE item_name = ?',
       [itemName]
     );
-    return rows[0];
+    return Material.formatRow(rows[0]);
   }
 
   static async create(data) {
@@ -81,7 +102,7 @@ class Material {
     const [rows] = await pool.execute(
       'SELECT * FROM inventory WHERE quantity < reorder_level'
     );
-    return rows || [];
+    return (rows || []).map(Material.formatRow);
   }
 }
 
