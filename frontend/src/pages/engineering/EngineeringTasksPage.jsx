@@ -6,8 +6,8 @@ import Badge from '../../components/ui/Badge';
 import '../../styles/TaskPage.css';
 
 const EngineeringTasksPage = () => {
-  const [salesOrders, setSalesOrders] = useState([]);
-  const [selectedSalesOrder, setSelectedSalesOrder] = useState(null);
+  const [rootCards, setRootCards] = useState([]);
+  const [selectedRootCard, setSelectedRootCard] = useState(null);
   const [documents, setDocuments] = useState([]);
   const [boms, setBoms] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -28,55 +28,55 @@ const EngineeringTasksPage = () => {
     lineItems: [{ itemCode: '', itemDescription: '', quantity: 1, unit: 'Nos', unitCost: 0, partType: 'raw_material' }]
   });
 
-  const fetchSalesOrders = useCallback(async () => {
+  const fetchRootCards = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await axios.get('/sales/orders', { __sessionGuard: true });
-      setSalesOrders(response.data.orders || []);
-      if (response.data.orders && response.data.orders.length > 0) {
-        setSelectedSalesOrder(response.data.orders[0].id);
+      const response = await axios.get('/root-cards', { __sessionGuard: true });
+      setRootCards(response.data.rootCards || []);
+      if (response.data.rootCards && response.data.rootCards.length > 0) {
+        setSelectedRootCard(response.data.rootCards[0].id);
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load sales orders');
+      setError(err.response?.data?.message || 'Failed to load root cards');
     } finally {
       setLoading(false);
     }
   }, []);
 
   const fetchDocuments = useCallback(async () => {
-    if (!selectedSalesOrder) return;
+    if (!selectedRootCard) return;
     try {
       const response = await axios.get('/engineering/documents', {
-        params: { salesOrderId: selectedSalesOrder },
+        params: { rootCardId: selectedRootCard },
         __sessionGuard: true
       });
       setDocuments(response.data || []);
     } catch (err) {
       console.error('Failed to fetch documents:', err);
     }
-  }, [selectedSalesOrder]);
+  }, [selectedRootCard]);
 
   const fetchBOMs = useCallback(async () => {
-    if (!selectedSalesOrder) return;
+    if (!selectedRootCard) return;
     try {
       const response = await axios.get('/engineering/bom', {
-        params: { salesOrderId: selectedSalesOrder },
+        params: { rootCardId: selectedRootCard },
         __sessionGuard: true
       });
       setBoms(response.data || []);
     } catch (err) {
       console.error('Failed to fetch BOMs:', err);
     }
-  }, [selectedSalesOrder]);
+  }, [selectedRootCard]);
 
   useEffect(() => {
-    fetchSalesOrders();
-  }, [fetchSalesOrders]);
+    fetchRootCards();
+  }, [fetchRootCards]);
 
   useEffect(() => {
     fetchDocuments();
     fetchBOMs();
-  }, [selectedSalesOrder, fetchDocuments, fetchBOMs]);
+  }, [selectedRootCard, fetchDocuments, fetchBOMs]);
 
   const handleUploadChange = (e) => {
     const { name, value, type } = e.target;
@@ -95,7 +95,7 @@ const EngineeringTasksPage = () => {
     }
 
     const formData = new FormData();
-    formData.append('salesOrderId', selectedSalesOrder);
+    formData.append('rootCardId', selectedRootCard);
     formData.append('documentType', uploadForm.documentType);
     formData.append('documentName', uploadForm.documentName || uploadForm.file.name);
     formData.append('document', uploadForm.file);
@@ -146,7 +146,7 @@ const EngineeringTasksPage = () => {
 
     try {
       await axios.post('/engineering/bom/generate', {
-        salesOrderId: selectedSalesOrder,
+        rootCardId: selectedRootCard,
         bomName: bomForm.bomName,
         description: bomForm.description,
         lineItems: bomForm.lineItems.filter(item => item.itemCode && item.itemDescription)
@@ -219,16 +219,16 @@ const EngineeringTasksPage = () => {
 
       <div className="mb-6">
         <label className="block text-sm font-medium  dark: mb-2">
-          Select Sales Order
+          Select Root Card
         </label>
         <select
-          value={selectedSalesOrder || ''}
-          onChange={(e) => setSelectedSalesOrder(Number(e.target.value))}
+          value={selectedRootCard || ''}
+          onChange={(e) => setSelectedRootCard(Number(e.target.value))}
           className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700  dark:"
         >
-          {salesOrders.map(order => (
+          {rootCards.map(order => (
             <option key={order.id} value={order.id}>
-              SO-{String(order.id).padStart(4, '0')} - {order.customer}
+              RC-{String(order.id).padStart(4, '0')} - {order.customer}
             </option>
           ))}
         </select>
@@ -351,7 +351,7 @@ const EngineeringTasksPage = () => {
                   {documents.length === 0 && (
                     <tr>
                       <td colSpan="5" className="px-6 py-6 text-center text-sm text-slate-500">
-                        No documents uploaded for this sales order
+                        No documents uploaded for this root card
                       </td>
                     </tr>
                   )}
@@ -543,7 +543,7 @@ const EngineeringTasksPage = () => {
                   {boms.length === 0 && (
                     <tr>
                       <td colSpan="4" className="px-6 py-6 text-center text-sm text-slate-500">
-                        No BOMs generated for this sales order
+                        No BOMs generated for this root card
                       </td>
                     </tr>
                   )}

@@ -35,7 +35,7 @@ async function runMigrations() {
           sales_order_id INT NOT NULL,
           step_number INT NOT NULL,
           step_name VARCHAR(255) NOT NULL,
-          step_type ENUM('po_details', 'sales_details', 'documents_upload', 'designs_upload', 'material_request', 'production_plan', 'quality_check', 'shipment', 'delivered') NOT NULL,
+          step_type ENUM('po_details', 'design_engineering', 'material_requirement', 'production_plan', 'quality_check', 'shipment', 'delivery') NOT NULL,
           status ENUM('pending', 'in_progress', 'completed', 'rejected', 'on_hold') DEFAULT 'pending',
           assigned_employee_id INT,
           assigned_at TIMESTAMP NULL,
@@ -1036,13 +1036,13 @@ async function runMigrations() {
       console.log('⚠️  specifications table already exists');
     }
 
-    // Migration 23: Create project_inventory_tasks table
+    // Migration 23: Create root_card_inventory_tasks table
     try {
       await connection.execute(`
-        CREATE TABLE IF NOT EXISTS project_inventory_tasks (
+        CREATE TABLE IF NOT EXISTS root_card_inventory_tasks (
           id INT AUTO_INCREMENT PRIMARY KEY,
-          project_id INT NOT NULL,
-          root_card_id INT,
+          root_card_id INT NOT NULL,
+          production_root_card_id INT,
           step_number INT NOT NULL COMMENT '1-7 for the workflow steps',
           step_name VARCHAR(100) NOT NULL COMMENT 'Create RFQ, Send RFQ, Receive Quotes, Create PO, Approve PO, GRN Processing, Add to Stock',
           status ENUM('pending', 'in_progress', 'completed') DEFAULT 'pending',
@@ -1054,19 +1054,19 @@ async function runMigrations() {
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
           
-          UNIQUE KEY unique_project_step (project_id, step_number),
-          FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
-          FOREIGN KEY (root_card_id) REFERENCES root_cards(id) ON DELETE CASCADE,
+          UNIQUE KEY unique_root_card_step (root_card_id, step_number),
+          FOREIGN KEY (root_card_id) REFERENCES projects(id) ON DELETE CASCADE,
+          FOREIGN KEY (production_root_card_id) REFERENCES root_cards(id) ON DELETE CASCADE,
           FOREIGN KEY (completed_by) REFERENCES users(id) ON DELETE SET NULL,
-          INDEX idx_project_id (project_id),
+          INDEX idx_root_card_id (root_card_id),
           INDEX idx_status (status),
           INDEX idx_step_number (step_number)
         )
       `);
-      console.log('✅ project_inventory_tasks table created/verified');
+      console.log('✅ root_card_inventory_tasks table created/verified');
     } catch (err) {
       if (err.code !== 'ER_TABLE_EXISTS_ERROR') throw err;
-      console.log('⚠️  project_inventory_tasks table already exists');
+      console.log('⚠️  root_card_inventory_tasks table already exists');
     }
 
     // BOM Line Items table
@@ -1256,6 +1256,20 @@ async function runMigrations() {
       await migration046();
     } catch (err) {
       console.error('Migration 046 failed:', err.message);
+    }
+
+    try {
+      const { up: migration048 } = require('../migrations/048_add_item_groups_and_update_inventory.js');
+      await migration048();
+    } catch (err) {
+      console.error('Migration 048 failed:', err.message);
+    }
+
+    try {
+      const { up: migration053 } = require('../migrations/053_update_workflow_step_types.js');
+      await migration053();
+    } catch (err) {
+      console.error('Migration 053 failed:', err.message);
     }
 
     console.log('\n✅ All migrations completed successfully!');

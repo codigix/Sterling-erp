@@ -1,5 +1,5 @@
 const pool = require('../config/database');
-const { parseJsonField, stringifyJsonField } = require('../utils/salesOrderHelpers');
+const { parseJsonField, stringifyJsonField, ensureArray } = require('../utils/rootCardHelpers');
 
 class QualityCheckDetail {
   static async createTable() {
@@ -17,6 +17,8 @@ class QualityCheckDetail {
         service_support VARCHAR(255),
         internal_project_owner INT,
         qc_status ENUM('pending', 'in_progress', 'passed', 'failed', 'conditional') DEFAULT 'pending',
+        inspection_type VARCHAR(100),
+        inspections JSON,
         inspected_by INT,
         inspection_date TIMESTAMP NULL,
         qc_report TEXT,
@@ -32,80 +34,101 @@ class QualityCheckDetail {
     `);
   }
 
-  static async findBySalesOrderId(salesOrderId) {
+  static async findByRootCardId(rootCardId) {
     const [rows] = await pool.execute(
       `SELECT * FROM quality_check_details WHERE sales_order_id = ?`,
-      [salesOrderId]
+      [rootCardId]
     );
     return rows[0] ? this.formatRow(rows[0]) : null;
   }
 
   static async create(data) {
+    const normalized = normalizeStepData(data, {
+      qcStatus: 'qualityCheck.qcStatus',
+      inspectionType: 'qualityCheck.inspectionType',
+      inspections: 'qualityCheck.inspections',
+      qcReport: 'qualityCheck.qcReport',
+      remarks: 'qualityCheck.remarks'
+    });
+
     const [result] = await pool.execute(
       `INSERT INTO quality_check_details 
        (sales_order_id, quality_standards, welding_standards, surface_finish, mechanical_load_testing,
         electrical_compliance, documents_required, warranty_period, service_support, internal_project_owner,
-        qc_status, inspected_by, qc_report, remarks)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        qc_status, inspection_type, inspections, inspected_by, qc_report, remarks)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        data.salesOrderId,
-        data.qualityCompliance?.qualityStandards || null,
-        data.qualityCompliance?.weldingStandards || null,
-        data.qualityCompliance?.surfaceFinish || null,
-        data.qualityCompliance?.mechanicalLoadTesting || null,
-        data.qualityCompliance?.electricalCompliance || null,
-        data.qualityCompliance?.documentsRequired || null,
-        data.warrantySupport?.warrantyPeriod || null,
-        data.warrantySupport?.serviceSupport || null,
-        data.internalProjectOwner || null,
-        data.qcStatus || 'pending',
-        data.inspectedBy || null,
-        data.qcReport || null,
-        data.remarks || null
+        normalized.rootCardId,
+        normalized.qualityCompliance?.qualityStandards || null,
+        normalized.qualityCompliance?.weldingStandards || null,
+        normalized.qualityCompliance?.surfaceFinish || null,
+        normalized.qualityCompliance?.mechanicalLoadTesting || null,
+        normalized.qualityCompliance?.electricalCompliance || null,
+        normalized.qualityCompliance?.documentsRequired || null,
+        normalized.warrantySupport?.warrantyPeriod || null,
+        normalized.warrantySupport?.serviceSupport || null,
+        normalized.internalProjectOwner || null,
+        normalized.qcStatus || 'pending',
+        normalized.inspectionType || null,
+        stringifyJsonField(ensureArray(normalized.inspections)),
+        normalized.inspectedBy || null,
+        normalized.qcReport || null,
+        normalized.remarks || null
       ]
     );
     return result.insertId;
   }
 
-  static async update(salesOrderId, data) {
+  static async update(rootCardId, data) {
+    const normalized = normalizeStepData(data, {
+      qcStatus: 'qualityCheck.qcStatus',
+      inspectionType: 'qualityCheck.inspectionType',
+      inspections: 'qualityCheck.inspections',
+      qcReport: 'qualityCheck.qcReport',
+      remarks: 'qualityCheck.remarks'
+    });
+
     await pool.execute(
       `UPDATE quality_check_details 
        SET quality_standards = ?, welding_standards = ?, surface_finish = ?, mechanical_load_testing = ?,
            electrical_compliance = ?, documents_required = ?, warranty_period = ?, service_support = ?,
-           internal_project_owner = ?, qc_status = ?, inspected_by = ?, inspection_date = ?, 
+           internal_project_owner = ?, qc_status = ?, inspection_type = ?, inspections = ?, 
+           inspected_by = ?, inspection_date = ?, 
            qc_report = ?, remarks = ?, updated_at = CURRENT_TIMESTAMP
        WHERE sales_order_id = ?`,
       [
-        data.qualityCompliance?.qualityStandards || null,
-        data.qualityCompliance?.weldingStandards || null,
-        data.qualityCompliance?.surfaceFinish || null,
-        data.qualityCompliance?.mechanicalLoadTesting || null,
-        data.qualityCompliance?.electricalCompliance || null,
-        data.qualityCompliance?.documentsRequired || null,
-        data.warrantySupport?.warrantyPeriod || null,
-        data.warrantySupport?.serviceSupport || null,
-        data.internalProjectOwner || null,
-        data.qcStatus || 'pending',
-        data.inspectedBy || null,
-        data.qcStatus !== 'pending' && !data.inspectionDate ? new Date() : data.inspectionDate || null,
-        data.qcReport || null,
-        data.remarks || null,
-        salesOrderId
+        normalized.qualityCompliance?.qualityStandards || null,
+        normalized.qualityCompliance?.weldingStandards || null,
+        normalized.qualityCompliance?.surfaceFinish || null,
+        normalized.qualityCompliance?.mechanicalLoadTesting || null,
+        normalized.qualityCompliance?.electricalCompliance || null,
+        normalized.qualityCompliance?.documentsRequired || null,
+        normalized.warrantySupport?.warrantyPeriod || null,
+        normalized.warrantySupport?.serviceSupport || null,
+        normalized.internalProjectOwner || null,
+        normalized.qcStatus || 'pending',
+        normalized.inspectionType || null,
+        stringifyJsonField(ensureArray(normalized.inspections)),
+        normalized.inspectedBy || null,
+        normalized.qcStatus !== 'pending' && !normalized.inspectionDate ? new Date() : normalized.inspectionDate || null,
+        normalized.qcReport || null,
+        normalized.remarks || null,
+        rootCardId
       ]
     );
   }
 
-  static async updateQCStatus(salesOrderId, status) {
+  static async updateQCStatus(rootCardId, status) {
     await pool.execute(
       `UPDATE quality_check_details 
        SET qc_status = ?, inspection_date = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
        WHERE sales_order_id = ?`,
-      [status, salesOrderId]
+      [status, rootCardId]
     );
   }
 
-  static async addCompliance(salesOrderId, complianceData) {
-    const detail = await this.findBySalesOrderId(salesOrderId);
+  static async addCompliance(rootCardId, complianceData) {
+    const detail = await this.findByRootCardId(rootCardId);
     if (!detail) {
       throw new Error('Quality check data not found');
     }
@@ -122,15 +145,15 @@ class QualityCheckDetail {
         complianceData.mechanicalLoadTesting || null,
         complianceData.electricalCompliance || null,
         complianceData.documentsRequired || null,
-        salesOrderId
+        rootCardId
       ]
     );
 
-    return await this.findBySalesOrderId(salesOrderId);
+    return await this.findByRootCardId(rootCardId);
   }
 
-  static async addWarrantySupport(salesOrderId, warrantyData) {
-    const detail = await this.findBySalesOrderId(salesOrderId);
+  static async addWarrantySupport(rootCardId, warrantyData) {
+    const detail = await this.findByRootCardId(rootCardId);
     if (!detail) {
       throw new Error('Quality check data not found');
     }
@@ -142,29 +165,29 @@ class QualityCheckDetail {
       [
         warrantyData.warrantyPeriod || null,
         warrantyData.serviceSupport || null,
-        salesOrderId
+        rootCardId
       ]
     );
 
-    return await this.findBySalesOrderId(salesOrderId);
+    return await this.findByRootCardId(rootCardId);
   }
 
-  static async assignProjectOwner(salesOrderId, employeeId) {
-    const detail = await this.findBySalesOrderId(salesOrderId);
+  static async assignProjectOwner(rootCardId, employeeId) {
+    const detail = await this.findByRootCardId(rootCardId);
     if (!detail) {
       throw new Error('Quality check data not found');
     }
 
     await pool.execute(
       `UPDATE quality_check_details SET internal_project_owner = ? WHERE sales_order_id = ?`,
-      [employeeId || null, salesOrderId]
+      [employeeId || null, rootCardId]
     );
 
-    return await this.findBySalesOrderId(salesOrderId);
+    return await this.findByRootCardId(rootCardId);
   }
 
-  static async validateCompliance(salesOrderId) {
-    const detail = await this.findBySalesOrderId(salesOrderId);
+  static async validateCompliance(rootCardId) {
+    const detail = await this.findByRootCardId(rootCardId);
     if (!detail) {
       throw new Error('Quality check data not found');
     }
@@ -195,9 +218,10 @@ class QualityCheckDetail {
 
   static formatRow(row) {
     if (!row) return null;
+    const inspections = ensureArray(parseJsonField(row.inspections, []));
     return {
       id: row.id,
-      salesOrderId: row.sales_order_id,
+      rootCardId: row.sales_order_id,
       qualityCompliance: {
         qualityStandards: row.quality_standards,
         weldingStandards: row.welding_standards,
@@ -210,8 +234,17 @@ class QualityCheckDetail {
         warrantyPeriod: row.warranty_period,
         serviceSupport: row.service_support
       },
+      qualityCheck: {
+        qcStatus: row.qc_status,
+        inspectionType: row.inspection_type,
+        inspections: inspections,
+        qcReport: row.qc_report,
+        remarks: row.remarks
+      },
       internalProjectOwner: row.internal_project_owner,
       qcStatus: row.qc_status,
+      inspectionType: row.inspection_type,
+      inspections: inspections,
       qcReport: row.qc_report,
       inspectedBy: row.inspected_by,
       inspectionDate: row.inspection_date,

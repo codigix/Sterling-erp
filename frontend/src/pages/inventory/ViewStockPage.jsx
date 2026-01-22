@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "../../utils/api";
-import taskService from "../../utils/taskService";
-import useProjectInventoryTask from "../../hooks/useProjectInventoryTask";
+import useRootCardInventoryTask from "../../hooks/useRootCardInventoryTask";
 import {
   Package,
   Search,
@@ -17,7 +16,7 @@ import {
 } from "lucide-react";
 
 const ViewStockPage = () => {
-  const { completeCurrentTask } = useProjectInventoryTask();
+  const { completeCurrentTask } = useRootCardInventoryTask();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [sortBy, setSortBy] = useState("name");

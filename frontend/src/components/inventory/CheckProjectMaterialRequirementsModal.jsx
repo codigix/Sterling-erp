@@ -30,16 +30,16 @@ const CheckProjectMaterialRequirementsModal = ({
     setLoading(true);
     try {
       let response;
-      const salesOrderId = rootCard?.sales_order_id || rootCard?.salesOrderId || rootCard?.project?.id;
+      const effectiveRootCardId = rootCard?.root_card_id || rootCard?.rootCardId || rootCard?.project?.id || rootCardId || projectId;
       
       const attempts = [
-        () => axios.get(`/sales/requirements/${salesOrderId}`),
-        () => axios.get(`/sales/requirements/${projectId}`),
-        () => axios.get(`/sales/requirements`).then(res => {
+        () => axios.get(`/root-cards/requirements/${effectiveRootCardId}`),
+        () => axios.get(`/root-cards/requirements/${projectId}`),
+        () => axios.get(`/root-cards/requirements`).then(res => {
           const all = res.data;
           if (Array.isArray(all)) {
             const matched = all.find(req => 
-              req.salesOrderId === salesOrderId || 
+              req.rootCardId === effectiveRootCardId || 
               req.id === projectId ||
               req.rootCardId === rootCardId
             );
@@ -82,7 +82,7 @@ const CheckProjectMaterialRequirementsModal = ({
       console.error("Error fetching material requirements:", error);
       Swal.fire(
         "Warning",
-        "No material requirements found for this project yet. You can create them from the project details.",
+        "No material requirements found for this root card yet. You can create them from the root card details.",
         "info"
       );
       setMaterials([]);
@@ -131,7 +131,7 @@ const CheckProjectMaterialRequirementsModal = ({
       }
 
       const navigationParams = new URLSearchParams();
-      if (projectId) navigationParams.append("salesOrderId", projectId);
+      if (projectId) navigationParams.append("rootCardId", projectId);
       if (rootId) navigationParams.append("rootCardId", rootId);
       navigationParams.append("fromMaterialCheck", "true");
 
@@ -178,7 +178,7 @@ const CheckProjectMaterialRequirementsModal = ({
         <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
           <div>
             <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
-              Check Project Material Requirements
+              Check Root Card Material Requirements
             </h2>
             <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
               Review and select materials for RFQ quotation
@@ -215,12 +215,12 @@ const CheckProjectMaterialRequirementsModal = ({
               {projectDetails && (
                 <div className="mb-6 p-4 bg-blue-50 dark:bg-slate-700 rounded-lg border border-blue-200 dark:border-slate-600">
                   <h3 className="font-semibold text-slate-900 dark:text-white mb-2">
-                    Project Details
+                    Root Card Details
                   </h3>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                     <div>
                       <p className="text-slate-600 dark:text-slate-400">
-                        Project Name
+                        Root Card Name
                       </p>
                       <p className="font-medium text-slate-900 dark:text-white">
                         {projectDetails.projectName || "N/A"}

@@ -85,8 +85,8 @@ const InventoryTasksPage = () => {
           setTasks([]);
           return;
         }
-        console.log(`[InventoryTasksPage] Fetching tasks for project ${rootCard.project.id}`);
-        const response = await axios.get(`/inventory/project-tasks/project/${rootCard.project.id}/tasks`);
+        console.log(`[InventoryTasksPage] Fetching tasks for root card ${rootCard.id}`);
+        const response = await axios.get(`/inventory/root-card-tasks/root-card/${rootCard.id}/tasks`);
         const tasksData = response.data.tasks || [];
         console.log(`[InventoryTasksPage] Fetched ${tasksData.length} backend tasks`, tasksData);
         setTasks(tasksData);
@@ -869,7 +869,7 @@ const InventoryTasksPage = () => {
                       className="text-slate-400 mx-auto mb-2"
                     />
                     <p className="text-slate-600 dark:text-slate-400">
-                      No tasks created for this GRN yet
+                      No tasks created for this root card yet
                     </p>
                     <p className="text-xs text-slate-500 mt-1">
                       Click "Create Task" to get started

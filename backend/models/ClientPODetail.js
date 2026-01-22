@@ -1,5 +1,5 @@
 const pool = require('../config/database');
-const { parseJsonField, stringifyJsonField } = require('../utils/salesOrderHelpers');
+const { parseJsonField, stringifyJsonField, ensureArray } = require('../utils/rootCardHelpers');
 
 class ClientPODetail {
   static async createTable() {
@@ -19,6 +19,7 @@ class ClientPODetail {
         client_gstin VARCHAR(20),
         billing_address TEXT,
         shipping_address TEXT,
+        product_details JSON,
         po_value DECIMAL(12,2),
         currency VARCHAR(10) DEFAULT 'INR',
         terms_conditions JSON,
@@ -34,10 +35,10 @@ class ClientPODetail {
     `);
   }
 
-  static async findBySalesOrderId(salesOrderId) {
+  static async findByRootCardId(rootCardId) {
     const [rows] = await pool.execute(
       `SELECT * FROM client_po_details WHERE sales_order_id = ?`,
-      [salesOrderId]
+      [rootCardId]
     );
     return rows[0] ? this.formatRow(rows[0]) : null;
   }
@@ -55,11 +56,11 @@ class ClientPODetail {
       `INSERT INTO client_po_details 
        (sales_order_id, po_number, po_date, client_name, client_email, client_phone, 
         project_name, project_code, client_company_name, client_address, client_gstin, 
-        billing_address, shipping_address, po_value, currency, terms_conditions, attachments, 
+        billing_address, shipping_address, product_details, po_value, currency, terms_conditions, attachments, 
         project_requirements, notes)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        data.salesOrderId,
+        data.rootCardId,
         data.poNumber,
         data.poDate,
         data.clientName,
@@ -72,10 +73,11 @@ class ClientPODetail {
         data.clientGSTIN || null,
         data.billingAddress || null,
         data.shippingAddress || null,
+        stringifyJsonField(data.productDetails),
         data.poValue || null,
         data.currency || 'INR',
         stringifyJsonField(data.termsConditions),
-        stringifyJsonField(data.attachments),
+        stringifyJsonField(ensureArray(data.attachments)),
         stringifyJsonField(data.projectRequirements),
         data.notes || null
       ]
@@ -83,12 +85,12 @@ class ClientPODetail {
     return result.insertId;
   }
 
-  static async update(salesOrderId, data) {
+  static async update(rootCardId, data) {
     await pool.execute(
       `UPDATE client_po_details 
        SET po_number = ?, po_date = ?, client_name = ?, client_email = ?, client_phone = ?,
            project_name = ?, project_code = ?, client_company_name = ?, client_address = ?,
-           client_gstin = ?, billing_address = ?, shipping_address = ?, po_value = ?, currency = ?,
+           client_gstin = ?, billing_address = ?, shipping_address = ?, product_details = ?, po_value = ?, currency = ?,
            terms_conditions = ?, attachments = ?, project_requirements = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
        WHERE sales_order_id = ?`,
       [
@@ -104,21 +106,22 @@ class ClientPODetail {
         data.clientGSTIN || null,
         data.billingAddress || null,
         data.shippingAddress || null,
+        stringifyJsonField(data.productDetails),
         data.poValue || null,
         data.currency || 'INR',
         stringifyJsonField(data.termsConditions),
-        stringifyJsonField(data.attachments),
+        stringifyJsonField(ensureArray(data.attachments)),
         stringifyJsonField(data.projectRequirements),
         data.notes || null,
-        salesOrderId
+        rootCardId
       ]
     );
   }
 
-  static async delete(salesOrderId) {
+  static async delete(rootCardId) {
     await pool.execute(
       `DELETE FROM client_po_details WHERE sales_order_id = ?`,
-      [salesOrderId]
+      [rootCardId]
     );
   }
 
@@ -137,7 +140,7 @@ class ClientPODetail {
     return rows.map(this.formatRow);
   }
 
-  static async updateClientInfo(salesOrderId, data) {
+  static async updateClientInfo(rootCardId, data) {
     await pool.execute(
       `UPDATE client_po_details 
        SET po_number = ?, po_date = ?, client_name = ?, client_email = ?, client_phone = ?, updated_at = CURRENT_TIMESTAMP
@@ -148,12 +151,12 @@ class ClientPODetail {
         data.clientName,
         data.clientEmail,
         data.clientPhone,
-        salesOrderId
+        rootCardId
       ]
     );
   }
 
-  static async updateProjectDetails(salesOrderId, data) {
+  static async updateProjectDetails(rootCardId, data) {
     await pool.execute(
       `UPDATE client_po_details 
        SET project_name = ?, project_code = ?, billing_address = ?, shipping_address = ?, updated_at = CURRENT_TIMESTAMP
@@ -163,27 +166,39 @@ class ClientPODetail {
         data.projectCode,
         data.billingAddress,
         data.shippingAddress,
-        salesOrderId
+        rootCardId
       ]
     );
   }
 
-  static async updateProjectRequirements(salesOrderId, data) {
+  static async updateProjectRequirements(rootCardId, data) {
     await pool.execute(
       `UPDATE client_po_details 
        SET project_requirements = ?, updated_at = CURRENT_TIMESTAMP
        WHERE sales_order_id = ?`,
       [
         stringifyJsonField(data),
-        salesOrderId
+        rootCardId
       ]
     );
   }
 
-  static async getClientInfo(salesOrderId) {
+  static async updateProductDetails(rootCardId, data) {
+    await pool.execute(
+      `UPDATE client_po_details 
+       SET product_details = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE sales_order_id = ?`,
+      [
+        stringifyJsonField(data),
+        rootCardId
+      ]
+    );
+  }
+
+  static async getClientInfo(rootCardId) {
     const [rows] = await pool.execute(
       `SELECT po_number, po_date, client_name, client_email, client_phone FROM client_po_details WHERE sales_order_id = ?`,
-      [salesOrderId]
+      [rootCardId]
     );
     return rows[0] ? {
       poNumber: rows[0].po_number,
@@ -194,10 +209,10 @@ class ClientPODetail {
     } : null;
   }
 
-  static async getProjectDetails(salesOrderId) {
+  static async getProjectDetails(rootCardId) {
     const [rows] = await pool.execute(
       `SELECT project_name, project_code, billing_address, shipping_address FROM client_po_details WHERE sales_order_id = ?`,
-      [salesOrderId]
+      [rootCardId]
     );
     return rows[0] ? {
       projectName: rows[0].project_name,
@@ -207,28 +222,36 @@ class ClientPODetail {
     } : null;
   }
 
-  static async deleteProjectDetails(salesOrderId) {
+  static async deleteProjectDetails(rootCardId) {
     await pool.execute(
       `UPDATE client_po_details 
        SET project_name = NULL, project_code = NULL, billing_address = NULL, shipping_address = NULL, updated_at = CURRENT_TIMESTAMP
        WHERE sales_order_id = ?`,
-      [salesOrderId]
+      [rootCardId]
     );
   }
 
-  static async getProjectRequirements(salesOrderId) {
+  static async getProjectRequirements(rootCardId) {
     const [rows] = await pool.execute(
       `SELECT project_requirements FROM client_po_details WHERE sales_order_id = ?`,
-      [salesOrderId]
+      [rootCardId]
     );
     return rows[0] ? parseJsonField(rows[0].project_requirements) : null;
+  }
+
+  static async getProductDetails(rootCardId) {
+    const [rows] = await pool.execute(
+      `SELECT product_details FROM client_po_details WHERE sales_order_id = ?`,
+      [rootCardId]
+    );
+    return rows[0] ? parseJsonField(rows[0].product_details) : null;
   }
 
   static formatRow(row) {
     if (!row) return null;
     return {
       id: row.id,
-      salesOrderId: row.sales_order_id,
+      rootCardId: row.sales_order_id,
       poNumber: row.po_number,
       poDate: row.po_date,
       clientName: row.client_name,
@@ -241,10 +264,11 @@ class ClientPODetail {
       clientGSTIN: row.client_gstin,
       billingAddress: row.billing_address,
       shippingAddress: row.shipping_address,
+      productDetails: parseJsonField(row.product_details),
       poValue: row.po_value,
       currency: row.currency,
       termsConditions: parseJsonField(row.terms_conditions),
-      attachments: parseJsonField(row.attachments),
+      attachments: ensureArray(parseJsonField(row.attachments, [])),
       projectRequirements: parseJsonField(row.project_requirements),
       notes: row.notes,
       createdAt: row.created_at,

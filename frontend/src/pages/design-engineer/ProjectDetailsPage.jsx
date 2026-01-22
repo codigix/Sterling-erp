@@ -109,7 +109,7 @@ const ProjectDetailsPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const projectId =
-    searchParams.get("projectId") || searchParams.get("salesOrderId");
+    searchParams.get("projectId") || searchParams.get("rootCardId");
   const viewMode = searchParams.get("mode");
 
   const [view, setView] = useState("list");
@@ -181,11 +181,11 @@ const ProjectDetailsPage = () => {
   const fetchProjects = async () => {
     try {
       setLoading(true);
-      const response = await axios.get("/sales/orders");
-      console.log("Sales orders response:", response.data);
+      const response = await axios.get("/root-cards");
+      console.log("Root cards response:", response.data);
       const orders = Array.isArray(response.data)
         ? response.data
-        : response.data.orders || [];
+        : response.data.rootCards || [];
       setProjects(orders);
     } catch (error) {
       console.error("Error fetching projects:", error);
@@ -217,13 +217,13 @@ const ProjectDetailsPage = () => {
 
   const handleSelectProject = (project) => {
     navigate(
-      `/design-engineer/project-details?projectId=${project.id}&mode=edit`
+      `/design-engineer/root-cards?projectId=${project.id}&mode=edit`
     );
   };
 
   const handleViewProject = (project) => {
     navigate(
-      `/design-engineer/project-details?projectId=${project.id}&mode=view`
+      `/design-engineer/root-cards?projectId=${project.id}&mode=view`
     );
   };
 
@@ -231,29 +231,29 @@ const ProjectDetailsPage = () => {
     try {
       setLoading(true);
 
-      let salesOrder = null;
+      let rootCard = null;
       try {
-        const response = await axios.get(`/sales/orders/${projectId}`);
-        salesOrder = response.data.order || response.data;
+        const response = await axios.get(`/root-cards/${projectId}`);
+        rootCard = response.data.order || response.data;
       } catch (err) {
-        console.error("Sales order not found:", err);
-        alert("Project not found");
+        console.error("Root card not found:", err);
+        alert("Root Card not found");
         setView("list");
         return;
       }
 
-      if (!salesOrder) {
-        alert("Project not found");
+      if (!rootCard) {
+        alert("Root Card not found");
         setView("list");
         return;
       }
 
-      setSelectedProject(salesOrder);
+      setSelectedProject(rootCard);
 
       let designDetails = null;
       try {
         const savedResponse = await axios.get(
-          `/sales/orders/${salesOrder.id}/design-details`
+          `/root-cards/${rootCard.id}/design-details`
         );
         designDetails = savedResponse.data?.data;
         console.log("Saved design details:", designDetails);
@@ -262,13 +262,13 @@ const ProjectDetailsPage = () => {
       }
 
       const dataToSet = {
-        designId: designDetails?.designId || salesOrder.po_number || "",
+        designId: designDetails?.designId || rootCard.po_number || "",
         projectName:
-          designDetails?.projectName || salesOrder.project_name || "",
+          designDetails?.projectName || rootCard.project_name || "",
         productName:
-          designDetails?.productName || salesOrder.project_name || "",
+          designDetails?.productName || rootCard.project_name || "",
         designStatus:
-          designDetails?.designStatus || salesOrder.status || "draft",
+          designDetails?.designStatus || rootCard.status || "draft",
         designEngineerName: designDetails?.designEngineerName || "",
         systemLength: designDetails?.systemLength || "",
         systemWidth: designDetails?.systemWidth || "",
@@ -298,10 +298,10 @@ const ProjectDetailsPage = () => {
             ? designDetails.referenceDocuments
             : [],
         });
-      } else if (salesOrder.documents) {
+      } else if (rootCard.documents) {
         setUploadedFiles({
-          references: Array.isArray(salesOrder.documents)
-            ? salesOrder.documents
+          references: Array.isArray(rootCard.documents)
+            ? rootCard.documents
             : [],
         });
       }
@@ -358,10 +358,10 @@ const ProjectDetailsPage = () => {
 
       setSaving(true);
 
-      const salesOrderId = selectedProject?.id;
-      if (!salesOrderId) {
+      const rootCardId = selectedProject?.id;
+      if (!rootCardId) {
         alert(
-          "No sales order selected. Please ensure the task is properly linked to a sales order. If the issue persists, please contact your administrator."
+          "No root card selected. Please ensure the task is properly linked to a root card. If the issue persists, please contact your administrator."
         );
         console.error("Selected project has no ID:", selectedProject);
         return;
@@ -402,13 +402,13 @@ const ProjectDetailsPage = () => {
         referenceDocuments: uploadedFiles.references || [],
       };
 
-      if (salesOrderId && !isNaN(salesOrderId)) {
+      if (rootCardId && !isNaN(rootCardId)) {
         await axios.post(
-          `/sales/orders/${salesOrderId}/design-details`,
+          `/root-cards/${rootCardId}/design-details`,
           payload
         );
       } else {
-        alert("No sales order linked to this task. Cannot save details.");
+        alert("No root card linked to this task. Cannot save details.");
         return;
       }
 
@@ -419,24 +419,6 @@ const ProjectDetailsPage = () => {
       console.error("Error saving project:", error);
       alert(
         "Failed to save project details: " +
-          (error.response?.data?.message || error.message)
-      );
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDeleteProject = async (projectId) => {
-    try {
-      setSaving(true);
-      await axios.delete(`/sales/orders/${projectId}`);
-      alert("Project deleted successfully!");
-      fetchProjects();
-      setView("list");
-    } catch (error) {
-      console.error("Error deleting project:", error);
-      alert(
-        "Failed to delete project: " +
           (error.response?.data?.message || error.message)
       );
     } finally {
@@ -466,25 +448,14 @@ const ProjectDetailsPage = () => {
                   </div>
                   <div>
                     <h1 className="text-3xl font-bold text-slate-900 dark:text-white text-xs">
-                      Project Details
+                      Root Cards
                     </h1>
                     <p className="text-slate-600 dark:text-slate-400 text-sm mt-1">
-                      Manage all project specifications and materials
+                      View all root cards and design details
                     </p>
                   </div>
                 </div>
               </div>
-              <Button
-                onClick={() => {
-                  alert(
-                    "Please create a Sales Order first. Go to Sales module to create a new order, then come back here to add design details."
-                  );
-                }}
-                className="flex items-center gap-2 whitespace-nowrap"
-              >
-                <Plus size={20} />
-                New Project
-              </Button>
             </div>
 
             {/* Filters */}
@@ -586,7 +557,7 @@ const ProjectDetailsPage = () => {
                       >
                         <div className="flex flex-col items-center gap-2">
                           <FileText className="w-12 h-12 text-slate-300" />
-                          <span className="text-sm">No projects found</span>
+                          <span className="text-sm">No root cards found</span>
                         </div>
                       </td>
                     </tr>
@@ -686,7 +657,7 @@ const ProjectDetailsPage = () => {
                                   try {
                                     setSaving(true);
                                     await axios.post(
-                                      `/api/sales/orders/${project.id}/send-to-inventory`
+                                      `/root-cards/${project.id}/send-to-inventory`
                                     );
                                     alert(
                                       "Materials sent to inventory successfully!"
@@ -707,33 +678,11 @@ const ProjectDetailsPage = () => {
                                 <ArrowRight size={16} />
                               </button>
                               <button
-                                onClick={() => handleSelectProject(project)}
-                                className="p-2 hover:bg-blue-100 dark:hover:bg-blue-900 rounded-lg text-blue-600 dark:text-blue-400 transition"
-                                title="Edit"
-                              >
-                                <Edit2 size={16} />
-                              </button>
-                              <button
                                 onClick={() => handleViewProject(project)}
                                 className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-400 transition"
                                 title="View Details"
                               >
                                 <Eye size={16} />
-                              </button>
-                              <button
-                                onClick={() => {
-                                  if (
-                                    confirm(
-                                      "Are you sure you want to delete this project?"
-                                    )
-                                  ) {
-                                    handleDeleteProject(project.id);
-                                  }
-                                }}
-                                className="p-2 hover:bg-red-100 dark:hover:bg-red-900 rounded-lg text-red-600 dark:text-red-400 transition"
-                                title="Delete"
-                              >
-                                <Trash2 size={16} />
                               </button>
                             </div>
                           </td>
@@ -754,7 +703,7 @@ const ProjectDetailsPage = () => {
                     {filteredProjects.length}
                   </span>{" "}
                   of <span className="font-semibold">{projects.length}</span>{" "}
-                  projects
+                  root cards
                 </p>
               </div>
             )}
@@ -776,11 +725,11 @@ const ProjectDetailsPage = () => {
               </div>
               <div>
                 <h1 className="text-md font-bold text-slate-900 dark:text-white text-xs">
-                  {selectedProject ? (editMode ? "Edit" : "View") : "Create"}{" "}
-                  Project Details
+                  {selectedProject ? (editMode ? "Edit" : "View") : "View"}{" "}
+                  Root Card Details
                 </h1>
                 <p className="text-xs text-slate-600 dark:text-slate-400">
-                  {selectedProject?.title || "New Project"}
+                  {selectedProject?.title || "Root Card"}
                 </p>
               </div>
             </div>
@@ -789,6 +738,52 @@ const ProjectDetailsPage = () => {
 
         {/* Form Content */}
         <div className="p-6 space-y-6">
+          {/* Root Card Reference (Read-Only) */}
+          <Card className="bg-slate-50 dark:bg-slate-900/50 border-blue-200 dark:border-blue-900">
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2">
+                <FileText size={18} className="text-blue-600" />
+                <CardTitle className="text-md">Root Card Reference</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider font-bold text-slate-500 dark:text-slate-400 mb-1">
+                    Customer / Client
+                  </p>
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {selectedProject?.customer || selectedProject?.client_name || "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider font-bold text-slate-500 dark:text-slate-400 mb-1">
+                    PO Number
+                  </p>
+                  <code className="text-xs font-mono bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded">
+                    {selectedProject?.po_number || "N/A"}
+                  </code>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider font-bold text-slate-500 dark:text-slate-400 mb-1">
+                    Order Date
+                  </p>
+                  <p className="text-sm text-slate-700 dark:text-slate-300">
+                    {selectedProject?.order_date ? new Date(selectedProject.order_date).toLocaleDateString() : "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider font-bold text-slate-500 dark:text-slate-400 mb-1">
+                    Due Date
+                  </p>
+                  <p className="text-sm text-slate-700 dark:text-slate-300 font-medium">
+                    {selectedProject?.due_date ? new Date(selectedProject.due_date).toLocaleDateString() : "N/A"}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Basic Info */}
           <Card>
             <CardHeader>
@@ -1336,7 +1331,7 @@ const ProjectDetailsPage = () => {
           {/* Action Buttons */}
           <div className="flex justify-end gap-3 sticky bottom-0 bg-white dark:bg-slate-800 p-4 rounded-lg shadow-lg">
             <Button
-              onClick={() => navigate("/design-engineer/project-details")}
+              onClick={() => navigate("/design-engineer/root-cards")}
               variant="secondary"
             >
               Back to List
@@ -1353,7 +1348,7 @@ const ProjectDetailsPage = () => {
                   ) : (
                     <Save size={20} />
                   )}
-                  {saving ? "Saving..." : "Save Project Details"}
+                  {saving ? "Saving..." : "Save Design Details"}
                 </Button>
               </>
             )}
@@ -1361,13 +1356,13 @@ const ProjectDetailsPage = () => {
               <Button
                 onClick={() =>
                   navigate(
-                    `/design-engineer/project-details?projectId=${selectedProject.id}&mode=edit`
+                    `/design-engineer/root-cards?projectId=${selectedProject.id}&mode=edit`
                   )
                 }
                 className="flex items-center gap-2"
               >
                 <Edit2 size={20} />
-                Edit Project
+                Edit Design Details
               </Button>
             )}
           </div>

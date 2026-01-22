@@ -1,25 +1,25 @@
 const pool = require('../../config/database');
 const EngineeringDocument = require('../../models/EngineeringDocument');
 const BillOfMaterials = require('../../models/BillOfMaterials');
-const SalesOrder = require('../../models/SalesOrder');
+const RootCard = require('../../models/RootCard');
 
 exports.uploadDocument = async (req, res) => {
   try {
-    const { salesOrderId, documentType, documentName } = req.body;
+    const { rootCardId, documentType, documentName } = req.body;
     const filePath = req.file?.path || null;
     const userId = req.user?.id;
 
-    if (!salesOrderId || !documentType || !filePath) {
-      return res.status(400).json({ message: 'Sales Order ID, Document Type, and File are required' });
+    if (!rootCardId || !documentType || !filePath) {
+      return res.status(400).json({ message: 'Root Card ID, Document Type, and File are required' });
     }
 
-    const salesOrder = await SalesOrder.findById(salesOrderId);
-    if (!salesOrder) {
-      return res.status(404).json({ message: 'Sales Order not found' });
+    const rootCard = await RootCard.findById(rootCardId);
+    if (!rootCard) {
+      return res.status(404).json({ message: 'Root Card not found' });
     }
 
     const docId = await EngineeringDocument.create({
-      salesOrderId,
+      rootCardId,
       documentType,
       documentName: documentName || req.file.originalname,
       filePath,
@@ -38,13 +38,13 @@ exports.uploadDocument = async (req, res) => {
 
 exports.getDocuments = async (req, res) => {
   try {
-    const { salesOrderId } = req.query;
+    const { rootCardId } = req.query;
 
-    if (!salesOrderId) {
-      return res.status(400).json({ message: 'Sales Order ID is required' });
+    if (!rootCardId) {
+      return res.status(400).json({ message: 'Root Card ID is required' });
     }
 
-    const documents = await EngineeringDocument.findBySalesOrderId(salesOrderId);
+    const documents = await EngineeringDocument.findByRootCardId(rootCardId);
     res.json(documents);
   } catch (error) {
     console.error('Get documents error:', error);
@@ -74,10 +74,10 @@ exports.approveDocument = async (req, res) => {
 exports.generateBOM = async (req, res) => {
   let connection = null;
   try {
-    const { salesOrderId, bomName, description, lineItems } = req.body;
+    const { rootCardId, bomName, description, lineItems } = req.body;
     const userId = req.user?.id;
 
-    console.log('GenerateBOM Request:', { userId, salesOrderId, bomName, lineItemsCount: lineItems?.length });
+    console.log('GenerateBOM Request:', { userId, rootCardId, bomName, lineItemsCount: lineItems?.length });
 
     if (!bomName || !bomName.trim()) {
       return res.status(400).json({ message: 'BOM Name is required' });
@@ -87,10 +87,10 @@ exports.generateBOM = async (req, res) => {
       return res.status(400).json({ message: 'At least one line item is required' });
     }
 
-    if (salesOrderId) {
-      const salesOrder = await SalesOrder.findById(salesOrderId);
-      if (!salesOrder) {
-        return res.status(404).json({ message: 'Sales Order not found' });
+    if (rootCardId) {
+      const rootCard = await RootCard.findById(rootCardId);
+      if (!rootCard) {
+        return res.status(404).json({ message: 'Root Card not found' });
       }
     }
 
@@ -102,7 +102,7 @@ exports.generateBOM = async (req, res) => {
     await connection.beginTransaction();
 
     const bomId = await BillOfMaterials.create({
-      salesOrderId: salesOrderId || null,
+      rootCardId: rootCardId || null,
       bomName: bomName.trim(),
       description: description || null,
       createdBy: userId
@@ -167,12 +167,12 @@ exports.getBOMDetails = async (req, res) => {
   }
 };
 
-exports.getSalesOrderBOMs = async (req, res) => {
+exports.getRootCardBOMs = async (req, res) => {
   try {
-    const { salesOrderId } = req.query;
+    const { rootCardId } = req.query;
 
-    if (salesOrderId) {
-      const boms = await BillOfMaterials.findBySalesOrderId(salesOrderId);
+    if (rootCardId) {
+      const boms = await BillOfMaterials.findByRootCardId(rootCardId);
       return res.json(boms || []);
     }
 

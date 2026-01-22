@@ -39,9 +39,6 @@ import DesignEngineerReportsPage from '../../pages/design-engineer/DesignEnginee
 
 // Project Details
 import ProjectDetailsPage from '../../pages/design-engineer/ProjectDetailsPage';
-import ProjectListPage from '../../pages/design-engineer/ProjectListPage';
-import CreateProjectPage from '../../pages/design-engineer/CreateProjectPage';
-import ProjectDetailViewPage from '../../pages/design-engineer/ProjectDetailViewPage';
 
 const navigationItems = [
   {
@@ -50,8 +47,8 @@ const navigationItems = [
     icon: Wrench,
   },
   {
-    title: 'Project Details',
-    path: '/design-engineer/project-details',
+    title: 'Root Cards',
+    path: '/design-engineer/root-cards',
     icon: FileText,
   },
   {
@@ -106,9 +103,7 @@ const DesignEngineerLayout = () => {
     >
       <Routes>
         <Route path="dashboard" element={<DesignEngineerDashboard />} />
-        <Route path="project-details" element={<ProjectDetailsPage />} />
-        <Route path="project-details/new" element={<CreateProjectPage />} />
-        <Route path="project-details/view" element={<ProjectDetailViewPage />} />
+        <Route path="root-cards" element={<ProjectDetailsPage />} />
         
         {/* Documents Routes */}
         <Route path="documents/designs" element={<MyDesignsPage />} />

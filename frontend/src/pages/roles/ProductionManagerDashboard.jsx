@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Link, Routes, Route, Navigate } from "react-router-dom";
 import RoleDashboardLayout from "../../components/layout/RoleDashboardLayout";
 import ProductionPhasesDisplay from "../../components/production/ProductionPhasesDisplay";
 import axios from "../../utils/api";
+import { Loader2, Package } from "lucide-react";
 import ProductionPlansPage from "../production/ProductionPlansPage";
 import SchedulingPage from "../production/SchedulingPage";
 import ResourceAllocationPage from "../production/ResourceAllocationPage";
@@ -176,10 +177,25 @@ const ProductionManagerDashboard = () => {
   const [rootCards, setRootCards] = useState([]);
   const [loadingRootCards, setLoadingRootCards] = useState(true);
   const [selectedRootCard, setSelectedRootCard] = useState(null);
+  const [departmentTasks, setDepartmentTasks] = useState([]);
+  const [loadingTasks, setLoadingTasks] = useState(true);
+
+  const fetchTasks = useCallback(async () => {
+    try {
+      setLoadingTasks(true);
+      const response = await axios.get("/employee/tasks?type=production_plan");
+      setDepartmentTasks(response.data.tasks || []);
+    } catch (err) {
+      console.error("Error fetching production tasks:", err);
+    } finally {
+      setLoadingTasks(false);
+    }
+  }, []);
 
   useEffect(() => {
     fetchRootCards();
-  }, []);
+    fetchTasks();
+  }, [fetchTasks]);
 
   const fetchRootCards = async () => {
     setLoadingRootCards(true);
@@ -232,6 +248,75 @@ const ProductionManagerDashboard = () => {
             </div>
           );
         })}
+      </div>
+
+      {/* Assigned Production Planning Tasks Section */}
+      <div className="bg-white dark:bg-slate-800 rounded-lg p-6 border border-slate-200 dark:border-slate-700 shadow-sm">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white text-xs flex items-center gap-2">
+            <Clock size={20} className="text-blue-600" />
+            Assigned Root Cards (Production Planning)
+          </h2>
+          <Link
+            to="/production-manager/department-tasks"
+            className="text-sm text-blue-600 dark:text-blue-400 font-semibold hover:text-blue-700"
+          >
+            View All Tasks →
+          </Link>
+        </div>
+
+        {loadingTasks ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="animate-spin text-blue-600" size={32} />
+          </div>
+        ) : departmentTasks.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {departmentTasks.slice(0, 6).map((task) => (
+              <div
+                key={task.id}
+                className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:border-blue-400 transition-all bg-slate-50 dark:bg-slate-900/50"
+              >
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <h4 className="font-bold text-slate-900 dark:text-white line-clamp-1">
+                      {task.rootCard?.title || task.title}
+                    </h4>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      {task.salesOrder?.customer || "No Customer"}
+                    </p>
+                  </div>
+                  <span
+                    className={`px-2 py-1 text-[10px] font-bold rounded-full uppercase ${
+                      task.status === "pending"
+                        ? "bg-amber-100 text-amber-700"
+                        : "bg-blue-100 text-blue-700"
+                    }`}
+                  >
+                    {task.status}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between mt-4">
+                  <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                    PO: {task.salesOrder?.poNumber || "N/A"}
+                  </span>
+                  <Link
+                    to={`/production-manager/department-tasks`}
+                    className="text-xs font-bold text-blue-600 hover:text-blue-700"
+                  >
+                    Process →
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-dashed border-slate-300 dark:border-slate-700">
+            <Package className="mx-auto text-slate-300 mb-2" size={40} />
+            <p className="text-slate-500 dark:text-slate-400 font-medium">
+              No active production planning tasks assigned.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Active Production Orders */}

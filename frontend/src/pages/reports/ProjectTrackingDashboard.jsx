@@ -30,8 +30,9 @@ const ProjectTrackingDashboard = () => {
   const fetchProjects = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/sales');
-      setProjects(response.data);
+      const response = await axios.get('/root-cards');
+      const projectsData = Array.isArray(response.data) ? response.data : (response.data.rootCards || []);
+      setProjects(projectsData);
       setError('');
     } catch (err) {
       setError('Failed to fetch projects');

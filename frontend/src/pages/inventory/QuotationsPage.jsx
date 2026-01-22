@@ -26,11 +26,11 @@ import {
   Paperclip,
 } from "lucide-react";
 import axios from "../../utils/api";
-import useProjectInventoryTask from "../../hooks/useProjectInventoryTask";
+import useRootCardInventoryTask from "../../hooks/useRootCardInventoryTask";
 
 const QuotationsPage = () => {
   const navigate = useNavigate();
-  const { completeCurrentTask, isFromDepartmentTasks } = useProjectInventoryTask();
+  const { completeCurrentTask, isFromDepartmentTasks } = useRootCardInventoryTask();
   const [quotations, setQuotations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -39,16 +39,16 @@ const QuotationsPage = () => {
   const [stats, setStats] = useState({});
   const [error, setError] = useState(null);
   const [vendors, setVendors] = useState([]);
-  const [projects, setProjects] = useState([]); // Added projects state
+  const [rootCards, setRootCards] = useState([]); // Added rootCards state
   const [showAddModal, setShowAddModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedQuotation, setSelectedQuotation] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [analysisMode, setAnalysisMode] = useState(false);
-  const [projectMaterials, setProjectMaterials] = useState([]);
+  const [rootCardMaterials, setRootCardMaterials] = useState([]);
   const [loadingMaterials, setLoadingMaterials] = useState(false);
   const [savingRequirements, setSavingRequirements] = useState(false);
-  const [projectQuotations, setProjectQuotations] = useState([]);
+  const [rootCardQuotations, setRootCardQuotations] = useState([]);
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailData, setEmailData] = useState({
@@ -64,7 +64,7 @@ const QuotationsPage = () => {
   const [loadingCommunications, setLoadingCommunications] = useState(false);
   const [formData, setFormData] = useState({
     vendor_id: "",
-    sales_order_id: "", // Added sales_order_id
+    root_card_id: "", // Added root_card_id
     total_amount: 0,
     valid_until: "",
     items: [],
@@ -110,12 +110,12 @@ const QuotationsPage = () => {
     }
   }, []);
 
-  const fetchProjects = useCallback(async () => {
+  const fetchRootCards = useCallback(async () => {
     try {
-      const response = await axios.get("/sales/requirements");
-      setProjects(response.data.data || []);
+      const response = await axios.get("/root-cards/requirements");
+      setRootCards(response.data.data || []);
     } catch (err) {
-      console.error("Error fetching projects:", err);
+      console.error("Error fetching rootCards:", err);
     }
   }, []);
 
@@ -123,8 +123,8 @@ const QuotationsPage = () => {
     fetchQuotations();
     fetchStats();
     fetchVendors();
-    fetchProjects();
-  }, [fetchQuotations, fetchStats, fetchVendors, fetchProjects]);
+    fetchRootCards();
+  }, [fetchQuotations, fetchStats, fetchVendors, fetchRootCards]);
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
@@ -187,14 +187,14 @@ const QuotationsPage = () => {
 
     setSubmitting(true);
     try {
-      const notesWithRef = formData.sales_order_id
-        ? `Ref: Sales Order ${formData.sales_order_id}\n\n${formData.notes}`
+      const notesWithRef = formData.root_card_id
+        ? `Ref: Root Card ${formData.root_card_id}\n\n${formData.notes}`
         : formData.notes;
 
       const payload = {
         ...formData,
-        sales_order_id: formData.sales_order_id
-          ? parseInt(formData.sales_order_id)
+        root_card_id: formData.root_card_id
+          ? parseInt(formData.root_card_id)
           : null,
         notes: notesWithRef,
         total_amount: formData.total_amount || 0,
@@ -206,7 +206,7 @@ const QuotationsPage = () => {
       setShowAddModal(false);
       setFormData({
         vendor_id: "",
-        sales_order_id: "",
+        root_card_id: "",
         total_amount: 0,
         valid_until: "",
         items: [],
@@ -233,20 +233,20 @@ const QuotationsPage = () => {
     }
   };
 
-  const handleProjectChange = async (e) => {
-    const selectedSalesOrderId = e.target.value;
+  const handleRootCardChange = async (e) => {
+    const selectedRootCardId = e.target.value;
 
     setFormData((prev) => ({
       ...prev,
-      sales_order_id: selectedSalesOrderId,
-      reference_id: null, // Reset reference_id when project changes
+      root_card_id: selectedRootCardId,
+      reference_id: null, // Reset reference_id when root card changes
       items: [], // Reset items
     }));
 
-    if (!selectedSalesOrderId) {
+    if (!selectedRootCardId) {
       setFormData((prev) => ({ ...prev, items: [] }));
-      setProjectMaterials([]);
-      setProjectQuotations([]);
+      setRootCardMaterials([]);
+      setRootCardQuotations([]);
       setAnalysisMode(false);
       return;
     }
@@ -256,7 +256,7 @@ const QuotationsPage = () => {
         // Existing logic for Outbound - load materials
         setLoadingMaterials(true);
         const reqResponse = await axios.get(
-          `/sales/requirements/${selectedSalesOrderId}`
+          `/root-cards/requirements/${selectedRootCardId}`
         );
         const reqData = reqResponse.data.data;
 
@@ -272,18 +272,18 @@ const QuotationsPage = () => {
             (parseFloat(m.currentStock) || 0),
         }));
 
-        setProjectMaterials(initializedMaterials);
+        setRootCardMaterials(initializedMaterials);
         setAnalysisMode(true);
       } else {
-        // Logic for Inbound - load outbound quotations for this project
+        // Logic for Inbound - load outbound quotations for this root card
         const quotesResponse = await axios.get(
-          `/inventory/quotations/project/${selectedSalesOrderId}`
+          `/inventory/quotations/root-card/${selectedRootCardId}`
         );
-        setProjectQuotations(quotesResponse.data);
+        setRootCardQuotations(quotesResponse.data);
       }
     } catch (error) {
-      console.error("Error fetching project data:", error);
-      Swal.fire("Error", "Failed to load project details", "error");
+      console.error("Error fetching root card data:", error);
+      Swal.fire("Error", "Failed to load root card details", "error");
     } finally {
       setLoadingMaterials(false);
     }
@@ -293,7 +293,7 @@ const QuotationsPage = () => {
     const quoteId = e.target.value;
     if (!quoteId) return;
 
-    const selectedQuote = projectQuotations.find(
+    const selectedQuote = rootCardQuotations.find(
       (q) => q.id.toString() === quoteId
     );
     if (selectedQuote) {
@@ -313,7 +313,7 @@ const QuotationsPage = () => {
   };
 
   const handleRequirementChange = (index, field, value) => {
-    setProjectMaterials((prev) => {
+    setRootCardMaterials((prev) => {
       const newMaterials = [...prev];
       newMaterials[index] = { ...newMaterials[index], [field]: value };
 
@@ -329,12 +329,12 @@ const QuotationsPage = () => {
   };
 
   const handleSaveRequirements = async () => {
-    if (!formData.sales_order_id) return;
+    if (!formData.root_card_id) return;
 
     try {
       setSavingRequirements(true);
-      await axios.post(`/sales/requirements/${formData.sales_order_id}`, {
-        materials: projectMaterials.map((m) => {
+      await axios.post(`/root-cards/requirements/${formData.root_card_id}`, {
+        materials: rootCardMaterials.map((m) => {
           const rest = { ...m };
           delete rest.selected;
           return rest;
@@ -343,7 +343,7 @@ const QuotationsPage = () => {
       });
 
       // Auto-proceed to quote
-      const selectedItems = projectMaterials.filter((m) => m.selected);
+      const selectedItems = rootCardMaterials.filter((m) => m.selected);
       const items = selectedItems.map((m) => ({
         description: m.itemName || m.item_name || "Unnamed Material",
         category: m.category || m.materialType || "",
@@ -642,7 +642,7 @@ const QuotationsPage = () => {
   const handleRecordResponse = (quote) => {
     setFormData({
       vendor_id: quote.vendor_id,
-      sales_order_id: "",
+      root_card_id: "",
       total_amount: 0,
       valid_until: "",
       items: (quote.items || []).map((item) => ({
@@ -715,7 +715,7 @@ const QuotationsPage = () => {
             onClick={() => {
               setFormData({
                 vendor_id: "",
-                sales_order_id: "",
+                root_card_id: "",
                 total_amount: 0,
                 valid_until: "",
                 items: [],
@@ -723,8 +723,8 @@ const QuotationsPage = () => {
                 type: activeTab,
                 reference_id: null,
               });
-              setProjectMaterials([]);
-              setProjectQuotations([]);
+              setRootCardMaterials([]);
+              setRootCardQuotations([]);
               setAnalysisMode(false);
               setShowAddModal(true);
             }}
@@ -1065,7 +1065,7 @@ const QuotationsPage = () => {
                   </h3>
                   <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 text-xs">
                     {analysisMode
-                      ? "Review project stock availability"
+                      ? "Review root card stock availability"
                       : formData.type === "inbound"
                       ? "Record details from vendor response"
                       : "Create a new vendor quotation request"}
@@ -1076,7 +1076,7 @@ const QuotationsPage = () => {
                 onClick={() => {
                   setShowAddModal(false);
                   setAnalysisMode(false);
-                  setProjectMaterials([]);
+                  setRootCardMaterials([]);
                 }}
                 className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors"
               >
@@ -1095,9 +1095,9 @@ const QuotationsPage = () => {
                         size={32}
                       />
                     </div>
-                  ) : projectMaterials.length === 0 ? (
+                  ) : rootCardMaterials.length === 0 ? (
                     <p className="text-center py-8 text-slate-500">
-                      No materials found for this project.
+                      No materials found for this root card.
                     </p>
                   ) : (
                     <div className="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-lg">
@@ -1122,7 +1122,7 @@ const QuotationsPage = () => {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                          {projectMaterials.map((material, idx) => {
+                          {rootCardMaterials.map((material, idx) => {
                             const required =
                               parseFloat(material.requiredQuantity) || 0;
                             const stock =
@@ -1202,7 +1202,7 @@ const QuotationsPage = () => {
                     type="button"
                     onClick={() => {
                       setAnalysisMode(false);
-                      setFormData((prev) => ({ ...prev, sales_order_id: "" }));
+                      setFormData((prev) => ({ ...prev, root_card_id: "" }));
                     }}
                     className="px-6 py-2.5 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors font-medium"
                   >
@@ -1233,8 +1233,8 @@ const QuotationsPage = () => {
                   <div>
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                       {formData.type === "outbound"
-                        ? "Select Project (Optional)"
-                        : "Select Project"}
+                        ? "Select Root Card (Optional)"
+                        : "Select Root Card"}
                     </label>
                     <div className="relative">
                       <Briefcase
@@ -1242,18 +1242,18 @@ const QuotationsPage = () => {
                         size={18}
                       />
                       <select
-                        name="sales_order_id"
-                        value={formData.sales_order_id}
-                        onChange={handleProjectChange}
+                        name="root_card_id"
+                        value={formData.root_card_id}
+                        onChange={handleRootCardChange}
                         className="w-full px-4 py-3 pl-11 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                       >
                         <option value="">
                           {formData.type === "outbound"
-                            ? "Select Project to Load Requirements"
-                            : "Select Project to Filter Quotes"}
+                            ? "Select Root Card to Load Requirements"
+                            : "Select Root Card to Filter Quotes"}
                         </option>
-                        {projects.map((p) => (
-                          <option key={p.salesOrderId} value={p.salesOrderId}>
+                        {rootCards.map((p) => (
+                          <option key={p.rootCardId} value={p.rootCardId}>
                             {p.projectName} ({p.poNumber})
                           </option>
                         ))}
@@ -1261,9 +1261,9 @@ const QuotationsPage = () => {
                     </div>
                   </div>
 
-                  {formData.type === "inbound" && formData.sales_order_id && (
+                  {formData.type === "inbound" && formData.root_card_id && (
                     <div>
-                      {projectQuotations.length > 0 ? (
+                      {rootCardQuotations.length > 0 ? (
                         <div>
                           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                             Select Outbound Quotation (RFQ){" "}
@@ -1274,7 +1274,7 @@ const QuotationsPage = () => {
                             className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                           >
                             <option value="">-- Select Quotation --</option>
-                            {projectQuotations.map((q) => (
+                            {rootCardQuotations.map((q) => (
                               <option key={q.id} value={q.id}>
                                 {q.quotation_number} ({q.vendor_name}) -{" "}
                                 {formatDate(q.created_at)}
@@ -1285,7 +1285,7 @@ const QuotationsPage = () => {
                       ) : (
                         <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
                           <p className="text-sm text-amber-800 dark:text-amber-200">
-                            ℹ️ No RFQs found for this project. Create an RFQ
+                            ℹ️ No RFQs found for this root card. Create an RFQ
                             from the "Sent Requests" tab first.
                           </p>
                         </div>
@@ -1325,11 +1325,11 @@ const QuotationsPage = () => {
                     </div>
                   </div>
 
-                  {formData.sales_order_id && (
+                  {formData.root_card_id && (
                     <div className="flex justify-between items-center bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-800">
                       <span className="text-sm text-blue-800 dark:text-blue-200 flex items-center gap-2">
                         <Check size={16} />
-                        Materials loaded from project analysis
+                        Materials loaded from root card analysis
                       </span>
                       <button
                         type="button"

@@ -4,26 +4,26 @@ const ProductionPhaseTracking = require('../../models/ProductionPhaseTracking');
 const productionPhaseController = {
   async savePhaseDetail(req, res) {
     try {
-      const { salesOrderId, subTaskKey, phaseName, subTaskName, stepNumber, ...details } = req.body;
+      const { rootCardId, subTaskKey, phaseName, subTaskName, stepNumber, ...details } = req.body;
       
-      if (!salesOrderId || !subTaskKey) {
-        return res.status(400).json({ message: 'salesOrderId and subTaskKey are required' });
+      if (!rootCardId || !subTaskKey) {
+        return res.status(400).json({ message: 'rootCardId and subTaskKey are required' });
       }
 
       let phaseDetailId;
-      const existing = await ProductionPhaseDetail.findBySubTaskKey(salesOrderId, subTaskKey);
+      const existing = await ProductionPhaseDetail.findBySubTaskKey(rootCardId, subTaskKey);
       
       if (existing) {
         await ProductionPhaseDetail.update(existing.id, details);
         phaseDetailId = existing.id;
       } else {
         phaseDetailId = await ProductionPhaseDetail.create({
-          salesOrderId, subTaskKey, phaseName, subTaskName, stepNumber, ...details
+          rootCardId, subTaskKey, phaseName, subTaskName, stepNumber, ...details
         });
       }
 
       const trackingData = {
-        salesOrderId, 
+        rootCardId, 
         phaseDetailId, 
         subTaskKey, 
         phaseName, 
@@ -32,7 +32,7 @@ const productionPhaseController = {
         processType: details.processType || 'inhouse'
       };
 
-      const existingTracking = (await ProductionPhaseTracking.findBySalesOrderId(salesOrderId))
+      const existingTracking = (await ProductionPhaseTracking.findByRootCardId(rootCardId))
         .find(t => t.sub_task_key === subTaskKey);
 
       if (!existingTracking) {
@@ -56,14 +56,14 @@ const productionPhaseController = {
 
   async getPhaseDetails(req, res) {
     try {
-      const { salesOrderId } = req.params;
+      const { rootCardId } = req.params;
       
-      if (!salesOrderId) {
-        return res.status(400).json({ message: 'salesOrderId is required' });
+      if (!rootCardId) {
+        return res.status(400).json({ message: 'rootCardId is required' });
       }
 
-      const details = await ProductionPhaseDetail.findBySalesOrderId(salesOrderId);
-      const tracking = await ProductionPhaseTracking.findBySalesOrderId(salesOrderId);
+      const details = await ProductionPhaseDetail.findByRootCardId(rootCardId);
+      const tracking = await ProductionPhaseTracking.findByRootCardId(rootCardId);
       
       res.json({ 
         details, 

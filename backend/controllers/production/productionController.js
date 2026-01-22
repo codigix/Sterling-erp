@@ -1,16 +1,16 @@
 const pool = require('../../config/database');
-const RootCard = require('../../models/RootCard');
+const ProductionRootCard = require('../../models/ProductionRootCard');
 const DesignEngineeringDetail = require('../../models/DesignEngineeringDetail');
 const DepartmentTask = require('../../models/DepartmentTask');
 const DesignWorkflowStep = require('../../models/DesignWorkflowStep');
 const DesignProjectDetails = require('../../models/DesignProjectDetails');
 
-exports.getRootCards = async (req, res) => {
+exports.getProductionRootCards = async (req, res) => {
   try {
-    const { status, projectId, search, salesOrderId } = req.query;
+    const { status, projectId, search, rootCardId } = req.query;
     
-    if (salesOrderId) {
-      const rootCard = await RootCard.findBySalesOrderId(salesOrderId);
+    if (rootCardId) {
+      const rootCard = await ProductionRootCard.findByRootCardId(rootCardId);
       return res.json(rootCard ? [rootCard] : []);
     }
 
@@ -20,7 +20,7 @@ exports.getRootCards = async (req, res) => {
     if (projectId) filters.projectId = projectId;
     if (search) filters.search = search;
 
-    const rootCards = await RootCard.findAll(filters);
+    const rootCards = await ProductionRootCard.findAll(filters);
     res.json({ rootCards, total: rootCards.length });
   } catch (error) {
     console.error('Get root cards error:', error);
@@ -28,10 +28,10 @@ exports.getRootCards = async (req, res) => {
   }
 };
 
-exports.getRootCardById = async (req, res) => {
+exports.getProductionRootCardById = async (req, res) => {
   try {
     const { id } = req.params;
-    const rootCard = await RootCard.findById(id);
+    const rootCard = await ProductionRootCard.findById(id);
     
     if (!rootCard) {
       return res.status(404).json({ message: 'Root card not found' });
@@ -53,7 +53,7 @@ exports.getRootCardById = async (req, res) => {
         `, [rootCard.project_id]);
 
         if (projects.length > 0 && projects[0].sales_order_id) {
-          designEngineeringDetails = await DesignEngineeringDetail.findBySalesOrderId(projects[0].sales_order_id);
+          designEngineeringDetails = await DesignEngineeringDetail.findByRootCardId(projects[0].sales_order_id);
         }
       }
 
@@ -71,7 +71,7 @@ exports.getRootCardById = async (req, res) => {
   }
 };
 
-exports.createRootCard = async (req, res) => {
+exports.createProductionRootCard = async (req, res) => {
   const connection = await pool.getConnection();
   
   try {
@@ -87,11 +87,11 @@ exports.createRootCard = async (req, res) => {
       'SELECT sales_order_id FROM projects WHERE id = ?',
       [projectId]
     );
-    const salesOrderId = projects.length > 0 ? projects[0].sales_order_id : null;
+    const rootCardIdValue = projects.length > 0 ? projects[0].sales_order_id : null;
 
-    const rootCardId = await RootCard.create({
+    const rootCardId = await ProductionRootCard.create({
       projectId,
-      salesOrderId,
+      rootCardId: rootCardIdValue,
       code,
       title,
       status: status || 'planning',
@@ -124,12 +124,12 @@ exports.createRootCard = async (req, res) => {
 
     await connection.commit();
 
-    const createdRootCard = await RootCard.findById(rootCardId);
+    const createdProductionRootCard = await ProductionRootCard.findById(rootCardId);
 
     res.status(201).json({
       message: 'Root card created successfully',
       rootCardId,
-      rootCard: createdRootCard
+      rootCard: createdProductionRootCard
     });
   } catch (error) {
     await connection.rollback();
@@ -140,7 +140,7 @@ exports.createRootCard = async (req, res) => {
   }
 };
 
-exports.updateRootCard = async (req, res) => {
+exports.updateProductionRootCard = async (req, res) => {
   try {
     const { id } = req.params;
     const { title, status, priority, plannedStart, plannedEnd, assignedSupervisor, notes } = req.body;
@@ -150,7 +150,7 @@ exports.updateRootCard = async (req, res) => {
       const [existingCard] = await connection.execute('SELECT status FROM root_cards WHERE id = ?', [id]);
       const oldStatus = existingCard[0]?.status;
 
-      const updated = await RootCard.update(id, {
+      const updated = await ProductionRootCard.update(id, {
         title,
         status,
         priority,
@@ -164,7 +164,7 @@ exports.updateRootCard = async (req, res) => {
         return res.status(404).json({ message: 'Root card not found' });
       }
 
-      const updatedCard = await RootCard.findById(id);
+      const updatedCard = await ProductionRootCard.findById(id);
 
       if (oldStatus !== status) {
         await connection.execute(
@@ -186,10 +186,10 @@ exports.updateRootCard = async (req, res) => {
   }
 };
 
-exports.deleteRootCard = async (req, res) => {
+exports.deleteProductionRootCard = async (req, res) => {
   try {
     const { id } = req.params;
-    const deleted = await RootCard.delete(id);
+    const deleted = await ProductionRootCard.delete(id);
 
     if (!deleted) {
       return res.status(404).json({ message: 'Root card not found' });
@@ -202,7 +202,7 @@ exports.deleteRootCard = async (req, res) => {
   }
 };
 
-exports.updateRootCardStatus = async (req, res) => {
+exports.updateProductionRootCardStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -226,7 +226,7 @@ exports.updateRootCardStatus = async (req, res) => {
 
       const oldStatus = existingCard[0].status;
 
-      const updated = await RootCard.update(id, { status }, connection);
+      const updated = await ProductionRootCard.update(id, { status }, connection);
 
       if (!updated) {
         return res.status(404).json({ message: 'Root card not found' });
@@ -237,7 +237,7 @@ exports.updateRootCardStatus = async (req, res) => {
         ['root_cards', id, 'STATUS_CHANGE', oldStatus, status, req.user.id]
       );
 
-      const updatedCard = await RootCard.findById(id);
+      const updatedCard = await ProductionRootCard.findById(id);
 
       res.json({
         message: 'Status updated successfully',
@@ -525,7 +525,7 @@ exports.createWorkflowBasedTasks = async (req, res) => {
     }
 
     const rootCard = rootCards[0];
-    const salesOrderId = rootCard.sales_order_id;
+    const baseRootCardId = rootCard.sales_order_id;
 
     // Get all active workflow steps ordered by step_order
     const [workflowSteps] = await connection.execute(
@@ -565,14 +565,14 @@ exports.createWorkflowBasedTasks = async (req, res) => {
       });
     }
 
-    // Update employee_tasks with sales_order_id if the column exists
+    // Update employee_tasks with baseRootCardId if the column exists
     try {
-      if (salesOrderId) {
+      if (baseRootCardId) {
         await connection.execute(
           `UPDATE employee_tasks 
            SET sales_order_id = ? 
            WHERE related_id = ? AND related_type = 'root_card'`,
-          [salesOrderId, rootCardId]
+          [baseRootCardId, rootCardId]
         );
       }
     } catch (err) {
@@ -666,7 +666,7 @@ exports.getDesignProjectDetails = async (req, res) => {
       return res.status(400).json({ message: 'Root card ID is required' });
     }
 
-    const details = await DesignProjectDetails.findByRootCardId(rootCardId);
+    const details = await DesignProjectDetails.findByProductionRootCardId(rootCardId);
 
     res.json(details || {});
   } catch (error) {
@@ -723,7 +723,7 @@ exports.getDesignWithDetails = async (req, res) => {
 
       const design = designs[0];
 
-      const designDetails = await DesignProjectDetails.findByRootCardId(id);
+      const designDetails = await DesignProjectDetails.findByProductionRootCardId(id);
 
       res.json({
         ...design,
@@ -749,7 +749,7 @@ exports.getAllDesignsWithDetails = async (req, res) => {
       const designsWithDetails = [];
 
       for (const design of designs) {
-        const details = await DesignProjectDetails.findByRootCardId(design.id);
+        const details = await DesignProjectDetails.findByProductionRootCardId(design.id);
         designsWithDetails.push({
           ...design,
           details: details || {}
@@ -868,7 +868,7 @@ exports.createProductionPlan = async (req, res) => {
   try {
     await connection.beginTransaction();
 
-    const { salesOrderId, bomId, planName, status, plannedStartDate, plannedEndDate, estimatedCompletionDate, supervisorId, notes, finishedGoods } = req.body;
+    const { rootCardId, bomId, planName, status, plannedStartDate, plannedEndDate, estimatedCompletionDate, supervisorId, notes, finishedGoods } = req.body;
 
     if (!planName) {
       return res.status(400).json({ message: 'Plan name is required' });
@@ -876,7 +876,7 @@ exports.createProductionPlan = async (req, res) => {
 
     const ProductionPlan = require('../../models/ProductionPlan');
     const planId = await ProductionPlan.create({
-      salesOrderId,
+      rootCardId,
       bomId,
       planName,
       status: status || 'draft',
@@ -891,14 +891,14 @@ exports.createProductionPlan = async (req, res) => {
       await ProductionPlan.addFinishedGoods(planId, finishedGoods, connection);
     }
 
-    if (salesOrderId) {
+    if (rootCardId) {
       try {
         const [productionPlanDetail] = await connection.execute(
           'SELECT selected_phases FROM production_plan_details WHERE sales_order_id = ? LIMIT 1',
-          [salesOrderId]
+          [rootCardId]
         );
 
-        console.log(`[Production Plan] Fetched production_plan_details for salesOrderId ${salesOrderId}:`, productionPlanDetail);
+        console.log(`[Production Plan] Fetched production_plan_details for rootCardId ${rootCardId}:`, productionPlanDetail);
 
         if (productionPlanDetail && productionPlanDetail[0]) {
           let selectedPhases = {};
@@ -1043,7 +1043,7 @@ exports.deleteProductionPlan = async (req, res) => {
   }
 };
 
-exports.createRootCardStage = async (req, res) => {
+exports.createProductionRootCardStage = async (req, res) => {
   const connection = await pool.getConnection();
   
   try {
@@ -1078,7 +1078,7 @@ exports.createRootCardStage = async (req, res) => {
   }
 };
 
-exports.deleteRootCardStage = async (req, res) => {
+exports.deleteProductionRootCardStage = async (req, res) => {
   const connection = await pool.getConnection();
   
   try {

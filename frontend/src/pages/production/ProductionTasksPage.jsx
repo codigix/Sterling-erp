@@ -276,20 +276,20 @@ const ProductionTasksPage = () => {
                       </div>
                     </>
                   )}
-                  {rc.salesOrderDetails && (
+                  {rc.rootCardDetails && (
                     <>
                       <div className="flex justify-between">
                         <span className="text-slate-600 dark:text-slate-400">Customer:</span>
-                        <span className="font-medium text-slate-900 dark:text-white">{rc.salesOrderDetails.customer || '-'}</span>
+                        <span className="font-medium text-slate-900 dark:text-white">{rc.rootCardDetails.customer || '-'}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-600 dark:text-slate-400">PO:</span>
-                        <span className="font-medium text-slate-900 dark:text-white">{rc.salesOrderDetails.poNumber || '-'}</span>
+                        <span className="font-medium text-slate-900 dark:text-white">{rc.rootCardDetails.poNumber || '-'}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-600 dark:text-slate-400">Amount:</span>
                         <span className="font-medium text-slate-900 dark:text-white">
-                          {rc.salesOrderDetails.total ? `${rc.salesOrderDetails.currency || 'INR'} ${rc.salesOrderDetails.total}` : '-'}
+                          {rc.rootCardDetails.total ? `${rc.rootCardDetails.currency || 'INR'} ${rc.rootCardDetails.total}` : '-'}
                         </span>
                       </div>
                     </>

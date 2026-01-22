@@ -5,7 +5,7 @@ class EngineeringDocument {
     const conn = connection || await pool.getConnection();
     try {
       const {
-        salesOrderId,
+        rootCardId,
         documentType,
         documentName,
         filePath,
@@ -16,7 +16,7 @@ class EngineeringDocument {
         `INSERT INTO engineering_documents 
         (sales_order_id, document_type, document_name, file_path, uploaded_by, status)
         VALUES (?, ?, ?, ?, ?, 'draft')`,
-        [salesOrderId, documentType, documentName, filePath, uploadedBy]
+        [rootCardId, documentType, documentName, filePath, uploadedBy]
       );
 
       return result.insertId;
@@ -25,7 +25,7 @@ class EngineeringDocument {
     }
   }
 
-  static async findBySalesOrderId(salesOrderId) {
+  static async findByRootCardId(rootCardId) {
     const conn = await pool.getConnection();
     try {
       const [rows] = await conn.query(
@@ -34,7 +34,7 @@ class EngineeringDocument {
         LEFT JOIN users u ON ed.uploaded_by = u.id
         WHERE ed.sales_order_id = ?
         ORDER BY ed.created_at DESC`,
-        [salesOrderId]
+        [rootCardId]
       );
       return rows;
     } finally {
@@ -72,14 +72,14 @@ class EngineeringDocument {
     }
   }
 
-  static async getByDocumentType(salesOrderId, documentType) {
+  static async getByDocumentType(rootCardId, documentType) {
     const conn = await pool.getConnection();
     try {
       const [rows] = await conn.query(
         `SELECT * FROM engineering_documents 
         WHERE sales_order_id = ? AND document_type = ?
         ORDER BY version DESC`,
-        [salesOrderId, documentType]
+        [rootCardId, documentType]
       );
       return rows;
     } finally {

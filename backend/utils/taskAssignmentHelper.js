@@ -2,18 +2,18 @@ const pool = require('../config/database');
 
 const STATUS_TO_TRIGGER_ASSIGNMENT = ['assigned', 'ready_to_start', 'in_progress', 'approved'];
 
-const assignTasksFromRootCard = async (salesOrderId, connection = null) => {
+const assignTasksFromRootCard = async (rootCardId, connection = null) => {
   const conn = connection || await pool.getConnection();
   const createdTasks = [];
   
   try {
     const [projects] = await conn.execute(
       'SELECT id FROM projects WHERE sales_order_id = ?',
-      [salesOrderId]
+      [rootCardId]
     );
 
     if (!projects.length) {
-      console.log(`[TaskAssignment] No project found for sales order ${salesOrderId}`);
+      console.log(`[TaskAssignment] No project found for root card ${rootCardId}`);
       return { success: true, tasksCreated: 0, details: 'No project found' };
     }
 
@@ -29,14 +29,14 @@ const assignTasksFromRootCard = async (salesOrderId, connection = null) => {
       return { success: true, tasksCreated: 0, details: 'No root card found' };
     }
 
-    const rootCardId = rootCards[0].id;
+    const productionRootCardId = rootCards[0].id;
     const rootCardTitle = rootCards[0].title;
     const rootCardPriority = rootCards[0].priority || 'medium';
 
     const [stages] = await conn.execute(
       `SELECT id, stage_name, assigned_worker FROM manufacturing_stages 
        WHERE root_card_id = ? AND assigned_worker IS NOT NULL`,
-      [rootCardId]
+      [productionRootCardId]
     );
 
     for (const stage of stages) {
@@ -57,7 +57,7 @@ const assignTasksFromRootCard = async (salesOrderId, connection = null) => {
           taskDescription
         });
 
-        console.log(`[TaskAssignment] Task created - Stage: ${stage.stage_name}, Worker: ${stage.assigned_worker}, Sales Order: ${salesOrderId}`);
+        console.log(`[TaskAssignment] Task created - Stage: ${stage.stage_name}, Worker: ${stage.assigned_worker}, Root Card: ${rootCardId}`);
       } catch (err) {
         if (err.code === 'ER_DUP_ENTRY') {
           console.log(`[TaskAssignment] Task already exists for stage ${stage.id}`);
@@ -71,9 +71,9 @@ const assignTasksFromRootCard = async (salesOrderId, connection = null) => {
       success: true,
       tasksCreated: createdTasks.length,
       tasks: createdTasks,
-      salesOrderId,
-      projectId,
       rootCardId,
+      projectId,
+      productionRootCardId,
       rootCardTitle
     };
   } catch (error) {
@@ -82,7 +82,7 @@ const assignTasksFromRootCard = async (salesOrderId, connection = null) => {
       success: false,
       tasksCreated: 0,
       error: error.message,
-      salesOrderId
+      rootCardId
     };
   } finally {
     if (!connection) {
@@ -91,13 +91,13 @@ const assignTasksFromRootCard = async (salesOrderId, connection = null) => {
   }
 };
 
-const getTasksAssignmentStatus = async (salesOrderId, connection = null) => {
+const getTasksAssignmentStatus = async (rootCardId, connection = null) => {
   const conn = connection || await pool.getConnection();
   
   try {
     const [projects] = await conn.execute(
       'SELECT id FROM projects WHERE sales_order_id = ?',
-      [salesOrderId]
+      [rootCardId]
     );
 
     if (!projects.length) {
@@ -115,7 +115,7 @@ const getTasksAssignmentStatus = async (salesOrderId, connection = null) => {
       return { tasksFound: 0, tasks: [] };
     }
 
-    const rootCardId = rootCards[0].id;
+    const productionRootCardId = rootCards[0].id;
 
     const [tasks] = await conn.execute(
       `SELECT wt.id, wt.stage_id, wt.worker_id, wt.task, wt.status, ms.stage_name
@@ -123,15 +123,15 @@ const getTasksAssignmentStatus = async (salesOrderId, connection = null) => {
        INNER JOIN manufacturing_stages ms ON ms.id = wt.stage_id
        WHERE ms.root_card_id = ?
        ORDER BY wt.created_at DESC`,
-      [rootCardId]
+      [productionRootCardId]
     );
 
     return {
       tasksFound: tasks.length,
       tasks: tasks,
-      salesOrderId,
+      rootCardId,
       projectId,
-      rootCardId
+      productionRootCardId
     };
   } catch (error) {
     console.error('[TaskAssignment] Error getting assignment status:', error);

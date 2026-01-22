@@ -117,14 +117,9 @@ class PurchaseOrder {
                  WHERE q.type = 'inbound'`;
     const params = [];
 
-    if (filters.sales_order_id) {
+    if (filters.root_card_id) {
       query += ' AND q.sales_order_id = ?';
-      params.push(filters.sales_order_id);
-    }
-
-    if (filters.project_id) {
-      query += ' AND q.sales_order_id = ?';
-      params.push(filters.project_id);
+      params.push(filters.root_card_id);
     }
 
     query += ' ORDER BY q.created_at DESC';

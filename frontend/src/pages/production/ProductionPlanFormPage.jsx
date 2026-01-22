@@ -11,7 +11,6 @@ const ProductionPlanFormPage = () => {
   const [rootCards, setRootCards] = useState([]);
   const [formData, setFormData] = useState({
     rootCardId: '',
-    salesOrderId: '',
     planName: '',
     productionStartDate: '',
     estimatedCompletionDate: '',
@@ -77,7 +76,6 @@ const ProductionPlanFormPage = () => {
       setFormData(prev => ({
         ...prev,
         rootCardId: '',
-        salesOrderId: '',
         planName: '',
         productionStartDate: '',
         estimatedCompletionDate: '',
@@ -91,12 +89,12 @@ const ProductionPlanFormPage = () => {
       const response = await axios.get(`/production/portal/root-cards/${rootCardId}?all=true`, { __sessionGuard: true });
       const rootCard = response.data;
 
-      const step5 = rootCard.stepData?.step5_productionPlan;
+      const step4 = rootCard.stepData?.step4_productionPlan;
       console.log('Full response:', rootCard);
-      console.log('Step 5 Data:', step5);
+      console.log('Step 4 Data:', step4);
       
-      const phasesArray = step5?.selectedPhases 
-        ? Object.keys(step5.selectedPhases)
+      const phasesArray = step4?.selectedPhases 
+        ? Object.keys(step4.selectedPhases)
         : [];
       setProductionPhases(phasesArray);
 
@@ -104,8 +102,8 @@ const ProductionPlanFormPage = () => {
         id: `auto_${Date.now()}_${index}`,
         stageName: phase,
         stageType: 'in_house',
-        plannedStartDate: step5?.timeline?.startDate || '',
-        plannedEndDate: step5?.timeline?.endDate || '',
+        plannedStartDate: step4?.timeline?.startDate || '',
+        plannedEndDate: step4?.timeline?.endDate || '',
         estimatedDurationDays: '',
         assignedEmployeeId: null,
         facilityId: null,
@@ -115,13 +113,12 @@ const ProductionPlanFormPage = () => {
       const projectName = rootCard.project?.name || '';
       const newFormData = {
         ...formData,
-        rootCardId: rootCardId,
-        salesOrderId: rootCard.sales_order_id || '',
+        rootCardId: rootCardId || rootCard.id || rootCard.sales_order_id || '',
         productName: rootCard.product_name || '',
         planName: projectName ? `${projectName} - Production Plan` : '',
-        productionStartDate: step5?.timeline?.startDate || '',
-        estimatedCompletionDate: step5?.timeline?.endDate || '',
-        procurementStatus: step5?.timeline?.procurementStatus || '',
+        productionStartDate: step4?.timeline?.startDate || '',
+        estimatedCompletionDate: step4?.timeline?.endDate || '',
+        procurementStatus: step4?.timeline?.procurementStatus || '',
         stages: autoCreatedStages
       };
       setFormData(newFormData);
@@ -132,7 +129,7 @@ const ProductionPlanFormPage = () => {
         setSuccess(`✓ Auto-populated ${autoCreatedStages.length} production stage(s) from project phases`);
         setTimeout(() => setSuccess(''), 5000);
       } else {
-        setError('⚠ No production phases found. Please complete Step 5 (Production Plan) in the root card first.');
+        setError('⚠ No production phases found. Please complete Step 4 (Production Plan) in the root card first.');
         setTimeout(() => setError(''), 6000);
       }
     } catch (err) {
@@ -272,9 +269,9 @@ const ProductionPlanFormPage = () => {
       return;
     }
 
-    if (!formData.salesOrderId) {
-      console.warn('[handleSubmit] Sales Order ID is missing');
-      setError('Sales Order ID is missing. Please select a valid root card.');
+    if (!formData.rootCardId) {
+      console.warn('[handleSubmit] Root Card ID is missing');
+      setError('Root Card ID is missing. Please select a valid root card.');
       setLoading(false);
       return;
     }
@@ -287,7 +284,7 @@ const ProductionPlanFormPage = () => {
     }
 
     console.log('[handleSubmit] ✓ All validations passed');
-    console.log('[handleSubmit] Making POST to: /api/sales/steps/' + formData.salesOrderId + '/production-plan');
+    console.log('[handleSubmit] Making POST to: /root-cards/steps/' + formData.rootCardId + '/production-plan');
     
     setLoading(true);
     setError('');
@@ -310,7 +307,7 @@ const ProductionPlanFormPage = () => {
 
       console.log('[handleSubmit] Payload to send:', JSON.stringify(payload, null, 2));
 
-      const response = await axios.post(`/sales/steps/${formData.salesOrderId}/production-plan`, payload);
+      const response = await axios.post(`/root-cards/steps/${formData.rootCardId}/production-plan`, payload);
 
       console.log('[handleSubmit] ✓✓✓ SUCCESS! Response:', response.data);
       console.log('[handleSubmit] Production plan created with ID:', response.data.data?.planId);
@@ -363,7 +360,6 @@ const ProductionPlanFormPage = () => {
       setSuccess('✓ Production plan created successfully!');
       setFormData({
         rootCardId: '',
-        salesOrderId: '',
         planName: '',
         productionStartDate: '',
         estimatedCompletionDate: '',

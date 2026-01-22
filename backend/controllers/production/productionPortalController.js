@@ -1,7 +1,7 @@
 exports.getRootCards = async (req, res) => {
   try {
     const RootCard = require('../../models/RootCard');
-    const SalesOrderStep = require('../../models/SalesOrderStep');
+    const RootCardStep = require('../../models/RootCardStep');
     const pool = require('../../config/database');
     const userId = parseInt(req.user.id);
     const { status, search, all } = req.query;
@@ -34,7 +34,7 @@ exports.getRootCards = async (req, res) => {
     }
 
     const [assignedSteps] = await pool.execute(
-      'SELECT DISTINCT sales_order_id FROM sales_order_steps WHERE assigned_to = ? AND step_id >= 3 AND step_id <= 8',
+      'SELECT DISTINCT sales_order_id FROM sales_order_steps WHERE assigned_to = ? AND step_id >= 2 AND step_id <= 7',
       [userId]
     );
 
@@ -51,12 +51,12 @@ exports.getRootCards = async (req, res) => {
     const assignedSalesOrderIds = assignedSteps.map(s => s.sales_order_id);
     
     const filteredCards = allRootCards.filter(card => 
-      card.sales_order_id && assignedSalesOrderIds.includes(card.sales_order_id)
+      card.rootCardId && assignedSalesOrderIds.includes(card.rootCardId)
     );
 
     const rootCardsWithSteps = await Promise.all(
       filteredCards.map(async (card) => {
-        const allSteps = await SalesOrderStep.findBySalesOrderId(card.sales_order_id);
+        const allSteps = await RootCardStep.findByRootCardId(card.rootCardId);
         const assignedStepsForCard = allSteps
           .filter(step => step.assignedTo && parseInt(step.assignedTo) === userId)
           .map(step => ({
@@ -90,7 +90,7 @@ exports.getRootCards = async (req, res) => {
 exports.getRootCardById = async (req, res) => {
   try {
     const RootCard = require('../../models/RootCard');
-    const SalesOrderStep = require('../../models/SalesOrderStep');
+    const RootCardStep = require('../../models/RootCardStep');
     const DesignEngineeringDetail = require('../../models/DesignEngineeringDetail');
     const MaterialRequirementsDetail = require('../../models/MaterialRequirementsDetail');
     const ProductionPlanDetail = require('../../models/ProductionPlanDetail');
@@ -113,8 +113,8 @@ exports.getRootCardById = async (req, res) => {
     const isAdmin = req.user.role === 'Admin' || req.user.role === 'Production';
     const bypassAuth = all === 'true' || isAdmin;
     
-    if (rootCard.sales_order_id) {
-      allSteps = await SalesOrderStep.findBySalesOrderId(rootCard.sales_order_id);
+    if (rootCard.rootCardId) {
+      allSteps = await RootCardStep.findByRootCardId(rootCard.rootCardId);
       userAssignedSteps = allSteps.filter(step => {
         if (!step.assignedTo) return false;
         const assignedUserId = parseInt(step.assignedTo);
@@ -132,29 +132,39 @@ exports.getRootCardById = async (req, res) => {
     
     if (!bypassAuth && userAssignedSteps.length === 0 && userAssignedStages.length === 0) {
       console.log(`[RC ${id}] Access Denied. User ${userId}: Steps=${userAssignedSteps.length}, Stages=${userAssignedStages.length}`);
-      console.log(`[RC ${id}] All Steps: ${allSteps.map(s => `${s.id}:${s.assignedTo}`).join(', ')}`);
       return res.status(403).json({ message: 'Access denied: Not assigned to any step or stage in this project' });
     }
 
     const stepData = {};
     
-    const step3 = await DesignEngineeringDetail.findBySalesOrderId(rootCard.sales_order_id);
-    if (step3) stepData.step3_designEngineering = step3;
+    // Step 1: Client PO
+    const ClientPODetail = require('../../models/ClientPODetail');
+    const step1 = await ClientPODetail.findByRootCardId(rootCard.rootCardId);
+    if (step1) stepData.step1_clientPO = step1;
 
-    const step4 = await MaterialRequirementsDetail.findBySalesOrderId(rootCard.sales_order_id);
-    if (step4) stepData.step4_materialRequirements = step4;
+    // Step 2: Design Engineering
+    const step2 = await DesignEngineeringDetail.findByRootCardId(rootCard.rootCardId);
+    if (step2) stepData.step2_designEngineering = step2;
 
-    const step5 = await ProductionPlanDetail.findBySalesOrderId(rootCard.sales_order_id);
-    if (step5) stepData.step5_productionPlan = step5;
+    // Step 3: Material Requirements
+    const step3 = await MaterialRequirementsDetail.findByRootCardId(rootCard.rootCardId);
+    if (step3) stepData.step3_materialRequirements = step3;
 
-    const step6 = await QualityCheckDetail.findBySalesOrderId(rootCard.sales_order_id);
-    if (step6) stepData.step6_qualityCheck = step6;
+    // Step 4: Production Plan
+    const step4 = await ProductionPlanDetail.findByRootCardId(rootCard.rootCardId);
+    if (step4) stepData.step4_productionPlan = step4;
 
-    const step7 = await ShipmentDetail.findBySalesOrderId(rootCard.sales_order_id);
-    if (step7) stepData.step7_shipment = step7;
+    // Step 5: Quality Check
+    const step5 = await QualityCheckDetail.findByRootCardId(rootCard.rootCardId);
+    if (step5) stepData.step5_qualityCheck = step5;
 
-    const step8 = await DeliveryDetail.findBySalesOrderId(rootCard.sales_order_id);
-    if (step8) stepData.step8_delivery = step8;
+    // Step 6: Shipment
+    const step6 = await ShipmentDetail.findByRootCardId(rootCard.rootCardId);
+    if (step6) stepData.step6_shipment = step6;
+
+    // Step 7: Delivery
+    const step7 = await DeliveryDetail.findByRootCardId(rootCard.rootCardId);
+    if (step7) stepData.step7_delivery = step7;
 
     res.json({
       ...rootCard,
@@ -327,7 +337,7 @@ exports.getProductionFormRootCards = async (req, res) => {
     }
 
     const [assignedSteps] = await pool.execute(
-      'SELECT DISTINCT sales_order_id FROM sales_order_steps WHERE assigned_to = ? AND step_id >= 3 AND step_id <= 8',
+      'SELECT DISTINCT sales_order_id FROM sales_order_steps WHERE assigned_to = ? AND step_id >= 2 AND step_id <= 7',
       [userId]
     );
 

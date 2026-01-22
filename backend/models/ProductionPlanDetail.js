@@ -1,5 +1,5 @@
 const pool = require('../config/database');
-const { parseJsonField, stringifyJsonField } = require('../utils/salesOrderHelpers');
+const { parseJsonField, stringifyJsonField, normalizeStepData } = require('../utils/rootCardHelpers');
 
 class ProductionPlanDetail {
   static async createTable() {
@@ -20,25 +20,37 @@ class ProductionPlanDetail {
     `);
   }
 
-  static async findBySalesOrderId(salesOrderId) {
+  static async findByRootCardId(rootCardId) {
     const [rows] = await pool.execute(
       `SELECT ppd.*, sod.product_details 
        FROM production_plan_details ppd
        LEFT JOIN sales_order_details sod ON sod.sales_order_id = ppd.sales_order_id
        WHERE ppd.sales_order_id = ?`,
-      [salesOrderId]
+      [rootCardId]
     );
     return rows[0] ? this.formatRow(rows[0]) : null;
   }
 
   static async create(data) {
+    const normalized = normalizeStepData(data, {
+      productionStartDate: 'timeline.productionStartDate',
+      estimatedCompletionDate: 'timeline.estimatedCompletionDate',
+      procurementStatus: 'timeline.procurementStatus'
+    });
+
+    const timeline = {
+      productionStartDate: normalized.productionStartDate,
+      estimatedCompletionDate: normalized.estimatedCompletionDate,
+      procurementStatus: normalized.procurementStatus
+    };
+
     const params = [
-      data.salesOrderId,
-      stringifyJsonField(data.timeline) || JSON.stringify({}),
-      stringifyJsonField(data.selectedPhases) || JSON.stringify({}),
-      stringifyJsonField(data.phaseDetails) || JSON.stringify({}),
-      data.productionNotes || null,
-      data.estimatedCompletionDate || null
+      normalized.rootCardId,
+      stringifyJsonField(timeline) || JSON.stringify({}),
+      stringifyJsonField(normalized.selectedPhases) || JSON.stringify({}),
+      stringifyJsonField(normalized.phaseDetails) || JSON.stringify({}),
+      normalized.productionNotes || null,
+      normalized.estimatedCompletionDate || null
     ];
 
     const [result] = await pool.execute(
@@ -50,14 +62,26 @@ class ProductionPlanDetail {
     return result.insertId;
   }
 
-  static async update(salesOrderId, data) {
+  static async update(rootCardId, data) {
+    const normalized = normalizeStepData(data, {
+      productionStartDate: 'timeline.productionStartDate',
+      estimatedCompletionDate: 'timeline.estimatedCompletionDate',
+      procurementStatus: 'timeline.procurementStatus'
+    });
+
+    const timeline = {
+      productionStartDate: normalized.productionStartDate,
+      estimatedCompletionDate: normalized.estimatedCompletionDate,
+      procurementStatus: normalized.procurementStatus
+    };
+
     const params = [
-      stringifyJsonField(data.timeline) || JSON.stringify({}),
-      stringifyJsonField(data.selectedPhases) || JSON.stringify({}),
-      stringifyJsonField(data.phaseDetails) || JSON.stringify({}),
-      data.productionNotes || null,
-      data.estimatedCompletionDate || null,
-      salesOrderId
+      stringifyJsonField(timeline) || JSON.stringify({}),
+      stringifyJsonField(normalized.selectedPhases) || JSON.stringify({}),
+      stringifyJsonField(normalized.phaseDetails) || JSON.stringify({}),
+      normalized.productionNotes || null,
+      normalized.estimatedCompletionDate || null,
+      rootCardId
     ];
 
     await pool.execute(
@@ -69,8 +93,8 @@ class ProductionPlanDetail {
     );
   }
 
-  static async addPhase(salesOrderId, phaseKey, phaseData) {
-    const detail = await this.findBySalesOrderId(salesOrderId);
+  static async addPhase(rootCardId, phaseKey, phaseData) {
+    const detail = await this.findByRootCardId(rootCardId);
     if (!detail) {
       throw new Error('Production plan not found');
     }
@@ -80,22 +104,22 @@ class ProductionPlanDetail {
 
     await pool.execute(
       `UPDATE production_plan_details SET phase_details = ? WHERE sales_order_id = ?`,
-      [stringifyJsonField(phaseDetails), salesOrderId]
+      [stringifyJsonField(phaseDetails), rootCardId]
     );
 
     return phaseDetails[phaseKey];
   }
 
-  static async getPhases(salesOrderId) {
-    const detail = await this.findBySalesOrderId(salesOrderId);
+  static async getPhases(rootCardId) {
+    const detail = await this.findByRootCardId(rootCardId);
     if (!detail) {
       throw new Error('Production plan not found');
     }
     return detail.phaseDetails || {};
   }
 
-  static async getPhase(salesOrderId, phaseKey) {
-    const detail = await this.findBySalesOrderId(salesOrderId);
+  static async getPhase(rootCardId, phaseKey) {
+    const detail = await this.findByRootCardId(rootCardId);
     if (!detail) {
       throw new Error('Production plan not found');
     }
@@ -103,8 +127,8 @@ class ProductionPlanDetail {
     return phaseDetails[phaseKey] || null;
   }
 
-  static async updatePhase(salesOrderId, phaseKey, phaseData) {
-    const detail = await this.findBySalesOrderId(salesOrderId);
+  static async updatePhase(rootCardId, phaseKey, phaseData) {
+    const detail = await this.findByRootCardId(rootCardId);
     if (!detail) {
       throw new Error('Production plan not found');
     }
@@ -118,14 +142,14 @@ class ProductionPlanDetail {
 
     await pool.execute(
       `UPDATE production_plan_details SET phase_details = ? WHERE sales_order_id = ?`,
-      [stringifyJsonField(phaseDetails), salesOrderId]
+      [stringifyJsonField(phaseDetails), rootCardId]
     );
 
     return phaseDetails[phaseKey];
   }
 
-  static async removePhase(salesOrderId, phaseKey) {
-    const detail = await this.findBySalesOrderId(salesOrderId);
+  static async removePhase(rootCardId, phaseKey) {
+    const detail = await this.findByRootCardId(rootCardId);
     if (!detail) {
       throw new Error('Production plan not found');
     }
@@ -139,14 +163,14 @@ class ProductionPlanDetail {
 
     await pool.execute(
       `UPDATE production_plan_details SET phase_details = ? WHERE sales_order_id = ?`,
-      [stringifyJsonField(phaseDetails), salesOrderId]
+      [stringifyJsonField(phaseDetails), rootCardId]
     );
 
     return true;
   }
 
-  static async updatePhaseStatus(salesOrderId, phaseKey, statusData) {
-    const detail = await this.findBySalesOrderId(salesOrderId);
+  static async updatePhaseStatus(rootCardId, phaseKey, statusData) {
+    const detail = await this.findByRootCardId(rootCardId);
     if (!detail) {
       throw new Error('Production plan not found');
     }
@@ -165,7 +189,7 @@ class ProductionPlanDetail {
 
     await pool.execute(
       `UPDATE production_plan_details SET phase_details = ? WHERE sales_order_id = ?`,
-      [stringifyJsonField(phaseDetails), salesOrderId]
+      [stringifyJsonField(phaseDetails), rootCardId]
     );
 
     return phaseDetails[phaseKey];
@@ -202,8 +226,8 @@ class ProductionPlanDetail {
     };
   }
 
-  static async validatePhases(salesOrderId) {
-    const detail = await this.findBySalesOrderId(salesOrderId);
+  static async validatePhases(rootCardId) {
+    const detail = await this.findByRootCardId(rootCardId);
     if (!detail) {
       throw new Error('Production plan not found');
     }
@@ -256,7 +280,7 @@ class ProductionPlanDetail {
 
     return {
       id: row.id,
-      salesOrderId: row.sales_order_id,
+      rootCardId: row.sales_order_id,
       productName: productName,
       timeline: timeline,
       selectedPhases: parseJsonField(row.selected_phases),

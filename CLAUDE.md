@@ -34,14 +34,13 @@
 ## Root Card Wizard Data Persistence
 
 ### Step-by-Step Data Flow
-1. **Step 1**: Client PO Details → `client_po_details` table
-2. **Step 2**: Sales Order Details (3 tabs) → `sales_order_details` table
-3. **Step 3**: Design Engineering → `design_engineering_details` table
-4. **Step 4**: Material Requirements → `material_requirements_details` table
-5. **Step 5**: Production Plan → `production_plan_details` table
-6. **Step 6**: Quality Check → `quality_check_details` table
-7. **Step 7**: Shipment → `shipment_details` table
-8. **Step 8**: Delivery → `delivery_details` table
+1. **Step 1**: Client PO Details & Product Details → `client_po_details` table
+2. **Step 2**: Design Engineering → `design_engineering_details` table
+3. **Step 3**: Material Requirements → `material_requirements_details` table
+4. **Step 4**: Production Plan → `production_plan_details` table
+5. **Step 5**: Quality Check → `quality_check_details` table
+6. **Step 6**: Shipment → `shipment_details` table
+7. **Step 7**: Delivery → `delivery_details` table
 
 ### Auto-Created Resources
 - Root Card: Created automatically in `root_cards` table

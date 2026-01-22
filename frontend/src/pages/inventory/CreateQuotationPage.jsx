@@ -25,21 +25,22 @@ import taskService from "../../utils/taskService";
 const CreateQuotationPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { materials, salesOrderId } = location.state || {};
+  const { materials, rootCardId } = location.state || {};
 
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [vendors, setVendors] = useState([]);
-  const [projects, setProjects] = useState([]);
-  const [projectMaterials, setProjectMaterials] = useState([]);
+  const [rootCards, setRootCards] = useState([]);
+  const [rootCardMaterials, setRootCardMaterials] = useState([]);
   const [loadingMaterials, setLoadingMaterials] = useState(false);
+  const [loadingRootCards, setLoadingRootCards] = useState(false);
   const [savingRequirements, setSavingRequirements] = useState(false);
   const [analysisMode, setAnalysisMode] = useState(false);
   const [taskId, setTaskId] = useState(null);
 
   const [formData, setFormData] = useState({
     vendor_id: "",
-    sales_order_id: salesOrderId || "",
+    root_card_id: rootCardId || "",
     valid_until: "",
     notes: "",
     items: [],
@@ -51,7 +52,7 @@ const CreateQuotationPage = () => {
       setTaskId(extractedTaskId);
     }
     fetchVendors();
-    fetchProjects();
+    fetchRootCards();
     if (materials) {
       initializeItemsFromMaterials(materials);
     }
@@ -66,28 +67,28 @@ const CreateQuotationPage = () => {
     }
   };
 
-  const fetchProjects = async () => {
+  const fetchRootCards = async () => {
     try {
-      setLoadingProjects(true);
-      const response = await axios.get("/sales/requirements");
-      setProjects(response.data.data || []);
+      setLoadingRootCards(true);
+      const response = await axios.get("/root-cards/requirements");
+      setRootCards(response.data.data || []);
     } catch (error) {
-      console.error("Error fetching projects:", error);
+      console.error("Error fetching root cards:", error);
     } finally {
-      setLoadingProjects(false);
+      setLoadingRootCards(false);
     }
   };
 
-  const handleProjectChange = async (e) => {
-    const selectedSalesOrderId = e.target.value;
+  const handleRootCardChange = async (e) => {
+    const selectedRootCardId = e.target.value;
 
     setFormData((prev) => ({
       ...prev,
-      sales_order_id: selectedSalesOrderId,
+      root_card_id: selectedRootCardId,
     }));
 
-    if (!selectedSalesOrderId) {
-      setProjectMaterials([]);
+    if (!selectedRootCardId) {
+      setRootCardMaterials([]);
       setFormData((prev) => ({ ...prev, items: [] }));
       return;
     }
@@ -95,7 +96,7 @@ const CreateQuotationPage = () => {
     try {
       setLoadingMaterials(true);
       const reqResponse = await axios.get(
-        `/sales/requirements/${selectedSalesOrderId}`
+        `/root-cards/requirements/${selectedRootCardId}`
       );
       const reqData = reqResponse.data.data;
 
@@ -112,7 +113,7 @@ const CreateQuotationPage = () => {
           (parseFloat(m.currentStock) || 0),
       }));
 
-      setProjectMaterials(initializedMaterials);
+      setRootCardMaterials(initializedMaterials);
 
       // Auto-populate if shortages exist (optional behavior)
       const shortages = initializedMaterials.filter(
@@ -126,15 +127,15 @@ const CreateQuotationPage = () => {
 
       setAnalysisMode(true);
     } catch (error) {
-      console.error("Error fetching project materials:", error);
-      Swal.fire("Error", "Failed to load project requirements", "error");
+      console.error("Error fetching root card materials:", error);
+      Swal.fire("Error", "Failed to load root card requirements", "error");
     } finally {
       setLoadingMaterials(false);
     }
   };
 
   const handleRequirementChange = (index, field, value) => {
-    setProjectMaterials((prev) => {
+    setRootCardMaterials((prev) => {
       const newMaterials = [...prev];
       newMaterials[index] = { ...newMaterials[index], [field]: value };
 
@@ -150,17 +151,17 @@ const CreateQuotationPage = () => {
   };
 
   const handleSaveRequirements = async () => {
-    if (!formData.sales_order_id) return;
+    if (!formData.root_card_id) return;
 
     try {
       setSavingRequirements(true);
-      await axios.post(`/sales/requirements/${formData.sales_order_id}`, {
-        materials: projectMaterials.map(({ selected, ...m }) => m), // Exclude UI-only 'selected' field
+      await axios.post(`/root-cards/requirements/${formData.root_card_id}`, {
+        materials: rootCardMaterials.map(({ selected, ...m }) => m), // Exclude UI-only 'selected' field
         procurementStatus: "pending", // Or keep existing status
       });
 
       // Auto-proceed
-      const selectedItems = projectMaterials.filter((m) => m.selected);
+      const selectedItems = rootCardMaterials.filter((m) => m.selected);
       initializeItemsFromMaterials(selectedItems);
       setAnalysisMode(false);
 
@@ -174,7 +175,7 @@ const CreateQuotationPage = () => {
   };
 
   const generateQuoteItems = () => {
-    const selectedItems = projectMaterials.filter((m) => m.selected);
+    const selectedItems = rootCardMaterials.filter((m) => m.selected);
     initializeItemsFromMaterials(selectedItems);
     setAnalysisMode(false);
   };
@@ -245,8 +246,8 @@ const CreateQuotationPage = () => {
         total_amount: calculateTotal(),
         valid_until: formData.valid_until,
         items: formData.items,
-        notes: formData.sales_order_id
-          ? `Ref: Sales Order ${formData.sales_order_id}\n\n${formData.notes}`
+        notes: formData.root_card_id
+          ? `Ref: Root Card ${formData.root_card_id}\n\n${formData.notes}`
           : formData.notes,
       };
 
@@ -273,8 +274,8 @@ const CreateQuotationPage = () => {
           <button
             onClick={() => {
               setAnalysisMode(false);
-              setFormData((prev) => ({ ...prev, sales_order_id: "" }));
-              setProjectMaterials([]);
+              setFormData((prev) => ({ ...prev, root_card_id: "" }));
+              setRootCardMaterials([]);
             }}
             className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition"
           >
@@ -298,7 +299,7 @@ const CreateQuotationPage = () => {
             <div className="flex justify-between items-center">
               <CardTitle className="flex items-center gap-2 text-blue-900 dark:text-blue-100">
                 <Briefcase size={20} />
-                Project Requirements
+                Root Card Requirements
               </CardTitle>
               <div className="flex gap-2">
                 <Button
@@ -322,9 +323,9 @@ const CreateQuotationPage = () => {
               <div className="flex justify-center py-8">
                 <Loader2 className="animate-spin text-blue-600" size={32} />
               </div>
-            ) : projectMaterials.length === 0 ? (
+            ) : rootCardMaterials.length === 0 ? (
               <p className="text-center py-8 text-slate-500">
-                No materials found for this project.
+                No materials found for this root card.
               </p>
             ) : (
               <div className="overflow-x-auto">
@@ -349,7 +350,7 @@ const CreateQuotationPage = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                    {projectMaterials.map((material, idx) => {
+                    {rootCardMaterials.map((material, idx) => {
                       const required =
                         parseFloat(material.requiredQuantity) || 0;
                       const stock = parseFloat(material.currentStock) || 0;
@@ -440,8 +441,8 @@ const CreateQuotationPage = () => {
             Create Quotation
           </h1>
           <p className="text-slate-600 dark:text-slate-400 text-sm">
-            {salesOrderId
-              ? `For Sales Order: ${salesOrderId}`
+            {rootCardId
+              ? `For Root Card: ${rootCardId}`
               : "New Vendor Quotation"}
           </p>
         </div>
@@ -461,7 +462,7 @@ const CreateQuotationPage = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    Select Project (Optional)
+                    Select Root Card (Optional)
                   </label>
                   <div className="relative">
                     <Briefcase
@@ -469,21 +470,21 @@ const CreateQuotationPage = () => {
                       size={18}
                     />
                     <select
-                      name="sales_order_id"
-                      value={formData.sales_order_id}
-                      onChange={handleProjectChange}
+                      name="root_card_id"
+                      value={formData.root_card_id}
+                      onChange={handleRootCardChange}
                       className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="">
-                        Select Project to Load Requirements
+                        Select Root Card to Load Requirements
                       </option>
-                      {projects.map((p) => (
-                        <option key={p.salesOrderId} value={p.salesOrderId}>
+                      {rootCards.map((p) => (
+                        <option key={p.rootCardId} value={p.rootCardId}>
                           {p.projectName} ({p.poNumber})
                         </option>
                       ))}
                     </select>
-                    {loadingProjects && (
+                    {loadingRootCards && (
                       <div className="absolute right-3 top-1/2 -translate-y-1/2">
                         <Loader2
                           className="animate-spin text-blue-500"
@@ -492,10 +493,10 @@ const CreateQuotationPage = () => {
                       </div>
                     )}
                   </div>
-                  {formData.sales_order_id && (
+                  {formData.root_card_id && (
                     <div className="mt-2 flex items-center justify-between">
                       <p className="text-xs text-slate-500">
-                        Project selected. Requirements loaded.
+                        Root Card selected. Requirements loaded.
                       </p>
                       <button
                         type="button"
@@ -616,13 +617,13 @@ const CreateQuotationPage = () => {
         </div>
 
         {/* Material Analysis Section */}
-        {formData.sales_order_id && (
+        {formData.root_card_id && (
           <Card className="border-blue-200 dark:border-blue-800">
             <CardHeader className="bg-blue-50 dark:bg-blue-900/20">
               <div className="flex justify-between items-center">
                 <CardTitle className="flex items-center gap-2 text-blue-900 dark:text-blue-100">
                   <Briefcase size={20} />
-                  Project Material Analysis
+                  Root Card Material Analysis
                 </CardTitle>
                 <div className="flex gap-2">
                   <Button
@@ -657,9 +658,9 @@ const CreateQuotationPage = () => {
                 <div className="flex justify-center py-8">
                   <Loader2 className="animate-spin text-blue-600" size={32} />
                 </div>
-              ) : projectMaterials.length === 0 ? (
+              ) : rootCardMaterials.length === 0 ? (
                 <p className="text-center py-8 text-slate-500">
-                  No materials found for this project.
+                  No materials found for this root card.
                 </p>
               ) : (
                 <div className="overflow-x-auto">
@@ -684,7 +685,7 @@ const CreateQuotationPage = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                      {projectMaterials.map((material, idx) => {
+                      {rootCardMaterials.map((material, idx) => {
                         const required =
                           parseFloat(material.requiredQuantity) || 0;
                         const stock = parseFloat(material.currentStock) || 0;

@@ -6,7 +6,7 @@ const router = express.Router();
 router.get('/stats', quotationController.getQuotationStats);
 router.get('/attachments/:id/download', quotationController.downloadQuotationAttachment);
 router.get('/vendor/:vendor_id', quotationController.getVendorQuotations);
-router.get('/project/:projectId', quotationController.getQuotationsByProject);
+router.get('/root-card/:rootCardId', quotationController.getQuotationsByRootCard);
 router.get('/:id/communications', quotationController.getQuotationCommunications);
 router.get('/:id/responses', quotationController.getQuotationResponses);
 router.get('/:id', quotationController.getQuotationById);

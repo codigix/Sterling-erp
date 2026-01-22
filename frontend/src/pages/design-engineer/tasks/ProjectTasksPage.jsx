@@ -62,10 +62,10 @@ const ProjectTasksPage = () => {
   const fetchProjects = async () => {
     setLoading(true);
     try {
-      const response = await axios.get("/sales/orders", {
+      const response = await axios.get("/root-cards", {
         params: { includeSteps: true },
       });
-      const data = response.data.orders || [];
+      const data = response.data.rootCards || [];
       const filteredData = data.filter(
         (order) => order.status !== "draft" && order.status !== "cancelled"
       );
@@ -81,18 +81,18 @@ const ProjectTasksPage = () => {
     }
   };
 
-  const fetchTasksForProject = async (salesOrder) => {
+  const fetchTasksForProject = async (project) => {
     try {
       if (!roleId) return;
       const response = await axios.get(`/department/portal/tasks/${roleId}`);
       const filtered = response.data.filter(
-        (t) => t.sales_order_id === salesOrder.id
+        (t) => t.root_card_id === project.id || t.sales_order_id === project.id
       );
       console.log(
         "Fetched tasks:",
         response.data.length,
-        "Filtered for sales order:",
-        salesOrder.id,
+        "Filtered for root card:",
+        project.id,
         "Result:",
         filtered.length
       );
@@ -118,8 +118,7 @@ const ProjectTasksPage = () => {
         priority: formData.priority,
         status: formData.status,
         roleId: roleId,
-        salesOrderId: selectedProject?.id,
-        rootCardId: null, // Let backend resolve root card from sales order
+        rootCardId: selectedProject?.id,
       };
 
       const response = await axios.post("/department/portal/tasks", payload);
@@ -182,7 +181,7 @@ const ProjectTasksPage = () => {
 
   const handleCreateWorkflowTasks = async () => {
     if (!selectedProject) {
-      alert("Please select a sales order");
+      alert("Please select a root card");
       return;
     }
 
@@ -206,7 +205,7 @@ const ProjectTasksPage = () => {
   };
 
   const getDesignStatus = (project) => {
-    const hasDesign = project.steps?.step3_design;
+    const hasDesign = project.steps?.step2_design;
     return hasDesign ? "Design Started" : "Pending Design";
   };
 
@@ -235,19 +234,19 @@ const ProjectTasksPage = () => {
           Design Engineering Projects
         </h2>
         <p className="text-slate-600 dark:text-slate-400 mt-1 text-xs">
-          View sales orders and create design tasks
+          View root cards and create design tasks
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
           <h3 className="font-semibold text-slate-900 dark:text-white mb-4">
-            Sales Orders
+            Root Cards
           </h3>
           <div className="space-y-2">
             {projects.length === 0 ? (
               <p className="text-sm text-slate-500 dark:text-slate-400">
-                No sales orders available
+                No root cards available
               </p>
             ) : (
               projects.map((project) => (
@@ -269,7 +268,7 @@ const ProjectTasksPage = () => {
                   <div className="flex items-center gap-2 mt-2">
                     <span
                       className={`text-xs px-2 py-1 rounded ${
-                        project.steps?.step3_design
+                        project.steps?.step2_design
                           ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200"
                           : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-200"
                       }`}
@@ -315,7 +314,7 @@ const ProjectTasksPage = () => {
           ) : (
             <div className="text-center py-12 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
               <p className="text-slate-600 dark:text-slate-400">
-                Select a sales order to view tasks
+                Select a root card to view tasks
               </p>
             </div>
           )}

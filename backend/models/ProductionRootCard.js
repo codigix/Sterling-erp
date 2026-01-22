@@ -1,0 +1,219 @@
+const pool = require("../config/database");
+const RootCardInventoryTask = require("./RootCardInventoryTask");
+const parseJson = (value, fallback = []) => {
+  if (!value) {
+    return fallback;
+  }
+  if (typeof value === "object") {
+    return value;
+  }
+  try {
+    return JSON.parse(value);
+  } catch (_error) {
+    return fallback;
+  }
+};
+
+class ProductionRootCard {
+  static formatRow(row) {
+    if (!row) {
+      return null;
+    }
+    return {
+      ...row,
+      stages: parseJson(row.stages, []),
+      product_details: row.product_details ? parseJson(row.product_details, null) : null,
+      sales_order_items: row.sales_order_items ? parseJson(row.sales_order_items, []) : [],
+      product_name: row.product_details ? parseJson(row.product_details).itemName : null,
+      project: row.project_id
+        ? {
+            id: row.project_id,
+            name: row.project_name,
+            code: row.project_code,
+            clientName: row.client_name,
+          }
+        : null,
+      rootCardDetails: row.sales_order_id ? {
+        id: row.sales_order_id,
+        customer: row.customer_name,
+        poNumber: row.po_number,
+        orderDate: row.order_date,
+        dueDate: row.due_date,
+        total: row.total,
+        currency: row.currency,
+        status: row.so_status,
+        items: parseJson(row.sales_order_items, [])
+      } : null
+    };
+  }
+
+  static async findAll(filters = {}) {
+    const params = [];
+    const conditions = [];
+    let query = `
+      SELECT rc.*, 
+             p.name AS project_name, 
+             p.code AS project_code, 
+             p.client_name,
+             p.sales_order_id,
+             so.customer AS customer_name,
+             so.po_number,
+             so.order_date,
+             so.due_date,
+             so.total,
+             so.currency,
+             so.status AS so_status,
+             so.items AS sales_order_items,
+             sod.product_details,
+             u.username AS assigned_supervisor_name
+      FROM root_cards rc
+      LEFT JOIN projects p ON p.id = rc.project_id
+      LEFT JOIN sales_orders so ON so.id = p.sales_order_id
+      LEFT JOIN sales_order_details sod ON sod.sales_order_id = so.id
+      LEFT JOIN users u ON u.id = rc.assigned_supervisor
+    `;
+
+    if (filters.assignedTo) {
+      query += `
+        INNER JOIN manufacturing_stages ms_filter ON ms_filter.root_card_id = rc.id AND ms_filter.assigned_worker = ?
+      `;
+      params.push(filters.assignedTo);
+    }
+
+    if (filters.status && filters.status !== "all") {
+      conditions.push("rc.status = ?");
+      params.push(filters.status);
+    }
+
+    if (filters.projectId) {
+      conditions.push("rc.project_id = ?");
+      params.push(filters.projectId);
+    }
+
+    if (filters.search) {
+      conditions.push("(rc.title LIKE ? OR p.name LIKE ? OR rc.code LIKE ?)");
+      const like = `%${filters.search}%`;
+      params.push(like, like, like);
+    }
+
+    if (conditions.length) {
+      query += ` WHERE ${conditions.join(" AND ")}`;
+    }
+
+    query += " ORDER BY rc.created_at DESC";
+
+    const [rows] = await pool.execute(query, params);
+    return rows.map(ProductionRootCard.formatRow);
+  }
+
+  static async findById(id) {
+    const [rows] = await pool.execute(
+      `
+        SELECT rc.*, 
+               p.name AS project_name, 
+               p.code AS project_code, 
+               p.client_name,
+               p.sales_order_id,
+               so.customer AS customer_name,
+               so.po_number,
+               so.order_date,
+               so.due_date,
+               so.total,
+               so.currency,
+               so.status AS so_status,
+               so.items AS sales_order_items,
+               sod.product_details,
+               u.username AS assigned_supervisor_name
+        FROM root_cards rc
+        LEFT JOIN projects p ON p.id = rc.project_id
+        LEFT JOIN sales_orders so ON so.id = p.sales_order_id
+        LEFT JOIN sales_order_details sod ON sod.sales_order_id = so.id
+        LEFT JOIN users u ON u.id = rc.assigned_supervisor
+        WHERE rc.id = ?
+      `,
+      [id]
+    );
+    return ProductionRootCard.formatRow(rows[0]);
+  }
+
+  static async findByRootCardId(rootCardId) {
+    const [rows] = await pool.execute(
+      `
+        SELECT rc.*, 
+               p.name AS project_name, 
+               p.code AS project_code, 
+               p.client_name,
+               p.sales_order_id,
+               so.customer AS customer_name,
+               so.po_number,
+               so.order_date,
+               so.due_date,
+               so.total,
+               so.currency,
+               so.status AS so_status,
+               so.items AS sales_order_items,
+               sod.product_details,
+               u.username AS assigned_supervisor_name
+        FROM root_cards rc
+        LEFT JOIN projects p ON p.id = rc.project_id
+        LEFT JOIN sales_orders so ON so.id = p.sales_order_id
+        LEFT JOIN sales_order_details sod ON sod.sales_order_id = so.id
+        LEFT JOIN users u ON u.id = rc.assigned_supervisor
+        WHERE so.id = ?
+      `,
+      [rootCardId]
+    );
+    return ProductionRootCard.formatRow(rows[0]);
+  }
+
+  static async create(data, externalConnection = null) {
+    const connection = externalConnection || (await pool.getConnection());
+
+    try {
+      const [result] = await connection.execute(
+        `
+          INSERT INTO root_cards
+          (project_id, sales_order_id, code, title, status, priority, planned_start, planned_end, created_by, assigned_supervisor, notes, stages)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `,
+        [
+          data.projectId,
+          data.rootCardId || null,
+          data.code || null,
+          data.title,
+          data.status || "planning",
+          data.priority || "medium",
+          data.plannedStart || null,
+          data.plannedEnd || null,
+          data.createdBy || null,
+          data.assignedSupervisor || null,
+          data.notes || null,
+          JSON.stringify(data.stages || []),
+        ]
+      );
+
+      const productionRootCardId = result.insertId;
+
+      if (data.projectId) {
+        await RootCardInventoryTask.initializeRootCardTasks(
+          data.projectId,
+          productionRootCardId,
+          connection
+        );
+      }
+
+      if (!externalConnection) {
+        connection.release();
+      }
+
+      return productionRootCardId;
+    } catch (error) {
+      if (!externalConnection) {
+        connection.release();
+      }
+      throw error;
+    }
+  }
+}
+
+module.exports = ProductionRootCard;

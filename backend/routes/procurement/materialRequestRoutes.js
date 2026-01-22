@@ -9,7 +9,7 @@ router.post('/', materialRequestController.createMaterialRequest);
 
 router.get('/', materialRequestController.getAllMaterialRequests);
 
-router.get('/sales-order/:salesOrderId', materialRequestController.getMaterialRequestsBySalesOrder);
+router.get('/root-card/:rootCardId', materialRequestController.getMaterialRequestsByRootCard);
 
 router.get('/:id', materialRequestController.getMaterialRequest);
 

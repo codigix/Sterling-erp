@@ -68,19 +68,19 @@ async function runFullSystemCheck() {
   // Check 3: API Endpoints Exist
   console.log('3️⃣  API Endpoints (checking files)');
   const requiredEndpoints = [
-    { file: 'salesOrderStepsRoutes.js', endpoint: '/client-po' },
-    { file: 'salesOrderStepsRoutes.js', endpoint: '/sales-order' },
-    { file: 'salesOrderStepsRoutes.js', endpoint: '/design-engineering' },
-    { file: 'salesOrderStepsRoutes.js', endpoint: '/material-requirements' },
-    { file: 'salesOrderStepsRoutes.js', endpoint: '/production-plan' },
-    { file: 'salesOrderStepsRoutes.js', endpoint: '/quality-check' },
-    { file: 'salesOrderStepsRoutes.js', endpoint: '/shipment' },
-    { file: 'salesOrderStepsRoutes.js', endpoint: '/delivery' },
+    { file: 'rootCardStepsRoutes.js', endpoint: '/client-po' },
+    { file: 'rootCardStepsRoutes.js', endpoint: '/root-card-details' },
+    { file: 'rootCardStepsRoutes.js', endpoint: '/design-engineering' },
+    { file: 'rootCardStepsRoutes.js', endpoint: '/material-requirements' },
+    { file: 'rootCardStepsRoutes.js', endpoint: '/production-plan' },
+    { file: 'rootCardStepsRoutes.js', endpoint: '/quality-check' },
+    { file: 'rootCardStepsRoutes.js', endpoint: '/shipment' },
+    { file: 'rootCardStepsRoutes.js', endpoint: '/delivery' },
   ];
 
   let allEndpointsExist = true;
   for (const ep of requiredEndpoints) {
-    const filepath = path.join(__dirname, 'routes', 'sales', ep.file);
+    const filepath = path.join(__dirname, 'routes', 'root-cards', ep.file);
     try {
       const content = fs.readFileSync(filepath, 'utf8');
       if (content.includes(ep.endpoint)) {
@@ -90,7 +90,7 @@ async function runFullSystemCheck() {
         allEndpointsExist = false;
       }
     } catch (error) {
-      console.log(`   ❌ ${ep.endpoint} - file not found`);
+      console.log(`   ❌ ${ep.endpoint} - file not found at ${filepath}`);
       allEndpointsExist = false;
     }
   }
@@ -107,7 +107,7 @@ async function runFullSystemCheck() {
   console.log('4️⃣  Controllers');
   const controllers = [
     'clientPOController.js',
-    'salesOrderDetailController.js',
+    'rootCardDetailController.js',
     'designEngineeringController.js',
     'materialRequirementsController.js',
     'productionPlanController.js',
@@ -118,12 +118,12 @@ async function runFullSystemCheck() {
 
   let allControllersExist = true;
   for (const controller of controllers) {
-    const filepath = path.join(__dirname, 'controllers', 'sales', controller);
+    const filepath = path.join(__dirname, 'controllers', 'root-cards', controller);
     try {
       fs.accessSync(filepath);
       console.log(`   ✅ ${controller}`);
     } catch {
-      console.log(`   ❌ ${controller}`);
+      console.log(`   ❌ ${controller} - not found at ${filepath}`);
       allControllersExist = false;
     }
   }

@@ -1,4 +1,5 @@
 const pool = require('../config/database');
+const RootCardStep = require('./RootCardStep');
 
 class EmployeeTask {
   static async findAll(filters = {}) {
@@ -145,20 +146,23 @@ class EmployeeTask {
     return rows[0];
   }
 
-  static async createAssignedTask(employeeId, data) {
-    const [result] = await pool.execute(
-      `INSERT INTO employee_tasks (employee_id, title, description, type, production_plan_stage_id, priority, status, due_date, notes)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  static async createAssignedTask(employeeId, data, connection = null) {
+    const db = connection || pool;
+    const [result] = await db.execute(
+      `INSERT INTO employee_tasks (employee_id, title, description, type, production_plan_stage_id, sales_order_id, priority, status, due_date, notes, assigned_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         employeeId,
         data.title,
         data.description || null,
         data.type || 'general',
         data.productionPlanStageId || null,
+        data.salesOrderId || null,
         data.priority || 'medium',
         'pending',
         data.dueDate || null,
-        data.notes || null
+        data.notes || null,
+        data.assignedBy || null
       ]
     );
 
@@ -166,7 +170,7 @@ class EmployeeTask {
     
     if (data.productionPlanStageId) {
       try {
-        const [stageRows] = await pool.execute(
+        const [stageRows] = await db.execute(
           'SELECT is_blocked FROM production_plan_stages WHERE id = ?',
           [data.productionPlanStageId]
         );
@@ -175,7 +179,7 @@ class EmployeeTask {
         
         if (!isStageBlocked) {
           try {
-            const [existingNotif] = await pool.execute(
+            const [existingNotif] = await db.execute(
               `SELECT id FROM alerts_notifications 
                WHERE user_id = ? AND alert_type = 'task_assigned' AND related_id = ? AND is_read = FALSE
                LIMIT 1`,
@@ -185,7 +189,7 @@ class EmployeeTask {
             if (existingNotif.length > 0) {
               console.log(`[EmployeeTask] ℹ️ Notification already exists for this task assignment (${taskId})`);
             } else {
-              await pool.execute(
+              await db.execute(
                 `INSERT INTO alerts_notifications (user_id, alert_type, message, related_table, related_id, priority)
                  VALUES (?, ?, ?, ?, ?, ?)`,
                 [
@@ -216,15 +220,22 @@ class EmployeeTask {
   static async getAssignedTasks(employeeId, filters = {}) {
     let query = `SELECT et.id, et.employee_id, et.title, et.description, et.type, et.priority, et.status, 
                         et.assigned_by, et.due_date, et.notes, et.started_at, et.completed_at, 
-                        et.created_at, et.updated_at, et.production_plan_stage_id,
-                        pps.stage_name, rc.title as root_card_title,
-                        p.id as project_id, p.name as project_name, p.code as project_code,
-                        sod.product_details
+                        et.created_at, et.updated_at, et.production_plan_stage_id, et.sales_order_id,
+                        pps.stage_name, 
+                        COALESCE(rc.title, so.project_name, so.po_number) as root_card_title,
+                        COALESCE(p.id, p2.id) as project_id, 
+                        COALESCE(p.name, p2.name) as project_name, 
+                        COALESCE(p.code, p2.code) as project_code,
+                        COALESCE(sod.product_details, so.items) as product_details,
+                        so.customer as customer_name,
+                        so.po_number as po_number
                  FROM employee_tasks et
                  LEFT JOIN production_plan_stages pps ON et.production_plan_stage_id = pps.id
                  LEFT JOIN production_plans pp ON pps.production_plan_id = pp.id
                  LEFT JOIN root_cards rc ON pp.root_card_id = rc.id
                  LEFT JOIN projects p ON rc.project_id = p.id
+                 LEFT JOIN sales_orders so ON et.sales_order_id = so.id
+                 LEFT JOIN projects p2 ON so.id = p2.sales_order_id
                  LEFT JOIN sales_order_details sod ON sod.sales_order_id = pp.sales_order_id
                  WHERE et.employee_id = ? AND (pps.id IS NULL OR pps.is_blocked = FALSE)`;
     const params = [employeeId];
@@ -248,16 +259,31 @@ class EmployeeTask {
     const [rows] = await pool.execute(query, params);
     
     return (rows || []).map(row => {
-      let product_name = null;
+      let product_name = row.project_name || null;
       if (row.product_details) {
         try {
           const details = typeof row.product_details === 'string' ? JSON.parse(row.product_details) : row.product_details;
-          product_name = details.itemName || null;
+          if (Array.isArray(details) && details.length > 0) {
+            product_name = details[0].name || details[0].itemName || product_name;
+          } else {
+            product_name = details.itemName || details.name || product_name;
+          }
         } catch (e) {
           console.warn('Error parsing product_details for task:', row.id);
         }
       }
-      return { ...row, product_name };
+
+      return { 
+        ...row, 
+        product_name,
+        salesOrder: {
+          customer: row.customer_name || 'N/A',
+          poNumber: row.po_number || 'N/A'
+        },
+        rootCard: {
+          title: row.root_card_title || 'N/A'
+        }
+      };
     });
   }
 
@@ -296,7 +322,7 @@ class EmployeeTask {
 
   static async updateAssignedTaskStatus(taskId, status, notes = null) {
     const [taskRows] = await pool.execute(
-      `SELECT id, production_plan_stage_id FROM employee_tasks WHERE id = ?`,
+      `SELECT id, production_plan_stage_id, sales_order_id, type FROM employee_tasks WHERE id = ?`,
       [taskId]
     );
     
@@ -328,6 +354,23 @@ class EmployeeTask {
       `UPDATE employee_tasks SET ${updateFields.join(', ')} WHERE id = ?`,
       values
     );
+
+    // Synchronize with RootCardStep workflow if applicable
+    if (task.sales_order_id && task.type) {
+      const stepDefinitions = RootCardStep.STEP_DEFINITIONS;
+      const step = stepDefinitions.find(s => s.key === task.type);
+      
+      if (step) {
+        console.log(`[EmployeeTask] Synchronizing workflow step ${step.id} (${step.key}) for SO ${task.sales_order_id}`);
+        await RootCardStep.updateStatus(task.sales_order_id, step.id, status);
+        
+        if (status === 'in_progress') {
+          await RootCardStep.startStep(task.sales_order_id, step.id);
+        } else if (status === 'completed') {
+          await RootCardStep.completeStep(task.sales_order_id, step.id);
+        }
+      }
+    }
 
     if (task.production_plan_stage_id) {
       await pool.execute(
@@ -461,6 +504,14 @@ class EmployeeTask {
 
   static async deleteWorkerTask(taskId) {
     await pool.execute('DELETE FROM worker_tasks WHERE id = ?', [taskId]);
+  }
+
+  static async findByRelatedId(salesOrderId, type) {
+    const [rows] = await pool.execute(
+      'SELECT * FROM employee_tasks WHERE sales_order_id = ? AND type = ?',
+      [salesOrderId, type]
+    );
+    return rows;
   }
 }
 

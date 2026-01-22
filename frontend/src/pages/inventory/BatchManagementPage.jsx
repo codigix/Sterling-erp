@@ -11,10 +11,10 @@ import {
   Clock,
   AlertTriangle,
 } from "lucide-react";
-import useProjectInventoryTask from "../../hooks/useProjectInventoryTask";
+import useRootCardInventoryTask from "../../hooks/useRootCardInventoryTask";
 
 const BatchManagementPage = () => {
-  const { completeCurrentTask } = useProjectInventoryTask();
+  const { completeCurrentTask } = useRootCardInventoryTask();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 

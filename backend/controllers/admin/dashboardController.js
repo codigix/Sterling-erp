@@ -7,7 +7,7 @@ exports.getKPIs = async (req, res) => {
       const [result] = await connection.execute(`
         SELECT
           (SELECT COUNT(*) FROM projects) as total_projects,
-          (SELECT COUNT(*) FROM sales_orders) as total_orders,
+          (SELECT COUNT(*) FROM sales_orders) as total_root_cards,
           (SELECT COUNT(*) FROM users) as total_users
       `);
       res.json(result[0] || {});
@@ -87,7 +87,7 @@ exports.getProduction = async (req, res) => {
         SELECT 
           pp.id, pp.plan_name, pp.status, pp.planned_start_date, pp.planned_end_date,
           pp.estimated_completion_date, pp.bom_id,
-          so.id AS sales_order_id, so.customer
+          so.id AS root_card_id, so.customer
         FROM production_plans pp
         LEFT JOIN sales_orders so ON so.id = pp.sales_order_id
         ORDER BY pp.created_at DESC
@@ -99,7 +99,7 @@ exports.getProduction = async (req, res) => {
         name: plan.plan_name,
         status: plan.status,
         customer: plan.customer,
-        salesOrderId: plan.sales_order_id,
+        rootCardId: plan.root_card_id,
         plannedStart: plan.planned_start_date,
         plannedEnd: plan.planned_end_date,
         estimatedCompletion: plan.estimated_completion_date,

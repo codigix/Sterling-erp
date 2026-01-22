@@ -7,7 +7,7 @@ class ProductionPhaseTracking {
        (sales_order_id, phase_detail_id, sub_task_key, phase_name, sub_task_name, step_number, process_type, status) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        data.salesOrderId, 
+        data.rootCardId, 
         data.phaseDetailId || null, 
         data.subTaskKey, 
         data.phaseName, 
@@ -25,10 +25,10 @@ class ProductionPhaseTracking {
     return rows[0];
   }
 
-  static async findBySalesOrderId(salesOrderId) {
+  static async findByRootCardId(rootCardId) {
     const [rows] = await pool.execute(
       'SELECT * FROM production_phase_tracking WHERE sales_order_id = ? ORDER BY step_number ASC', 
-      [salesOrderId]
+      [rootCardId]
     );
     return rows || [];
   }

@@ -41,7 +41,7 @@ const MyDesignsPage = () => {
     designCategory: "Part",
     priority: "Normal",
     description: "",
-    salesOrderId: null,
+    rootCardId: null,
     selectedRootCardId: null,
   });
 
@@ -56,10 +56,10 @@ const MyDesignsPage = () => {
 
   const fetchProjects = async () => {
     try {
-      const response = await axios.get("/sales/orders");
+      const response = await axios.get("/root-cards");
       const orders = Array.isArray(response.data)
         ? response.data
-        : response.data?.orders || [];
+        : response.data?.rootCards || [];
       const projectsList = orders.map((order) => ({
         value: String(order.id),
         id: String(order.id),
@@ -67,7 +67,7 @@ const MyDesignsPage = () => {
         projectName: order.project_name,
         productName: order.po_number,
         customer: order.customer,
-        salesOrderId: String(order.id),
+        rootCardId: String(order.id),
       }));
       setProjects(projectsList);
 
@@ -83,12 +83,12 @@ const MyDesignsPage = () => {
             jobNo: selected.projectName || "",
             productAssemblyName: selected.productName || "",
             customerName: selected.customer || "",
-            salesOrderId: selected.salesOrderId,
+            rootCardId: selected.rootCardId,
           }));
         }
       }
     } catch (error) {
-      console.error("Failed to fetch projects from sales orders:", error);
+      console.error("Failed to fetch projects from root cards:", error);
     }
   };
 
@@ -187,7 +187,7 @@ const MyDesignsPage = () => {
 
   const handleEdit = async (design) => {
     navigate(
-      `/design-engineer/project-details?projectId=${design.rootCardId}&mode=edit&designId=${design.id}`
+      `/design-engineer/root-cards?projectId=${design.rootCardId}&mode=edit&designId=${design.id}`
     );
   };
 
@@ -240,7 +240,7 @@ const MyDesignsPage = () => {
         priority: formData.priority,
         designEngineerName: "Current User",
         additionalNotes: formData.description,
-        salesOrderId: formData.salesOrderId,
+        rootCardId: formData.rootCardId,
         referenceDocuments: uploadedFiles,
       };
 
@@ -262,7 +262,7 @@ const MyDesignsPage = () => {
         designCategory: "Part",
         priority: "Normal",
         description: "",
-        salesOrderId: null,
+        rootCardId: null,
         selectedRootCardId: null,
       });
     } catch (error) {
@@ -286,7 +286,7 @@ const MyDesignsPage = () => {
         selectedRootCardId: String(selectedRootCardId),
         jobNo: selectedProject.projectName || "",
         productAssemblyName: selectedProject.productName || "",
-        salesOrderId: selectedProject.salesOrderId,
+        rootCardId: selectedProject.rootCardId,
         customerName: selectedProject.customer || "",
       }));
     }
@@ -376,7 +376,7 @@ const MyDesignsPage = () => {
         <div className="flex items-center gap-3">
           {projectId && (
             <button
-              onClick={() => navigate("/design-engineer/project-details")}
+              onClick={() => navigate("/design-engineer/root-cards")}
               className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-400 transition"
               title="Back to Projects"
             >

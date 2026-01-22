@@ -86,7 +86,6 @@ exports.createTask = async (req, res) => {
       description,
       priority = 'medium',
       status = 'pending',
-      salesOrderId = null,
       rootCardId = null
     } = req.body;
     const userId = req.user?.id;
@@ -102,8 +101,7 @@ exports.createTask = async (req, res) => {
       priority,
       status,
       assigned_by: userId,
-      root_card_id: rootCardId,
-      sales_order_id: salesOrderId
+      root_card_id: rootCardId
     };
 
     const result = await DepartmentTask.createDepartmentTask(taskData);

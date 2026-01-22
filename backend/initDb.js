@@ -55,6 +55,14 @@ async function initDatabase() {
         INDEX idx_status (status)
       )`,
 
+      `CREATE TABLE item_groups (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        name VARCHAR(255) UNIQUE NOT NULL,
+        description TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )`,
+
       `CREATE TABLE inventory (
         id INT PRIMARY KEY AUTO_INCREMENT,
         item_code VARCHAR(100) UNIQUE NOT NULL,
@@ -63,6 +71,17 @@ async function initDatabase() {
         specification TEXT,
         unit VARCHAR(50),
         category VARCHAR(100),
+        item_group_id INT,
+        valuation_rate DECIMAL(12, 2) DEFAULT 0.00,
+        selling_rate DECIMAL(12, 2) DEFAULT 0.00,
+        no_of_cavity INT DEFAULT 1,
+        weight_per_unit DECIMAL(12, 4) DEFAULT 0.0000,
+        weight_uom VARCHAR(50),
+        drawing_no VARCHAR(255),
+        revision VARCHAR(50),
+        material_grade VARCHAR(255),
+        ean_barcode VARCHAR(255),
+        gst_percent DECIMAL(5, 2) DEFAULT 0.00,
         quantity INT NOT NULL DEFAULT 0,
         reorder_level INT DEFAULT 0,
         location VARCHAR(255),
@@ -73,9 +92,11 @@ async function initDatabase() {
         qr_code VARCHAR(500),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (vendor_id) REFERENCES vendors(id) ON DELETE SET NULL,
+        FOREIGN KEY (item_group_id) REFERENCES item_groups(id) ON DELETE SET NULL,
         INDEX idx_item_code (item_code),
         INDEX idx_category (category),
-        INDEX idx_quantity (quantity)
+        INDEX idx_quantity (quantity),
+        INDEX idx_item_group (item_group_id)
       )`,
 
       `CREATE TABLE reports (

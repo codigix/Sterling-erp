@@ -1,5 +1,5 @@
 const pool = require('../config/database');
-const ProjectInventoryTask = require('./ProjectInventoryTask');
+const RootCardInventoryTask = require('./RootCardInventoryTask');
 
 class Project {
   static async create(data, externalConnection = null) {
@@ -15,7 +15,7 @@ class Project {
         [
           data.name,
           data.code || null,
-          data.salesOrderId || null,
+          data.rootCardId || null,
           data.clientName || null,
           data.poNumber || null,
           data.status || 'draft',
@@ -28,11 +28,8 @@ class Project {
       );
 
       const projectId = result.insertId;
-      console.log(`[Project] Created project ${projectId}, initializing inventory tasks...`);
+      console.log(`[Project] Created project ${projectId}`);
 
-      await ProjectInventoryTask.initializeProjectTasks(projectId, data.rootCardId || null, connection);
-
-      console.log(`[Project] Inventory tasks initialized for project ${projectId}`);
       if (!externalConnection) {
         connection.release();
       }

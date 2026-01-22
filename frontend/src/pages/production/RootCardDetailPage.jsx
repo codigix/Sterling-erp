@@ -627,43 +627,43 @@ const RootCardDetailPage = () => {
             </Card>
           )}
 
-          {card.salesOrderDetails && (
+          {card.rootCardDetails && (
             <Card className="p-6">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Sales Order Details</h3>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Root Card Details</h3>
               <div className="space-y-4 text-sm">
                 <div>
                   <p className="text-slate-600 dark:text-slate-400 mb-1">PO Number</p>
-                  <p className="font-medium text-slate-900 dark:text-white">{card.salesOrderDetails.poNumber || '-'}</p>
+                  <p className="font-medium text-slate-900 dark:text-white">{card.rootCardDetails.poNumber || '-'}</p>
                 </div>
                 <div>
                   <p className="text-slate-600 dark:text-slate-400 mb-1">Order Date</p>
                   <p className="font-medium text-slate-900 dark:text-white">
-                    {card.salesOrderDetails.orderDate ? new Date(card.salesOrderDetails.orderDate).toLocaleDateString() : '-'}
+                    {card.rootCardDetails.orderDate ? new Date(card.rootCardDetails.orderDate).toLocaleDateString() : '-'}
                   </p>
                 </div>
                 <div>
                   <p className="text-slate-600 dark:text-slate-400 mb-1">Due Date</p>
                   <p className="font-medium text-slate-900 dark:text-white">
-                    {card.salesOrderDetails.dueDate ? new Date(card.salesOrderDetails.dueDate).toLocaleDateString() : '-'}
+                    {card.rootCardDetails.dueDate ? new Date(card.rootCardDetails.dueDate).toLocaleDateString() : '-'}
                   </p>
                 </div>
                 <div>
                   <p className="text-slate-600 dark:text-slate-400 mb-1">Total Amount</p>
                   <p className="font-medium text-slate-900 dark:text-white">
-                    {card.salesOrderDetails.total ? `${card.salesOrderDetails.currency || 'INR'} ${card.salesOrderDetails.total}` : '-'}
+                    {card.rootCardDetails.total ? `${card.rootCardDetails.currency || 'INR'} ${card.rootCardDetails.total}` : '-'}
                   </p>
                 </div>
                 <div>
                   <p className="text-slate-600 dark:text-slate-400 mb-1">Order Status</p>
                   <p className="font-medium text-slate-900 dark:text-white">
-                    {card.salesOrderDetails.status ? card.salesOrderDetails.status.replace('_', ' ').toUpperCase() : '-'}
+                    {card.rootCardDetails.status ? card.rootCardDetails.status.replace('_', ' ').toUpperCase() : '-'}
                   </p>
                 </div>
-                {card.salesOrderDetails.items && card.salesOrderDetails.items.length > 0 && (
+                {card.rootCardDetails.items && card.rootCardDetails.items.length > 0 && (
                   <div>
                     <p className="text-slate-600 dark:text-slate-400 mb-2">Items</p>
                     <div className="space-y-1">
-                      {card.salesOrderDetails.items.map((item, idx) => (
+                      {card.rootCardDetails.items.map((item, idx) => (
                         <div key={idx} className="text-xs text-slate-700 dark:text-slate-300">
                           {item.name || item.description} - Qty: {item.quantity || item.qty}
                         </div>

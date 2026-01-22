@@ -117,18 +117,18 @@ const CreateProjectPage = () => {
   const [loadingProject, setLoadingProject] = useState(false);
 
   useEffect(() => {
-    const salesOrderId = searchParams.get("salesOrderId");
-    if (salesOrderId) {
-      fetchProjectInfoBySalesOrder(salesOrderId);
+    const rootCardId = searchParams.get("rootCardId") || searchParams.get("salesOrderId");
+    if (rootCardId) {
+      fetchProjectInfoByRootCard(rootCardId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
-  const fetchProjectInfoBySalesOrder = async (salesOrderId) => {
+  const fetchProjectInfoByRootCard = async (rootCardId) => {
     setLoadingProject(true);
     try {
-      if (!salesOrderId) {
-        console.warn("No salesOrderId provided");
+      if (!rootCardId) {
+        console.warn("No rootCardId provided");
         setLoadingProject(false);
         return;
       }
@@ -137,7 +137,7 @@ const CreateProjectPage = () => {
 
       try {
         const response = await axios.get(
-          `/production/root-cards?salesOrderId=${salesOrderId}`
+          `/production/root-cards?rootCardId=${rootCardId}`
         );
         if (Array.isArray(response.data)) {
           rootCard = response.data[0];
@@ -145,7 +145,7 @@ const CreateProjectPage = () => {
           rootCard = response.data;
         }
       } catch (error) {
-        console.log("Could not fetch root card by sales order:", error.message);
+        console.log("Could not fetch root card:", error.message);
       }
 
       if (rootCard) {
@@ -176,7 +176,7 @@ const CreateProjectPage = () => {
       } else {
         setProjectData((prev) => ({
           ...prev,
-          rootCardId: String(salesOrderId),
+          rootCardId: String(rootCardId),
           projectName: searchParams.get("projectName") || "",
           poNumber: searchParams.get("poNumber") || "",
           clientName: searchParams.get("customer") || "",

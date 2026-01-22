@@ -8,7 +8,7 @@ const TaskDetailPage = () => {
   const navigate = useNavigate();
 
   const taskPageMap = {
-    'Enter Project Details': '/design-engineer/project-details',
+    'Enter Project Details': '/design-engineer/root-cards',
     'Prepare Design Documents': '/design-engineer/documents/designs',
     'Create and Validate BOM': '/design-engineer/bom/create',
     'Submit Design for Review': '/design-engineer/reviews/pending',

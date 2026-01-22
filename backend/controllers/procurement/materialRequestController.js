@@ -3,7 +3,7 @@ const Vendor = require('../../models/Vendor');
 
 exports.createMaterialRequest = async (req, res) => {
   const {
-    salesOrderId,
+    rootCardId,
     productionPlanId,
     materialName,
     materialCode,
@@ -15,9 +15,9 @@ exports.createMaterialRequest = async (req, res) => {
     remarks
   } = req.body;
 
-  if (!salesOrderId || !materialName || !quantity) {
+  if (!rootCardId || !materialName || !quantity) {
     return res.status(400).json({
-      message: 'Sales order ID, material name, and quantity are required'
+      message: 'Root card ID, material name, and quantity are required'
     });
   }
 
@@ -25,7 +25,7 @@ exports.createMaterialRequest = async (req, res) => {
     const createdBy = typeof req.user?.id === 'number' ? req.user.id : null;
 
     const materialRequestId = await MaterialRequest.create({
-      salesOrderId,
+      rootCardId,
       productionPlanId,
       materialName: materialName.trim(),
       materialCode: materialCode || null,
@@ -73,11 +73,11 @@ exports.getMaterialRequest = async (req, res) => {
   }
 };
 
-exports.getMaterialRequestsBySalesOrder = async (req, res) => {
-  const { salesOrderId } = req.params;
+exports.getMaterialRequestsByRootCard = async (req, res) => {
+  const { rootCardId } = req.params;
 
   try {
-    const materialRequests = await MaterialRequest.findBySalesOrder(salesOrderId);
+    const materialRequests = await MaterialRequest.findByRootCardId(rootCardId);
 
     res.json({
       materialRequests,
@@ -90,14 +90,14 @@ exports.getMaterialRequestsBySalesOrder = async (req, res) => {
 };
 
 exports.getAllMaterialRequests = async (req, res) => {
-  const { status, priority, search, salesOrderId } = req.query;
+  const { status, priority, search, rootCardId } = req.query;
 
   try {
     const materialRequests = await MaterialRequest.findAll({
       status,
       priority,
       search,
-      salesOrderId
+      rootCardId
     });
 
     const stats = await MaterialRequest.getStats();

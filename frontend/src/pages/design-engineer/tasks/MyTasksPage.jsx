@@ -107,10 +107,10 @@ const MyTasksPage = () => {
   };
 
   const getTaskNavigationUrl = (task) => {
-    const salesOrderId = task.salesOrder?.id || task.rootCard?.id || "";
+    const rootCardId = task.salesOrder?.id || task.rootCard?.id || "";
     const baseParams = `taskId=${task.id}&taskTitle=${encodeURIComponent(
       task.title
-    )}&salesOrderId=${salesOrderId}`;
+    )}&rootCardId=${rootCardId}`;
 
     const taskTitle = (task.title || "").toLowerCase();
 
@@ -120,7 +120,7 @@ const MyTasksPage = () => {
       taskTitle.includes("project details") ||
       taskTitle.includes("enter project")
     ) {
-      return `/design-engineer/project-details?salesOrderId=${salesOrderId}`;
+      return `/design-engineer/root-cards?rootCardId=${rootCardId}`;
     }
     // Step 2: Prepare Design Documents
     else if (
@@ -163,7 +163,7 @@ const MyTasksPage = () => {
     }
     // Fallback: Default to project details
     else {
-      return `/design-engineer/project-details?salesOrderId=${salesOrderId}`;
+      return `/design-engineer/root-cards?rootCardId=${rootCardId}`;
     }
   };
 

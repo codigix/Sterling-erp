@@ -56,62 +56,68 @@ export const taskService = {
 
   getProjectIdFromParams: () => {
     const params = new URLSearchParams(window.location.search);
-    const projectId = params.get("projectId");
+    const projectId = params.get("projectId") || params.get("rootCardId");
     return projectId ? parseInt(projectId, 10) : null;
   },
 
-  getProjectInventoryTaskParams: () => {
+  getRootCardIdFromParams: () => {
     const params = new URLSearchParams(window.location.search);
+    const rootCardId = params.get("rootCardId") || params.get("projectId");
+    return rootCardId ? parseInt(rootCardId, 10) : null;
+  },
+
+  getRootCardInventoryTaskParams: () => {
+    const params = new URLSearchParams(window.location.search);
+    const rootCardId = params.get("rootCardId") || params.get("projectId");
     return {
       taskId: params.get("taskId") ? parseInt(params.get("taskId"), 10) : null,
-      projectId: params.get("projectId") ? parseInt(params.get("projectId"), 10) : null,
-      rootCardId: params.get("rootCardId") ? parseInt(params.get("rootCardId"), 10) : null,
+      rootCardId: rootCardId ? parseInt(rootCardId, 10) : null,
       taskTitle: params.get("taskTitle"),
     };
   },
 
-  completeProjectInventoryTask: async (taskId, projectId, notes = "") => {
+  completeRootCardInventoryTask: async (taskId, rootCardId, notes = "") => {
     try {
-      if (!taskId || !projectId) {
+      if (!taskId || !rootCardId) {
         return null;
       }
       const response = await axios.patch(
-        `/inventory/project-tasks/project/${projectId}/task/${taskId}/complete`,
+        `/inventory/root-card-tasks/root-card/${rootCardId}/task/${taskId}/complete`,
         { notes }
       );
       return response.data;
     } catch (error) {
-      console.error("Error completing project inventory task:", error);
+      console.error("Error completing root card inventory task:", error);
       throw error;
     }
   },
 
-  updateProjectInventoryTaskStatus: async (taskId, projectId, status) => {
+  updateRootCardInventoryTaskStatus: async (taskId, rootCardId, status) => {
     try {
-      if (!taskId || !projectId) {
+      if (!taskId || !rootCardId) {
         return null;
       }
       if (!["pending", "in_progress", "completed"].includes(status)) {
         throw new Error("Invalid status value");
       }
       const response = await axios.patch(
-        `/inventory/project-tasks/project/${projectId}/task/${taskId}/status`,
+        `/inventory/root-card-tasks/root-card/${rootCardId}/task/${taskId}/status`,
         { status }
       );
       return response.data;
     } catch (error) {
-      console.error("Error updating project inventory task status:", error);
+      console.error("Error updating root card inventory task status:", error);
       throw error;
     }
   },
 
-  completeProjectTaskIfPresent: async (taskId, notes = "") => {
-    const projectId = taskService.getProjectIdFromParams();
-    if (projectId && taskId) {
+  completeRootCardTaskIfPresent: async (taskId, notes = "") => {
+    const rootCardId = taskService.getRootCardIdFromParams();
+    if (rootCardId && taskId) {
       try {
-        return await taskService.completeProjectInventoryTask(taskId, projectId, notes);
+        return await taskService.completeRootCardInventoryTask(taskId, rootCardId, notes);
       } catch (error) {
-        console.error("Error completing project task:", error);
+        console.error("Error completing root card task:", error);
         return null;
       }
     }
@@ -119,13 +125,14 @@ export const taskService = {
   },
 
   isNavigatingFromDepartmentTasks: () => {
-    const projectId = taskService.getProjectIdFromParams();
-    return projectId !== null;
+    const rootCardId = taskService.getRootCardIdFromParams();
+    return rootCardId !== null;
   },
 
   autoCompleteTaskByAction: async (taskId, actionType) => {
     if (!taskId) return null;
     try {
+      const rootCardId = taskService.getRootCardIdFromParams();
       const taskTitle = taskService.getTaskTitleFromParams() || "";
       const normalizedTitle = taskTitle.toLowerCase();
       const normalizedAction = (actionType || "").toLowerCase();
@@ -150,8 +157,14 @@ export const taskService = {
         normalizedTitle.includes(normalizedAction);
 
       if (shouldComplete) {
+        if (rootCardId) {
+          return await taskService.completeRootCardInventoryTask(taskId, rootCardId);
+        }
         return await taskService.completeTask(taskId);
       } else {
+        if (rootCardId) {
+          return await taskService.updateRootCardInventoryTaskStatus(taskId, rootCardId, "in_progress");
+        }
         return await taskService.markTaskInProgress(taskId);
       }
     } catch (error) {

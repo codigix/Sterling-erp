@@ -31,10 +31,10 @@ const PurchaseOrderPage = () => {
   const [purchaseOrders, setPurchaseOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [projects, setProjects] = useState([]);
+  const [rootCards, setRootCards] = useState([]);
   const [receivedQuotes, setReceivedQuotes] = useState([]);
   const [stats, setStats] = useState(null);
-  const [selectedProject, setSelectedProject] = useState("");
+  const [selectedRootCardId, setSelectedRootCardId] = useState("");
   const [selectedQuote, setSelectedQuote] = useState("");
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
@@ -64,29 +64,29 @@ const PurchaseOrderPage = () => {
       setTaskId(extractedTaskId);
     }
     fetchPurchaseOrders();
-    fetchProjects();
+    fetchRootCards();
     fetchStats();
   }, []);
 
   useEffect(() => {
-    if (location.state?.quotation && projects.length > 0) {
+    if (location.state?.quotation && rootCards.length > 0) {
       const { quotation } = location.state;
-      // Pre-select project (sales order)
-      if (quotation.sales_order_id) {
-        setSelectedProject(quotation.sales_order_id);
+      // Pre-select root card
+      if (quotation.root_card_id) {
+        setSelectedRootCardId(quotation.root_card_id);
       }
       setShowCreateModal(true);
     }
-  }, [location.state, projects]);
+  }, [location.state, rootCards]);
 
   useEffect(() => {
-    if (selectedProject) {
-      fetchReceivedQuotes(selectedProject);
+    if (selectedRootCardId) {
+      fetchReceivedQuotes(selectedRootCardId);
     } else {
       setReceivedQuotes([]);
       setSelectedQuote("");
     }
-  }, [selectedProject]);
+  }, [selectedRootCardId]);
 
   useEffect(() => {
     // Select the quotation after receivedQuotes are loaded
@@ -119,21 +119,21 @@ const PurchaseOrderPage = () => {
     }
   };
 
-  const fetchProjects = async () => {
+  const fetchRootCards = async () => {
     try {
-      const response = await axios.get("/sales/requirements");
-      setProjects(response.data.data || response.data || []);
+      const response = await axios.get("/root-cards/requirements");
+      setRootCards(response.data.data || response.data || []);
     } catch (error) {
-      console.error("Error fetching projects:", error);
+      console.error("Error fetching root cards:", error);
     }
   };
 
-  const fetchReceivedQuotes = async (projectId) => {
+  const fetchReceivedQuotes = async (rootCardId) => {
     try {
       const response = await axios.get(
         "/procurement/purchase-orders/quotes/received",
         {
-          params: { sales_order_id: projectId },
+          params: { root_card_id: rootCardId },
         }
       );
       const quotes = (response.data || []).map((q) => ({
@@ -243,7 +243,7 @@ const PurchaseOrderPage = () => {
       }
 
       setShowCreateModal(false);
-      setSelectedProject("");
+      setSelectedRootCardId("");
       setSelectedQuote("");
       setFormData({
         expected_delivery_date: "",
@@ -526,110 +526,7 @@ const PurchaseOrderPage = () => {
             <Plus size={18} />
             Create PO from Quote
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 text-xs:5001/api/sales/material-requirements/9:1  Failed to load resource: the server responded with a status of 404 (Not Found)Understand this error
-CheckProjectMaterialRequirementsModal.jsx?t=1767173544562:44 Error fetching material requirements: AxiosError
-fetchMaterialRequirements @ CheckProjectMaterialRequirementsModal.jsx?t=1767173544562:44Understand this error
-:5001/api/auth/login:1  Failed to load resource: the server responded with a status of 401 (Unauthorized)Understand this error
-ProjectDetailsPage.jsx:201 Sales orders response: Object
-ProjectDetailsPage.jsx:201 Sales orders response: Object
-ProjectDetailsPage.jsx:201 Sales orders response: Object
-ProjectDetailsPage.jsx:201 Sales orders response: Object
-:5001/api/auth/login:1  Failed to load resource: the server responded with a status of 401 (Unauthorized)Understand this error
-status:1  Failed to load resource: the server responded with a status of 500 (Internal Server Error)Understand this error
-QuotationsPage.jsx?t=1767175575292:463 Error sending email: AxiosError
-submitEmail @ QuotationsPage.jsx?t=1767175575292:463Understand this error
-QuotationsPage.jsx:520  PATCH http://localhost:5001/api/inventory/quotations/18/status 500 (Internal Server Error)
-dispatchXhrRequest @ axios.js?v=5b1d54ee:1696
-xhr @ axios.js?v=5b1d54ee:1573
-dispatchRequest @ axios.js?v=5b1d54ee:2107
-Promise.then
-_request @ axios.js?v=5b1d54ee:2310
-request @ axios.js?v=5b1d54ee:2219
-httpMethod @ axios.js?v=5b1d54ee:2356
-wrap @ axios.js?v=5b1d54ee:8
-submitEmail @ QuotationsPage.jsx:520
-await in submitEmail
-executeDispatch @ react-dom_client.js?v=5b1d54ee:13622
-runWithFiberInDEV @ react-dom_client.js?v=5b1d54ee:997
-processDispatchQueue @ react-dom_client.js?v=5b1d54ee:13658
-(anonymous) @ react-dom_client.js?v=5b1d54ee:14071
-batchedUpdates$1 @ react-dom_client.js?v=5b1d54ee:2626
-dispatchEventForPluginEventSystem @ react-dom_client.js?v=5b1d54ee:13763
-dispatchEvent @ react-dom_client.js?v=5b1d54ee:16784
-dispatchDiscreteEvent @ react-dom_client.js?v=5b1d54ee:16765
-<form>
-exports.jsxDEV @ react_jsx-dev-runtime.js?v=5b1d54ee:247
-QuotationsPage @ QuotationsPage.jsx:1703
-react_stack_bottom_frame @ react-dom_client.js?v=5b1d54ee:18509
-renderWithHooksAgain @ react-dom_client.js?v=5b1d54ee:5729
-renderWithHooks @ react-dom_client.js?v=5b1d54ee:5665
-updateFunctionComponent @ react-dom_client.js?v=5b1d54ee:7475
-beginWork @ react-dom_client.js?v=5b1d54ee:8525
-runWithFiberInDEV @ react-dom_client.js?v=5b1d54ee:997
-performUnitOfWork @ react-dom_client.js?v=5b1d54ee:12561
-workLoopSync @ react-dom_client.js?v=5b1d54ee:12424
-renderRootSync @ react-dom_client.js?v=5b1d54ee:12408
-performWorkOnRoot @ react-dom_client.js?v=5b1d54ee:11766
-performSyncWorkOnRoot @ react-dom_client.js?v=5b1d54ee:13517
-flushSyncWorkAcrossRoots_impl @ react-dom_client.js?v=5b1d54ee:13414
-processRootScheduleInMicrotask @ react-dom_client.js?v=5b1d54ee:13437
-(anonymous) @ react-dom_client.js?v=5b1d54ee:13531Understand this error
-QuotationsPage.jsx:528 Error sending email: AxiosError {message: 'Request failed with status code 500', name: 'AxiosError', code: 'ERR_BAD_RESPONSE', config: {…}, request: XMLHttpRequest, …}
-submitEmail @ QuotationsPage.jsx:528
-await in submitEmail
-executeDispatch @ react-dom_client.js?v=5b1d54ee:13622
-runWithFiberInDEV @ react-dom_client.js?v=5b1d54ee:997
-processDispatchQueue @ react-dom_client.js?v=5b1d54ee:13658
-(anonymous) @ react-dom_client.js?v=5b1d54ee:14071
-batchedUpdates$1 @ react-dom_client.js?v=5b1d54ee:2626
-dispatchEventForPluginEventSystem @ react-dom_client.js?v=5b1d54ee:13763
-dispatchEvent @ react-dom_client.js?v=5b1d54ee:16784
-dispatchDiscreteEvent @ react-dom_client.js?v=5b1d54ee:16765
-<form>
-exports.jsxDEV @ react_jsx-dev-runtime.js?v=5b1d54ee:247
-QuotationsPage @ QuotationsPage.jsx:1703
-react_stack_bottom_frame @ react-dom_client.js?v=5b1d54ee:18509
-renderWithHooksAgain @ react-dom_client.js?v=5b1d54ee:5729
-renderWithHooks @ react-dom_client.js?v=5b1d54ee:5665
-updateFunctionComponent @ react-dom_client.js?v=5b1d54ee:7475
-beginWork @ react-dom_client.js?v=5b1d54ee:8525
-runWithFiberInDEV @ react-dom_client.js?v=5b1d54ee:997
-performUnitOfWork @ react-dom_client.js?v=5b1d54ee:12561
-workLoopSync @ react-dom_client.js?v=5b1d54ee:12424
-renderRootSync @ react-dom_client.js?v=5b1d54ee:12408
-performWorkOnRoot @ react-dom_client.js?v=5b1d54ee:11766
-performSyncWorkOnRoot @ react-dom_client.js?v=5b1d54ee:13517
-flushSyncWorkAcrossRoots_impl @ react-dom_client.js?v=5b1d54ee:13414
-processRootScheduleInMicrotask @ react-dom_client.js?v=5b1d54ee:13437
-(anonymous) @ react-dom_client.js?v=5b1d54ee:13531Understand this error
-QuotationsPage.jsx:906 Uncaught ReferenceError: MessageSquare is not defined
-    at QuotationsPage.jsx:906:30
-    at Array.map (<anonymous>)
-    at QuotationsPage (QuotationsPage.jsx:814:29)
-    at Object.react_stack_bottom_frame (react-dom_client.js?v=5b1d54ee:18509:20)
-    at renderWithHooks (react-dom_client.js?v=5b1d54ee:5654:24)
-    at updateFunctionComponent (react-dom_client.js?v=5b1d54ee:7475:21)
-    at beginWork (react-dom_client.js?v=5b1d54ee:8525:20)
-    at runWithFiberInDEV (react-dom_client.js?v=5b1d54ee:997:72)
-    at performUnitOfWork (react-dom_client.js?v=5b1d54ee:12561:98)
-    at workLoopSync (react-dom_client.js?v=5b1d54ee:12424:43)
-(anonymous) @ QuotationsPage.jsx:906
-QuotationsPage @ QuotationsPage.jsx:814
-react_stack_bottom_frame @ react-dom_client.js?v=5b1d54ee:18509
-renderWithHooks @ react-dom_client.js?v=5b1d54ee:5654
-updateFunctionComponent @ react-dom_client.js?v=5b1d54ee:7475
-beginWork @ react-dom_client.js?v=5b1d54ee:8525
-runWithFiberInDEV @ react-dom_client.js?v=5b1d54ee:997
-performUnitOfWork @ react-dom_client.js?v=5b1d54ee:12561
-workLoopSync @ react-dom_client.js?v=5b1d54ee:12424
-renderRootSync @ react-dom_client.js?v=5b1d54ee:12408
-performWorkOnRoot @ react-dom_client.js?v=5b1d54ee:11827
-performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5b1d54ee:13505
-performWorkUntilDeadline @ react-dom_client.js?v=5b1d54ee:36Understand this error
-react-dom_client.js?v=5b1d54ee:6966 An error occurred in the <QuotationsPage> component.
-
-Consider adding an error boundary to your tree to customize error handling behavior.
-Visit https://react.dev/link/error-boundaries to learn more about error boundaries. bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium">
+          <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium">
             <Download size={18} />
             Export Report
           </button>
@@ -961,24 +858,24 @@ Visit https://react.dev/link/error-boundaries to learn more about error boundari
             <form onSubmit={handleCreatePO} className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  Select Project <span className="text-red-500">*</span>
+                  Select Root Card <span className="text-red-500">*</span>
                 </label>
                 <select
                   required
-                  value={selectedProject}
-                  onChange={(e) => setSelectedProject(e.target.value)}
+                  value={selectedRootCardId}
+                  onChange={(e) => setSelectedRootCardId(e.target.value)}
                   className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="">Select a project...</option>
-                  {projects.map((project) => (
-                    <option key={project.id} value={project.salesOrderId}>
-                      {project.projectName} ({project.poNumber})
+                  <option value="">Select a root card...</option>
+                  {rootCards.map((rootCard) => (
+                    <option key={rootCard.id} value={rootCard.rootCardId}>
+                      {rootCard.projectName} ({rootCard.poNumber})
                     </option>
                   ))}
                 </select>
               </div>
 
-              {selectedProject && (
+              {selectedRootCardId && (
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                     Select Quotation <span className="text-red-500">*</span>

@@ -199,7 +199,7 @@ const ProcurementTasksPage = () => {
                     PR Number
                   </th>
                   <th className="px-6 py-3 text-left text-sm font-semibold">
-                    Project
+                    Root Card
                   </th>
                   <th className="px-6 py-3 text-center text-sm font-semibold">
                     Items

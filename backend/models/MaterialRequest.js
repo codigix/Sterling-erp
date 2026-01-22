@@ -11,7 +11,7 @@ class MaterialRequest {
           quantity, unit, specification, required_date, priority, status, created_by, remarks)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-          data.salesOrderId,
+          data.rootCardId,
           data.productionPlanId || null,
           data.materialName,
           data.materialCode || null,
@@ -51,13 +51,13 @@ class MaterialRequest {
     return rows[0] || null;
   }
 
-  static async findBySalesOrder(salesOrderId) {
+  static async findByRootCardId(rootCardId) {
     const [rows] = await pool.execute(
       `SELECT mr.* 
        FROM material_requests mr
        WHERE mr.sales_order_id = ?
        ORDER BY mr.created_at DESC`,
-      [salesOrderId]
+      [rootCardId]
     );
     return rows || [];
   }
@@ -70,9 +70,9 @@ class MaterialRequest {
                  WHERE 1=1`;
     const params = [];
 
-    if (filters.salesOrderId) {
+    if (filters.rootCardId) {
       query += ' AND mr.sales_order_id = ?';
-      params.push(filters.salesOrderId);
+      params.push(filters.rootCardId);
     }
 
     if (filters.status && filters.status !== 'all') {

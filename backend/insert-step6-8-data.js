@@ -2,7 +2,7 @@ const pool = require('./config/database');
 
 async function insertTestData() {
   try {
-    const salesOrderId = 6;
+    const rootCardId = 6;
     
     console.log('🔧 Inserting test data for Steps 6 and 8...\n');
 
@@ -25,7 +25,7 @@ async function insertTestData() {
       service_support = VALUES(service_support),
       updated_at = CURRENT_TIMESTAMP
     `, [
-      salesOrderId,
+      rootCardId,
       'ISO 9001:2015, DRDO standards',
       'AWS D1.1, EN 287',
       'Ra 1.6, Polished',
@@ -54,7 +54,7 @@ async function insertTestData() {
       production_supervisor = VALUES(production_supervisor),
       updated_at = CURRENT_TIMESTAMP
     `, [
-      salesOrderId,
+      rootCardId,
       'Sanika Mote - sanikamote@gmail.com',
       'Yes, factory assembly required',
       'After delivery on site',
@@ -67,8 +67,8 @@ async function insertTestData() {
 
     // Verify
     console.log('🔍 Verifying insertion...');
-    const [qc] = await pool.execute('SELECT * FROM quality_check_details WHERE sales_order_id = ?', [salesOrderId]);
-    const [delivery] = await pool.execute('SELECT * FROM delivery_details WHERE sales_order_id = ?', [salesOrderId]);
+    const [qc] = await pool.execute('SELECT * FROM quality_check_details WHERE sales_order_id = ?', [rootCardId]);
+    const [delivery] = await pool.execute('SELECT * FROM delivery_details WHERE sales_order_id = ?', [rootCardId]);
     
     console.log(`✅ Step 6: ${qc.length > 0 ? 'FOUND in database' : 'NOT FOUND'}`);
     console.log(`✅ Step 8: ${delivery.length > 0 ? 'FOUND in database' : 'NOT FOUND'}`);

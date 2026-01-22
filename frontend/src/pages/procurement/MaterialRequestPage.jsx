@@ -35,7 +35,7 @@ const MaterialRequestPage = () => {
   const [showVendorModal, setShowVendorModal] = useState(false);
 
   const [formData, setFormData] = useState({
-    salesOrderId: "",
+    rootCardId: "",
     materialName: "",
     materialCode: "",
     quantity: "",
@@ -110,11 +110,11 @@ const MaterialRequestPage = () => {
     e.preventDefault();
 
     if (
-      !formData.salesOrderId ||
+      !formData.rootCardId ||
       !formData.materialName ||
       !formData.quantity
     ) {
-      setError("Sales Order ID, material name, and quantity are required");
+      setError("Root Card ID, material name, and quantity are required");
       return;
     }
 
@@ -125,7 +125,7 @@ const MaterialRequestPage = () => {
       await axios.post(
         "/procurement/material-requests",
         {
-          salesOrderId: Number(formData.salesOrderId),
+          rootCardId: Number(formData.rootCardId),
           materialName: formData.materialName.trim(),
           materialCode: formData.materialCode || null,
           quantity: Number(formData.quantity),
@@ -139,7 +139,7 @@ const MaterialRequestPage = () => {
       );
 
       setFormData({
-        salesOrderId: "",
+        rootCardId: "",
         materialName: "",
         materialCode: "",
         quantity: "",
@@ -319,14 +319,14 @@ const MaterialRequestPage = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Sales Order ID
+                  Root Card ID
                 </label>
                 <input
                   type="number"
-                  name="salesOrderId"
-                  value={formData.salesOrderId}
+                  name="rootCardId"
+                  value={formData.rootCardId}
                   onChange={handleFormChange}
-                  placeholder="Enter sales order ID"
+                  placeholder="Enter root card ID"
                   className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg"
                   required
                 />

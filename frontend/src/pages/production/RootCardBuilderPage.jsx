@@ -275,10 +275,10 @@ const RootCardBuilderPage = () => {
                       {card.projectDetails?.code || card.project_code || `-`}
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
-                      {card.salesOrderDetails?.customer || card.customer_name || `-`}
+                      {card.rootCardDetails?.customer || card.customer_name || `-`}
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
-                      {card.salesOrderDetails?.poNumber || `-`}
+                      {card.rootCardDetails?.poNumber || `-`}
                     </td>
                     <td className="px-6 py-4 text-sm">
                       <div className="flex flex-wrap gap-1">
@@ -297,7 +297,7 @@ const RootCardBuilderPage = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
-                      {card.salesOrderDetails?.total ? `${card.salesOrderDetails?.currency || 'INR'} ${card.salesOrderDetails?.total}` : `-`}
+                      {card.rootCardDetails?.total ? `${card.rootCardDetails?.currency || 'INR'} ${card.rootCardDetails?.total}` : `-`}
                     </td>
                     <td className="px-6 py-4">
                       <Badge className={`inline-block text-xs font-semibold px-3 py-1.5 rounded-full ${getStatusColor(card.status)}`}>

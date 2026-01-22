@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
+import axios from "../../utils/api";
 import {
   Wrench,
   TrendingUp,
@@ -51,11 +52,21 @@ const DesignEngineerDashboard = () => {
     try {
       setLoading(true);
       setError(null);
-      setDepartmentTasks([]);
+      
+      const response = await axios.get("/employee/tasks?type=design_engineering");
+      const tasks = response.data.tasks || [];
+      
+      setDepartmentTasks(tasks);
+      
+      const pendingCount = tasks.filter(t => t.status === 'pending').length;
+      const inProgressCount = tasks.filter(t => t.status === 'in_progress').length;
+      const completedCount = tasks.filter(t => t.status === 'completed').length;
+      const criticalCount = tasks.filter(t => t.priority === 'critical' && t.status !== 'completed').length;
+
       setStats([
         {
-          title: "Assigned Projects",
-          value: "0",
+          title: "Root Cards",
+          value: tasks.length.toString(),
           change: "+0",
           positive: true,
           icon: Wrench,
@@ -65,7 +76,7 @@ const DesignEngineerDashboard = () => {
         },
         {
           title: "Pending Tasks",
-          value: "0",
+          value: pendingCount.toString(),
           change: "+0",
           positive: true,
           icon: Clock,
@@ -75,7 +86,7 @@ const DesignEngineerDashboard = () => {
         },
         {
           title: "Completed",
-          value: "0",
+          value: completedCount.toString(),
           change: "+0",
           positive: true,
           icon: CheckCircle,
@@ -85,7 +96,7 @@ const DesignEngineerDashboard = () => {
         },
         {
           title: "Critical Priority",
-          value: "0",
+          value: criticalCount.toString(),
           change: "None",
           positive: true,
           icon: AlertCircle,
@@ -341,7 +352,7 @@ const DesignEngineerDashboard = () => {
               Assigned Root Cards
             </h3>
             <Link
-              to="/design-engineer/department-tasks"
+              to="/design-engineer/root-cards"
               className="text-sm text-blue-600 dark:text-blue-400 font-semibold hover:text-blue-700"
             >
               View All →

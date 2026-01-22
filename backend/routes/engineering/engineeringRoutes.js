@@ -38,7 +38,7 @@ router.patch('/documents/:id/approve', engineeringController.approveDocument);
 
 router.post('/bom/generate', engineeringController.generateBOM);
 router.get('/bom/all', engineeringController.getAllBOMs);
-router.get('/bom', engineeringController.getSalesOrderBOMs);
+router.get('/bom', engineeringController.getRootCardBOMs);
 router.patch('/bom/:id/line-items/:itemId', engineeringController.updateLineItem);
 router.delete('/bom/:id/line-items/:itemId', engineeringController.deleteLineItem);
 router.get('/bom/:id', engineeringController.getBOMDetails);

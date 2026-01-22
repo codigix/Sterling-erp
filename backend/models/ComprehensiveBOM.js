@@ -14,7 +14,6 @@ class ComprehensiveBOM {
         description,
         isActive,
         isDefault,
-        salesOrderId,
         projectId,
         rootCardId,
         createdBy
@@ -23,12 +22,12 @@ class ComprehensiveBOM {
       const [result] = await conn.execute(
         `INSERT INTO bill_of_materials 
         (product_name, item_code, item_group, quantity, uom, revision, description, 
-         is_active, is_default, sales_order_id, project_id, root_card_id, created_by, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft')`,
+         is_active, is_default, project_id, root_card_id, created_by, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft')`,
         [
           productName, itemCode, itemGroup, quantity, uom, revision || 1, 
           description, isActive ? 1 : 0, isDefault ? 1 : 0, 
-          salesOrderId || null, projectId || null, rootCardId || null, createdBy
+          projectId || null, rootCardId || null, createdBy
         ]
       );
 
@@ -228,7 +227,6 @@ class ComprehensiveBOM {
         description,
         isActive,
         isDefault,
-        salesOrderId,
         projectId,
         rootCardId,
         status
@@ -238,13 +236,13 @@ class ComprehensiveBOM {
         `UPDATE bill_of_materials 
         SET product_name = ?, item_code = ?, item_group = ?, quantity = ?, 
             uom = ?, revision = ?, description = ?, is_active = ?, 
-            is_default = ?, sales_order_id = ?, project_id = ?, root_card_id = ?,
+            is_default = ?, project_id = ?, root_card_id = ?,
             status = ?
         WHERE id = ?`,
         [
           productName, itemCode, itemGroup, quantity, uom, revision, 
           description, isActive ? 1 : 0, isDefault ? 1 : 0, 
-          salesOrderId || null, projectId || null, rootCardId || null,
+          projectId || null, rootCardId || null,
           status || 'draft', id
         ]
       );

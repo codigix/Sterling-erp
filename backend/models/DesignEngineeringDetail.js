@@ -1,5 +1,5 @@
 const pool = require('../config/database');
-const { parseJsonField, stringifyJsonField } = require('../utils/salesOrderHelpers');
+const { parseJsonField, stringifyJsonField, normalizeStepData, ensureArray } = require('../utils/rootCardHelpers');
 
 class DesignEngineeringDetail {
   static async createTable() {
@@ -26,25 +26,42 @@ class DesignEngineeringDetail {
     `);
   }
 
-  static async findBySalesOrderId(salesOrderId) {
+  static async findByRootCardId(rootCardId) {
     const [rows] = await pool.execute(
       `SELECT * FROM design_engineering_details WHERE sales_order_id = ?`,
-      [salesOrderId]
+      [rootCardId]
     );
     return rows[0] ? this.formatRow(rows[0]) : null;
   }
 
   static async create(data) {
+    const normalized = normalizeStepData(data, {
+      documents: 'designEngineering.attachments.documents',
+      drawings3D: 'designEngineering.attachments.drawings',
+      designStatus: 'designEngineering.designStatus',
+      bomData: 'designEngineering.bomData',
+      specifications: 'designEngineering.specifications',
+      designNotes: 'designEngineering.designNotes'
+    });
+
+    // Fallback to direct keys if designEngineering prefix not present
+    if (normalized.documents === undefined) normalized.documents = data.attachments?.documents || data.documents;
+    if (normalized.drawings3D === undefined) normalized.drawings3D = data.attachments?.drawings || data.drawings3D;
+    if (normalized.designStatus === undefined) normalized.designStatus = data.designStatus || data.generalDesignInfo?.designStatus;
+    if (normalized.bomData === undefined) normalized.bomData = data.bomData || data.bomSheet;
+    if (normalized.specifications === undefined) normalized.specifications = data.specifications || data.productSpecification;
+    if (normalized.designNotes === undefined) normalized.designNotes = data.designNotes || data.commentsNotes?.internalDesignNotes;
+
     const params = [
-      data.salesOrderId,
-      stringifyJsonField(data.documents) || JSON.stringify([]),
-      data.designStatus || 'draft',
-      stringifyJsonField(data.bomData) || null,
-      stringifyJsonField(data.drawings3D) || null,
-      stringifyJsonField(data.specifications) || null,
-      data.designNotes || null,
-      data.reviewedBy || null,
-      data.approvalComments || null
+      data.rootCardId || data.salesOrderId || data.sales_order_id,
+      stringifyJsonField(ensureArray(normalized.documents)),
+      normalized.designStatus || 'draft',
+      stringifyJsonField(normalized.bomData) || null,
+      stringifyJsonField(ensureArray(normalized.drawings3D)),
+      stringifyJsonField(normalized.specifications) || null,
+      normalized.designNotes || null,
+      normalized.reviewedBy || null,
+      normalized.approvalComments || null
     ];
 
     const [result] = await pool.execute(
@@ -56,18 +73,35 @@ class DesignEngineeringDetail {
     return result.insertId;
   }
 
-  static async update(salesOrderId, data) {
+  static async update(rootCardId, data) {
+    const normalized = normalizeStepData(data, {
+      documents: 'designEngineering.attachments.documents',
+      drawings3D: 'designEngineering.attachments.drawings',
+      designStatus: 'designEngineering.designStatus',
+      bomData: 'designEngineering.bomData',
+      specifications: 'designEngineering.specifications',
+      designNotes: 'designEngineering.designNotes'
+    });
+
+    // Fallback to direct keys if designEngineering prefix not present
+    if (normalized.documents === undefined) normalized.documents = data.attachments?.documents || data.documents;
+    if (normalized.drawings3D === undefined) normalized.drawings3D = data.attachments?.drawings || data.drawings3D;
+    if (normalized.designStatus === undefined) normalized.designStatus = data.designStatus || data.generalDesignInfo?.designStatus;
+    if (normalized.bomData === undefined) normalized.bomData = data.bomData || data.bomSheet;
+    if (normalized.specifications === undefined) normalized.specifications = data.specifications || data.productSpecification;
+    if (normalized.designNotes === undefined) normalized.designNotes = data.designNotes || data.commentsNotes?.internalDesignNotes;
+
     const params = [
-      stringifyJsonField(data.documents) || JSON.stringify([]),
-      data.designStatus || 'draft',
-      stringifyJsonField(data.bomData) || null,
-      stringifyJsonField(data.drawings3D) || null,
-      stringifyJsonField(data.specifications) || null,
-      data.designNotes || null,
-      data.reviewedBy || null,
-      data.designStatus === 'approved' && !data.reviewedAt ? new Date() : (data.reviewedAt || null),
-      data.approvalComments || null,
-      salesOrderId
+      stringifyJsonField(ensureArray(normalized.documents)),
+      normalized.designStatus || 'draft',
+      stringifyJsonField(normalized.bomData) || null,
+      stringifyJsonField(ensureArray(normalized.drawings3D)),
+      stringifyJsonField(normalized.specifications) || null,
+      normalized.designNotes || null,
+      normalized.reviewedBy || null,
+      normalized.designStatus === 'approved' && !normalized.reviewedAt ? new Date() : (normalized.reviewedAt || null),
+      normalized.approvalComments || null,
+      rootCardId
     ];
 
     await pool.execute(
@@ -80,30 +114,30 @@ class DesignEngineeringDetail {
     );
   }
 
-  static async approveDesign(salesOrderId, reviewedBy, comments) {
+  static async approveDesign(rootCardId, reviewedBy, comments) {
     await pool.execute(
       `UPDATE design_engineering_details 
        SET design_status = 'approved', reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP,
            approval_comments = ?, updated_at = CURRENT_TIMESTAMP
        WHERE sales_order_id = ?`,
-      [reviewedBy, comments || null, salesOrderId]
+      [reviewedBy, comments || null, rootCardId]
     );
   }
 
-  static async rejectDesign(salesOrderId, reviewedBy, comments) {
+  static async rejectDesign(rootCardId, reviewedBy, comments) {
     await pool.execute(
       `UPDATE design_engineering_details 
        SET design_status = 'rejected', reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP,
            approval_comments = ?, updated_at = CURRENT_TIMESTAMP
        WHERE sales_order_id = ?`,
-      [reviewedBy, comments || null, salesOrderId]
+      [reviewedBy, comments || null, rootCardId]
     );
   }
 
-  static async addDocument(salesOrderId, documentData) {
+  static async addDocument(rootCardId, documentData) {
     const [existing] = await pool.execute(
       `SELECT documents FROM design_engineering_details WHERE sales_order_id = ?`,
-      [salesOrderId]
+      [rootCardId]
     );
 
     if (existing.length === 0) {
@@ -131,16 +165,16 @@ class DesignEngineeringDetail {
 
     await pool.execute(
       `UPDATE design_engineering_details SET documents = ?, updated_at = CURRENT_TIMESTAMP WHERE sales_order_id = ?`,
-      [JSON.stringify(documents), salesOrderId]
+      [JSON.stringify(documents), rootCardId]
     );
 
     return newDocument;
   }
 
-  static async getDocuments(salesOrderId) {
+  static async getDocuments(rootCardId) {
     const [rows] = await pool.execute(
       `SELECT documents FROM design_engineering_details WHERE sales_order_id = ?`,
-      [salesOrderId]
+      [rootCardId]
     );
 
     if (rows.length === 0) {
@@ -154,15 +188,15 @@ class DesignEngineeringDetail {
     }
   }
 
-  static async getDocument(salesOrderId, documentId) {
-    const documents = await this.getDocuments(salesOrderId);
+  static async getDocument(rootCardId, documentId) {
+    const documents = await this.getDocuments(rootCardId);
     return documents.find(doc => doc.id === parseInt(documentId)) || null;
   }
 
-  static async removeDocument(salesOrderId, documentId) {
+  static async removeDocument(rootCardId, documentId) {
     const [existing] = await pool.execute(
       `SELECT documents FROM design_engineering_details WHERE sales_order_id = ?`,
-      [salesOrderId]
+      [rootCardId]
     );
 
     if (existing.length === 0) {
@@ -180,20 +214,20 @@ class DesignEngineeringDetail {
 
     await pool.execute(
       `UPDATE design_engineering_details SET documents = ?, updated_at = CURRENT_TIMESTAMP WHERE sales_order_id = ?`,
-      [JSON.stringify(documents), salesOrderId]
+      [JSON.stringify(documents), rootCardId]
     );
 
     return true;
   }
 
-  static async getApprovalHistory(salesOrderId) {
+  static async getApprovalHistory(rootCardId) {
     const [history] = await pool.execute(
       `SELECT 
         id, sales_order_id, design_status, reviewed_by, reviewed_at, 
         approval_comments, updated_at
       FROM design_engineering_details 
       WHERE sales_order_id = ?`,
-      [salesOrderId]
+      [rootCardId]
     );
 
     return history.map(h => ({
@@ -208,20 +242,48 @@ class DesignEngineeringDetail {
 
   static formatRow(row) {
     if (!row) return null;
+    const documents = ensureArray(parseJsonField(row.documents, []));
+    const drawings3D = ensureArray(parseJsonField(row.drawings_3d, []));
+    const bomData = parseJsonField(row.bom_data, []);
+    const specifications = parseJsonField(row.specifications, {});
+
     return {
       id: row.id,
-      salesOrderId: row.sales_order_id,
-      documents: parseJsonField(row.documents),
+      rootCardId: row.sales_order_id,
+      documents,
+      drawings3D,
+      attachments: {
+        drawings: drawings3D,
+        documents: documents,
+        model3D: "", // Placeholder for compatibility
+        fabricationDrawings: "",
+        assemblyDrawings: "",
+        bomSheet: "",
+        calculationSheet: ""
+      },
       designStatus: row.design_status,
-      bomData: parseJsonField(row.bom_data),
-      drawings3D: parseJsonField(row.drawings_3d),
-      specifications: parseJsonField(row.specifications),
+      bomData,
+      specifications,
       designNotes: row.design_notes,
       reviewedBy: row.reviewed_by,
       reviewedAt: row.reviewed_at,
       approvalComments: row.approval_comments,
       createdAt: row.created_at,
-      updatedAt: row.updated_at
+      updatedAt: row.updated_at,
+      
+      // Nested structure for frontend compatibility
+      generalDesignInfo: {
+        designId: row.id,
+        designStatus: row.design_status,
+        designEngineerName: "", // Need to join with users if needed
+        designStartDate: row.created_at,
+        designCompletionDate: row.reviewed_at
+      },
+      productSpecification: specifications,
+      commentsNotes: {
+        internalDesignNotes: row.design_notes,
+        approvalComments: row.approval_comments
+      }
     };
   }
 }

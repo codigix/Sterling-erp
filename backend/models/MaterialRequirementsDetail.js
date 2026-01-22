@@ -1,5 +1,5 @@
 const pool = require('../config/database');
-const { parseJsonField, stringifyJsonField } = require('../utils/salesOrderHelpers');
+const { parseJsonField, stringifyJsonField, ensureArray } = require('../utils/rootCardHelpers');
 
 class MaterialRequirementsDetail {
   static async createTable() {
@@ -34,18 +34,18 @@ class MaterialRequirementsDetail {
     }));
   }
 
-  static async findBySalesOrderId(salesOrderId) {
+  static async findByRootCardId(rootCardId) {
     const [rows] = await pool.execute(
       `SELECT * FROM material_requirements_details WHERE sales_order_id = ?`,
-      [salesOrderId]
+      [rootCardId]
     );
     return rows[0] ? this.formatRow(rows[0]) : null;
   }
 
   static async create(data) {
     const params = [
-      data.salesOrderId,
-      stringifyJsonField(data.materials) || JSON.stringify([]),
+      data.rootCardId,
+      stringifyJsonField(ensureArray(data.materials)),
       data.totalMaterialCost || null,
       data.procurementStatus || 'pending',
       data.notes || null
@@ -55,18 +55,18 @@ class MaterialRequirementsDetail {
       `INSERT INTO material_requirements_details 
        (sales_order_id, materials, total_material_cost, procurement_status, notes)
        VALUES (?, ?, ?, ?, ?)`,
-      params
+      [...params]
     );
     return result.insertId;
   }
 
-  static async update(salesOrderId, data) {
+  static async update(rootCardId, data) {
     const params = [
-      stringifyJsonField(data.materials) || JSON.stringify([]),
+      stringifyJsonField(ensureArray(data.materials)),
       data.totalMaterialCost || null,
       data.procurementStatus || 'pending',
       data.notes || null,
-      salesOrderId
+      rootCardId
     ];
 
     await pool.execute(
@@ -77,19 +77,19 @@ class MaterialRequirementsDetail {
     );
   }
 
-  static async updateProcurementStatus(salesOrderId, status) {
+  static async updateProcurementStatus(rootCardId, status) {
     await pool.execute(
       `UPDATE material_requirements_details 
        SET procurement_status = ?, updated_at = CURRENT_TIMESTAMP
        WHERE sales_order_id = ?`,
-      [status, salesOrderId]
+      [status, rootCardId]
     );
   }
 
-  static async addMaterial(salesOrderId, materialData) {
+  static async addMaterial(rootCardId, materialData) {
     const [existing] = await pool.execute(
       `SELECT materials FROM material_requirements_details WHERE sales_order_id = ?`,
-      [salesOrderId]
+      [rootCardId]
     );
 
     if (existing.length === 0) {
@@ -113,16 +113,16 @@ class MaterialRequirementsDetail {
 
     await pool.execute(
       `UPDATE material_requirements_details SET materials = ?, updated_at = CURRENT_TIMESTAMP WHERE sales_order_id = ?`,
-      [JSON.stringify(materials), salesOrderId]
+      [JSON.stringify(materials), rootCardId]
     );
 
     return newMaterial;
   }
 
-  static async getMaterials(salesOrderId) {
+  static async getMaterials(rootCardId) {
     const [rows] = await pool.execute(
       `SELECT materials FROM material_requirements_details WHERE sales_order_id = ?`,
-      [salesOrderId]
+      [rootCardId]
     );
 
     if (rows.length === 0) {
@@ -136,15 +136,15 @@ class MaterialRequirementsDetail {
     }
   }
 
-  static async getMaterial(salesOrderId, materialId) {
-    const materials = await this.getMaterials(salesOrderId);
+  static async getMaterial(rootCardId, materialId) {
+    const materials = await this.getMaterials(rootCardId);
     return materials.find(m => m.id === parseInt(materialId)) || null;
   }
 
-  static async updateMaterial(salesOrderId, materialId, materialData) {
+  static async updateMaterial(rootCardId, materialId, materialData) {
     const [existing] = await pool.execute(
       `SELECT materials FROM material_requirements_details WHERE sales_order_id = ?`,
-      [salesOrderId]
+      [rootCardId]
     );
 
     if (existing.length === 0) {
@@ -166,16 +166,16 @@ class MaterialRequirementsDetail {
 
     await pool.execute(
       `UPDATE material_requirements_details SET materials = ?, updated_at = CURRENT_TIMESTAMP WHERE sales_order_id = ?`,
-      [JSON.stringify(materials), salesOrderId]
+      [JSON.stringify(materials), rootCardId]
     );
 
     return materials.find(m => m.id === parseInt(materialId));
   }
 
-  static async removeMaterial(salesOrderId, materialId) {
+  static async removeMaterial(rootCardId, materialId) {
     const [existing] = await pool.execute(
       `SELECT materials FROM material_requirements_details WHERE sales_order_id = ?`,
-      [salesOrderId]
+      [rootCardId]
     );
 
     if (existing.length === 0) {
@@ -193,20 +193,22 @@ class MaterialRequirementsDetail {
 
     await pool.execute(
       `UPDATE material_requirements_details SET materials = ?, updated_at = CURRENT_TIMESTAMP WHERE sales_order_id = ?`,
-      [JSON.stringify(materials), salesOrderId]
+      [JSON.stringify(materials), rootCardId]
     );
 
     return true;
   }
 
-  static async assignMaterial(salesOrderId, materialId, employeeId) {
-    return this.updateMaterial(salesOrderId, materialId, { assignee_id: employeeId });
+  static async assignMaterial(rootCardId, materialId, employeeId) {
+    return this.updateMaterial(rootCardId, materialId, { assignee_id: employeeId });
   }
 
   static async calculateTotalCost(materials) {
+    if (!Array.isArray(materials)) return 0;
     return materials.reduce((total, material) => {
-      const cost = (material.unitCost || 0) * (material.quantity || 1);
-      return total + cost;
+      const quantity = parseFloat(material.quantity) || 0;
+      const price = parseFloat(material.unitPrice || material.unitCost || material.valuationRate || 0);
+      return total + (quantity * price);
     }, 0);
   }
 
@@ -214,8 +216,8 @@ class MaterialRequirementsDetail {
     if (!row) return null;
     return {
       id: row.id,
-      salesOrderId: row.sales_order_id,
-      materials: parseJsonField(row.materials),
+      rootCardId: row.sales_order_id,
+      materials: ensureArray(parseJsonField(row.materials, [])),
       totalMaterialCost: row.total_material_cost,
       procurementStatus: row.procurement_status,
       notes: row.notes,

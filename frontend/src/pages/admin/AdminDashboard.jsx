@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import axios from "../../utils/api";
 import Card, { CardHeader, CardTitle, CardContent } from "../../components/ui/Card";
-import SalesOrderForm from "../../components/admin/SalesOrderForm";
-import SalesOrderList from "../../components/admin/SalesOrderList/SalesOrderList";
+import RootCardForm from "../../components/admin/RootCardForm";
+import RootCardList from "../../components/admin/RootCardList/RootCardList";
 import {
   BarChart3,
   ShoppingCart,
@@ -127,7 +127,7 @@ const AdminDashboard = () => {
   const metrics = [
     {
       icon: ShoppingCart,
-      label: 'Sales Orders',
+      label: 'Root Cards',
       value: String(kpis.total_orders),
       trend: '+12%',
       color: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400',
@@ -157,7 +157,7 @@ const AdminDashboard = () => {
 
   const navigation = [
     { icon: BarChart3, label: 'Overview', color: 'text-blue-600 dark:text-blue-400' },
-    { icon: ShoppingCart, label: 'Sales Orders', color: 'text-green-600 dark:text-green-400' },
+    { icon: ShoppingCart, label: 'Root Cards', color: 'text-green-600 dark:text-green-400' },
     { icon: Target, label: 'Projects', color: 'text-purple-600 dark:text-purple-400' },
     { icon: Factory, label: 'Departments', color: 'text-orange-600 dark:text-orange-400' },
     { icon: Truck, label: 'Vendors', color: 'text-red-600 dark:text-red-400' },
@@ -620,37 +620,37 @@ const AdminDashboard = () => {
   );
 };
 
-const SalesOrdersTab = () => {
+const RootCardsTab = () => {
   const [mode, setMode] = useState('list');
-  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [selectedRootCard, setSelectedRootCard] = useState(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  const handleViewOrder = (order) => {
-    setSelectedOrder(order);
+  const handleViewRootCard = (rootCard) => {
+    setSelectedRootCard(rootCard);
     setMode('view');
   };
 
-  const handleEditOrder = (order) => {
-    setSelectedOrder(order);
+  const handleEditRootCard = (rootCard) => {
+    setSelectedRootCard(rootCard);
     setMode('edit');
   };
 
-  const handleAssignOrder = (order) => {
-    setSelectedOrder(order);
+  const handleAssignRootCard = (rootCard) => {
+    setSelectedRootCard(rootCard);
     setMode('assign');
   };
 
   const handleBackToList = () => {
     setMode('list');
-    setSelectedOrder(null);
+    setSelectedRootCard(null);
     setRefreshTrigger(prev => prev + 1);
   };
 
   if (mode === 'create' || mode === 'view' || mode === 'edit' || mode === 'assign') {
     return (
-      <SalesOrderForm
+      <RootCardForm
         mode={mode}
-        initialData={selectedOrder}
+        initialData={selectedRootCard}
         onSubmit={handleBackToList}
         onCancel={handleBackToList}
       />
@@ -659,11 +659,11 @@ const SalesOrdersTab = () => {
 
   return (
     <div className="w-full">
-      <SalesOrderList
+      <RootCardList
         onCreateNew={() => setMode('create')}
-        onViewOrder={handleViewOrder}
-        onEditOrder={handleEditOrder}
-        onAssignOrder={handleAssignOrder}
+        onViewRootCard={handleViewRootCard}
+        onEditRootCard={handleEditRootCard}
+        onAssignRootCard={handleAssignRootCard}
         refreshTrigger={refreshTrigger}
       />
     </div>
@@ -680,5 +680,5 @@ export {
   ProductionTab,
   EmployeesTab,
   ResourcesTab,
-  SalesOrdersTab,
+  RootCardsTab,
 };

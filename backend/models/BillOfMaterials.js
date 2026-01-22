@@ -5,7 +5,7 @@ class BillOfMaterials {
     const conn = connection || await pool.getConnection();
     try {
       const {
-        salesOrderId,
+        rootCardId,
         bomName,
         createdBy
       } = data;
@@ -14,7 +14,7 @@ class BillOfMaterials {
         `INSERT INTO bill_of_materials 
         (sales_order_id, bom_number, created_by, status)
         VALUES (?, ?, ?, 'draft')`,
-        [salesOrderId, bomName, createdBy]
+        [rootCardId, bomName, createdBy]
       );
 
       return result.insertId;
@@ -78,7 +78,7 @@ class BillOfMaterials {
     }
   }
 
-  static async findBySalesOrderId(salesOrderId) {
+  static async findByRootCardId(rootCardId) {
     const conn = await pool.getConnection();
     try {
       const [rows] = await conn.query(
@@ -87,7 +87,7 @@ class BillOfMaterials {
         LEFT JOIN users u ON bom.created_by = u.id
         WHERE bom.sales_order_id = ?
         ORDER BY bom.created_at DESC`,
-        [salesOrderId]
+        [rootCardId]
       );
       return rows;
     } finally {

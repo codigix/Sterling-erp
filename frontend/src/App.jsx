@@ -22,9 +22,9 @@ import MaterialsPage from "./pages/admin/MaterialsPage";
 import ProductionPage from "./pages/admin/ProductionPage";
 import EmployeesPage from "./pages/admin/EmployeesPage";
 import ResourcesPage from "./pages/admin/ResourcesPage";
-import SalesOrdersPage from "./pages/admin/SalesOrdersPage";
-import NewSalesOrderPage from "./pages/admin/NewSalesOrderPage";
-import SalesOrderDetailPage from "./pages/admin/SalesOrderDetailPage";
+import RootCardsPage from "./pages/admin/RootCardsPage";
+import NewRootCardPage from "./pages/admin/NewRootCardPage";
+import AdminRootCardDetailPage from "./pages/admin/RootCardDetailPage";
 import ReportsAnalytics from "./pages/admin/ReportsAnalytics";
 import AnalyticsReportsPage from "./pages/admin/AnalyticsReportsPage";
 import AuditLogs from "./pages/admin/AuditLogs";
@@ -34,7 +34,7 @@ import EmployeeManagement from "./pages/admin/EmployeeManagement";
 import TaskAssignmentPage from "./pages/admin/TaskAssignmentPage";
 
 // Sales Pages
-import SalesDashboard from "./pages/sales/SalesDashboard";
+import RootCardDashboard from "./pages/sales/RootCardDashboard";
 
 // Engineering Pages
 import EngineeringTasksPage from "./pages/engineering/EngineeringTasksPage";
@@ -51,7 +51,7 @@ import InventoryTasksPage from "./pages/inventory/InventoryTasksPage";
 // Production Pages
 import ProductionTasksPage from "./pages/production/ProductionTasksPage";
 import RootCardBuilderPage from "./pages/production/RootCardBuilderPage";
-import RootCardDetailPage from "./pages/production/RootCardDetailPage";
+import ProductionRootCardDetailPage from "./pages/production/RootCardDetailPage";
 import ProductionPlansPage from "./pages/production/ProductionPlansPage";
 import ProductionPlanDetailPage from "./pages/production/ProductionPlanDetailPage";
 import SchedulingPage from "./pages/production/SchedulingPage";
@@ -129,10 +129,10 @@ function App() {
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminLayout />}>
               <Route path="dashboard" element={<AdminDashboard />} />
-              <Route path="sales-orders" element={<SalesOrdersPage />} />
-              <Route path="sales-orders/new-order" element={<NewSalesOrderPage />} />
-              <Route path="sales-orders/:id" element={<SalesOrderDetailPage />} />
-              <Route path="sales-orders/:id/assign" element={<SalesOrderDetailPage />} />
+              <Route path="root-cards" element={<RootCardsPage />} />
+              <Route path="root-cards/new-root-card" element={<NewRootCardPage />} />
+              <Route path="root-cards/:id" element={<AdminRootCardDetailPage />} />
+              <Route path="root-cards/:id/assign" element={<AdminRootCardDetailPage />} />
               <Route path="projects" element={<ProjectsPage />} />
               <Route path="departments" element={<DepartmentsPage />} />
               <Route path="vendors" element={<VendorsPage />} />
@@ -151,7 +151,7 @@ function App() {
 
             {/* Department Routes - Task-Oriented Pages */}
             <Route path="/department" element={<DepartmentLayout />}>
-              <Route path="sales" element={<SalesDashboard />} />
+              <Route path="root-cards" element={<RootCardDashboard />} />
               <Route path="engineering" element={<EngineeringTasksPage />} />
               <Route path="procurement" element={<ProcurementTasksPage />} />
               <Route path="qc" element={<QCTasksPage />} />
@@ -160,7 +160,7 @@ function App() {
               
               {/* Production Flow Routes */}
               <Route path="production/root-cards" element={<RootCardBuilderPage />} />
-              <Route path="production/root-cards/:id" element={<RootCardDetailPage />} />
+              <Route path="production/root-cards/:id" element={<ProductionRootCardDetailPage />} />
               <Route path="production/plans" element={<ProductionPlansPage />} />
               <Route path="production/plans/new" element={<ProductionPlanFormPage />} />
               <Route path="production/plans/:id" element={<ProductionPlanDetailPage />} />

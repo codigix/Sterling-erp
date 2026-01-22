@@ -35,7 +35,14 @@ exports.getMaterialById = async (req, res) => {
 
 exports.createMaterial = async (req, res) => {
   try {
-    const { itemCode, itemName, batch, specification, unit, category, quantity, reorderLevel, location, vendorId, unitCost } = req.body;
+    const { 
+      itemCode, itemName, batch, specification, unit, category, 
+      itemGroupId, valuationRate, sellingRate, noOfCavity, 
+      weightPerUnit, weightUom, drawingNo, revision, 
+      materialGrade, eanBarcode, gstPercent,
+      quantity, reorderLevel, location, vendorId, unitCost,
+      rack, shelf, qrCode
+    } = req.body;
     
     if (!itemCode || !itemName || !unit) {
       return res.status(400).json({ message: 'Item code, name, and unit are required' });
@@ -48,11 +55,25 @@ exports.createMaterial = async (req, res) => {
       specification,
       unit,
       category,
+      itemGroupId,
+      valuationRate,
+      sellingRate,
+      noOfCavity,
+      weightPerUnit,
+      weightUom,
+      drawingNo,
+      revision,
+      materialGrade,
+      eanBarcode,
+      gstPercent,
       quantity: quantity || 0,
       reorderLevel: reorderLevel || 0,
       location,
       vendorId,
-      unitCost
+      unitCost,
+      rack,
+      shelf,
+      qrCode
     });
     
     res.status(201).json({ message: 'Material created successfully', materialId });
@@ -65,19 +86,41 @@ exports.createMaterial = async (req, res) => {
 exports.updateMaterial = async (req, res) => {
   try {
     const { id } = req.params;
-    const { itemName, batch, specification, unit, category, quantity, reorderLevel, location, vendorId, unitCost } = req.body;
+    const { 
+      itemCode, itemName, batch, specification, unit, category, 
+      itemGroupId, valuationRate, sellingRate, noOfCavity, 
+      weightPerUnit, weightUom, drawingNo, revision, 
+      materialGrade, eanBarcode, gstPercent,
+      quantity, reorderLevel, location, vendorId, unitCost,
+      rack, shelf, qrCode
+    } = req.body;
     
     await Material.update(id, {
+      itemCode,
       itemName,
       batch,
       specification,
       unit,
       category,
+      itemGroupId,
+      valuationRate,
+      sellingRate,
+      noOfCavity,
+      weightPerUnit,
+      weightUom,
+      drawingNo,
+      revision,
+      materialGrade,
+      eanBarcode,
+      gstPercent,
       quantity,
       reorderLevel,
       location,
       vendorId,
-      unitCost
+      unitCost,
+      rack,
+      shelf,
+      qrCode
     });
     
     res.json({ message: 'Material updated successfully' });

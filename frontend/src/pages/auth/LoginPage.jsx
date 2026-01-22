@@ -7,7 +7,7 @@ import "./LoginPage.css";
 const ROLE_MAP = {
   admin: "/admin/dashboard",
   management: "/admin/dashboard",
-  sales: "/department/sales",
+  sales: "/department/root-cards",
   engineering: "/department/engineering",
   procurement: "/department/procurement",
   qc: "/department/qc",
@@ -72,7 +72,7 @@ const LoginPage = () => {
     }
     const role = userData.role || "";
     const normalizedRole = normalizeRoleName(role);
-    return ROLE_MAP[normalizedRole] || "/department/sales";
+    return ROLE_MAP[normalizedRole] || "/department/root-cards";
   }, []);
 
   useEffect(() => {

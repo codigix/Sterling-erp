@@ -44,7 +44,7 @@ const ProjectListPage = () => {
         planned_start: project.createdAt,
         planned_end: null,
         project_name: project.projectName,
-        customer: project.clientName,
+        customer: project.clientName
       }));
       setProjects(mapped);
     } catch (error) {
@@ -123,12 +123,12 @@ const ProjectListPage = () => {
             </div>
             <div className="flex gap-2">
               <Button
-                onClick={() => navigate("/admin/sales-orders/new-order")}
+                onClick={() => navigate("/admin/root-cards/new-root-card")}
                 variant="secondary"
                 className="flex items-center gap-2 whitespace-nowrap"
               >
                 <Plus size={20} />
-                New Order
+                New Root Card
               </Button>
               <Button
                 onClick={() => navigate("/design-engineer/project-details/new")}
@@ -260,7 +260,7 @@ const ProjectListPage = () => {
                                 {project.code || "N/A"}
                               </code>
                               <span className="text-xs text-slate-500 dark:text-slate-400">
-                                • {project.project_name}
+                                • {project.customer}
                               </span>
                             </div>
                           </div>

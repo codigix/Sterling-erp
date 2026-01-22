@@ -15,7 +15,7 @@ router.get('/debug/user-info', authMiddleware, (req, res) => {
 router.get('/debug/root-card/:id', authMiddleware, async (req, res) => {
   try {
     const RootCard = require('../../models/RootCard');
-    const SalesOrderStep = require('../../models/SalesOrderStep');
+    const RootCardStep = require('../../models/RootCardStep');
     const ManufacturingStage = require('../../models/ManufacturingStage');
     
     const { id } = req.params;
@@ -28,7 +28,7 @@ router.get('/debug/root-card/:id', authMiddleware, async (req, res) => {
 
     let stepInfo = [];
     if (rootCard.sales_order_id) {
-      const allSteps = await SalesOrderStep.findBySalesOrderId(rootCard.sales_order_id);
+      const allSteps = await RootCardStep.findBySalesOrderId(rootCard.sales_order_id);
       stepInfo = allSteps.map(s => ({
         id: s.id,
         step_id: s.step_id,

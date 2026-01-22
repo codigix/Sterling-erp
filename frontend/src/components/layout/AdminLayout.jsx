@@ -50,7 +50,7 @@ const AdminLayout = () => {
     },
     {
       title: "Root Cards",
-      path: "/admin/sales-orders",
+      path: "/admin/root-cards",
       icon: ShoppingCart,
       badge: null,
     },

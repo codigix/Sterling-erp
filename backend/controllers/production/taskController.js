@@ -4,25 +4,43 @@ const Notification = require('../../models/Notification');
 
 exports.getEmployeeTasks = async (req, res) => {
   try {
-    const { dateFilter, status } = req.query;
-    let tasks;
+    const { dateFilter, status, type } = req.query;
+    const employeeId = req.user.id;
     
+    // Fetch tasks from both tables
+    let workerTasks = [];
     if (dateFilter === 'today') {
       const today = new Date().toISOString().split('T')[0];
-      tasks = await EmployeeTask.getEmployeeTasks(req.user.id, today);
-    } else if (dateFilter === 'week') {
-      tasks = await EmployeeTask.findAll({ workerId: req.user.id });
-    } else if (dateFilter === 'month') {
-      tasks = await EmployeeTask.findAll({ workerId: req.user.id });
+      workerTasks = await EmployeeTask.getEmployeeTasks(employeeId, today);
     } else {
-      tasks = await EmployeeTask.findByWorkerId(req.user.id);
+      workerTasks = await EmployeeTask.findByWorkerId(employeeId);
     }
+
+    // Fetch assigned tasks (from employee_tasks table)
+    const assignedTasks = await EmployeeTask.getAssignedTasks(employeeId, { status, type });
     
+    // Normalize worker tasks to match the format
+    const normalizedWorkerTasks = workerTasks.map(t => ({
+      ...t,
+      id: t.id,
+      title: t.task,
+      type: 'worker_task',
+      taskType: 'worker'
+    }));
+
+    // Combine tasks
+    let allTasks = [...normalizedWorkerTasks, ...assignedTasks];
+    
+    // Apply filters if not already applied by model
     if (status) {
-      tasks = tasks.filter(t => t.status === status);
+      allTasks = allTasks.filter(t => t.status === status);
     }
     
-    res.json({ tasks, total: tasks.length });
+    if (type) {
+      allTasks = allTasks.filter(t => t.type === type);
+    }
+    
+    res.json({ tasks: allTasks, total: allTasks.length });
   } catch (error) {
     console.error('Get employee tasks error:', error);
     res.status(500).json({ message: 'Internal server error' });
@@ -32,13 +50,22 @@ exports.getEmployeeTasks = async (req, res) => {
 exports.getTaskById = async (req, res) => {
   try {
     const { id } = req.params;
-    const task = await EmployeeTask.findById(id);
+    
+    // Check worker_tasks first (legacy)
+    let task = await EmployeeTask.findById(id);
+    
+    if (task) {
+      return res.json({ ...task, taskType: 'worker' });
+    }
+
+    // Then check employee_tasks (modern)
+    task = await EmployeeTask.getAssignedTaskById(id);
     
     if (!task) {
       return res.status(404).json({ message: 'Task not found' });
     }
     
-    res.json(task);
+    res.json({ ...task, taskType: 'assigned' });
   } catch (error) {
     console.error('Get task error:', error);
     res.status(500).json({ message: 'Internal server error' });
@@ -48,30 +75,47 @@ exports.getTaskById = async (req, res) => {
 exports.updateTaskStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, notes } = req.body;
     
     if (!status) {
       return res.status(400).json({ message: 'Status is required' });
     }
     
-    const task = await EmployeeTask.findById(id);
-    if (!task) {
-      return res.status(404).json({ message: 'Task not found' });
+    // Check if it's a worker task
+    const workerTask = await EmployeeTask.findById(id);
+    if (workerTask) {
+      await EmployeeTask.updateStatus(id, status);
+      
+      if (status === 'completed') {
+        await Notification.create({
+          userId: workerTask.worker_id,
+          message: `Task "${workerTask.task}" has been completed`,
+          type: 'success',
+          relatedId: id,
+          relatedType: 'task'
+        });
+      }
+      return res.json({ message: 'Worker task status updated successfully' });
+    }
+
+    // Check if it's an assigned task
+    const assignedTask = await EmployeeTask.getAssignedTaskById(id);
+    if (assignedTask) {
+      await EmployeeTask.updateAssignedTaskStatus(id, status, notes);
+      
+      if (status === 'completed') {
+        await Notification.create({
+          userId: assignedTask.employee_id,
+          message: `Task "${assignedTask.title}" has been completed`,
+          type: 'success',
+          relatedId: id,
+          relatedType: 'employee_task'
+        });
+      }
+      return res.json({ message: 'Assigned task status updated successfully' });
     }
     
-    await EmployeeTask.updateStatus(id, status);
-    
-    if (status === 'completed') {
-      await Notification.create({
-        userId: task.worker_id,
-        message: `Task "${task.task}" has been completed`,
-        type: 'success',
-        relatedId: id,
-        relatedType: 'task'
-      });
-    }
-    
-    res.json({ message: 'Task status updated successfully' });
+    return res.status(404).json({ message: 'Task not found' });
   } catch (error) {
     console.error('Update task status error:', error);
     res.status(500).json({ message: 'Internal server error' });

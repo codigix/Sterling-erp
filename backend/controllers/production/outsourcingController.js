@@ -90,7 +90,7 @@ const outsourcingController = {
       const [materials] = await pool.execute(
         `SELECT DISTINCT inv.* 
          FROM inventory inv
-         LEFT JOIN project_inventory_tasks pit ON pit.project_id = ?
+         LEFT JOIN root_card_inventory_tasks pit ON pit.root_card_id = ?
          WHERE 1=1
          ORDER BY inv.item_name ASC`,
         [projectId]

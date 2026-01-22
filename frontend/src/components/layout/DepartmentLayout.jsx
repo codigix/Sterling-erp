@@ -49,9 +49,9 @@ const DepartmentLayout = () => {
 
   const departmentModules = {
     sales: {
-      title: "Sales",
-      icon: ShoppingCart,
-      path: "/department/sales",
+      title: "Root Cards",
+      icon: Layers,
+      path: "/department/root-cards",
     },
     engineering: {
       title: "Engineering",

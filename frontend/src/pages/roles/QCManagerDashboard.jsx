@@ -1,6 +1,8 @@
-import React from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
+import axios from "../../utils/api";
 import RoleDashboardLayout from "../../components/layout/RoleDashboardLayout";
+import { Loader2, Package } from "lucide-react";
 import {
   CheckCircle,
   AlertCircle,
@@ -11,6 +13,25 @@ import {
 } from "lucide-react";
 
 const QCManagerDashboard = () => {
+  const [departmentTasks, setDepartmentTasks] = useState([]);
+  const [loadingTasks, setLoadingTasks] = useState(true);
+
+  const fetchTasks = useCallback(async () => {
+    try {
+      setLoadingTasks(true);
+      const response = await axios.get("/employee/tasks?type=quality_check");
+      setDepartmentTasks(response.data.tasks || []);
+    } catch (err) {
+      console.error("Error fetching QC tasks:", err);
+    } finally {
+      setLoadingTasks(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchTasks();
+  }, [fetchTasks]);
+
   const navigationItems = [
     {
       title: "Dashboard",
@@ -166,67 +187,73 @@ const QCManagerDashboard = () => {
           })}
         </div>
 
-        {/* Pending QC Tasks */}
-        <div className="bg-white dark:bg-slate-800 rounded-lg p-6 border border-slate-200 dark:border-slate-700">
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white text-xs text-left mb-4">
-            Pending QC Tasks
-          </h2>
-          <div className="space-y-4">
-            {[
-              {
-                item: "Steel Batch #S123",
-                type: "Material Testing",
-                priority: "High",
-                dueDate: "2025-12-15",
-              },
-              {
-                item: "GRN #GRN-2025-045",
-                type: "Incoming Inspection",
-                priority: "Medium",
-                dueDate: "2025-12-16",
-              },
-              {
-                item: "Project Alpha - Stage 2",
-                type: "Process Inspection",
-                priority: "High",
-                dueDate: "2025-12-14",
-              },
-              {
-                item: "Bearing Set #B456",
-                type: "Final Inspection",
-                priority: "Medium",
-                dueDate: "2025-12-17",
-              },
-            ].map((task, idx) => (
-              <div
-                key={idx}
-                className="flex items-center text-xs justify-between p-4 bg-slate-50 dark:bg-slate-700 rounded border-l-4 border-blue-500"
-              >
-                <div className="flex-1">
-                  <p className="font-medium text-slate-900 dark:text-white text-xs">
-                    {task.item}
-                  </p>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
-                    {task.type}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <span
-                    className={`px-3 py-1 rounded text-xs font-medium ${
-                      task.priority === "High"
-                        ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-                        : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
-                    }`}
-                  >
-                    {task.priority}
-                  </span>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 text-xs">
-                    Due: {task.dueDate}
-                  </p>
-                </div>
-              </div>
-            ))}
+        {/* Assigned Root Cards (Quality Check) */}
+        <div className="bg-white dark:bg-slate-800 rounded-lg p-6 border border-slate-200 dark:border-slate-700 shadow-sm">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white text-xs flex items-center gap-2">
+              <Clock size={20} className="text-blue-600" />
+              Assigned Root Cards (Quality Check)
+            </h2>
+            <Link
+              to="/qc-manager/qc/pending"
+              className="text-sm text-blue-600 dark:text-blue-400 font-semibold hover:text-blue-700"
+            >
+              View All Tasks →
+            </Link>
           </div>
+
+          {loadingTasks ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="animate-spin text-blue-600" size={32} />
+            </div>
+          ) : departmentTasks.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {departmentTasks.slice(0, 6).map((task) => (
+                <div
+                  key={task.id}
+                  className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:border-blue-400 transition-all bg-slate-50 dark:bg-slate-900/50"
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <h4 className="font-bold text-slate-900 dark:text-white line-clamp-1">
+                        {task.rootCard?.title || task.title}
+                      </h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        {task.salesOrder?.customer || "No Customer"}
+                      </p>
+                    </div>
+                    <span
+                      className={`px-2 py-1 text-[10px] font-bold rounded-full uppercase ${
+                        task.status === "pending"
+                          ? "bg-amber-100 text-amber-700"
+                          : "bg-blue-100 text-blue-700"
+                      }`}
+                    >
+                      {task.status}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between mt-4">
+                    <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                      PO: {task.salesOrder?.poNumber || "N/A"}
+                    </span>
+                    <Link
+                      to={`/qc-manager/qc/pending`}
+                      className="text-xs font-bold text-blue-600 hover:text-blue-700"
+                    >
+                      Process →
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-dashed border-slate-300 dark:border-slate-700">
+              <Package className="mx-auto text-slate-300 mb-2" size={40} />
+              <p className="text-slate-500 dark:text-slate-400 font-medium">
+                No active quality check tasks assigned.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* QC Metrics */}

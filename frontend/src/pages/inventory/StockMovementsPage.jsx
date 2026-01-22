@@ -49,9 +49,9 @@ const StockMovementsPage = () => {
       quantity: 25,
       unit: "sheets",
       from: "Storage B-05",
-      to: "Project X",
+      to: "Root Card X",
       user: "Jane Smith",
-      reference: "SO-2024-045",
+      reference: "RC-2024-045",
       status: "completed",
     },
     {

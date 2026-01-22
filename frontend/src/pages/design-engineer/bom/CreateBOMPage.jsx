@@ -23,9 +23,8 @@ const initialBOMState = {
     isActive: true,
     isDefault: false,
     status: "draft",
-    salesOrderId: null,
-    projectId: null,
     rootCardId: null,
+    projectId: null,
   },
   components: [],
   materials: [],
@@ -60,9 +59,8 @@ const CreateBOMPage = () => {
     ...initialBOMState,
     productInfo: {
       ...initialBOMState.productInfo,
-      salesOrderId: searchParams.get("salesOrderId") || null,
-      projectId: searchParams.get("projectId") || null,
       rootCardId: searchParams.get("rootCardId") || null,
+      projectId: searchParams.get("projectId") || null,
     }
   });
 
@@ -246,7 +244,6 @@ const CreateBOMPage = () => {
         ...initialBOMState,
         productInfo: {
           ...initialBOMState.productInfo,
-          salesOrderId: prev.productInfo.salesOrderId,
           projectId: prev.productInfo.projectId,
           rootCardId: rootCardId
         }
@@ -298,7 +295,6 @@ const CreateBOMPage = () => {
                   isActive: existingBOM.is_active === 1,
                   isDefault: existingBOM.is_default === 1,
                   status: existingBOM.status || 'draft',
-                  salesOrderId: existingBOM.sales_order_id,
                   projectId: existingBOM.project_id,
                   rootCardId: existingBOM.root_card_id,
                 },
@@ -313,7 +309,7 @@ const CreateBOMPage = () => {
               // Fetch requirements for the dropdown even when editing
               if (existingBOM.sales_order_id) {
                 try {
-                  const reqRes = await axios.get(`/sales/requirements/${existingBOM.sales_order_id}`);
+                  const reqRes = await axios.get(`/root-cards/requirements/${existingBOM.sales_order_id}`);
                   if (reqRes.data?.success && reqRes.data?.data?.materials) {
                     setRequirementMaterials(reqRes.data.data.materials);
                   }
@@ -335,7 +331,7 @@ const CreateBOMPage = () => {
         
         // Auto-fill from root card details
         productInfo.productName = rootCard.title || "";
-        productInfo.salesOrderId = rootCard.sales_order_id || productInfo.salesOrderId;
+        productInfo.rootCardId = rootCard.sales_order_id || productInfo.rootCardId;
         productInfo.projectId = rootCard.project_id || productInfo.projectId;
         productInfo.rootCardId = rootCard.id;
         productInfo.description = rootCard.notes || "";
@@ -360,7 +356,7 @@ const CreateBOMPage = () => {
           productInfo.description = details.specification || productInfo.description;
           productInfo.itemGroup = details.category || productInfo.itemGroup;
         } else if (rootCard.sales_order_items && Array.isArray(rootCard.sales_order_items) && rootCard.sales_order_items.length > 0) {
-          // Fallback to the first item in sales order items
+          // Fallback to the first item in root card items
           const firstItem = rootCard.sales_order_items[0];
           productInfo.productName = firstItem.description || firstItem.itemName || productInfo.productName;
           productInfo.itemCode = firstItem.itemCode || productInfo.itemCode;
@@ -380,10 +376,10 @@ const CreateBOMPage = () => {
           combinedStages = [...rootCard.stages];
         }
 
-        // 2. Fetch Production Plan from Sales Order (selected during project creation)
-        if (productInfo.salesOrderId) {
+        // 2. Fetch Production Plan from Root Card (selected during project creation)
+        if (productInfo.rootCardId) {
           try {
-            const planResponse = await axios.get(`/sales/steps/${productInfo.salesOrderId}/production-plan`);
+            const planResponse = await axios.get(`/root-cards/steps/${productInfo.rootCardId}/production-plan`);
             if (planResponse.data?.success && planResponse.data?.data) {
               const planData = planResponse.data.data;
               const phases = planData.selectedPhases || planData.phaseDetails || planData.phases || {};
@@ -428,10 +424,10 @@ const CreateBOMPage = () => {
           targetWarehouse: ""
         }));
 
-        // Fetch Material Requirements for the sales order
-        if (productInfo.salesOrderId) {
+        // Fetch Material Requirements for the root card
+        if (productInfo.rootCardId) {
           try {
-            const reqResponse = await axios.get(`/sales/requirements/${productInfo.salesOrderId}`);
+            const reqResponse = await axios.get(`/root-cards/requirements/${productInfo.rootCardId}`);
             if (reqResponse.data && reqResponse.data.success && reqResponse.data.data) {
               const requirements = reqResponse.data.data.materials || [];
               setRequirementMaterials(requirements);

@@ -1,5 +1,5 @@
 const RootCard = require('../../models/RootCard');
-const SalesOrderStep = require('../../models/SalesOrderStep');
+const RootCardStep = require('../../models/RootCardStep');
 const ManufacturingStage = require('../../models/ManufacturingStage');
 
 exports.getUserInfo = (req, res) => {
@@ -23,8 +23,8 @@ exports.debugRootCard = async (req, res) => {
     }
 
     let stepInfo = [];
-    if (rootCard.sales_order_id) {
-      const allSteps = await SalesOrderStep.findBySalesOrderId(rootCard.sales_order_id);
+    if (rootCard.rootCardId) {
+      const allSteps = await RootCardStep.findByRootCardId(rootCard.rootCardId);
       stepInfo = allSteps.map(s => ({
         id: s.id,
         step_id: s.step_id,
@@ -56,9 +56,9 @@ exports.debugRootCard = async (req, res) => {
         id: rootCard.id,
         project: rootCard.project,
         projectId: rootCard.project_id,
-        salesOrderId: rootCard.sales_order_id
+        rootCardId: rootCard.rootCardId
       },
-      salesOrderSteps: stepInfo,
+      rootCardSteps: stepInfo,
       manufacturingStages: stageInfo,
       access: {
         hasStepAccess: stepInfo.some(s => s.matches_user),

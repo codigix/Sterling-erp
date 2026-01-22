@@ -1,11 +1,10 @@
-const pool = require("../config/database");
-const ProjectInventoryTask = require("./ProjectInventoryTask");
+const pool = require('../config/database');
 
 const parseJson = (value, fallback = []) => {
   if (!value) {
     return fallback;
   }
-  if (typeof value === "object") {
+  if (typeof value === 'object') {
     return value;
   }
   try {
@@ -22,168 +21,201 @@ class RootCard {
     }
     return {
       ...row,
-      stages: parseJson(row.stages, []),
-      product_details: row.product_details ? parseJson(row.product_details, null) : null,
-      sales_order_items: row.sales_order_items ? parseJson(row.sales_order_items, []) : [],
-      product_name: row.product_details ? parseJson(row.product_details).itemName : null,
-      project: row.project_id
-        ? {
-            id: row.project_id,
-            name: row.project_name,
-            code: row.project_code,
-            clientName: row.client_name,
-          }
-        : null,
+      items: parseJson(row.items),
+      documents: parseJson(row.documents),
+      project_scope: parseJson(row.project_scope, null),
+      design_details: parseJson(row.design_details, null)
     };
   }
 
   static async findAll(filters = {}) {
-    const params = [];
     const conditions = [];
-    let query = `
-      SELECT rc.*, 
-             p.name AS project_name, 
-             p.code AS project_code, 
-             p.client_name,
-             p.sales_order_id,
-             so.customer AS customer_name,
-             sod.product_details,
-             u.username AS assigned_supervisor_name
-      FROM root_cards rc
-      LEFT JOIN projects p ON p.id = rc.project_id
-      LEFT JOIN sales_orders so ON so.id = p.sales_order_id
-      LEFT JOIN sales_order_details sod ON sod.sales_order_id = so.id
-      LEFT JOIN users u ON u.id = rc.assigned_supervisor
-    `;
+    const params = [];
 
-    if (filters.assignedTo) {
-      query += `
-        INNER JOIN manufacturing_stages ms_filter ON ms_filter.root_card_id = rc.id AND ms_filter.assigned_worker = ?
-      `;
-      params.push(filters.assignedTo);
-    }
-
-    if (filters.status && filters.status !== "all") {
-      conditions.push("rc.status = ?");
+    if (filters.status && filters.status !== 'all') {
+      conditions.push('status = ?');
       params.push(filters.status);
     }
 
-    if (filters.projectId) {
-      conditions.push("rc.project_id = ?");
-      params.push(filters.projectId);
+    if (filters.search) {
+      conditions.push('(customer LIKE ? OR po_number LIKE ? OR project_name LIKE ? OR notes LIKE ?)');
+      const like = `%${filters.search}%`;
+      params.push(like, like, like, like);
     }
 
-    if (filters.search) {
-      conditions.push("(rc.title LIKE ? OR p.name LIKE ? OR rc.code LIKE ?)");
-      const like = `%${filters.search}%`;
-      params.push(like, like, like);
-    }
+    let query = 'SELECT * FROM sales_orders';
 
     if (conditions.length) {
-      query += ` WHERE ${conditions.join(" AND ")}`;
+      query += ` WHERE ${conditions.join(' AND ')}`;
     }
 
-    query += " ORDER BY rc.created_at DESC";
+    query += ' ORDER BY created_at DESC';
 
     const [rows] = await pool.execute(query, params);
-    return rows.map(RootCard.formatRow);
+    const formattedCards = rows.map(RootCard.formatRow);
+    
+    const includeSteps = filters.includeSteps !== false;
+    if (includeSteps) {
+      return Promise.all(formattedCards.map(card => RootCard.enrichRootCardWithSteps(card)));
+    }
+    return formattedCards;
   }
 
   static async findById(id) {
-    const [rows] = await pool.execute(
-      `
-        SELECT rc.*, 
-               p.name AS project_name, 
-               p.code AS project_code, 
-               p.client_name,
-               p.sales_order_id,
-               so.customer AS customer_name,
-               so.items AS sales_order_items,
-               sod.product_details,
-               u.username AS assigned_supervisor_name
-        FROM root_cards rc
-        LEFT JOIN projects p ON p.id = rc.project_id
-        LEFT JOIN sales_orders so ON so.id = p.sales_order_id
-        LEFT JOIN sales_order_details sod ON sod.sales_order_id = so.id
-        LEFT JOIN users u ON u.id = rc.assigned_supervisor
-        WHERE rc.id = ?
-      `,
-      [id]
-    );
-    return RootCard.formatRow(rows[0]);
+    const [rows] = await pool.execute('SELECT * FROM sales_orders WHERE id = ?', [id]);
+    const rootCard = RootCard.formatRow(rows[0]);
+    if (!rootCard) return null;
+    return RootCard.enrichRootCardWithSteps(rootCard);
   }
 
-  static async findBySalesOrderId(salesOrderId) {
-    const [rows] = await pool.execute(
-      `
-        SELECT rc.*, 
-               p.name AS project_name, 
-               p.code AS project_code, 
-               p.client_name,
-               p.sales_order_id,
-               so.customer AS customer_name,
-               so.items AS sales_order_items,
-               sod.product_details,
-               u.username AS assigned_supervisor_name
-        FROM root_cards rc
-        LEFT JOIN projects p ON p.id = rc.project_id
-        LEFT JOIN sales_orders so ON so.id = p.sales_order_id
-        LEFT JOIN sales_order_details sod ON sod.sales_order_id = so.id
-        LEFT JOIN users u ON u.id = rc.assigned_supervisor
-        WHERE so.id = ?
-      `,
-      [salesOrderId]
-    );
-    return RootCard.formatRow(rows[0]);
+  static async enrichRootCardWithSteps(rootCard) {
+    const steps = {
+      step1_clientPO: null,
+      step2_design: null,
+      step3_materials: null,
+      step4_production: null,
+      step5_quality: null,
+      step6_shipment: null,
+      step7_delivery: null
+    };
+
+    const tables = [
+      { key: 'step1_clientPO', name: 'client_po_details' },
+      { key: 'step2_design', name: 'design_engineering_details' },
+      { key: 'step3_materials', name: 'material_requirements_details' },
+      { key: 'step4_production', name: 'production_plan_details' },
+      { key: 'step5_quality', name: 'quality_check_details' },
+      { key: 'step6_shipment', name: 'shipment_details' },
+      { key: 'step7_delivery', name: 'delivery_details' }
+    ];
+
+    for (const table of tables) {
+      try {
+        const [rows] = await pool.execute(
+          `SELECT * FROM ${table.name} WHERE sales_order_id = ?`,
+          [rootCard.id]
+        );
+        if (rows && rows.length > 0) {
+          steps[table.key] = RootCard.parseStepData(rows[0]);
+        }
+      } catch (error) {
+        console.warn(`Table ${table.name} not available`);
+      }
+    }
+
+    return {
+      ...rootCard,
+      steps
+    };
+  }
+
+  static parseStepData(row) {
+    if (!row) return null;
+    const parsed = { ...row };
+    for (const [key, value] of Object.entries(parsed)) {
+      if (typeof value === 'string') {
+        try {
+          parsed[key] = JSON.parse(value);
+        } catch (e) {
+          // Keep as string if not JSON
+        }
+      }
+    }
+    return parsed;
+  }
+
+  static async getStats() {
+    const [rows] = await pool.execute(`
+      SELECT
+        COUNT(*) AS total_cards,
+        COALESCE(SUM(total), 0) AS total_value,
+        SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending_cards,
+        SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) AS approved_cards,
+        SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completed_cards,
+        SUM(CASE WHEN status = 'delivered' THEN 1 ELSE 0 END) AS delivered_cards
+      FROM sales_orders
+    `);
+    return rows[0];
   }
 
   static async create(data, externalConnection = null) {
     const connection = externalConnection || (await pool.getConnection());
 
     try {
+      const projectNameValue = (data.projectName && data.projectName.trim()) ? data.projectName : `${data.customer}-${data.poNumber}`;
+      const projectScopeValue = (data.projectScope && Object.values(data.projectScope).some(v => v)) ? data.projectScope : { application: '', dimensions: '', specifications: '' };
+
       const [result] = await connection.execute(
         `
-          INSERT INTO root_cards
-          (project_id, sales_order_id, code, title, status, priority, planned_start, planned_end, created_by, assigned_supervisor, notes, stages)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO sales_orders
+          (customer, po_number, order_date, due_date, total, currency, status, priority, items, documents, notes, project_scope, project_name, created_by)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
-          data.projectId,
-          data.salesOrderId || null,
-          data.code || null,
-          data.title,
-          data.status || "planning",
-          data.priority || "medium",
-          data.plannedStart || null,
-          data.plannedEnd || null,
-          data.createdBy || null,
-          data.assignedSupervisor || null,
+          data.customer,
+          data.poNumber,
+          data.orderDate,
+          data.dueDate || null,
+          data.total,
+          data.currency || 'INR',
+          data.status || 'pending',
+          data.priority || 'medium',
+          JSON.stringify(data.items || []),
+          data.documents ? JSON.stringify(data.documents) : null,
           data.notes || null,
-          JSON.stringify(data.stages || []),
+          JSON.stringify(projectScopeValue),
+          projectNameValue,
+          data.createdBy || null
         ]
       );
-
-      const rootCardId = result.insertId;
-
-      if (data.projectId) {
-        await ProjectInventoryTask.initializeProjectTasks(
-          data.projectId,
-          rootCardId,
-          connection
-        );
-      }
 
       if (!externalConnection) {
         connection.release();
       }
 
-      return rootCardId;
+      return result.insertId;
     } catch (error) {
       if (!externalConnection) {
         connection.release();
       }
       throw error;
     }
+  }
+
+  static async update(id, data) {
+    const updates = {};
+
+    if (data.customer !== undefined && data.customer !== null) updates.customer = data.customer;
+    if (data.poNumber !== undefined && data.poNumber !== null) updates.po_number = data.poNumber;
+    if (data.orderDate !== undefined && data.orderDate !== null) updates.order_date = data.orderDate;
+    if (data.dueDate !== undefined) updates.due_date = data.dueDate || null;
+    if (data.total !== undefined && data.total !== null) updates.total = data.total;
+    if (data.currency !== undefined) updates.currency = data.currency || 'INR';
+    if (data.status !== undefined && data.status !== null) updates.status = data.status;
+    if (data.priority !== undefined) updates.priority = data.priority || 'medium';
+    if (data.items !== undefined) updates.items = JSON.stringify(data.items || []);
+    if (data.documents !== undefined) updates.documents = data.documents ? JSON.stringify(data.documents) : null;
+    if (data.notes !== undefined) updates.notes = data.notes || null;
+    if (data.projectScope !== undefined && data.projectScope !== null) {
+      const projectScopeValue = (data.projectScope && Object.values(data.projectScope).some(v => v)) ? data.projectScope : { application: '', dimensions: '', specifications: '' };
+      updates.project_scope = JSON.stringify(projectScopeValue);
+    }
+    if (data.projectName !== undefined && data.projectName !== null) updates.project_name = data.projectName;
+
+    updates.updated_at = new Date().toISOString().slice(0, 19).replace('T', ' ');
+
+    const setClause = Object.keys(updates).map(key => `${key} = ?`).join(', ');
+    const values = Object.values(updates);
+    values.push(id);
+
+    await pool.execute(
+      `UPDATE sales_orders SET ${setClause} WHERE id = ?`,
+      values
+    );
+  }
+
+  static async updateStatus(id, status) {
+    await pool.execute('UPDATE sales_orders SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [status, id]);
   }
 }
 

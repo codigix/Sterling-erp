@@ -29,7 +29,7 @@ const DEPARTMENT_MANAGERS = {
 
 const STEP_DESCRIPTIONS = {
   1: 'Client PO',
-  2: 'Sales Order',
+  2: 'Root Card',
   3: 'Design Engineering',
   4: 'Material Requirement',
   5: 'Production Plan',
@@ -38,7 +38,7 @@ const STEP_DESCRIPTIONS = {
   8: 'Delivery'
 };
 
-export const sendAssignmentNotifications = async (salesOrderData, formData) => {
+export const sendAssignmentNotifications = async (rootCardData, formData) => {
   try {
     const assignmentNotifications = [];
 
@@ -56,14 +56,14 @@ export const sendAssignmentNotifications = async (salesOrderData, formData) => {
         const deptInfo = DEPARTMENT_MANAGERS[stepType];
         assignmentNotifications.push({
           recipientId: assignee,
-          type: 'sales-order-assigned',
+          type: 'root-card-assigned',
           title: `New ${deptInfo.manager} Task Assigned`,
-          message: `Sales Order SO-${salesOrderData.id} for ${formData.projectName || formData.clientName} has been assigned to you for ${stepType.replace(/_/g, ' ')}`,
+          message: `Root Card RC-${rootCardData.id} for ${formData.projectName || formData.clientName} has been assigned to you for ${stepType.replace(/_/g, ' ')}`,
           stepType,
           department: deptInfo.department,
           priority: 'high',
           metadata: {
-            salesOrderId: salesOrderData.id,
+            rootCardId: rootCardData.id,
             poNumber: formData.poNumber,
             projectName: formData.projectName,
             clientName: formData.clientName,
@@ -92,16 +92,16 @@ export const sendAssignmentNotifications = async (salesOrderData, formData) => {
   }
 };
 
-export const sendOrderCreatedNotification = async (salesOrderData, formData) => {
+export const sendOrderCreatedNotification = async (rootCardData, formData) => {
   try {
     const notification = {
       recipientId: formData.internalProjectOwner || 'admin',
-      type: 'sales-order-created',
-      title: 'New Sales Order Created',
-      message: `Sales Order SO-${salesOrderData.id} has been successfully created for ${formData.projectName || formData.clientName}. All assigned departments have been notified.`,
+      type: 'root-card-created',
+      title: 'New Root Card Created',
+      message: `Root Card RC-${rootCardData.id} has been successfully created for ${formData.projectName || formData.clientName}. All assigned departments have been notified.`,
       priority: 'high',
       metadata: {
-        salesOrderId: salesOrderData.id,
+        rootCardId: rootCardData.id,
         poNumber: formData.poNumber,
         projectName: formData.projectName,
         clientName: formData.clientName,

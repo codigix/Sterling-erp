@@ -171,198 +171,56 @@ const ProjectDetailViewPage = () => {
     try {
       setLoading(true);
 
-      let rootCard = null;
-      let order = null;
-
-      try {
-        const rootCardResponse = await axios.get(
-          `/production/root-cards/${projectId}`
-        );
-        rootCard = rootCardResponse.data;
-        console.log("Loaded root card:", rootCard);
-        setSelectedRootCard(rootCard);
-      } catch (err) {
-        console.log("Root card not found, trying as sales order:", err.message);
-        try {
-          const orderResponse = await axios.get(`/sales/orders/${projectId}`);
-          order = orderResponse.data.order || orderResponse.data;
-          console.log("Loaded sales order:", order);
-          setSelectedProject(order);
-
-          if (order?.id) {
-            const rootCardsResponse = await axios.get(
-              `/production/root-cards?salesOrderId=${order.id}`
-            );
-            const rootCards = Array.isArray(rootCardsResponse.data)
-              ? rootCardsResponse.data
-              : rootCardsResponse.data.rootCards || rootCardsResponse.data;
-            rootCard =
-              Array.isArray(rootCards) && rootCards.length > 0
-                ? rootCards[0]
-                : null;
-            if (rootCard) {
-              setSelectedRootCard(rootCard);
-            }
-          }
-        } catch (orderErr) {
-          console.error(
-            "Could not fetch as root card or sales order:",
-            orderErr
-          );
-          alert("Project not found");
-          return;
-        }
-      }
-
-      if (!rootCard && !order) {
-        alert("Project not found");
-        return;
-      }
-
-      if (!selectedProject && rootCard) {
-        setSelectedProject(rootCard);
-      }
-
-      let designDetails = null;
-      if (order?.id) {
-        try {
-          const designResponse = await axios.get(
-            `/sales/${order.id}/client-po/project-details`
-          );
-          designDetails = designResponse.data;
-        } catch {
-          console.log("No design details found");
-        }
-      }
-
-      let savedProjectDetails = null;
-      if (rootCard?.id) {
-        try {
-          console.log("Fetching design details for root card:", rootCard.id);
-          const savedResponse = await axios.get(
-            `/production/root-cards/${rootCard.id}/design-details`
-          );
-          console.log("Design details response:", savedResponse.data);
-          savedProjectDetails = savedResponse.data?.data;
-          console.log("Extracted saved project details:", savedProjectDetails);
-        } catch (err) {
-          console.error("Error fetching saved project details:", err);
-        }
-      } else {
-        console.warn("No root card found, cannot fetch design details");
-      }
+      const response = await axios.get(`/design/projects/${projectId}`);
+      const project = response.data;
+      
+      console.log("Loaded unified project details:", project);
+      setSelectedProject(project);
 
       const dataToSet = {
-        designId:
-          savedProjectDetails?.designId ||
-          rootCard?.code ||
-          order?.po_number ||
-          "",
-        projectName:
-          savedProjectDetails?.projectName ||
-          rootCard?.project_name ||
-          order?.project_name ||
-          "",
-        productName:
-          savedProjectDetails?.productName ||
-          designDetails?.productName ||
-          rootCard?.title ||
-          "",
-        designStatus:
-          savedProjectDetails?.designStatus ||
-          rootCard?.status ||
-          order?.status ||
-          "draft",
-        designEngineerName:
-          savedProjectDetails?.designEngineerName ||
-          designDetails?.designEngineerName ||
-          rootCard?.assigned_supervisor ||
-          "",
-        systemLength:
-          savedProjectDetails?.systemLength ||
-          designDetails?.systemLength ||
-          "",
-        systemWidth:
-          savedProjectDetails?.systemWidth || designDetails?.systemWidth || "",
-        systemHeight:
-          savedProjectDetails?.systemHeight ||
-          designDetails?.systemHeight ||
-          "",
-        loadCapacity:
-          savedProjectDetails?.loadCapacity ||
-          designDetails?.loadCapacity ||
-          "",
-        operatingEnvironment:
-          savedProjectDetails?.operatingEnvironment ||
-          designDetails?.operatingEnvironment ||
-          "",
-        materialGrade:
-          savedProjectDetails?.materialGrade ||
-          designDetails?.materialGrade ||
-          "",
-        surfaceFinish:
-          savedProjectDetails?.surfaceFinish ||
-          designDetails?.surfaceFinish ||
-          "",
-        steelSections:
-          savedProjectDetails?.steelSections ||
-          designDetails?.steelSections ||
-          [],
-        plates: savedProjectDetails?.plates || designDetails?.plates || [],
-        fasteners:
-          savedProjectDetails?.fasteners || designDetails?.fasteners || [],
-        components:
-          savedProjectDetails?.components || designDetails?.components || [],
-        electrical:
-          savedProjectDetails?.electrical || designDetails?.electrical || [],
-        consumables:
-          savedProjectDetails?.consumables || designDetails?.consumables || [],
-        designSpecifications:
-          savedProjectDetails?.designSpecifications ||
-          designDetails?.designSpecifications ||
-          "",
-        manufacturingInstructions:
-          savedProjectDetails?.manufacturingInstructions ||
-          designDetails?.manufacturingInstructions ||
-          "",
-        qualitySafety:
-          savedProjectDetails?.qualitySafety ||
-          designDetails?.qualitySafety ||
-          "",
-        additionalNotes:
-          savedProjectDetails?.additionalNotes ||
-          designDetails?.additionalNotes ||
-          "",
+        designId: project.designId || project.projectCode || "",
+        projectName: project.projectName || "",
+        productName: project.productName || "",
+        designStatus: project.designStatus || project.status || "draft",
+        designEngineerName: project.designEngineerName || "",
+        systemLength: project.systemLength || "",
+        systemWidth: project.systemWidth || "",
+        systemHeight: project.systemHeight || "",
+        loadCapacity: project.loadCapacity || "",
+        operatingEnvironment: project.operatingEnvironment || "",
+        materialGrade: project.materialGrade || "",
+        surfaceFinish: project.surfaceFinish || "",
+        steelSections: project.steelSections || [],
+        plates: project.plates || [],
+        fasteners: project.fasteners || [],
+        components: project.components || [],
+        electrical: project.electrical || [],
+        consumables: project.consumables || [],
+        designSpecifications: project.designSpecifications || "",
+        manufacturingInstructions: project.manufacturingInstructions || "",
+        qualitySafety: project.qualitySafety || "",
+        additionalNotes: project.additionalNotes || "",
       };
-      console.log("Data to set:", dataToSet);
-      console.log("Saved details:", savedProjectDetails);
-      console.log("Root card:", rootCard);
-      console.log("Design details from order:", designDetails);
-      console.log("Sales order:", order);
+
       const safeData = ensureMaterialsAreArrays(dataToSet);
-      console.log("Safe data after ensureMaterialsAreArrays:", safeData);
       setProjectData(safeData);
 
-      if (savedProjectDetails?.referenceDocuments) {
+      if (project.referenceDocuments) {
         setUploadedFiles({
-          references: savedProjectDetails.referenceDocuments,
-        });
-      } else if (designDetails?.documents) {
-        setUploadedFiles({
-          references: designDetails.documents,
+          references: project.referenceDocuments,
         });
       }
 
-      if (roleId && (rootCard?.id || order?.id)) {
+      // Fetch tasks if it's a root card
+      if (roleId && projectId.startsWith("RC-")) {
+        const realId = projectId.replace("RC-", "");
         try {
           const response = await axios.get(
             `/department/portal/tasks/${roleId}`
           );
           setTasks(
             response.data.filter(
-              (t) =>
-                t.salesOrder?.id === order?.id ||
-                t.rootCard?.id === rootCard?.id
+              (t) => t.salesOrder?.id === parseInt(realId)
             )
           );
         } catch (err) {
@@ -435,36 +293,15 @@ const ProjectDetailViewPage = () => {
 
       setSaving(true);
 
-      const rootCardId = selectedRootCard?.id;
-      if (!rootCardId) {
-        alert("No project root card found");
+      const projectId = searchParams.get("projectId");
+      if (!projectId) {
+        alert("No project ID found");
         return;
       }
 
-      await axios.post(`/production/root-cards/${rootCardId}/design-details`, {
-        designId: projectData.designId,
-        projectName: projectData.projectName,
-        productName: projectData.productName,
-        designStatus: projectData.designStatus,
-        designEngineerName: projectData.designEngineerName,
-        systemLength: projectData.systemLength,
-        systemWidth: projectData.systemWidth,
-        systemHeight: projectData.systemHeight,
-        loadCapacity: projectData.loadCapacity,
-        operatingEnvironment: projectData.operatingEnvironment,
-        materialGrade: projectData.materialGrade,
-        surfaceFinish: projectData.surfaceFinish,
-        steelSections: projectData.steelSections,
-        plates: projectData.plates,
-        fasteners: projectData.fasteners,
-        components: projectData.components,
-        electrical: projectData.electrical,
-        consumables: projectData.consumables,
-        designSpecifications: projectData.designSpecifications,
-        manufacturingInstructions: projectData.manufacturingInstructions,
-        qualitySafety: projectData.qualitySafety,
-        additionalNotes: projectData.additionalNotes,
-        uploadedFiles: uploadedFiles,
+      await axios.put(`/design/projects/${projectId}`, {
+        ...projectData,
+        referenceDocuments: uploadedFiles.references,
       });
 
       alert("Project details saved successfully!");

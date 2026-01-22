@@ -1,4 +1,5 @@
 const pool = require('../config/database');
+const { normalizeStepData } = require('../utils/rootCardHelpers');
 
 class ShipmentDetail {
   static async createTable() {
@@ -38,15 +39,27 @@ class ShipmentDetail {
     `);
   }
 
-  static async findBySalesOrderId(salesOrderId) {
+  static async findByRootCardId(rootCardId) {
     const [rows] = await pool.execute(
       `SELECT * FROM shipment_details WHERE sales_order_id = ?`,
-      [salesOrderId]
+      [rootCardId]
     );
     return rows[0] ? this.formatRow(rows[0]) : null;
   }
 
   static async create(data) {
+    const normalized = normalizeStepData(data, {
+      deliverySchedule: 'deliveryTerms.deliverySchedule',
+      packagingInfo: 'deliveryTerms.packagingInfo',
+      dispatchMode: 'deliveryTerms.dispatchMode',
+      installationRequired: 'deliveryTerms.installationRequired',
+      siteCommissioning: 'deliveryTerms.siteCommissioning',
+      marking: 'shipment.marking',
+      dismantling: 'shipment.dismantling',
+      packing: 'shipment.packing',
+      dispatch: 'shipment.dispatch'
+    });
+
     const [result] = await pool.execute(
       `INSERT INTO shipment_details 
        (sales_order_id, delivery_schedule, packaging_info, dispatch_mode, installation_required,
@@ -55,31 +68,43 @@ class ShipmentDetail {
         shipping_address, shipment_date, shipment_status, shipment_cost, notes)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        data.salesOrderId,
-        data.deliveryTerms?.deliverySchedule || null,
-        data.deliveryTerms?.packagingInfo || null,
-        data.deliveryTerms?.dispatchMode || null,
-        data.deliveryTerms?.installationRequired || null,
-        data.deliveryTerms?.siteCommissioning || null,
-        data.shipment?.marking || null,
-        data.shipment?.dismantling || null,
-        data.shipment?.packing || null,
-        data.shipment?.dispatch || null,
-        data.shipmentMethod || null,
-        data.carrierName || null,
-        data.trackingNumber || null,
-        data.estimatedDeliveryDate || null,
-        data.shippingAddress || null,
-        data.shipmentDate || null,
-        data.shipmentStatus || 'pending',
-        data.shipmentCost || null,
-        data.notes || null
+        normalized.rootCardId,
+        normalized.deliverySchedule || null,
+        normalized.packagingInfo || null,
+        normalized.dispatchMode || null,
+        normalized.installationRequired || null,
+        normalized.siteCommissioning || null,
+        normalized.marking || null,
+        normalized.dismantling || null,
+        normalized.packing || null,
+        normalized.dispatch || null,
+        normalized.shipmentMethod || null,
+        normalized.carrierName || null,
+        normalized.trackingNumber || null,
+        normalized.estimatedDeliveryDate || null,
+        normalized.shippingAddress || null,
+        normalized.shipmentDate || null,
+        normalized.shipmentStatus || 'pending',
+        normalized.shipmentCost || null,
+        normalized.notes || null
       ]
     );
     return result.insertId;
   }
 
-  static async update(salesOrderId, data) {
+  static async update(rootCardId, data) {
+    const normalized = normalizeStepData(data, {
+      deliverySchedule: 'deliveryTerms.deliverySchedule',
+      packagingInfo: 'deliveryTerms.packagingInfo',
+      dispatchMode: 'deliveryTerms.dispatchMode',
+      installationRequired: 'deliveryTerms.installationRequired',
+      siteCommissioning: 'deliveryTerms.siteCommissioning',
+      marking: 'shipment.marking',
+      dismantling: 'shipment.dismantling',
+      packing: 'shipment.packing',
+      dispatch: 'shipment.dispatch'
+    });
+
     await pool.execute(
       `UPDATE shipment_details 
        SET delivery_schedule = ?, packaging_info = ?, dispatch_mode = ?, installation_required = ?,
@@ -89,30 +114,30 @@ class ShipmentDetail {
            shipment_status = ?, shipment_cost = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
        WHERE sales_order_id = ?`,
       [
-        data.deliveryTerms?.deliverySchedule || null,
-        data.deliveryTerms?.packagingInfo || null,
-        data.deliveryTerms?.dispatchMode || null,
-        data.deliveryTerms?.installationRequired || null,
-        data.deliveryTerms?.siteCommissioning || null,
-        data.shipment?.marking || null,
-        data.shipment?.dismantling || null,
-        data.shipment?.packing || null,
-        data.shipment?.dispatch || null,
-        data.shipmentMethod || null,
-        data.carrierName || null,
-        data.trackingNumber || null,
-        data.estimatedDeliveryDate || null,
-        data.shippingAddress || null,
-        data.shipmentDate || null,
-        data.shipmentStatus || 'pending',
-        data.shipmentCost || null,
-        data.notes || null,
-        salesOrderId
+        normalized.deliverySchedule || null,
+        normalized.packagingInfo || null,
+        normalized.dispatchMode || null,
+        normalized.installationRequired || null,
+        normalized.siteCommissioning || null,
+        normalized.marking || null,
+        normalized.dismantling || null,
+        normalized.packing || null,
+        normalized.dispatch || null,
+        normalized.shipmentMethod || null,
+        normalized.carrierName || null,
+        normalized.trackingNumber || null,
+        normalized.estimatedDeliveryDate || null,
+        normalized.shippingAddress || null,
+        normalized.shipmentDate || null,
+        normalized.shipmentStatus || 'pending',
+        normalized.shipmentCost || null,
+        normalized.notes || null,
+        rootCardId
       ]
     );
   }
 
-  static async updateShipmentStatus(salesOrderId, status) {
+  static async updateShipmentStatus(rootCardId, status) {
     const updateData = {
       shipment_status: status,
       updated_at: new Date()
@@ -126,11 +151,11 @@ class ShipmentDetail {
       `UPDATE shipment_details 
        SET shipment_status = ?, shipment_date = ?, updated_at = CURRENT_TIMESTAMP
        WHERE sales_order_id = ?`,
-      [status, status === 'dispatched' ? new Date() : null, salesOrderId]
+      [status, status === 'dispatched' ? new Date() : null, rootCardId]
     );
   }
 
-  static async updateDeliveryTerms(salesOrderId, deliveryTerms) {
+  static async updateDeliveryTerms(rootCardId, deliveryTerms) {
     await pool.execute(
       `UPDATE shipment_details 
        SET delivery_schedule = ?, packaging_info = ?, dispatch_mode = ?, 
@@ -142,12 +167,12 @@ class ShipmentDetail {
         deliveryTerms.dispatchMode || null,
         deliveryTerms.installationRequired || null,
         deliveryTerms.siteCommissioning || null,
-        salesOrderId
+        rootCardId
       ]
     );
   }
 
-  static async updateShipmentProcess(salesOrderId, shipment) {
+  static async updateShipmentProcess(rootCardId, shipment) {
     await pool.execute(
       `UPDATE shipment_details 
        SET marking = ?, dismantling = ?, packing = ?, dispatch = ?, updated_at = CURRENT_TIMESTAMP
@@ -157,12 +182,12 @@ class ShipmentDetail {
         shipment.dismantling || null,
         shipment.packing || null,
         shipment.dispatch || null,
-        salesOrderId
+        rootCardId
       ]
     );
   }
 
-  static async updateShippingDetails(salesOrderId, shippingData) {
+  static async updateShippingDetails(rootCardId, shippingData) {
     await pool.execute(
       `UPDATE shipment_details 
        SET shipment_method = ?, carrier_name = ?, tracking_number = ?, 
@@ -177,17 +202,17 @@ class ShipmentDetail {
         shippingData.shippingAddress || null,
         shippingData.shipmentCost || null,
         shippingData.notes || null,
-        salesOrderId
+        rootCardId
       ]
     );
   }
 
-  static async validateShipment(salesOrderId) {
+  static async validateShipment(rootCardId) {
     const [rows] = await pool.execute(
       `SELECT delivery_schedule, packaging_info, dispatch_mode, marking, packing, dispatch,
               shipment_method, carrier_name, estimated_delivery_date, shipping_address
        FROM shipment_details WHERE sales_order_id = ?`,
-      [salesOrderId]
+      [rootCardId]
     );
 
     if (!rows || rows.length === 0) {
@@ -219,7 +244,7 @@ class ShipmentDetail {
     if (!row) return null;
     return {
       id: row.id,
-      salesOrderId: row.sales_order_id,
+      rootCardId: row.sales_order_id,
       deliveryTerms: {
         deliverySchedule: row.delivery_schedule,
         packagingInfo: row.packaging_info,

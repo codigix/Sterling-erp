@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Link, Routes, Route, Navigate } from "react-router-dom";
+import axios from "../../utils/api";
 import RoleDashboardLayout from "../../components/layout/RoleDashboardLayout";
 import ViewStockPage from "../inventory/ViewStockPage";
 import StockMovementsPage from "../inventory/StockMovementsPage";
@@ -68,6 +69,8 @@ const DashboardContent = ({
   dateRange,
   setDateRange,
   handleExport,
+  departmentTasks,
+  loadingTasks,
 }) => (
   <div className="space-y-6">
     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -139,8 +142,76 @@ const DashboardContent = ({
       })}
     </div>
 
-    {criticalAlerts.length > 0 && (
-      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6">
+    {/* Assigned Root Cards Tasks Section */}
+    <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
+      <div className="flex items-center justify-between mb-5">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white text-xs flex items-center gap-2">
+          <Clock size={20} className="text-blue-600" />
+          Assigned Root Cards (Logistics & Inventory)
+        </h3>
+        <Link
+          to="/inventory-manager/department-tasks"
+          className="text-sm text-blue-600 dark:text-blue-400 font-semibold hover:text-blue-700"
+        >
+          View All Tasks →
+        </Link>
+      </div>
+
+      {loadingTasks ? (
+        <div className="flex justify-center py-8">
+          <Loader2 className="animate-spin text-blue-600" size={32} />
+        </div>
+      ) : departmentTasks.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {departmentTasks.slice(0, 6).map((task) => (
+            <div
+              key={task.id}
+              className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:border-blue-400 transition-all bg-slate-50 dark:bg-slate-900/50"
+            >
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <h4 className="font-bold text-slate-900 dark:text-white line-clamp-1">
+                    {task.rootCard?.title || task.title}
+                  </h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {task.salesOrder?.customer || "No Customer"}
+                  </p>
+                </div>
+                <span
+                  className={`px-2 py-1 text-[10px] font-bold rounded-full uppercase ${
+                    task.status === "pending"
+                      ? "bg-amber-100 text-amber-700"
+                      : "bg-blue-100 text-blue-700"
+                  }`}
+                >
+                  {task.status}
+                </span>
+              </div>
+              <div className="flex items-center justify-between mt-4">
+                <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                  PO: {task.salesOrder?.poNumber || "N/A"}
+                </span>
+                <Link
+                  to={`/inventory-manager/department-tasks`}
+                  className="text-xs font-bold text-blue-600 hover:text-blue-700"
+                >
+                  Process →
+                </Link>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-8 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-dashed border-slate-300 dark:border-slate-700">
+          <Package className="mx-auto text-slate-300 mb-2" size={40} />
+          <p className="text-slate-500 dark:text-slate-400 font-medium">
+            No active material, shipment, or delivery tasks assigned.
+          </p>
+        </div>
+      )}
+    </div>
+
+    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6">
         <div className="flex items-center text-xs gap-3 mb-4">
           <AlertTriangle size={24} className="text-red-600 dark:text-red-400" />
           <h2 className="text-xl font-bold text-red-900 dark:text-red-100">
@@ -326,6 +397,29 @@ const DashboardContent = ({
 
 const InventoryManagerDashboard = () => {
   const [dateRange, setDateRange] = useState("30days");
+  const [departmentTasks, setDepartmentTasks] = useState([]);
+  const [loadingTasks, setLoadingTasks] = useState(true);
+
+  const fetchTasks = useCallback(async () => {
+    try {
+      setLoadingTasks(true);
+      // Fetch all tasks for this employee and filter for logistics/inventory types
+      const response = await axios.get("/employee/tasks");
+      const allTasks = response.data.tasks || [];
+      const filteredTasks = allTasks.filter(task => 
+        ['material_requirement', 'shipment', 'delivery'].includes(task.type)
+      );
+      setDepartmentTasks(filteredTasks);
+    } catch (err) {
+      console.error("Error fetching inventory tasks:", err);
+    } finally {
+      setLoadingTasks(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchTasks();
+  }, [fetchTasks]);
 
   const navigationItems = [
     {
@@ -580,7 +674,7 @@ const InventoryManagerDashboard = () => {
       item: "Aluminum Sheet",
       qty: "-25 kg",
       type: "out",
-      vendor: "Project X",
+      vendor: "Root Card X",
       time: "4 hrs ago",
     },
     {
@@ -639,6 +733,8 @@ const InventoryManagerDashboard = () => {
               dateRange={dateRange}
               setDateRange={setDateRange}
               handleExport={handleExport}
+              departmentTasks={departmentTasks}
+              loadingTasks={loadingTasks}
             />
           }
         />
@@ -656,6 +752,8 @@ const InventoryManagerDashboard = () => {
               dateRange={dateRange}
               setDateRange={setDateRange}
               handleExport={handleExport}
+              departmentTasks={departmentTasks}
+              loadingTasks={loadingTasks}
             />
           }
         />

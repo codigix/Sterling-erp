@@ -2,18 +2,18 @@
 
 ## Overview
 
-When users navigate to an inventory task from the **Department Tasks** interface, they can complete actions that automatically update the task status in the project inventory workflow. This document explains how to integrate this functionality into inventory pages.
+When users navigate to an inventory task from the **Department Tasks** interface, they can complete actions that automatically update the task status in the root card inventory workflow. This document explains how to integrate this functionality into inventory pages.
 
 ## How It Works
 
 ### 1. User navigates from Department Tasks → Task Page
 - User clicks on a task in **Department Tasks → Inventory Tasks**
-- The system passes `projectId`, `taskId`, and other parameters in the URL
+- The system passes `rootCardId`, `taskId`, and other parameters in the URL
 - Task page detects these parameters and provides feedback to the user
 
 ### 2. User completes the task action
 - User performs the required action (create quotation, send PO, receive material, etc.)
-- Upon successful completion, the task status is automatically marked as **completed** in the `project_inventory_tasks` table
+- Upon successful completion, the task status is automatically marked as **completed** in the `root_card_inventory_tasks` table
 
 ### 3. Normal behavior for direct navigation
 - If a user navigates directly to a task page (without coming from Department Tasks), the page works normally
@@ -24,14 +24,14 @@ When users navigate to an inventory task from the **Department Tasks** interface
 ### Step 1: Import the Hook
 
 ```javascript
-import useProjectInventoryTask from "../../hooks/useProjectInventoryTask";
+import useRootCardInventoryTask from "../../hooks/useRootCardInventoryTask";
 ```
 
 ### Step 2: Use the Hook in Your Component
 
 ```javascript
 const MyInventoryPage = () => {
-  const { completeCurrentTask, isFromDepartmentTasks, getTaskParams } = useProjectInventoryTask();
+  const { completeCurrentTask, isFromDepartmentTasks, getTaskParams } = useRootCardInventoryTask();
   
   // ... rest of your component code
 };
@@ -89,11 +89,11 @@ if (isFromDepartmentTasks()) {
 Returns an object with task parameters:
 
 ```javascript
-const { taskId, projectId, rootCardId, taskTitle } = getTaskParams();
+const { taskId, rootCardId, taskTitle } = getTaskParams();
 ```
 
 ### `completeCurrentTask(notes = '')`
-Marks the current task as completed in the project inventory workflow.
+Marks the current task as completed in the root card inventory workflow.
 
 ```javascript
 await completeCurrentTask("Optional notes about completion");
@@ -110,14 +110,13 @@ await updateTaskStatus('in_progress');
 
 When navigating from Department Tasks, the following parameters are included:
 
-- `taskId` - The ID of the project inventory task
-- `projectId` - The ID of the project
-- `rootCardId` - The ID of the root card
+- `taskId` - The ID of the root card inventory task
+- `rootCardId` - The ID of the root card (project)
 - `taskTitle` - The title of the task (URL encoded)
 
 Example URL:
 ```
-/inventory-manager/vendors/quotations?taskId=1&projectId=5&rootCardId=10&taskTitle=Create%20RFQ%20Quotation
+/inventory-manager/vendors/quotations?taskId=1&rootCardId=5&taskTitle=Create%20RFQ%20Quotation
 ```
 
 ## Example Implementation
@@ -125,10 +124,10 @@ Example URL:
 ### QuotationsPage.jsx
 
 ```javascript
-import useProjectInventoryTask from "../../hooks/useProjectInventoryTask";
+import useRootCardInventoryTask from "../../hooks/useRootCardInventoryTask";
 
 const QuotationsPage = () => {
-  const { completeCurrentTask, isFromDepartmentTasks } = useProjectInventoryTask();
+  const { completeCurrentTask, isFromDepartmentTasks } = useRootCardInventoryTask();
 
   const handleSaveRequirements = async () => {
     try {
@@ -162,12 +161,12 @@ const QuotationsPage = () => {
 ## Task Completion Conditions
 
 The task is marked as complete when:
-1. User navigates FROM Department Tasks (projectId in URL params)
+1. User navigates FROM Department Tasks (rootCardId in URL params)
 2. User successfully completes an action (saves, sends, creates, receives, etc.)
 3. `completeCurrentTask()` is called
 
 The task remains incomplete if:
-1. User navigates directly to the page (no projectId in URL)
+1. User navigates directly to the page (no rootCardId in URL)
 2. `completeCurrentTask()` is never called
 3. An error occurs during the action
 
@@ -187,7 +186,7 @@ Should be integrated:
 
 | Workflow Step | Page | Completion Action |
 |---|---|---|
-| Check Project Material Requirements | InventoryTasksPage | Task auto-marked complete |
+| Check Root Card Material Requirements | InventoryTasksPage | Task auto-marked complete |
 | Create RFQ | QuotationsPage | Save requirements |
 | Send RFQ to Vendor | QuotationsPage | Send email |
 | Receive & Record Quotes | QuotationsPage | Receive response |
@@ -222,7 +221,7 @@ To test the integration:
 
 1. Navigate to Department Tasks → Inventory Tasks
 2. Click on a specific task (e.g., "Create RFQ")
-3. Verify the URL contains `?taskId=...&projectId=...`
+3. Verify the URL contains `?taskId=...&rootCardId=...`
 4. Verify the context banner appears
 5. Complete the required action
 6. Verify the task status changes to "completed" in Department Tasks

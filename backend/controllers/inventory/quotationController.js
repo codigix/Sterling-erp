@@ -211,19 +211,19 @@ exports.getVendorQuotations = async (req, res) => {
   }
 };
 
-exports.getQuotationsByProject = async (req, res) => {
+exports.getQuotationsByRootCard = async (req, res) => {
   try {
-    const { projectId } = req.params;
+    const { rootCardId } = req.params;
     
     const quotations = await Quotation.findAll({ 
       type: 'outbound',
-      sales_order_id: projectId
+      sales_order_id: rootCardId
     });
     
     res.json(quotations);
   } catch (error) {
-    console.error('Error fetching project quotations:', error);
-    res.status(500).json({ message: 'Error fetching project quotations' });
+    console.error('Error fetching root card quotations:', error);
+    res.status(500).json({ message: 'Error fetching root card quotations' });
   }
 };
 

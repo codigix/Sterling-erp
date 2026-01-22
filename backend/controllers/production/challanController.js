@@ -4,10 +4,10 @@ const ProductionPhaseTracking = require('../../models/ProductionPhaseTracking');
 const challanController = {
   async createOutwardChallan(req, res) {
     try {
-      const { salesOrderId, trackingId, vendorName, vendorContact, expectedDeliveryDate } = req.body;
+      const { rootCardId, trackingId, vendorName, vendorContact, expectedDeliveryDate } = req.body;
 
-      if (!salesOrderId || !trackingId) {
-        return res.status(400).json({ message: 'salesOrderId and trackingId are required' });
+      if (!rootCardId || !trackingId) {
+        return res.status(400).json({ message: 'rootCardId and trackingId are required' });
       }
 
       const challanNo = `OC-${Date.now()}`;
@@ -16,7 +16,7 @@ const challanController = {
         `INSERT INTO outward_challan_details 
          (sales_order_id, tracking_id, challan_number, vendor_name, vendor_contact, expected_delivery_date, status) 
          VALUES (?, ?, ?, ?, ?, ?, 'Issued')`,
-        [salesOrderId, trackingId, challanNo, vendorName || null, vendorContact || null, expectedDeliveryDate || null]
+        [rootCardId, trackingId, challanNo, vendorName || null, vendorContact || null, expectedDeliveryDate || null]
       );
 
       await ProductionPhaseTracking.updateStatus(trackingId, 'Outsourced', {
@@ -81,15 +81,15 @@ const challanController = {
 
   async getOutwardChallans(req, res) {
     try {
-      const { salesOrderId } = req.params;
+      const { rootCardId } = req.params;
       
-      if (!salesOrderId) {
-        return res.status(400).json({ message: 'salesOrderId is required' });
+      if (!rootCardId) {
+        return res.status(400).json({ message: 'rootCardId is required' });
       }
 
       const [rows] = await pool.execute(
         'SELECT * FROM outward_challan_details WHERE sales_order_id = ? ORDER BY created_at DESC',
-        [salesOrderId]
+        [rootCardId]
       );
 
       res.json({ 

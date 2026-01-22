@@ -200,8 +200,7 @@ exports.updateComprehensiveBOM = async (req, res) => {
             task_description: `BOM has been activated. Please review and initiate procurement for items in BOM revision ${productInfo.revision || oldBOM.revision}.`,
             priority: 'high',
             status: 'pending',
-            assigned_by: req.user?.id,
-            sales_order_id: productInfo.salesOrderId || oldBOM.sales_order_id
+            assigned_by: req.user?.id
           });
         }
       } catch (taskError) {

@@ -6,19 +6,11 @@ const STEP_VALIDATORS = {
     name: 'Client PO Details',
     table: 'client_po_details',
     requiredFields: ['po_number', 'po_date', 'client_name', 'client_email', 'client_phone', 'project_name', 'project_code'],
-    optionalFields: ['client_address', 'billing_address', 'shipping_address', 'po_value', 'currency', 'notes', 'project_requirements'],
-    jsonFields: ['project_requirements', 'terms_conditions', 'attachments'],
-    description: 'PO information, client details, project details, and requirements'
+    optionalFields: ['client_address', 'billing_address', 'shipping_address', 'po_value', 'currency', 'notes', 'project_requirements', 'product_details'],
+    jsonFields: ['project_requirements', 'terms_conditions', 'attachments', 'product_details'],
+    description: 'PO information, client details, project details, requirements, and product details'
   },
   2: {
-    name: 'Sales Order Details',
-    table: 'sales_order_details',
-    requiredFields: ['client_email', 'client_phone', 'estimated_end_date'],
-    optionalFields: ['billing_address', 'shipping_address', 'product_details', 'quality_compliance', 'warranty_support', 'payment_terms', 'project_priority', 'total_amount', 'project_code', 'internal_info', 'special_instructions'],
-    jsonFields: ['product_details', 'quality_compliance', 'warranty_support', 'internal_info'],
-    description: '3 tabs: Sales & Product, Quality & Compliance, Payment & Internal'
-  },
-  3: {
     name: 'Design Engineering Details',
     table: 'design_engineering_details',
     requiredFields: [],
@@ -26,7 +18,7 @@ const STEP_VALIDATORS = {
     jsonFields: ['design_details', 'documents', 'specifications'],
     description: 'General design info, product specification, materials, attachments, comments'
   },
-  4: {
+  3: {
     name: 'Material Requirements Details',
     table: 'material_requirements_details',
     requiredFields: [],
@@ -34,7 +26,7 @@ const STEP_VALIDATORS = {
     jsonFields: ['materials'],
     description: 'Materials list with quantities, vendors, and costs'
   },
-  5: {
+  4: {
     name: 'Production Plan Details',
     table: 'production_plan_details',
     requiredFields: [],
@@ -42,7 +34,7 @@ const STEP_VALIDATORS = {
     jsonFields: ['selected_phases', 'material_info'],
     description: 'Production timeline, phases, material preparation info'
   },
-  6: {
+  5: {
     name: 'Quality Check Details',
     table: 'quality_check_details',
     requiredFields: [],
@@ -50,7 +42,7 @@ const STEP_VALIDATORS = {
     jsonFields: ['quality_compliance', 'warranty_support'],
     description: 'Quality standards, compliance, warranty, and internal owner'
   },
-  7: {
+  6: {
     name: 'Shipment Details',
     table: 'shipment_details',
     requiredFields: [],
@@ -58,7 +50,7 @@ const STEP_VALIDATORS = {
     jsonFields: ['delivery_terms', 'shipment_data'],
     description: 'Delivery schedule, packing, dispatch, and shipment info'
   },
-  8: {
+  7: {
     name: 'Delivery Details',
     table: 'delivery_details',
     requiredFields: [],
@@ -96,7 +88,7 @@ async function validateStepFields(salesOrderId, stepNumber = null) {
     console.log(`✅ Sales Order Found: ${salesOrders[0].customer} (PO: ${salesOrders[0].po_number})\n`);
 
     // Validate requested steps
-    const stepsToCheck = stepNumber ? [parseInt(stepNumber)] : [1, 2, 3, 4, 5, 6, 7, 8];
+    const stepsToCheck = stepNumber ? [parseInt(stepNumber)] : [1, 2, 3, 4, 5, 6, 7];
 
     let totalFieldsFound = 0;
     let totalFieldsMissing = 0;

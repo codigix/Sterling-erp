@@ -164,10 +164,9 @@ exports.getPurchaseOrderStats = async (req, res) => {
 
 exports.getReceivedQuotes = async (req, res) => {
   try {
-    const { sales_order_id, project_id } = req.query;
+    const { root_card_id } = req.query;
     const quotes = await PurchaseOrder.getReceivedQuotes({
-      sales_order_id,
-      project_id
+      root_card_id
     });
     
     const parsedQuotes = quotes.map(q => ({

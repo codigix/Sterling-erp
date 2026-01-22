@@ -47,7 +47,7 @@ const ProjectCard = ({
   const getTaskNavigationUrl = (task) => {
     const baseParams = `taskId=${task.id}&taskTitle=${encodeURIComponent(
       task.task_title || task.title
-    )}&salesOrderId=${project.id}&projectName=${encodeURIComponent(
+    )}&rootCardId=${project.id}&projectName=${encodeURIComponent(
       project.project_name || ""
     )}&poNumber=${encodeURIComponent(
       project.po_number || ""
@@ -63,7 +63,7 @@ const ProjectCard = ({
       taskTitle.includes("project details") ||
       taskTitle.includes("enter project")
     ) {
-      return `/design-engineer/project-details?salesOrderId=${project.id}`;
+      return `/design-engineer/root-cards?rootCardId=${project.id}`;
     }
     // Step 2: Prepare Design Documents
     else if (
@@ -106,7 +106,7 @@ const ProjectCard = ({
     }
     // Fallback: Default to project details
     else {
-      return `/design-engineer/project-details?salesOrderId=${project.id}`;
+      return `/design-engineer/root-cards?rootCardId=${project.id}`;
     }
   };
 

@@ -154,7 +154,7 @@ const ProductionPlansPage = () => {
             </span>
           </div>
           <p className="text-sm text-amber-800 dark:text-amber-200 mb-4">
-            The following sales orders have production phases defined and are ready to start production planning.
+            The following root cards have production phases defined and are ready to start production planning.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {readyItems.map((item) => (
@@ -185,7 +185,7 @@ const ProductionPlansPage = () => {
                   </div>
                 </div>
                 <button
-                  onClick={() => navigate("/department/production/plans/new", { state: { salesOrderId: item.id } })}
+                  onClick={() => navigate("/department/production/plans/new", { state: { rootCardId: item.id } })}
                   className="w-full px-3 py-2 bg-amber-600 hover:bg-amber-700 dark:bg-amber-700 dark:hover:bg-amber-600 text-white text-sm font-medium rounded-lg transition-colors"
                 >
                   Create Production Plan
