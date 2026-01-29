@@ -14,6 +14,7 @@ exports.createProductionStage = async (req, res) => {
     plannedEndDate,
     estimatedDurationDays,
     delayToleranceDays,
+    targetWarehouse,
     notes
   } = req.body;
 
@@ -49,6 +50,7 @@ exports.createProductionStage = async (req, res) => {
       estimatedDurationDays: estimatedDurationDays ? Number(estimatedDurationDays) : null,
       delayToleranceDays: delayToleranceDays ? Number(delayToleranceDays) : null,
       status: 'pending',
+      targetWarehouse: targetWarehouse || null,
       notes: notes || null
     });
 
@@ -133,6 +135,7 @@ exports.updateProductionStage = async (req, res) => {
     plannedEndDate,
     estimatedDurationDays,
     delayToleranceDays,
+    targetWarehouse,
     notes,
     status
   } = req.body;
@@ -166,6 +169,7 @@ exports.updateProductionStage = async (req, res) => {
       plannedEndDate,
       estimatedDurationDays,
       delayToleranceDays,
+      targetWarehouse,
       notes,
       status
     });

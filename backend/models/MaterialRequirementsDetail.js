@@ -44,9 +44,9 @@ class MaterialRequirementsDetail {
 
   static async create(data) {
     const params = [
-      data.rootCardId,
-      stringifyJsonField(ensureArray(data.materials)),
-      data.totalMaterialCost || null,
+      data.rootCardId || null,
+      stringifyJsonField(ensureArray(data.materials)) || '[]',
+      data.totalMaterialCost || 0,
       data.procurementStatus || 'pending',
       data.notes || null
     ];
@@ -62,8 +62,8 @@ class MaterialRequirementsDetail {
 
   static async update(rootCardId, data) {
     const params = [
-      stringifyJsonField(ensureArray(data.materials)),
-      data.totalMaterialCost || null,
+      stringifyJsonField(ensureArray(data.materials)) || '[]',
+      data.totalMaterialCost || 0,
       data.procurementStatus || 'pending',
       data.notes || null,
       rootCardId
@@ -207,7 +207,7 @@ class MaterialRequirementsDetail {
     if (!Array.isArray(materials)) return 0;
     return materials.reduce((total, material) => {
       const quantity = parseFloat(material.quantity) || 0;
-      const price = parseFloat(material.unitPrice || material.unitCost || material.valuationRate || 0);
+      const price = parseFloat(material.sellingRate || material.selling_rate || material.unitPrice || material.unitCost || material.valuationRate || material.valuation_rate || 0);
       return total + (quantity * price);
     }, 0);
   }

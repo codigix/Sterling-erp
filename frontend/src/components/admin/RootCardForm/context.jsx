@@ -1,6 +1,5 @@
-import { createContext, useReducer, useCallback } from "react";
-
-export const RootCardContext = createContext();
+import { useReducer, useMemo, useEffect } from "react";
+import { RootCardContext } from "./RootCardContext";
 
 const initialState = {
   currentStep: 1,
@@ -130,7 +129,7 @@ const initialState = {
         designEngineerName: "",
         designStartDate: "",
         designCompletionDate: "",
-        designStatus: "Pending",
+        designStatus: "draft",
       },
       productSpecification: {
         productName: "CCIS – Container Canister Integration Stand",
@@ -236,12 +235,11 @@ const initialState = {
       productionSupervisor: "",
     },
     deliveryAssignedTo: "",
-    design_engineeringAssignedTo: "",
-    material_requirementAssignedTo: "",
-    production_planAssignedTo: "",
-    quality_checkAssignedTo: "",
+    designEngineeringAssignedTo: "",
+    materialRequirementsAssignedTo: "",
+    productionPlanAssignedTo: "",
+    qualityCheckAssignedTo: "",
     shipmentAssignedTo: "",
-    deliveryAssignedToManager: "",
   },
   enabledMaterials: {
     steelSection: false,
@@ -273,7 +271,6 @@ const initialState = {
     hardwareMisc: [],
     documentationMaterials: [],
   },
-  selectedProductionPhases: {},
   productionPhaseDetails: {},
   productionPhaseTracking: {},
   poDocuments: [],
@@ -300,6 +297,10 @@ const ACTION_TYPES = {
   SET_PO_DOCUMENTS: "SET_PO_DOCUMENTS",
   SET_STEP_ASSIGNEE: "SET_STEP_ASSIGNEE",
   SET_STEP_NOTE: "SET_STEP_NOTE",
+  SET_MATERIAL_DETAILS_TABLE: "SET_MATERIAL_DETAILS_TABLE",
+  SET_PRODUCTION_PHASE_DETAILS: "SET_PRODUCTION_PHASE_DETAILS",
+  SET_FORM_DATA: "SET_FORM_DATA",
+  SET_DRAFT_DATA: "SET_DRAFT_DATA",
   RESET: "RESET",
 };
 
@@ -422,6 +423,31 @@ function reducer(state, action) {
           [action.step]: action.value,
         },
       };
+    case ACTION_TYPES.SET_MATERIAL_DETAILS_TABLE:
+      return { ...state, materialDetailsTable: action.payload };
+    case ACTION_TYPES.SET_PRODUCTION_PHASE_DETAILS:
+      return { ...state, productionPhaseDetails: action.payload };
+    case ACTION_TYPES.SET_FORM_DATA:
+      return {
+        ...state,
+        formData: {
+          ...state.formData,
+          ...action.payload,
+        },
+      };
+    case ACTION_TYPES.SET_DRAFT_DATA:
+      return {
+        ...state,
+        createdOrderId: action.payload.id,
+        currentStep: action.payload.currentStep || 1,
+        formData: {
+          ...state.formData,
+          ...action.payload.formData,
+        },
+        materialDetailsTable: action.payload.materialDetailsTable || state.materialDetailsTable,
+        productionPhaseDetails: action.payload.productionPhaseDetails || state.productionPhaseDetails,
+        poDocuments: action.payload.poDocuments || state.poDocuments,
+      };
     case ACTION_TYPES.RESET:
       return initialState;
     default:
@@ -430,46 +456,59 @@ function reducer(state, action) {
 }
 
 export function RootCardProvider({ children, mode = 'create', initialData = null, assigneeData = null }) {
-  const [state, dispatch] = useReducer(reducer, initialState);
+  const [state, dispatch] = useReducer(reducer, {
+    ...initialState,
+    createdOrderId: initialData?.id || initialData?._id || null
+  });
 
-  const actions = {
-    setStep: useCallback((step) => {
+  // Keep createdOrderId in sync with initialData if it arrives later
+  useEffect(() => {
+    if (initialData?.id || initialData?._id) {
+      dispatch({ 
+        type: ACTION_TYPES.SET_ORDER_ID, 
+        payload: initialData.id || initialData._id 
+      });
+    }
+  }, [initialData]);
+
+  const actions = useMemo(() => ({
+    setStep: (step) => {
       dispatch({ type: ACTION_TYPES.SET_STEP, payload: step });
-    }, []),
-    updateField: useCallback((field, value) => {
+    },
+    updateField: (field, value) => {
       dispatch({ type: ACTION_TYPES.UPDATE_FIELD, field, value });
-    }, []),
-    setNestedField: useCallback((section, field, value) => {
+    },
+    setNestedField: (section, field, value) => {
       dispatch({ type: ACTION_TYPES.SET_NESTED_FIELD, section, field, value });
-    }, []),
-    updateDeepNestedField: useCallback((section, subsection, field, value) => {
+    },
+    updateDeepNestedField: (section, subsection, field, value) => {
       dispatch({ type: ACTION_TYPES.UPDATE_DEEP_NESTED_FIELD, section, subsection, field, value });
-    }, []),
-    setLoading: useCallback((loading) => {
+    },
+    setLoading: (loading) => {
       dispatch({ type: ACTION_TYPES.SET_LOADING, payload: loading });
-    }, []),
-    setError: useCallback((error) => {
+    },
+    setError: (error) => {
       dispatch({ type: ACTION_TYPES.SET_ERROR, payload: error });
-    }, []),
-    setSuccess: useCallback((msg) => {
+    },
+    setSuccess: (msg) => {
       dispatch({ type: ACTION_TYPES.SET_SUCCESS, payload: msg });
-    }, []),
-    setOrderId: useCallback((id) => {
+    },
+    setOrderId: (id) => {
       dispatch({ type: ACTION_TYPES.SET_ORDER_ID, payload: id });
-    }, []),
-    setOrderSubmitted: useCallback((submitted) => {
+    },
+    setOrderSubmitted: (submitted) => {
       dispatch({ type: ACTION_TYPES.SET_ORDER_SUBMITTED, payload: submitted });
-    }, []),
-    updateMaterialDetail: useCallback((materialType, index, details) => {
+    },
+    updateMaterialDetail: (materialType, index, details) => {
       dispatch({ type: ACTION_TYPES.UPDATE_MATERIAL_DETAIL, materialType, index, details });
-    }, []),
-    deleteMaterialDetail: useCallback((materialType, index) => {
+    },
+    deleteMaterialDetail: (materialType, index) => {
       dispatch({ type: ACTION_TYPES.DELETE_MATERIAL_DETAIL, materialType, index });
-    }, []),
-    toggleMaterialType: useCallback((materialType) => {
+    },
+    toggleMaterialType: (materialType) => {
       dispatch({ type: ACTION_TYPES.TOGGLE_MATERIAL_TYPE, materialType });
-    }, []),
-    setConfigData: useCallback((projectCategories, materialUnits, materialSources, priorityLevels) => {
+    },
+    setConfigData: (projectCategories, materialUnits, materialSources, priorityLevels) => {
       dispatch({
         type: ACTION_TYPES.SET_CONFIG_DATA,
         projectCategories,
@@ -477,26 +516,46 @@ export function RootCardProvider({ children, mode = 'create', initialData = null
         materialSources,
         priorityLevels,
       });
-    }, []),
-    setEmployees: useCallback((employees) => {
+    },
+    setEmployees: (employees) => {
       dispatch({ type: ACTION_TYPES.SET_EMPLOYEES, payload: employees });
-    }, []),
-    setPoDocuments: useCallback((documents) => {
+    },
+    setPoDocuments: (documents) => {
       dispatch({ type: ACTION_TYPES.SET_PO_DOCUMENTS, payload: documents });
-    }, []),
-    setStepAssignee: useCallback((step, value) => {
+    },
+    setStepAssignee: (step, value) => {
       dispatch({ type: ACTION_TYPES.SET_STEP_ASSIGNEE, step, value });
-    }, []),
-    setStepNote: useCallback((step, value) => {
+    },
+    setStepNote: (step, value) => {
       dispatch({ type: ACTION_TYPES.SET_STEP_NOTE, step, value });
-    }, []),
-    reset: useCallback(() => {
+    },
+    setMaterialDetailsTable: (table) => {
+      dispatch({ type: ACTION_TYPES.SET_MATERIAL_DETAILS_TABLE, payload: table });
+    },
+    setProductionPhaseDetails: (details) => {
+      dispatch({ type: ACTION_TYPES.SET_PRODUCTION_PHASE_DETAILS, payload: details });
+    },
+    setFormData: (formData) => {
+      dispatch({ type: ACTION_TYPES.SET_FORM_DATA, payload: formData });
+    },
+    setDraftData: (draftData) => {
+      dispatch({ type: ACTION_TYPES.SET_DRAFT_DATA, payload: draftData });
+    },
+    reset: () => {
       dispatch({ type: ACTION_TYPES.RESET });
-    }, []),
-  };
+    },
+  }), []);
+
+  const value = useMemo(() => ({
+    state,
+    ...actions,
+    mode,
+    initialData,
+    assigneeData
+  }), [state, actions, mode, initialData, assigneeData]);
 
   return (
-    <RootCardContext.Provider value={{ state, ...actions, mode, initialData, assigneeData }}>
+    <RootCardContext.Provider value={value}>
       {children}
     </RootCardContext.Provider>
   );

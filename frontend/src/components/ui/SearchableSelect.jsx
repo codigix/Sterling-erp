@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useId, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Search, ChevronDown, X } from 'lucide-react';
 
 const SearchableSelect = ({
@@ -10,33 +11,66 @@ const SearchableSelect = ({
   disabled = false,
   className = "",
   error,
-  allowCustom = false
+  allowCustom = false,
+  name,
+  id,
+  'aria-label': ariaLabel
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [prevValue, setPrevValue] = useState(value);
+  const [dropdownStyle, setDropdownStyle] = useState({});
   const wrapperRef = useRef(null);
   const inputRef = useRef(null);
+  const dropdownRef = useRef(null);
+  const generatedId = useId();
+
+  const inputId = id || name || generatedId;
 
   const selectedOption = options.find(opt => String(opt.value) === String(value));
 
-  // Update search term when value changes or component mounts
-  useEffect(() => {
-    if (selectedOption) {
-      setSearchTerm(selectedOption.label);
-    } else if (value && allowCustom) {
-      setSearchTerm(value);
-    } else {
-      setSearchTerm('');
-    }
-  }, [value, selectedOption, allowCustom]);
+  // Adjust search term when value changes from outside
+  if (value !== prevValue) {
+    setPrevValue(value);
+    const desiredTerm = selectedOption 
+      ? selectedOption.label 
+      : (value && allowCustom ? String(value) : '');
+    setSearchTerm(desiredTerm);
+  }
 
   const filteredOptions = options.filter(option =>
     (option?.label || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  useLayoutEffect(() => {
+    if (isOpen && wrapperRef.current) {
+      const rect = wrapperRef.current.getBoundingClientRect();
+      const availableHeight = window.innerHeight - rect.bottom;
+      const dropdownHeight = 240; // max-h-60 is 240px
+      
+      const style = {
+        position: 'fixed',
+        left: `${rect.left}px`,
+        width: `${rect.width}px`,
+        zIndex: 9999,
+      };
+
+      if (availableHeight < dropdownHeight && rect.top > dropdownHeight) {
+        // Show above
+        style.bottom = `${window.innerHeight - rect.top + 4}px`;
+      } else {
+        // Show below
+        style.top = `${rect.bottom + 4}px`;
+      }
+
+      setDropdownStyle(style);
+    }
+  }, [isOpen]);
+
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target) && 
+          dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsOpen(false);
         
         if (allowCustom && searchTerm && !options.find(opt => opt.label === searchTerm)) {
@@ -49,8 +83,28 @@ const SearchableSelect = ({
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [selectedOption, value, allowCustom, searchTerm, options, onChange]);
+    
+    const handleScroll = (event) => {
+      if (isOpen && dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    
+    const handleResize = () => {
+      if (isOpen) {
+        setIsOpen(false);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, true);
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('scroll', handleScroll, true);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [selectedOption, value, allowCustom, searchTerm, options, onChange, isOpen]);
 
   const handleSelect = (option) => {
     onChange(option.value);
@@ -88,7 +142,7 @@ const SearchableSelect = ({
   return (
     <div className={`relative ${className}`} ref={wrapperRef}>
       {label && (
-        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+        <label htmlFor={inputId} className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1 tracking-tight">
           {label}
         </label>
       )}
@@ -97,22 +151,29 @@ const SearchableSelect = ({
         className={`
           relative w-full border rounded-lg bg-white dark:bg-slate-700 
           transition-all duration-200 flex items-center
-          ${isOpen ? 'ring-2 ring-blue-500 border-blue-500 shadow-sm' : 'border-slate-300 dark:border-slate-600'}
+          ${isOpen ? 'ring-2 ring-blue-500 border-blue-500 shadow-sm' : 'border-slate-200 dark:border-slate-600'}
           ${error ? 'border-red-500 ring-red-500' : ''}
-          ${disabled ? 'opacity-60 cursor-not-allowed bg-slate-50' : 'cursor-text'}
+          ${disabled ? 'opacity-60 cursor-not-allowed bg-slate-50' : 'cursor-default'}
         `}
-        onClick={() => inputRef.current?.focus()}
+        onClick={() => !disabled && setIsOpen(!isOpen)}
       >
         <input
           ref={inputRef}
           type="text"
+          id={inputId}
+          name={name || inputId}
+          aria-label={ariaLabel}
           value={searchTerm}
           onChange={handleInputChange}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (!disabled) setIsOpen(true);
+          }}
           onFocus={() => !disabled && setIsOpen(true)}
           onKeyDown={handleInputKeyDown}
           placeholder={placeholder}
           disabled={disabled}
-          className="w-full px-3 py-2 bg-transparent text-slate-900 dark:text-white text-xs focus:outline-none placeholder:text-slate-400"
+          className="w-full px-3 py-2.5 bg-transparent text-slate-900 dark:text-white text-xs focus:outline-none placeholder:text-slate-400"
         />
         
         <div className="flex items-center gap-1 pr-2">
@@ -138,9 +199,11 @@ const SearchableSelect = ({
         </div>
       </div>
 
-      {isOpen && !disabled && (
+      {isOpen && !disabled && createPortal(
         <div 
-          className="absolute top-full left-0 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl max-h-60 overflow-hidden flex flex-col z-[100] animate-in fade-in zoom-in-95 duration-100"
+          ref={dropdownRef}
+          style={dropdownStyle}
+          className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl max-h-60 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-100"
         >
           <div className="overflow-y-auto flex-1 py-1 modal-body-scroll">
             {filteredOptions.length > 0 ? (
@@ -149,7 +212,7 @@ const SearchableSelect = ({
                   key={option.value || `option-${index}`}
                   onClick={() => handleSelect(option)}
                   className={`
-                    px-4 py-2.5 text-sm cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors
+                    px-4 py-2 text-xs cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors
                     ${String(value) === String(option.value) ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-semibold' : 'text-slate-700 dark:text-slate-300'}
                   `}
                 >
@@ -191,7 +254,8 @@ const SearchableSelect = ({
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
       
       {error && <p className="mt-1 text-[10px] text-red-500 font-medium">{error}</p>}
@@ -199,4 +263,4 @@ const SearchableSelect = ({
   );
 };
 
-export default SearchableSelect;
+export default React.memo(SearchableSelect);

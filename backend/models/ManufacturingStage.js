@@ -14,8 +14,8 @@ class ManufacturingStage {
         const [result] = await connection.execute(
           `
             INSERT INTO manufacturing_stages
-            (root_card_id, stage_name, stage_type, status, assigned_worker, planned_start, planned_end, start_date, end_date, progress, notes)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (root_card_id, stage_name, stage_type, status, assigned_worker, planned_start, planned_end, start_date, end_date, progress, target_warehouse, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `,
           [
             stage.rootCardId,
@@ -28,6 +28,7 @@ class ManufacturingStage {
             stage.startDate || null,
             stage.endDate || null,
             stage.progress ?? 0,
+            stage.targetWarehouse || null,
             stage.notes || null
           ]
         );
@@ -133,6 +134,10 @@ class ManufacturingStage {
     if (data.status !== undefined) {
       updates.push('status = ?');
       params.push(data.status);
+    }
+    if (data.targetWarehouse !== undefined) {
+      updates.push('target_warehouse = ?');
+      params.push(data.targetWarehouse);
     }
     if (data.notes !== undefined) {
       updates.push('notes = ?');

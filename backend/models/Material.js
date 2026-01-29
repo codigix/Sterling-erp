@@ -12,6 +12,7 @@ class Material {
       unit: row.unit,
       category: row.category,
       itemGroupId: row.item_group_id,
+      itemGroupName: row.item_group_name,
       valuationRate: row.valuation_rate,
       sellingRate: row.selling_rate,
       noOfCavity: row.no_of_cavity,
@@ -37,21 +38,26 @@ class Material {
   }
 
   static async findAll(filters = {}) {
-    let query = 'SELECT * FROM inventory WHERE 1=1';
+    let query = `
+      SELECT i.*, ig.name as item_group_name 
+      FROM inventory i 
+      LEFT JOIN item_groups ig ON i.item_group_id = ig.id 
+      WHERE 1=1
+    `;
     const params = [];
 
     if (filters.itemCode) {
-      query += ' AND item_code LIKE ?';
+      query += ' AND i.item_code LIKE ?';
       params.push(`%${filters.itemCode}%`);
     }
 
     if (filters.category) {
-      query += ' AND category = ?';
+      query += ' AND i.category = ?';
       params.push(filters.category);
     }
 
     if (filters.belowReorderLevel) {
-      query += ' AND quantity < reorder_level';
+      query += ' AND i.quantity < i.reorder_level';
     }
 
     const [rows] = await pool.execute(query, params);
@@ -60,7 +66,10 @@ class Material {
 
   static async findById(id) {
     const [rows] = await pool.execute(
-      'SELECT * FROM inventory WHERE id = ?',
+      `SELECT i.*, ig.name as item_group_name 
+       FROM inventory i 
+       LEFT JOIN item_groups ig ON i.item_group_id = ig.id 
+       WHERE i.id = ?`,
       [id]
     );
     return Material.formatRow(rows[0]);
@@ -68,7 +77,10 @@ class Material {
 
   static async findByItemCode(itemCode) {
     const [rows] = await pool.execute(
-      'SELECT * FROM inventory WHERE item_code = ?',
+      `SELECT i.*, ig.name as item_group_name 
+       FROM inventory i 
+       LEFT JOIN item_groups ig ON i.item_group_id = ig.id 
+       WHERE i.item_code = ?`,
       [itemCode]
     );
     return Material.formatRow(rows[0]);
@@ -76,7 +88,10 @@ class Material {
 
   static async findByName(itemName) {
     const [rows] = await pool.execute(
-      'SELECT * FROM inventory WHERE item_name = ?',
+      `SELECT i.*, ig.name as item_group_name 
+       FROM inventory i 
+       LEFT JOIN item_groups ig ON i.item_group_id = ig.id 
+       WHERE i.item_name = ?`,
       [itemName]
     );
     return Material.formatRow(rows[0]);
@@ -202,7 +217,10 @@ class Material {
 
   static async checkReorderLevels() {
     const [rows] = await pool.execute(
-      'SELECT * FROM inventory WHERE quantity < reorder_level'
+      `SELECT i.*, ig.name as item_group_name 
+       FROM inventory i 
+       LEFT JOIN item_groups ig ON i.item_group_id = ig.id 
+       WHERE i.quantity < i.reorder_level`
     );
     return (rows || []).map(Material.formatRow);
   }

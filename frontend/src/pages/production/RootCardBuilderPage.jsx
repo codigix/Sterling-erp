@@ -267,19 +267,27 @@ const RootCardBuilderPage = () => {
                 </tr>
               </thead>
               <tbody>
-                {rootCards.map((card) => (
-                  <tr key={card.id} className="border-b border-slate-200 dark:border-slate-700 hover:bg-blue-50/50 dark:hover:bg-slate-700/30 transition-colors group">
-                    <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">{card.code || `-`}</td>
-                    <td className="px-6 py-4 text-sm text-slate-900 dark:text-white font-medium">{card.title || `-`}</td>
-                    <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
-                      {card.projectDetails?.code || card.project_code || `-`}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
-                      {card.rootCardDetails?.customer || card.customer_name || `-`}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
-                      {card.rootCardDetails?.poNumber || `-`}
-                    </td>
+                {rootCards.map((card) => {
+                  const step1 = card.steps?.step1_clientPO || {};
+                  const productDetails = step1.productDetails || {};
+                  
+                  return (
+                    <tr key={card.id} className="border-b border-slate-200 dark:border-slate-700 hover:bg-blue-50/50 dark:hover:bg-slate-700/30 transition-colors group">
+                      <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">
+                        {step1.projectCode || card.code || `-`}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-900 dark:text-white font-medium">
+                        {productDetails.itemName || card.title || `-`}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
+                        {step1.projectName || card.projectDetails?.code || card.project_code || `-`}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
+                        {step1.clientName || card.rootCardDetails?.customer || card.customer_name || `-`}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
+                        {step1.poNumber || card.rootCardDetails?.poNumber || `-`}
+                      </td>
                     <td className="px-6 py-4 text-sm">
                       <div className="flex flex-wrap gap-1">
                         {card.assignedSteps && card.assignedSteps.length > 0 ? (
@@ -342,8 +350,9 @@ const RootCardBuilderPage = () => {
                         </button>
                       </div>
                     </td>
-                  </tr>
-                ))}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

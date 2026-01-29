@@ -45,10 +45,10 @@ class ProductionPlanDetail {
     };
 
     const params = [
-      normalized.rootCardId,
-      stringifyJsonField(timeline) || JSON.stringify({}),
-      stringifyJsonField(normalized.selectedPhases) || JSON.stringify({}),
-      stringifyJsonField(normalized.phaseDetails) || JSON.stringify({}),
+      normalized.rootCardId || null,
+      stringifyJsonField(timeline) || '{}',
+      stringifyJsonField(normalized.selectedPhases) || '{}',
+      stringifyJsonField(normalized.phaseDetails) || '{}',
       normalized.productionNotes || null,
       normalized.estimatedCompletionDate || null
     ];
@@ -76,9 +76,9 @@ class ProductionPlanDetail {
     };
 
     const params = [
-      stringifyJsonField(timeline) || JSON.stringify({}),
-      stringifyJsonField(normalized.selectedPhases) || JSON.stringify({}),
-      stringifyJsonField(normalized.phaseDetails) || JSON.stringify({}),
+      stringifyJsonField(timeline) || '{}',
+      stringifyJsonField(normalized.selectedPhases) || '{}',
+      stringifyJsonField(normalized.phaseDetails) || '{}',
       normalized.productionNotes || null,
       normalized.estimatedCompletionDate || null,
       rootCardId

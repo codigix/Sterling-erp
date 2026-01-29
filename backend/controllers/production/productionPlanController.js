@@ -87,6 +87,7 @@ const productionPlanController = {
       try {
         const [stages] = await connection.execute(
           `SELECT pps.*,
+                  pps.target_warehouse AS targetWarehouse,
                   CONCAT(e.first_name, ' ', e.last_name) AS worker_name,
                   e.email AS worker_email
            FROM production_plan_stages pps
@@ -116,6 +117,7 @@ const productionPlanController = {
           plannedEndDate: stage.planned_end_date,
           durationDays: stage.duration_days,
           estimatedDelayDays: stage.estimated_delay_days,
+          targetWarehouse: stage.target_warehouse,
           notes: stage.notes,
           assignedEmployeeId: stage.assigned_employee_id,
           workerName: stage.worker_name || null,
@@ -365,10 +367,10 @@ const productionPlanController = {
   async updatePlanStage(req, res) {
     try {
       const { id: stageId } = req.params;
-      const { stageName, stageType, assignedEmployeeId, assignedFacilityId, plannedStartDate, plannedEndDate, notes } = req.body;
+      const { stageName, stageType, assignedEmployeeId, assignedFacilityId, plannedStartDate, plannedEndDate, targetWarehouse, notes } = req.body;
 
       console.log('[ProductionPlanController.updatePlanStage] Updating stage:', stageId);
-      console.log('[ProductionPlanController.updatePlanStage] Data:', { stageName, stageType, assignedEmployeeId, assignedFacilityId, plannedStartDate, plannedEndDate, notes });
+      console.log('[ProductionPlanController.updatePlanStage] Data:', { stageName, stageType, assignedEmployeeId, assignedFacilityId, plannedStartDate, plannedEndDate, targetWarehouse, notes });
 
       // Calculate duration from start and end dates
       let durationDays = null;
@@ -409,7 +411,7 @@ const productionPlanController = {
       const query = `
         UPDATE production_plan_stages
         SET stage_name = ?, stage_type = ?, assigned_employee_id = ?, assigned_facility_id = ?,
-            planned_start_date = ?, planned_end_date = ?, duration_days = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
+            planned_start_date = ?, planned_end_date = ?, duration_days = ?, target_warehouse = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `;
 
@@ -423,6 +425,7 @@ const productionPlanController = {
         plannedStartDate || null,
         plannedEndDate || null,
         durationDays,
+        targetWarehouse || null,
         notes || null,
         stageId
       ]);

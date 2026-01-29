@@ -3,7 +3,6 @@ const ProductionRootCard = require('../../models/ProductionRootCard');
 const DesignEngineeringDetail = require('../../models/DesignEngineeringDetail');
 const DepartmentTask = require('../../models/DepartmentTask');
 const DesignWorkflowStep = require('../../models/DesignWorkflowStep');
-const DesignProjectDetails = require('../../models/DesignProjectDetails');
 
 exports.getProductionRootCards = async (req, res) => {
   try {
@@ -108,8 +107,8 @@ exports.createProductionRootCard = async (req, res) => {
       for (const stage of stages) {
         await connection.execute(`
           INSERT INTO manufacturing_stages
-          (root_card_id, stage_name, stage_type, status, planned_start, planned_end, notes)
-          VALUES (?, ?, ?, ?, ?, ?, ?)
+          (root_card_id, stage_name, stage_type, status, planned_start, planned_end, target_warehouse, notes)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `, [
           rootCardId,
           stage.stageName,
@@ -117,6 +116,7 @@ exports.createProductionRootCard = async (req, res) => {
           stage.status || 'pending',
           stage.plannedStart || null,
           stage.plannedEnd || null,
+          stage.targetWarehouse || null,
           stage.notes || null
         ]);
       }
@@ -283,7 +283,7 @@ exports.getManufacturingStages = async (req, res) => {
 
 exports.createManufacturingStage = async (req, res) => {
   try {
-    const { rootCardId, stageName, stageType, plannedStart, plannedEnd, notes } = req.body;
+    const { rootCardId, stageName, stageType, plannedStart, plannedEnd, targetWarehouse, notes } = req.body;
 
     if (!rootCardId || !stageName) {
       return res.status(400).json({ message: 'Root card ID and stage name are required' });
@@ -292,8 +292,8 @@ exports.createManufacturingStage = async (req, res) => {
     const connection = await pool.getConnection();
     try {
       const [result] = await connection.execute(
-        'INSERT INTO manufacturing_stages (root_card_id, stage_name, stage_type, planned_start, planned_end, notes, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [rootCardId, stageName, stageType || 'in_house', plannedStart || null, plannedEnd || null, notes || null, 'pending']
+        'INSERT INTO manufacturing_stages (root_card_id, stage_name, stage_type, planned_start, planned_end, target_warehouse, notes, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [rootCardId, stageName, stageType || 'in_house', plannedStart || null, plannedEnd || null, targetWarehouse || null, notes || null, 'pending']
       );
 
       const stageId = result.insertId;
@@ -314,13 +314,13 @@ exports.createManufacturingStage = async (req, res) => {
 exports.updateManufacturingStage = async (req, res) => {
   try {
     const { id } = req.params;
-    const { stageName, stageType, plannedStart, plannedEnd, notes } = req.body;
+    const { stageName, stageType, plannedStart, plannedEnd, targetWarehouse, notes } = req.body;
 
     const connection = await pool.getConnection();
     try {
       await connection.execute(
-        'UPDATE manufacturing_stages SET stage_name = ?, stage_type = ?, planned_start = ?, planned_end = ?, notes = ? WHERE id = ?',
-        [stageName, stageType, plannedStart || null, plannedEnd || null, notes || null, id]
+        'UPDATE manufacturing_stages SET stage_name = ?, stage_type = ?, planned_start = ?, planned_end = ?, target_warehouse = ?, notes = ? WHERE id = ?',
+        [stageName, stageType, plannedStart || null, plannedEnd || null, targetWarehouse || null, notes || null, id]
       );
 
       res.json({ message: 'Stage updated successfully' });
@@ -634,195 +634,6 @@ exports.getProductionStatistics = async (req, res) => {
   }
 };
 
-exports.saveDesignProjectDetails = async (req, res) => {
-  try {
-    const { rootCardId } = req.params;
-    const { designDetails } = req.body;
-
-    if (!rootCardId || !designDetails) {
-      return res.status(400).json({ message: 'Root card ID and design details are required' });
-    }
-
-    const result = await DesignProjectDetails.createOrUpdate({
-      rootCardId,
-      ...designDetails
-    });
-
-    res.json({
-      message: 'Design details saved successfully',
-      result
-    });
-  } catch (error) {
-    console.error('Save design project details error:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-};
-
-exports.getDesignProjectDetails = async (req, res) => {
-  try {
-    const { rootCardId } = req.params;
-
-    if (!rootCardId) {
-      return res.status(400).json({ message: 'Root card ID is required' });
-    }
-
-    const details = await DesignProjectDetails.findByProductionRootCardId(rootCardId);
-
-    res.json(details || {});
-  } catch (error) {
-    console.error('Get design project details error:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-};
-
-exports.createDesignProject = async (req, res) => {
-  try {
-    const { title, description, projectType, priority, assignedTo, dueDate } = req.body;
-
-    if (!title) {
-      return res.status(400).json({ message: 'Title is required' });
-    }
-
-    const connection = await pool.getConnection();
-    try {
-      const [result] = await connection.execute(
-        `INSERT INTO design_projects (title, description, project_type, priority, assigned_to, due_date, created_by, status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [title, description || null, projectType || 'general', priority || 'medium', assignedTo || null, dueDate || null, req.user.id, 'active']
-      );
-
-      const projectId = result.insertId;
-
-      res.status(201).json({
-        message: 'Design project created successfully',
-        projectId
-      });
-    } finally {
-      connection.release();
-    }
-  } catch (error) {
-    console.error('Create design project error:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-};
-
-exports.getDesignWithDetails = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const connection = await pool.getConnection();
-    try {
-      const [designs] = await connection.execute(
-        'SELECT * FROM root_cards WHERE id = ?',
-        [id]
-      );
-
-      if (!designs || designs.length === 0) {
-        return res.status(404).json({ message: 'Design not found' });
-      }
-
-      const design = designs[0];
-
-      const designDetails = await DesignProjectDetails.findByProductionRootCardId(id);
-
-      res.json({
-        ...design,
-        details: designDetails || {}
-      });
-    } finally {
-      connection.release();
-    }
-  } catch (error) {
-    console.error('Get design with details error:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-};
-
-exports.getAllDesignsWithDetails = async (req, res) => {
-  try {
-    const connection = await pool.getConnection();
-    try {
-      const [designs] = await connection.execute(
-        'SELECT * FROM root_cards ORDER BY created_at DESC'
-      );
-
-      const designsWithDetails = [];
-
-      for (const design of designs) {
-        const details = await DesignProjectDetails.findByProductionRootCardId(design.id);
-        designsWithDetails.push({
-          ...design,
-          details: details || {}
-        });
-      }
-
-      res.json({ designs: designsWithDetails, total: designsWithDetails.length });
-    } finally {
-      connection.release();
-    }
-  } catch (error) {
-    console.error('Get all designs with details error:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-};
-
-exports.deleteDesign = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const connection = await pool.getConnection();
-    try {
-      const [result] = await connection.execute(
-        'DELETE FROM root_cards WHERE id = ?',
-        [id]
-      );
-
-      if (result.affectedRows === 0) {
-        return res.status(404).json({ message: 'Design not found' });
-      }
-
-      res.json({ message: 'Design deleted successfully' });
-    } finally {
-      connection.release();
-    }
-  } catch (error) {
-    console.error('Delete design error:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-};
-
-exports.updateDesign = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { title, description } = req.body;
-
-    const connection = await pool.getConnection();
-    try {
-      await connection.execute(
-        'UPDATE root_cards SET title = ?, notes = ? WHERE id = ?',
-        [title, description || null, id]
-      );
-
-      res.json({ message: 'Design updated successfully' });
-    } finally {
-      connection.release();
-    }
-  } catch (error) {
-    console.error('Update design error:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-};
-
-exports.downloadDesign = async (req, res) => {
-  try {
-    const { id } = req.params;
-    res.json({ message: 'Download functionality not yet implemented' });
-  } catch (error) {
-    console.error('Download design error:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-};
-
 exports.getProductionPlans = async (req, res) => {
   try {
     const { status, projectId, search } = req.query;
@@ -925,9 +736,9 @@ exports.createProductionPlan = async (req, res) => {
 
               const [stageResult] = await connection.execute(
                 `INSERT INTO production_stages 
-                 (production_plan_id, stage_name, stage_type, status)
-                 VALUES (?, ?, ?, ?)`,
-                [planId, phaseName, 'manufacturing', 'pending']
+                 (production_plan_id, stage_name, stage_type, status, target_warehouse)
+                 VALUES (?, ?, ?, ?, ?)`,
+                [planId, phaseName, 'manufacturing', 'pending', selectedPhases[phaseName]?.targetWarehouse || null]
               );
 
               console.log(`[Production Plan] Created stage with ID:`, stageResult.insertId);
@@ -1050,7 +861,7 @@ exports.createProductionRootCardStage = async (req, res) => {
     await connection.beginTransaction();
 
     const { id } = req.params;
-    const { stageName, stageType, status, plannedStart, plannedEnd, notes, assignedWorker } = req.body;
+    const { stageName, stageType, status, plannedStart, plannedEnd, targetWarehouse, notes, assignedWorker } = req.body;
 
     if (!stageName) {
       return res.status(400).json({ message: 'Stage name is required' });
@@ -1058,9 +869,9 @@ exports.createProductionRootCardStage = async (req, res) => {
 
     const [result] = await connection.execute(
       `INSERT INTO manufacturing_stages 
-       (root_card_id, stage_name, stage_type, status, planned_start, planned_end, notes, assigned_worker)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, stageName, stageType || 'in_house', status || 'pending', plannedStart || null, plannedEnd || null, notes || null, assignedWorker || null]
+       (root_card_id, stage_name, stage_type, status, planned_start, planned_end, target_warehouse, notes, assigned_worker)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, stageName, stageType || 'in_house', status || 'pending', plannedStart || null, plannedEnd || null, targetWarehouse || null, notes || null, assignedWorker || null]
     );
 
     await connection.commit();

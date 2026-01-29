@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 
 const INITIAL_MATERIAL = {
   quantity: "",
@@ -106,7 +106,7 @@ export const useMaterialForm = (onOpenSpecModal, updateField, formData) => {
   const [currentMaterial, setCurrentMaterial] = useState(INITIAL_MATERIAL);
   const [editingDetail, setEditingDetail] = useState(null);
 
-  const handleMaterialChange = (e) => {
+  const handleMaterialChange = useCallback((e) => {
     const { name, value } = e.target;
     setCurrentMaterial((prev) => ({ ...prev, [name]: value }));
 
@@ -125,29 +125,34 @@ export const useMaterialForm = (onOpenSpecModal, updateField, formData) => {
     if (specTypes.includes(name) && value) {
       setTimeout(() => onOpenSpecModal(name), 100);
     }
-  };
+  }, [onOpenSpecModal]);
 
-  const addMaterial = () => {
+  const resetMaterial = useCallback(() => {
+    setCurrentMaterial(INITIAL_MATERIAL);
+    setEditingDetail(null);
+  }, []);
+
+  const addMaterial = useCallback(() => {
     updateField("materials", [
       ...formData.materials,
       { ...currentMaterial, id: Date.now() },
     ]);
     resetMaterial();
-  };
+  }, [currentMaterial, formData.materials, updateField, resetMaterial]);
 
-  const removeMaterial = (id) => {
+  const removeMaterial = useCallback((id) => {
     updateField(
       "materials",
       formData.materials.filter((m) => m.id !== id)
     );
-  };
+  }, [formData.materials, updateField]);
 
-  const editMaterial = (material) => {
+  const editMaterial = useCallback((material) => {
     setCurrentMaterial(material);
     setEditingDetail(material.id);
-  };
+  }, []);
 
-  const updateMaterial = () => {
+  const updateMaterial = useCallback(() => {
     updateField(
       "materials",
       formData.materials.map((m) =>
@@ -156,12 +161,7 @@ export const useMaterialForm = (onOpenSpecModal, updateField, formData) => {
     );
     resetMaterial();
     setEditingDetail(null);
-  };
-
-  const resetMaterial = () => {
-    setCurrentMaterial(INITIAL_MATERIAL);
-    setEditingDetail(null);
-  };
+  }, [currentMaterial, editingDetail, formData.materials, updateField, resetMaterial]);
 
   return {
     currentMaterial,

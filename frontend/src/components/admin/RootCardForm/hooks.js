@@ -1,5 +1,5 @@
 import { useContext } from "react";
-import { RootCardContext } from "./context";
+import { RootCardContext } from "./RootCardContext";
 
 export function useRootCardContext() {
   const context = useContext(RootCardContext);

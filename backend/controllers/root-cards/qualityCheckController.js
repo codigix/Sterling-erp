@@ -40,11 +40,11 @@ class QualityCheckController {
           
           if (existingTasks.length === 0) {
             await EmployeeTask.createAssignedTask(assignedTo, {
-              title: `Quality Check: ${rootCard.project_name || rootCard.title || 'Project'}`,
-              description: `Perform quality check for Root Card ${rootCard.po_number || ''}`,
+              title: `Quality Check: ${rootCard?.project_name || rootCard?.title || 'Project'}`,
+              description: `Perform quality check for Root Card ${rootCard?.po_number || ''}`,
               type: 'quality_check',
-              priority: rootCard.priority || 'medium',
-              dueDate: rootCard.due_date,
+              priority: rootCard?.priority || 'medium',
+              dueDate: rootCard?.due_date,
               salesOrderId: rootCardId,
               notes: `Auto-assigned from Admin Root Card flow`
             });
@@ -71,10 +71,7 @@ class QualityCheckController {
     try {
       const { rootCardId } = req.params;
       const detail = await QualityCheckDetail.findByRootCardId(rootCardId);
-      if (!detail) {
-        return res.status(404).json(formatErrorResponse('Quality check data not found'));
-      }
-      res.json(formatSuccessResponse(detail, 'Quality check retrieved'));
+      res.json(formatSuccessResponse(detail || null, 'Quality check retrieved'));
     } catch (error) {
       res.status(500).json(formatErrorResponse(error.message));
     }
@@ -89,9 +86,14 @@ class QualityCheckController {
         return res.status(400).json(formatErrorResponse('Status is required'));
       }
 
-      await QualityCheckDetail.updateQCStatus(rootCardId, status);
-      const updated = await QualityCheckDetail.findByRootCardId(rootCardId);
+      let detail = await QualityCheckDetail.findByRootCardId(rootCardId);
+      if (!detail) {
+        await QualityCheckDetail.create({ rootCardId, qualityCheck: { qcStatus: status } });
+      } else {
+        await QualityCheckDetail.updateQCStatus(rootCardId, status);
+      }
 
+      const updated = await QualityCheckDetail.findByRootCardId(rootCardId);
       res.json(formatSuccessResponse(updated, 'QC status updated'));
     } catch (error) {
       res.status(500).json(formatErrorResponse(error.message));
@@ -103,13 +105,18 @@ class QualityCheckController {
       const { rootCardId } = req.params;
       const complianceData = req.body;
 
-      if (!complianceData.standard) {
-        return res.status(400).json(formatErrorResponse('Compliance standard is required'));
+      if (!complianceData.standard && !complianceData.qualityStandards) {
+        return res.status(400).json(formatErrorResponse('Compliance data is required'));
       }
 
-      await QualityCheckDetail.addCompliance(rootCardId, complianceData);
-      const updated = await QualityCheckDetail.findByRootCardId(rootCardId);
+      let detail = await QualityCheckDetail.findByRootCardId(rootCardId);
+      if (!detail) {
+        await QualityCheckDetail.create({ rootCardId, qualityCompliance: complianceData });
+      } else {
+        await QualityCheckDetail.addCompliance(rootCardId, complianceData);
+      }
 
+      const updated = await QualityCheckDetail.findByRootCardId(rootCardId);
       res.json(formatSuccessResponse(updated, 'Compliance added'));
     } catch (error) {
       res.status(500).json(formatErrorResponse(error.message));
@@ -121,13 +128,14 @@ class QualityCheckController {
       const { rootCardId } = req.params;
       const warrantyData = req.body;
 
-      if (!warrantyData.period) {
-        return res.status(400).json(formatErrorResponse('Warranty period is required'));
+      let detail = await QualityCheckDetail.findByRootCardId(rootCardId);
+      if (!detail) {
+        await QualityCheckDetail.create({ rootCardId, warrantySupport: warrantyData });
+      } else {
+        await QualityCheckDetail.addWarrantySupport(rootCardId, warrantyData);
       }
 
-      await QualityCheckDetail.addWarrantySupport(rootCardId, warrantyData);
       const updated = await QualityCheckDetail.findByRootCardId(rootCardId);
-
       res.json(formatSuccessResponse(updated, 'Warranty support added'));
     } catch (error) {
       res.status(500).json(formatErrorResponse(error.message));
@@ -143,9 +151,14 @@ class QualityCheckController {
         return res.status(400).json(formatErrorResponse('Project owner ID is required'));
       }
 
-      await QualityCheckDetail.assignProjectOwner(rootCardId, ownerId);
-      const updated = await QualityCheckDetail.findByRootCardId(rootCardId);
+      let detail = await QualityCheckDetail.findByRootCardId(rootCardId);
+      if (!detail) {
+        await QualityCheckDetail.create({ rootCardId, internalProjectOwner: ownerId });
+      } else {
+        await QualityCheckDetail.assignProjectOwner(rootCardId, ownerId);
+      }
 
+      const updated = await QualityCheckDetail.findByRootCardId(rootCardId);
       res.json(formatSuccessResponse(updated, 'Project owner assigned'));
     } catch (error) {
       res.status(500).json(formatErrorResponse(error.message));
@@ -157,12 +170,18 @@ class QualityCheckController {
       const { rootCardId } = req.params;
 
       const detail = await QualityCheckDetail.findByRootCardId(rootCardId);
-      if (!detail) {
-        return res.status(404).json(formatErrorResponse('Quality check data not found'));
-      }
-
+      
       const errors = [];
       const warnings = [];
+
+      if (!detail) {
+        return res.json(formatSuccessResponse({
+          isValid: true,
+          errors: [],
+          warnings: ['Quality check data not yet initialized'],
+          complianceData: null
+        }, 'Compliance validation completed (no data)'));
+      }
 
       if (!detail.qualityCompliance || Object.keys(detail.qualityCompliance).length === 0) {
         warnings.push('No quality compliance standards specified');

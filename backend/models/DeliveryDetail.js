@@ -69,7 +69,7 @@ class DeliveryDetail {
         delivered_quantity, recipient_signature_path, delivery_notes, pod_number, delivery_cost)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        normalized.rootCardId,
+        normalized.rootCardId || null,
         normalized.actualDeliveryDate || null,
         normalized.customerContact || null,
         normalized.installationCompleted || null,

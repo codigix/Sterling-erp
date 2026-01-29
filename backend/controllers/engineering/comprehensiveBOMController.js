@@ -3,6 +3,36 @@ const pool = require('../../config/database');
 const DepartmentTask = require('../../models/DepartmentTask');
 const Role = require('../../models/Role');
 
+// Helper to trigger procurement tasks and workflow updates
+const triggerActivationTasks = async (bomId, productInfo, userId) => {
+  try {
+    const rootCardId = productInfo.rootCardId;
+    
+    // 1. Mark Material Requirements step as completed (Step 3)
+    if (rootCardId) {
+      const RootCardStep = require('../../models/RootCardStep');
+      await RootCardStep.completeStep(rootCardId, 3);
+      // 2. Start Production Plan step (Step 4)
+      await RootCardStep.startStep(rootCardId, 4);
+    }
+
+    const procurementRole = await Role.findByName('Procurement Manager') || await Role.findByName('Inventory Manager');
+    if (procurementRole) {
+      await DepartmentTask.createDepartmentTask({
+        root_card_id: rootCardId,
+        role_id: procurementRole.id,
+        task_title: `Procure Materials for BOM: ${productInfo.productName}`,
+        task_description: `BOM has been activated. Please review and initiate procurement for items in BOM revision ${productInfo.revision || 1}.`,
+        priority: 'high',
+        status: 'pending',
+        assigned_by: userId
+      });
+    }
+  } catch (taskError) {
+    console.error('Error triggering procurement task:', taskError.message);
+  }
+};
+
 exports.createComprehensiveBOM = async (req, res) => {
   let connection = null;
   try {
@@ -71,6 +101,11 @@ exports.createComprehensiveBOM = async (req, res) => {
           await ComprehensiveBOM.addScrapLoss(bomId, scrap, connection);
         }
       }
+    }
+
+    // Trigger Procurement tasks if status is active
+    if (productInfo.status === 'active') {
+      await triggerActivationTasks(bomId, productInfo, userId);
     }
 
     await connection.commit();
@@ -190,22 +225,12 @@ exports.updateComprehensiveBOM = async (req, res) => {
 
     // Trigger Procurement tasks if status changed to active (Point 152)
     if (oldBOM.status === 'draft' && productInfo.status === 'active') {
-      try {
-        const procurementRole = await Role.findByName('Procurement Manager') || await Role.findByName('Inventory Manager');
-        if (procurementRole) {
-          await DepartmentTask.createDepartmentTask({
-            root_card_id: productInfo.rootCardId || oldBOM.root_card_id,
-            role_id: procurementRole.id,
-            task_title: `Procure Materials for BOM: ${productInfo.productName || oldBOM.product_name}`,
-            task_description: `BOM has been activated. Please review and initiate procurement for items in BOM revision ${productInfo.revision || oldBOM.revision}.`,
-            priority: 'high',
-            status: 'pending',
-            assigned_by: req.user?.id
-          });
-        }
-      } catch (taskError) {
-        console.error('Error triggering procurement task:', taskError.message);
-      }
+      await triggerActivationTasks(id, {
+        ...productInfo,
+        rootCardId: productInfo.rootCardId || oldBOM.rootCardId,
+        productName: productInfo.productName || oldBOM.productName,
+        revision: productInfo.revision || oldBOM.revision
+      }, req.user?.id);
     }
 
     await connection.commit();
@@ -248,6 +273,38 @@ exports.deleteComprehensiveBOM = async (req, res) => {
   }
 };
 
+exports.updateBOMStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!status) {
+      return res.status(400).json({ message: 'Status is required' });
+    }
+
+    const oldBOM = await ComprehensiveBOM.findById(id);
+    if (!oldBOM) {
+      return res.status(404).json({ message: 'BOM not found' });
+    }
+
+    await ComprehensiveBOM.updateStatus(id, status);
+
+    // Trigger Procurement tasks if status changed to active
+    if (oldBOM.status === 'draft' && status === 'active') {
+      await triggerActivationTasks(id, {
+        rootCardId: oldBOM.rootCardId,
+        productName: oldBOM.productName,
+        revision: oldBOM.revision
+      }, req.user?.id);
+    }
+
+    res.json({ message: 'BOM status updated successfully' });
+  } catch (error) {
+    console.error('Update BOM status error:', error.message);
+    res.status(500).json({ message: 'Failed to update BOM status' });
+  }
+};
+
 exports.getBOMCosts = async (req, res) => {
   try {
     const { id } = req.params;
@@ -265,7 +322,7 @@ exports.getComprehensiveBOMByRootCard = async (req, res) => {
     const bomSummary = await ComprehensiveBOM.findByRootCardId(rootCardId);
     
     if (!bomSummary) {
-      return res.status(404).json({ message: 'BOM not found for this root card' });
+      return res.status(200).json(null);
     }
 
     const bom = await ComprehensiveBOM.findById(bomSummary.id);
@@ -273,5 +330,16 @@ exports.getComprehensiveBOMByRootCard = async (req, res) => {
   } catch (error) {
     console.error('Get BOM by Root Card error:', error.message);
     res.status(500).json({ message: 'Failed to fetch BOM' });
+  }
+};
+
+exports.getComprehensiveBOMsByRootCard = async (req, res) => {
+  try {
+    const { rootCardId } = req.params;
+    const boms = await ComprehensiveBOM.findAllByRootCardId(rootCardId);
+    res.json(boms);
+  } catch (error) {
+    console.error('Get BOMs by Root Card error:', error.message);
+    res.status(500).json({ message: 'Failed to fetch BOMs' });
   }
 };

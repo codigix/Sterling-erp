@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useCallback, useMemo } from "react";
 import { Zap, AlertCircle } from "lucide-react";
 import Input from "../../../ui/Input";
 import FormSection from "../shared/FormSection";
@@ -45,37 +45,26 @@ export default function Step4_ProductionPlan({ readOnly = false }) {
   const { formData, updateField } = useFormData();
   const { state } = useRootCardContext();
 
-  const [selectedPhases, setSelectedPhases] = useState(formData?.selectedPhases || {});
+  const selectedPhases = useMemo(() => formData.selectedPhases || {}, [formData.selectedPhases]);
 
-  useEffect(() => {
-    if (formData?.selectedPhases) {
-      setSelectedPhases(formData.selectedPhases);
+  const handlePhaseToggle = useCallback((phase) => {
+    const newPhases = { ...selectedPhases };
+    if (newPhases[phase]) {
+      delete newPhases[phase];
+    } else {
+      newPhases[phase] = true;
     }
-  }, [formData?.selectedPhases]);
-
-  useEffect(() => {
-    updateField("selectedPhases", selectedPhases);
+    updateField("selectedPhases", newPhases);
   }, [selectedPhases, updateField]);
 
-  const handlePhaseToggle = (phase) => {
-    setSelectedPhases((prev) => {
-      const newPhases = { ...prev };
-      if (newPhases[phase]) {
-        delete newPhases[phase];
-      } else {
-        newPhases[phase] = true;
-      }
-      return newPhases;
-    });
-  };
-
-  return (
+  const content = useMemo(() => (
     <div className="space-y-6">
       <AssigneeField
-        stepType="production_plan"
+        stepType="productionPlan"
         formData={state.formData}
         updateField={updateField}
         employees={state.employees}
+        readOnly={readOnly}
       />
       <FormSection
         title="Production Plan"
@@ -96,6 +85,7 @@ export default function Step4_ProductionPlan({ readOnly = false }) {
                 onChange={(e) =>
                   updateField("productionStartDate", e.target.value)
                 }
+                disabled={readOnly}
               />
               <Input
                 label="Estimated Completion Date"
@@ -104,6 +94,7 @@ export default function Step4_ProductionPlan({ readOnly = false }) {
                 onChange={(e) =>
                   updateField("estimatedCompletionDate", e.target.value)
                 }
+                disabled={readOnly}
               />
             </FormRow>
           </div>
@@ -122,7 +113,8 @@ export default function Step4_ProductionPlan({ readOnly = false }) {
                 onChange={(e) =>
                   updateField("procurementStatus", e.target.value)
                 }
-                className="w-full px-3 py-2 bg-white border border-slate-200 rounded text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                disabled={readOnly}
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-slate-50 disabled:text-slate-500"
               >
                 <option value="">Select Status</option>
                 <option value="Pending">Pending</option>
@@ -145,13 +137,14 @@ export default function Step4_ProductionPlan({ readOnly = false }) {
               {Object.keys(PRODUCTION_PHASES).map((phase) => (
                 <label
                   key={phase}
-                  className="flex items-center text-xs gap-2 p-3 border border-slate-200 rounded-lg bg-white cursor-pointer hover:bg-purple-50 hover:border-purple-400 transition-colors"
+                  className={`flex items-center text-xs gap-2 p-3 border border-slate-200 rounded-lg bg-white cursor-pointer hover:bg-purple-50 hover:border-purple-400 transition-colors ${readOnly ? 'pointer-events-none opacity-80' : ''}`}
                 >
                   <input
                     type="checkbox"
                     checked={selectedPhases[phase] || false}
-                    onChange={() => handlePhaseToggle(phase)}
-                    className="w-4 h-4 text-purple-600 bg-white border-slate-300 rounded focus:ring-2 focus:ring-purple-500 cursor-pointer"
+                    onChange={() => !readOnly && handlePhaseToggle(phase)}
+                    disabled={readOnly}
+                    className="w-4 h-4 text-purple-600 bg-white border-slate-300 rounded focus:ring-2 focus:ring-purple-500 cursor-pointer disabled:cursor-not-allowed"
                   />
                   <span className="text-sm font-medium text-slate-900 text-left">
                     {phase}
@@ -176,5 +169,17 @@ export default function Step4_ProductionPlan({ readOnly = false }) {
         </div>
       </FormSection>
     </div>
-  );
+  ), [
+    state.formData,
+    state.employees,
+    formData.productionStartDate,
+    formData.estimatedCompletionDate,
+    formData.procurementStatus,
+    selectedPhases,
+    readOnly,
+    handlePhaseToggle,
+    updateField
+  ]);
+
+  return content;
 }

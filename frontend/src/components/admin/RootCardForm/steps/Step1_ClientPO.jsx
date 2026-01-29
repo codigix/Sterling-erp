@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import React, { useEffect, useCallback, useMemo } from "react";
 import { FileText, User, FolderOpen, FileCheck } from "lucide-react";
 import Input from "../../../ui/Input";
 import FormSection from "../shared/FormSection";
@@ -8,26 +8,26 @@ import { useFormData, useRootCardContext } from "../hooks";
 
 export default function Step1_ClientPO({ readOnly = false }) {
   const { formData, updateField } = useFormData();
-  const { state, setNestedField } = useRootCardContext();
-
+  const { setNestedField } = useRootCardContext();
+  
   useEffect(() => {
-    if (formData.projectName && !formData.projectCode) {
+    if (!readOnly && formData.projectName && !formData.projectCode) {
       const codePrefix = formData.projectName.substring(0, 3).toUpperCase();
       const generatedCode = `${codePrefix}-${Date.now().toString().slice(-6)}`;
       updateField("projectCode", generatedCode);
     }
-  }, [formData.projectName]);
+  }, [formData.projectName, formData.projectCode, updateField, readOnly]);
 
   useEffect(() => {
-    if (formData.projectName && !formData.poNumber) {
+    if (!readOnly && formData.projectName && !formData.poNumber) {
       const poPrefix = formData.projectName.substring(0, 3).toUpperCase();
       const timestamp = Date.now().toString().slice(-6);
       const generatedPO = `PO-${poPrefix}-${timestamp}`;
       updateField("poNumber", generatedPO);
     }
-  }, [formData.projectName]);
+  }, [formData.projectName, formData.poNumber, updateField, readOnly]);
 
-  const clientInfoContent = (
+  const clientInfoContent = useMemo(() => (
     <FormSection
       title="Client Information"
       subtitle="Enter the client details and PO information"
@@ -88,9 +88,9 @@ export default function Step1_ClientPO({ readOnly = false }) {
         </div>
       </div>
     </FormSection>
-  );
+  ), [formData.poNumber, formData.poDate, formData.clientName, formData.clientEmail, formData.clientPhone, updateField, readOnly]);
 
-  const projectDetailsContent = (
+  const projectDetailsContent = useMemo(() => (
     <FormSection
       title="Project Details"
       subtitle="Enter project information and delivery addresses"
@@ -183,9 +183,9 @@ export default function Step1_ClientPO({ readOnly = false }) {
         </div>
       </div>
     </FormSection>
-  );
+  ), [formData.projectName, formData.projectCode, formData.billingAddress, formData.shippingAddress, formData.productDetails, formData.estimatedEndDate, updateField, setNestedField, readOnly]);
 
-  const projectRequirementsContent = (
+  const projectRequirementsContent = useMemo(() => (
     <FormSection
       title="Project Requirements"
       subtitle="Detailed requirements and specifications for the project"
@@ -197,7 +197,7 @@ export default function Step1_ClientPO({ readOnly = false }) {
           <FormRow cols={2}>
             <Input
               label="Application / Use Case"
-              value={state.formData.projectRequirements.application || ""}
+              value={formData.projectRequirements?.application || ""}
               onChange={(e) =>
                 setNestedField(
                   "projectRequirements",
@@ -211,7 +211,7 @@ export default function Step1_ClientPO({ readOnly = false }) {
             <Input
               label="Number of Units"
               type="number"
-              value={state.formData.projectRequirements.numberOfUnits || ""}
+              value={formData.projectRequirements?.numberOfUnits || ""}
               onChange={(e) =>
                 setNestedField(
                   "projectRequirements",
@@ -225,7 +225,7 @@ export default function Step1_ClientPO({ readOnly = false }) {
           </FormRow>
           <Input
             label="Dimensions (L x W x H)"
-            value={state.formData.projectRequirements.dimensions || ""}
+            value={formData.projectRequirements?.dimensions || ""}
             onChange={(e) =>
               setNestedField("projectRequirements", "dimensions", e.target.value)
             }
@@ -234,7 +234,7 @@ export default function Step1_ClientPO({ readOnly = false }) {
           />
           <Input
             label="Load Capacity"
-            value={state.formData.projectRequirements.loadCapacity || ""}
+            value={formData.projectRequirements?.loadCapacity || ""}
             onChange={(e) =>
               setNestedField(
                 "projectRequirements",
@@ -252,7 +252,7 @@ export default function Step1_ClientPO({ readOnly = false }) {
           <FormRow cols={2}>
             <Input
               label="Material Grade"
-              value={state.formData.projectRequirements.materialGrade || ""}
+              value={formData.projectRequirements?.materialGrade || ""}
               onChange={(e) =>
                 setNestedField(
                   "projectRequirements",
@@ -265,7 +265,7 @@ export default function Step1_ClientPO({ readOnly = false }) {
             />
             <Input
               label="Finish & Coatings"
-              value={state.formData.projectRequirements.finishCoatings || ""}
+              value={formData.projectRequirements?.finishCoatings || ""}
               onChange={(e) =>
                 setNestedField(
                   "projectRequirements",
@@ -279,7 +279,7 @@ export default function Step1_ClientPO({ readOnly = false }) {
           </FormRow>
           <Input
             label="Installation Requirement"
-            value={state.formData.projectRequirements.installationRequirement || ""}
+            value={formData.projectRequirements?.installationRequirement || ""}
             onChange={(e) =>
               setNestedField(
                 "projectRequirements",
@@ -293,9 +293,9 @@ export default function Step1_ClientPO({ readOnly = false }) {
         </div>
       </div>
     </FormSection>
-  );
+  ), [formData.projectRequirements, setNestedField, readOnly]);
 
-  const tabs = [
+  const tabs = useMemo(() => [
     {
       label: "Client Info",
       content: clientInfoContent,
@@ -308,7 +308,7 @@ export default function Step1_ClientPO({ readOnly = false }) {
       label: "Project Requirements",
       content: projectRequirementsContent,
     },
-  ];
+  ], [clientInfoContent, projectDetailsContent, projectRequirementsContent]);
 
   return (
     <div className="space-y-6">

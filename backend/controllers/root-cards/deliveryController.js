@@ -56,11 +56,11 @@ class DeliveryController {
       
       if (existingTasks.length === 0) {
         await EmployeeTask.createAssignedTask(employeeId, {
-          title: `Delivery: ${rootCard.project_name || rootCard.title || 'Project'}`,
-          description: `Manage delivery and installation for Root Card ${rootCard.po_number || ''}`,
+          title: `Delivery: ${rootCard?.project_name || rootCard?.title || 'Project'}`,
+          description: `Manage delivery and installation for Root Card ${rootCard?.po_number || ''}`,
           type: 'delivery',
-          priority: rootCard.priority || 'medium',
-          dueDate: rootCard.due_date,
+          priority: rootCard?.priority || 'medium',
+          dueDate: rootCard?.due_date,
           salesOrderId: rootCardId,
           notes: `Auto-assigned from Admin Root Card flow`
         });
@@ -97,12 +97,13 @@ class DeliveryController {
         return res.status(400).json(formatErrorResponse('Invalid delivery status'));
       }
 
-      const detail = await DeliveryDetail.findByRootCardId(rootCardId);
+      let detail = await DeliveryDetail.findByRootCardId(rootCardId);
       if (!detail) {
-        return res.status(404).json(formatErrorResponse('Delivery not found'));
+        await DeliveryDetail.create({ rootCardId, deliveryStatus: status });
+      } else {
+        await DeliveryDetail.updateDeliveryStatus(rootCardId, status);
       }
-
-      await DeliveryDetail.updateDeliveryStatus(rootCardId, status);
+      
       await RootCardStep.update(rootCardId, 7, { status: 'in_progress' });
 
       const updated = await DeliveryDetail.findByRootCardId(rootCardId);
@@ -117,14 +118,14 @@ class DeliveryController {
       const { rootCardId } = req.params;
       const deliveryData = req.body;
 
-      const detail = await DeliveryDetail.findByRootCardId(rootCardId);
+      let detail = await DeliveryDetail.findByRootCardId(rootCardId);
       if (!detail) {
-        return res.status(404).json(formatErrorResponse('Delivery not found'));
+        await DeliveryDetail.create({ rootCardId, delivery: deliveryData });
+      } else {
+        await DeliveryDetail.updateFinalDelivery(rootCardId, deliveryData);
       }
-
-      await DeliveryDetail.updateFinalDelivery(rootCardId, deliveryData);
+      
       const updated = await DeliveryDetail.findByRootCardId(rootCardId);
-
       res.json(formatSuccessResponse(updated, 'Final delivery updated'));
     } catch (error) {
       res.status(500).json(formatErrorResponse(error.message));
@@ -136,14 +137,14 @@ class DeliveryController {
       const { rootCardId } = req.params;
       const installationData = req.body;
 
-      const detail = await DeliveryDetail.findByRootCardId(rootCardId);
+      let detail = await DeliveryDetail.findByRootCardId(rootCardId);
       if (!detail) {
-        return res.status(404).json(formatErrorResponse('Delivery not found'));
+        await DeliveryDetail.create({ rootCardId, delivery: installationData });
+      } else {
+        await DeliveryDetail.updateInstallationStatus(rootCardId, installationData);
       }
-
-      await DeliveryDetail.updateInstallationStatus(rootCardId, installationData);
+      
       const updated = await DeliveryDetail.findByRootCardId(rootCardId);
-
       res.json(formatSuccessResponse(updated, 'Installation status updated'));
     } catch (error) {
       res.status(500).json(formatErrorResponse(error.message));
@@ -155,14 +156,14 @@ class DeliveryController {
       const { rootCardId } = req.params;
       const warrantyData = req.body;
 
-      const detail = await DeliveryDetail.findByRootCardId(rootCardId);
+      let detail = await DeliveryDetail.findByRootCardId(rootCardId);
       if (!detail) {
-        return res.status(404).json(formatErrorResponse('Delivery not found'));
+        await DeliveryDetail.create({ rootCardId, delivery: warrantyData });
+      } else {
+        await DeliveryDetail.updateWarrantyInfo(rootCardId, warrantyData);
       }
-
-      await DeliveryDetail.updateWarrantyInfo(rootCardId, warrantyData);
+      
       const updated = await DeliveryDetail.findByRootCardId(rootCardId);
-
       res.json(formatSuccessResponse(updated, 'Warranty information updated'));
     } catch (error) {
       res.status(500).json(formatErrorResponse(error.message));
@@ -174,14 +175,14 @@ class DeliveryController {
       const { rootCardId } = req.params;
       const completionData = req.body;
 
-      const detail = await DeliveryDetail.findByRootCardId(rootCardId);
+      let detail = await DeliveryDetail.findByRootCardId(rootCardId);
       if (!detail) {
-        return res.status(404).json(formatErrorResponse('Delivery not found'));
+        await DeliveryDetail.create({ rootCardId, delivery: completionData });
+      } else {
+        await DeliveryDetail.updateProjectCompletion(rootCardId, completionData);
       }
-
-      await DeliveryDetail.updateProjectCompletion(rootCardId, completionData);
+      
       const updated = await DeliveryDetail.findByRootCardId(rootCardId);
-
       await RootCardStep.update(rootCardId, 7, { status: 'completed', data: updated });
 
       res.json(formatSuccessResponse(updated, 'Project completion updated'));
@@ -195,14 +196,14 @@ class DeliveryController {
       const { rootCardId } = req.params;
       const internalData = req.body;
 
-      const detail = await DeliveryDetail.findByRootCardId(rootCardId);
+      let detail = await DeliveryDetail.findByRootCardId(rootCardId);
       if (!detail) {
-        return res.status(404).json(formatErrorResponse('Delivery not found'));
+        await DeliveryDetail.create({ rootCardId, ...internalData });
+      } else {
+        await DeliveryDetail.updateInternalInfo(rootCardId, internalData);
       }
-
-      await DeliveryDetail.updateInternalInfo(rootCardId, internalData);
+      
       const updated = await DeliveryDetail.findByRootCardId(rootCardId);
-
       res.json(formatSuccessResponse(updated, 'Internal information updated'));
     } catch (error) {
       res.status(500).json(formatErrorResponse(error.message));
@@ -215,21 +216,22 @@ class DeliveryController {
 
       const detail = await DeliveryDetail.findByRootCardId(rootCardId);
       if (!detail) {
-        return res.status(404).json(formatErrorResponse('Delivery not found'));
+        return res.json(formatSuccessResponse({
+          isValid: true,
+          errors: [],
+          warnings: ['Delivery data not yet initialized'],
+          deliveryData: null
+        }, 'Delivery validation completed (no data)'));
       }
 
       const errors = [];
       const warnings = [];
 
-      if (!detail.deliveryTerms || Object.keys(detail.deliveryTerms).length === 0) {
-        warnings.push('No delivery terms specified');
+      if (!detail.deliveryTerms && !detail.delivery?.actualDeliveryDate) {
+        warnings.push('No delivery terms or actual delivery date specified');
       }
 
-      if (!detail.warrantySupport || Object.keys(detail.warrantySupport).length === 0) {
-        warnings.push('No warranty support information provided');
-      }
-
-      if (!detail.customerContact) {
+      if (!detail.customerContact && !detail.delivery?.customerContact) {
         warnings.push('Customer contact information not provided');
       }
 

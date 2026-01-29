@@ -21,6 +21,11 @@ router.get('/root-card/:rootCardId',
   comprehensiveBOMController.getComprehensiveBOMByRootCard
 );
 
+router.get('/root-card/:rootCardId/all',
+  roleMiddleware('Admin', 'Management', 'Design Engineer', 'Engineering', 'Production'),
+  comprehensiveBOMController.getComprehensiveBOMsByRootCard
+);
+
 router.get('/:id',
   roleMiddleware('Admin', 'Management', 'Design Engineer', 'Engineering', 'Production'),
   comprehensiveBOMController.getComprehensiveBOM
@@ -39,6 +44,11 @@ router.delete('/:id',
 router.get('/:id/costs',
   roleMiddleware('Admin', 'Management', 'Design Engineer', 'Engineering', 'Production'),
   comprehensiveBOMController.getBOMCosts
+);
+
+router.patch('/:id/status',
+  roleMiddleware('Admin', 'Management', 'Design Engineer', 'Engineering'),
+  comprehensiveBOMController.updateBOMStatus
 );
 
 module.exports = router;

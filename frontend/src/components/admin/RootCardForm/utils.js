@@ -69,22 +69,22 @@ export const validateStep2 = (formData) => {
   return errors;
 };
 
-export const validateStep3 = (formData) => {
+export const validateStep3 = () => {
   const errors = [];
   return errors;
 };
 
-export const validateStep4 = (formData) => {
+export const validateStep4 = () => {
   const errors = [];
   return errors;
 };
 
-export const validateStep6 = (formData) => {
+export const validateStep6 = () => {
   const errors = [];
   return errors;
 };
 
-export const validateStep7 = (formData) => {
+export const validateStep7 = () => {
   const errors = [];
   return errors;
 };

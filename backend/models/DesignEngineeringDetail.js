@@ -53,11 +53,11 @@ class DesignEngineeringDetail {
     if (normalized.designNotes === undefined) normalized.designNotes = data.designNotes || data.commentsNotes?.internalDesignNotes;
 
     const params = [
-      data.rootCardId || data.salesOrderId || data.sales_order_id,
-      stringifyJsonField(ensureArray(normalized.documents)),
+      data.rootCardId || data.salesOrderId || data.sales_order_id || null,
+      stringifyJsonField(ensureArray(normalized.documents)) || '[]',
       normalized.designStatus || 'draft',
       stringifyJsonField(normalized.bomData) || null,
-      stringifyJsonField(ensureArray(normalized.drawings3D)),
+      stringifyJsonField(ensureArray(normalized.drawings3D)) || '[]',
       stringifyJsonField(normalized.specifications) || null,
       normalized.designNotes || null,
       normalized.reviewedBy || null,
@@ -92,10 +92,10 @@ class DesignEngineeringDetail {
     if (normalized.designNotes === undefined) normalized.designNotes = data.designNotes || data.commentsNotes?.internalDesignNotes;
 
     const params = [
-      stringifyJsonField(ensureArray(normalized.documents)),
+      stringifyJsonField(ensureArray(normalized.documents)) || '[]',
       normalized.designStatus || 'draft',
       stringifyJsonField(normalized.bomData) || null,
-      stringifyJsonField(ensureArray(normalized.drawings3D)),
+      stringifyJsonField(ensureArray(normalized.drawings3D)) || '[]',
       stringifyJsonField(normalized.specifications) || null,
       normalized.designNotes || null,
       normalized.reviewedBy || null,

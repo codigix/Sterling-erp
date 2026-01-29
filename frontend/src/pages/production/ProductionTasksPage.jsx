@@ -243,58 +243,58 @@ const ProductionTasksPage = () => {
       {/* Root Cards */}
       {activeTab === "rootcards" && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {rootCards.map((rc) => (
-            <Card key={rc.id} className="card-hover">
-              <div className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <h4 className="text-lg font-bold text-slate-900 dark:text-white">{rc.title}</h4>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">
-                      {rc.projectDetails?.name || rc.project_name || 'N/A'}
-                    </p>
-                    {rc.product_name && (
-                      <p className="text-xs text-purple-600 dark:text-purple-400 font-medium mt-1">
-                        📦 {rc.product_name}
+          {rootCards.map((rc) => {
+            const step1 = rc.steps?.step1_clientPO || {};
+            const productDetails = step1.productDetails || {};
+            
+            return (
+              <Card key={rc.id} className="card-hover">
+                <div className="p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <h4 className="text-lg font-bold text-slate-900 dark:text-white">
+                        {productDetails.itemName || rc.title || 'Untitled Card'}
+                      </h4>
+                      <p className="text-sm text-slate-600 dark:text-slate-400">
+                        {step1.projectName || rc.projectDetails?.name || rc.project_name || 'N/A'}
                       </p>
-                    )}
+                      {(productDetails.itemName || rc.product_name) && (
+                        <p className="text-xs text-purple-600 dark:text-purple-400 font-medium mt-1">
+                          📦 {productDetails.itemName || rc.product_name}
+                        </p>
+                      )}
+                    </div>
+                    <Badge className={getStatusColor(rc.status)}>
+                      {rc.status.charAt(0).toUpperCase() + rc.status.slice(1)}
+                    </Badge>
                   </div>
-                  <Badge className={getStatusColor(rc.status)}>
-                    {rc.status.charAt(0).toUpperCase() + rc.status.slice(1)}
-                  </Badge>
-                </div>
 
-                <div className="mb-4 space-y-2 text-xs">
-                  {rc.projectDetails && (
-                    <>
-                      <div className="flex justify-between">
-                        <span className="text-slate-600 dark:text-slate-400">Code:</span>
-                        <span className="font-medium text-slate-900 dark:text-white">{rc.projectDetails.code || '-'}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-600 dark:text-slate-400">Client:</span>
-                        <span className="font-medium text-slate-900 dark:text-white">{rc.projectDetails.clientName || '-'}</span>
-                      </div>
-                    </>
-                  )}
-                  {rc.rootCardDetails && (
-                    <>
-                      <div className="flex justify-between">
-                        <span className="text-slate-600 dark:text-slate-400">Customer:</span>
-                        <span className="font-medium text-slate-900 dark:text-white">{rc.rootCardDetails.customer || '-'}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-600 dark:text-slate-400">PO:</span>
-                        <span className="font-medium text-slate-900 dark:text-white">{rc.rootCardDetails.poNumber || '-'}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-600 dark:text-slate-400">Amount:</span>
-                        <span className="font-medium text-slate-900 dark:text-white">
-                          {rc.rootCardDetails.total ? `${rc.rootCardDetails.currency || 'INR'} ${rc.rootCardDetails.total}` : '-'}
-                        </span>
-                      </div>
-                    </>
-                  )}
-                </div>
+                  <div className="mb-4 space-y-2 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-slate-600 dark:text-slate-400">Code:</span>
+                      <span className="font-medium text-slate-900 dark:text-white">
+                        {step1.projectCode || rc.projectDetails?.code || '-'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-600 dark:text-slate-400">Client:</span>
+                      <span className="font-medium text-slate-900 dark:text-white">
+                        {step1.clientName || rc.projectDetails?.clientName || '-'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-600 dark:text-slate-400">PO:</span>
+                      <span className="font-medium text-slate-900 dark:text-white">
+                        {step1.poNumber || rc.rootCardDetails?.poNumber || '-'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-600 dark:text-slate-400">Amount:</span>
+                      <span className="font-medium text-slate-900 dark:text-white">
+                        {rc.total ? `${rc.currency || 'INR'} ${rc.total}` : (rc.rootCardDetails?.total ? `${rc.rootCardDetails?.currency || 'INR'} ${rc.rootCardDetails?.total}` : '-')}
+                      </span>
+                    </div>
+                  </div>
 
                 <div className="mb-4 p-3 bg-slate-50 dark:bg-slate-700 rounded-lg">
                   <p className="text-xs text-slate-600 dark:text-slate-400 uppercase mb-2">
@@ -322,7 +322,8 @@ const ProductionTasksPage = () => {
                 </div>
               </div>
             </Card>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -350,6 +351,9 @@ const ProductionTasksPage = () => {
                   </th>
                   <th className="px-6 py-3 text-center text-sm font-semibold">
                     Progress
+                  </th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold">
+                    Target Wh
                   </th>
                   <th className="px-6 py-3 text-left text-sm font-semibold">
                     Status
@@ -398,6 +402,15 @@ const ProductionTasksPage = () => {
                           {stage.progress}%
                         </span>
                       </div>
+                    </td>
+                    <td className="p-1 text-sm">
+                      {stage.target_warehouse ? (
+                        <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-medium">
+                          {stage.target_warehouse}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 italic text-xs">Default</span>
+                      )}
                     </td>
                     <td className="p-1">
                       <Badge className={getStatusColor(stage.status)}>

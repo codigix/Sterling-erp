@@ -1,129 +1,61 @@
-import React, { useState, useEffect } from "react";
-import { Search, Eye, Download, Trash2, AlertCircle } from "lucide-react";
+import React, { useState, useEffect, useMemo } from "react";
+import { 
+  Search, 
+  Eye, 
+  Download, 
+  Trash2, 
+  AlertCircle, 
+  Plus, 
+  Edit2, 
+  Layers, 
+  PackageCheck, 
+  FileText, 
+  CheckCircle2, 
+  TrendingUp,
+  Filter,
+  MoreVertical,
+  ClipboardList
+} from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import axios from "../../../utils/api";
 import Swal from "sweetalert2";
+import Badge from "../../../components/ui/Badge";
+import DataTable from "../../../components/ui/DataTable/DataTable";
+import Card, { CardContent } from "../../../components/ui/Card";
+import Button from "../../../components/ui/Button";
+import Input from "../../../components/ui/Input";
+import Select from "../../../components/ui/Select";
+import SearchableSelect from "../../../components/ui/SearchableSelect";
 
 const ViewBOMsPage = () => {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [rootCardFilter, setRootCardFilter] = useState("all");
   const [boms, setBoms] = useState([]);
+  const [rootCards, setRootCards] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [selectedBOM, setSelectedBOM] = useState(null);
-  const [bomDetails, setBomDetails] = useState(null);
-  const [detailsLoading, setDetailsLoading] = useState(false);
 
   useEffect(() => {
-    fetchBOMs();
+    fetchData();
   }, []);
 
-  const fetchBOMs = async () => {
+  const fetchData = async () => {
     try {
       setLoading(true);
-      const response = await axios.get("/production/bom/all");
-      
-      const formattedBoms = await Promise.all(
-        (response.data || []).map(async (bom) => {
-          try {
-            const detailResponse = await axios.get(`/production/bom/${bom.id}`);
-            const itemCount = detailResponse.data.lineItems?.length || 0;
-            return {
-              id: bom.id,
-              name: bom.bom_number,
-              project: bom.sales_order_id || "Standalone BOM",
-              items: itemCount,
-              created: new Date(bom.created_at).toLocaleDateString(),
-              status: bom.status === 'draft' ? 'Draft' : 'Final',
-            };
-          } catch (err) {
-            console.error(`Failed to fetch details for BOM ${bom.id}:`, err);
-            return {
-              id: bom.id,
-              name: bom.bom_number,
-              project: bom.sales_order_id || "Standalone BOM",
-              items: 0,
-              created: new Date(bom.created_at).toLocaleDateString(),
-              status: bom.status === 'draft' ? 'Draft' : 'Final',
-            };
-          }
-        })
-      );
-      
-      setBoms(formattedBoms);
+      const [bomRes, rcRes] = await Promise.all([
+        axios.get("/engineering/bom/comprehensive"),
+        axios.get("/root-cards")
+      ]);
+      setBoms(bomRes.data.boms || []);
+      setRootCards(rcRes.data.rootCards || rcRes.data || []);
     } catch (err) {
-      console.error("Failed to fetch BOMs:", err);
-      setError("Failed to load BOMs");
+      console.error("Failed to fetch data:", err);
+      setError("Failed to load BOMs or Root Cards");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleView = async (bomId) => {
-    try {
-      setDetailsLoading(true);
-      const response = await axios.get(`/production/bom/${bomId}`);
-      setBomDetails(response.data);
-      setSelectedBOM(bomId);
-      
-      const itemCount = response.data.lineItems?.length || 0;
-      setBoms(prevBoms => 
-        prevBoms.map(bom => 
-          bom.id === bomId ? { ...bom, items: itemCount } : bom
-        )
-      );
-    } catch (err) {
-      console.error("Failed to fetch BOM details:", err);
-      Swal.fire({
-        icon: "error",
-        title: "Failed to Load",
-        text: "Could not fetch BOM details. Please try again.",
-        confirmButtonColor: "#3b82f6",
-      });
-    } finally {
-      setDetailsLoading(false);
-    }
-  };
-
-  const handleExport = async (bom) => {
-    try {
-      const response = await axios.get(`/production/bom/${bom.id}`);
-      const bomData = response.data;
-      
-      let csvContent = "BOM Details\n\n";
-      csvContent += `BOM Name,${bomData.bom.bom_number}\n`;
-      csvContent += `Status,${bomData.bom.status}\n`;
-      csvContent += `Created,${new Date(bomData.bom.created_at).toLocaleDateString()}\n`;
-      csvContent += `Created By,${bomData.bom.created_by_name || 'N/A'}\n\n`;
-      
-      csvContent += "Line Items\n";
-      csvContent += "Item Code,Description,Quantity,Unit,Unit Cost,Specification,Part Type\n";
-      
-      bomData.lineItems.forEach(item => {
-        csvContent += `${item.item_code},${item.item_description},${item.quantity},${item.unit},${item.unit_cost},${item.specification || ''},${item.part_type}\n`;
-      });
-      
-      const blob = new Blob([csvContent], { type: "text/csv" });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `BOM_${bomData.bom.bom_number}_${new Date().getTime()}.csv`;
-      link.click();
-      window.URL.revokeObjectURL(url);
-      
-      Swal.fire({
-        icon: "success",
-        title: "Exported Successfully",
-        text: `BOM '${bomData.bom.bom_number}' exported as CSV`,
-        confirmButtonColor: "#10b981",
-        timer: 2000,
-      });
-    } catch (err) {
-      console.error("Failed to export BOM:", err);
-      Swal.fire({
-        icon: "error",
-        title: "Export Failed",
-        text: "Could not export BOM. Please try again.",
-        confirmButtonColor: "#3b82f6",
-      });
     }
   };
 
@@ -131,7 +63,7 @@ const ViewBOMsPage = () => {
     const result = await Swal.fire({
       icon: "warning",
       title: "Delete BOM",
-      text: "Are you sure you want to delete this BOM? This action cannot be undone.",
+      text: "Are you sure you want to delete this comprehensive BOM? This action cannot be undone.",
       showCancelButton: true,
       confirmButtonColor: "#ef4444",
       cancelButtonColor: "#6b7280",
@@ -142,19 +74,14 @@ const ViewBOMsPage = () => {
     if (!result.isConfirmed) return;
 
     try {
-      await axios.delete(`/production/bom/${bomId}`);
+      await axios.delete(`/engineering/bom/comprehensive/${bomId}`);
       setBoms(boms.filter(b => b.id !== bomId));
-      if (selectedBOM === bomId) {
-        setSelectedBOM(null);
-        setBomDetails(null);
-      }
-
       Swal.fire({
         icon: "success",
         title: "Deleted Successfully",
         text: "BOM has been deleted.",
-        confirmButtonColor: "#10b981",
-        timer: 2000,
+        timer: 1500,
+        showConfirmButton: false
       });
     } catch (err) {
       console.error("Failed to delete BOM:", err);
@@ -162,205 +89,316 @@ const ViewBOMsPage = () => {
         icon: "error",
         title: "Delete Failed",
         text: "Could not delete BOM. Please try again.",
-        confirmButtonColor: "#3b82f6",
       });
     }
   };
 
-  const filteredBOMs = boms.filter(
-    (bom) =>
-      (bom.name && bom.name.toString().toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (bom.project && bom.project.toString().toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredBOMs = useMemo(() => {
+    return boms.filter((bom) => {
+      const matchesSearch = 
+        (bom.productName?.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (bom.itemCode?.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (bom.bomNumber?.toLowerCase().includes(searchTerm.toLowerCase()));
+      
+      const matchesStatus = statusFilter === "all" || bom.status === statusFilter;
+      const matchesType = typeFilter === "all" || bom.itemGroup === typeFilter;
+      const matchesRootCard = rootCardFilter === "all" || String(bom.rootCardId) === String(rootCardFilter);
+      
+      return matchesSearch && matchesStatus && matchesType && matchesRootCard;
+    });
+  }, [boms, searchTerm, statusFilter, typeFilter, rootCardFilter]);
+
+  const rootCardOptions = useMemo(() => {
+    const options = (Array.isArray(rootCards) ? rootCards : []).map(rc => ({
+      label: `${rc.po_number || rc.code || 'N/A'} - ${rc.project_name || rc.customer || rc.title || 'N/A'}`,
+      value: String(rc.id)
+    }));
+    return [{ label: "All Root Cards", value: "all" }, ...options];
+  }, [rootCards]);
+
+  const stats = useMemo(() => {
+    const total = boms.length;
+    const active = boms.filter(b => b.status === 'active').length;
+    const draft = boms.filter(b => b.status === 'draft').length;
+    const totalCost = boms.reduce((acc, bom) => acc + (parseFloat(bom.totalCost) || 0), 0);
+
+    return [
+      { label: "Total BOMs", value: total, icon: FileText, color: "blue" },
+      { label: "Active BOMs", value: active, icon: CheckCircle2, color: "green" },
+      { label: "Draft BOMs", value: draft, icon: AlertCircle, color: "amber" },
+      { label: "Total Cost", value: `₹${totalCost.toLocaleString()}`, icon: TrendingUp, color: "purple" },
+    ];
+  }, [boms]);
+
+  const rootCardMap = useMemo(() => {
+    const map = {};
+    (Array.isArray(rootCards) ? rootCards : []).forEach(rc => {
+      map[rc.id] = rc;
+    });
+    return map;
+  }, [rootCards]);
+
+  const columns = [
+    {
+      key: "productName",
+      label: "ITEM",
+      render: (val, row) => {
+        const linkedRC = rootCardMap[row.rootCardId];
+        return (
+          <div className="flex flex-col">
+            <span className="font-semibold text-slate-900 dark:text-white">{val}</span>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-medium">
+                {row.bomNumber || row.itemCode}
+              </span>
+              {linkedRC && (
+                <span className="text-[10px] text-blue-600 font-medium flex items-center gap-1">
+                  <ClipboardList size={10} />
+                  {linkedRC.po_number || linkedRC.code}
+                </span>
+              )}
+            </div>
+          </div>
+        );
+      }
+    },
+    {
+      key: "itemGroup",
+      label: "TYPE",
+      render: (val) => {
+        const isFinished = val === "Finished Goods" || val === "Finished Good";
+        const isSubAssembly = val === "Sub Assemblies" || val === "Sub-assembly";
+        
+        if (isFinished) {
+          return (
+            <Badge variant="secondary" className="gap-1.5 py-1 px-2.5">
+              <PackageCheck size={12} />
+              Finished Good
+            </Badge>
+          );
+        }
+        if (isSubAssembly) {
+          return (
+            <Badge variant="primary" className="gap-1.5 py-1 px-2.5 bg-purple-50 text-purple-700 border-purple-100">
+              <Layers size={12} />
+              Sub-Assembly
+            </Badge>
+          );
+        }
+        return <Badge variant="gray">{val || "Other"}</Badge>;
+      }
+    },
+    {
+      key: "isActive",
+      label: "IS ACTIVE",
+      render: (val, row) => (
+        <input 
+          type="checkbox" 
+          checked={row.status === 'active'} 
+          readOnly 
+          className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-4 w-4"
+        />
+      )
+    },
+    {
+      key: "isDefault",
+      label: "IS DEFAULT",
+      render: (val) => (
+        <input 
+          type="checkbox" 
+          checked={val === true || val === 1} 
+          readOnly 
+          className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-4 w-4"
+        />
+      )
+    },
+    {
+      key: "quantity",
+      label: "BOM QTY",
+      render: (val, row) => (
+        <span className="font-medium text-slate-700">
+          {(parseFloat(val) || 0).toFixed(2)} {row.uom || 'Nos'}
+        </span>
+      )
+    },
+    {
+      key: "totalCost",
+      label: "TOTAL COST",
+      render: (val) => (
+        <span className="font-bold text-slate-900">
+          ₹{(parseFloat(val) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+        </span>
+      )
+    },
+    {
+      key: "updatedAt",
+      label: "LAST UPDATED ON",
+      render: (val) => new Date(val).toLocaleDateString('en-GB')
+    },
+    {
+      key: "status",
+      label: "STATUS",
+      render: (val) => (
+        <Badge 
+          variant={val === 'active' ? 'success' : val === 'approved' ? 'primary' : 'warning'}
+          className="capitalize"
+        >
+          {val}
+        </Badge>
+      )
+    },
+    {
+      key: "actions",
+      label: "ACTIONS",
+      sortable: false,
+      render: (_, row) => (
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={() => navigate(`/design-engineer/bom/view/${row.id}`)}
+            className="p-1.5 hover:bg-blue-50 rounded-md text-blue-600 transition-colors"
+            title="View Details"
+          >
+            <Eye size={16} />
+          </button>
+          <button 
+            onClick={() => navigate(`/design-engineer/bom/create?bomId=${row.id}`)}
+            className="p-1.5 hover:bg-slate-100 rounded-md text-slate-600 transition-colors"
+            title="Edit BOM"
+          >
+            <Edit2 size={16} />
+          </button>
+          <button 
+            onClick={() => handleDelete(row.id)}
+            className="p-1.5 hover:bg-red-50 rounded-md text-red-600 transition-colors"
+            title="Delete BOM"
+          >
+            <Trash2 size={16} />
+          </button>
+        </div>
+      )
+    }
+  ];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-bold text-slate-900 dark:text-white text-xs">
-          View BOMs
-        </h2>
-        <p className="text-slate-600 dark:text-slate-400 mt-1 text-xs">
-          Browse and manage existing bills of materials
-        </p>
+    <div className="p-6 space-y-6 bg-slate-50/50 min-h-screen">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-xl font-bold text-slate-900">Bill of Materials</h2>
+          <p className="text-slate-500 text-xs">Manage your product structures and assembly definitions</p>
+        </div>
+        <Button 
+          variant="primary" 
+          icon={Plus} 
+          onClick={() => navigate("/design-engineer/bom/create")}
+        >
+          Create New BOM
+        </Button>
       </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {stats.map((stat, idx) => (
+          <Card key={idx} className="border-none shadow-sm overflow-hidden relative">
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className={`p-3 rounded-xl bg-${stat.color}-50 text-${stat.color}-600`}>
+                <stat.icon size={24} />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-slate-500">{stat.label}</p>
+                <p className="text-xl font-bold text-slate-900">{stat.value}</p>
+              </div>
+            </CardContent>
+            <div className={`absolute top-0 left-0 w-1 h-full bg-${stat.color}-500`} />
+          </Card>
+        ))}
+      </div>
+
+      {/* Filters & Search */}
+      <Card className="border-none shadow-sm">
+        <CardContent className="p-4 flex flex-wrap items-end gap-4">
+          <div className="flex-1 min-w-[250px]">
+            <Input
+              placeholder="Search BOM or product..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              leftIcon={<Search size={18} />}
+              className="mb-0"
+              containerClassName="mt-0"
+            />
+          </div>
+          <div className="flex-1 min-w-[300px]">
+            <div className="flex items-end gap-2">
+              <div className="flex-1">
+                <SearchableSelect
+                  label="Filter by Root Card"
+                  options={rootCardOptions}
+                  value={rootCardFilter}
+                  onChange={(val) => setRootCardFilter(val)}
+                  placeholder="Select Root Card..."
+                  containerClassName="mt-0"
+                  icon={<ClipboardList size={16} />}
+                />
+              </div>
+              {rootCardFilter !== "all" && (
+                <Button 
+                  variant="ghost" 
+                  className="mb-0.5 text-xs h-9 px-2 text-slate-500 hover:text-red-600"
+                  onClick={() => setRootCardFilter("all")}
+                >
+                  CLEAR
+                </Button>
+              )}
+            </div>
+          </div>
+          <div className="w-40">
+            <Select
+              label="Status"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              containerClassName="mt-0"
+              className="mt-0"
+            >
+              <option value="all">All Status</option>
+              <option value="draft">Draft</option>
+              <option value="active">Active</option>
+              <option value="approved">Approved</option>
+            </Select>
+          </div>
+          <div className="w-40">
+            <Select
+              label="Type"
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              containerClassName="mt-0"
+              className="mt-0"
+            >
+              <option value="all">All Types</option>
+              <option value="Finished Goods">Finished Goods</option>
+              <option value="Sub Assemblies">Sub Assemblies</option>
+              <option value="Bought-Out">Bought-Out</option>
+              <option value="Raw Material">Raw Material</option>
+              <option value="Consumable">Consumable</option>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Data Table */}
+      <Card className="border-none shadow-sm overflow-hidden">
+        <CardContent className="p-0">
+          <DataTable 
+            columns={columns}
+            data={filteredBOMs}
+            loading={loading}
+            emptyMessage="No Bill of Materials found."
+          />
+        </CardContent>
+      </Card>
 
       {error && (
-        <div className="flex items-center gap-3 p-4 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800">
-          <AlertCircle size={20} className="text-red-600 dark:text-red-400" />
-          <p className="text-sm font-medium text-red-800 dark:text-red-300">
-            {error}
-          </p>
-        </div>
-      )}
-
-      <div className="bg-white dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
-        <div className="relative">
-          <Search size={18} className="absolute left-3 top-3 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search BOMs..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-      </div>
-
-      {loading ? (
-        <div className="text-center py-12 bg-white dark:bg-slate-800 rounded-lg">
-          <p className="text-slate-500 dark:text-slate-400">Loading BOMs...</p>
-        </div>
-      ) : (
-        <div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {filteredBOMs.map((bom) => (
-              <div
-                key={bom.id}
-                className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6 hover:shadow-lg transition-shadow"
-              >
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h3 className="font-semibold text-slate-900 dark:text-white">
-                      {bom.name}
-                    </h3>
-                    <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 text-xs">
-                      {bom.project}
-                    </p>
-                  </div>
-                  <span
-                    className={`px-3 py-1 text-xs font-medium rounded-full ${
-                      bom.status === "Final"
-                        ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                        : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
-                    }`}
-                  >
-                    {bom.status}
-                  </span>
-                </div>
-                <div className="bg-slate-50 dark:bg-slate-700 rounded p-3 mb-4">
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
-                    <span className="font-semibold text-slate-900 dark:text-white">
-                      {bom.items}
-                    </span>{" "}
-                    items
-                  </p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                    Created: {bom.created}
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <button onClick={() => handleView(bom.id)} className="flex-1 px-3 py-2 bg-blue-50 dark:bg-blue-900 text-blue-600 dark:text-blue-400 rounded text-sm hover:bg-blue-100 dark:hover:bg-blue-800 transition-colors flex items-center text-xs justify-center gap-2">
-                    <Eye size={16} />
-                    View
-                  </button>
-                  <button onClick={() => handleExport(bom)} className="flex-1 px-3 py-2 bg-green-50 dark:bg-green-900 text-green-600 dark:text-green-400 rounded text-sm hover:bg-green-100 dark:hover:bg-green-800 transition-colors flex items-center text-xs justify-center gap-2">
-                    <Download size={16} />
-                    Export
-                  </button>
-                  <button onClick={() => handleDelete(bom.id)} className="px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-red-600 dark:text-red-400">
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {filteredBOMs.length === 0 && (
-            <div className="text-center py-12 bg-white dark:bg-slate-800 rounded-lg">
-              <p className="text-slate-500 dark:text-slate-400">No BOMs found</p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {selectedBOM && bomDetails && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-lg max-w-2xl w-full max-h-96 overflow-y-auto">
-            <div className="sticky top-0 bg-white dark:bg-slate-800 p-6 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-                BOM Details: {bomDetails.bom.bom_number}
-              </h3>
-              <button
-                onClick={() => {
-                  setSelectedBOM(null);
-                  setBomDetails(null);
-                }}
-                className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs text-slate-600 dark:text-slate-400">Status</p>
-                  <p className="font-semibold text-slate-900 dark:text-white capitalize">
-                    {bomDetails.bom.status}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-600 dark:text-slate-400">Created By</p>
-                  <p className="font-semibold text-slate-900 dark:text-white">
-                    {bomDetails.bom.created_by_name || "N/A"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-600 dark:text-slate-400">Created</p>
-                  <p className="font-semibold text-slate-900 dark:text-white">
-                    {new Date(bomDetails.bom.created_at).toLocaleDateString()}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-600 dark:text-slate-400">Items</p>
-                  <p className="font-semibold text-slate-900 dark:text-white">
-                    {bomDetails.lineItems.length}
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-6">
-                <h4 className="font-semibold text-slate-900 dark:text-white mb-3">
-                  Line Items
-                </h4>
-                <div className="space-y-2">
-                  {bomDetails.lineItems.map((item) => (
-                    <div
-                      key={item.id}
-                      className="p-3 bg-slate-50 dark:bg-slate-700 rounded-lg"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <p className="font-semibold text-slate-900 dark:text-white text-sm">
-                            {item.item_code}
-                          </p>
-                          <p className="text-xs text-slate-600 dark:text-slate-400">
-                            {item.item_description}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                            {item.quantity} {item.unit}
-                          </p>
-                          <p className="text-xs text-slate-600 dark:text-slate-400">
-                            @ ${item.unit_cost}
-                          </p>
-                        </div>
-                      </div>
-                      {item.specification && (
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                          Spec: {item.specification}
-                        </p>
-                      )}
-                      <p className="text-xs text-slate-500 dark:text-slate-400 capitalize">
-                        Type: {item.part_type}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
+        <div className="flex items-center gap-3 p-4 rounded-lg bg-red-50 border border-red-200">
+          <AlertCircle size={20} className="text-red-600" />
+          <p className="text-sm font-medium text-red-800">{error}</p>
         </div>
       )}
     </div>

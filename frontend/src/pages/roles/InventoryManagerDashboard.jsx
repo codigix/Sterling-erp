@@ -44,6 +44,7 @@ import {
   Activity,
   BarChart3,
   FileText,
+  Loader2,
 } from "lucide-react";
 
 ChartJS.register(
@@ -174,7 +175,7 @@ const DashboardContent = ({
                     {task.rootCard?.title || task.title}
                   </h4>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                    {task.salesOrder?.customer || "No Customer"}
+                    {task.rootCard?.customer || task.salesOrder?.customer || "No Customer"}
                   </p>
                 </div>
                 <span
@@ -189,7 +190,7 @@ const DashboardContent = ({
               </div>
               <div className="flex items-center justify-between mt-4">
                 <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
-                  PO: {task.salesOrder?.poNumber || "N/A"}
+                  PO: {task.rootCard?.poNumber || task.salesOrder?.poNumber || "N/A"}
                 </span>
                 <Link
                   to={`/inventory-manager/department-tasks`}
@@ -245,7 +246,6 @@ const DashboardContent = ({
           ))}
         </div>
       </div>
-    )}
 
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">

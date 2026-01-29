@@ -61,8 +61,7 @@ const MyTasksPage = () => {
             ? 50
             : 0,
         description: task.description,
-        rootCard: task.rootCard,
-        salesOrder: task.salesOrder,
+        rootCard: task.rootCard || task.salesOrder,
         notes: task.notes,
       }));
 
@@ -107,7 +106,7 @@ const MyTasksPage = () => {
   };
 
   const getTaskNavigationUrl = (task) => {
-    const rootCardId = task.salesOrder?.id || task.rootCard?.id || "";
+    const rootCardId = task.rootCard?.id || task.salesOrder?.id || "";
     const baseParams = `taskId=${task.id}&taskTitle=${encodeURIComponent(
       task.title
     )}&rootCardId=${rootCardId}`;

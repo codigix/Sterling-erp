@@ -343,7 +343,8 @@ const ProductionPlanDetailPage = () => {
                   <tr className="bg-slate-50 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-700">
                     <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Stage Name</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Root Card</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Assigned To</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Assigned To / Facility</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Target Warehouse</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Dates</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Status</th>
                   </tr>
@@ -366,11 +367,31 @@ const ProductionPlanDetailPage = () => {
                             </div>
                             <div>
                               <p className="text-sm font-medium text-slate-900 dark:text-white">{stage.workerName}</p>
-                              <p className="text-xs text-slate-500 dark:text-slate-400">{stage.workerEmail || 'No email'}</p>
+                              {stage.assignedFacilityId && (
+                                <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+                                  Facility #{stage.assignedFacilityId}
+                                </p>
+                              )}
                             </div>
                           </div>
                         ) : (
-                          <p className="text-sm text-slate-500 dark:text-slate-400">Not assigned</p>
+                          <div>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">Not assigned</p>
+                            {stage.assignedFacilityId && (
+                              <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+                                Facility #{stage.assignedFacilityId}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        {stage.targetWarehouse ? (
+                          <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-xs font-medium border border-purple-200 dark:border-purple-800">
+                            {stage.targetWarehouse}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 text-xs italic">Default</span>
                         )}
                       </td>
                       <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">

@@ -171,7 +171,7 @@ This document maps **EVERY** form field from the Root Card Wizard (8 steps) to i
 |---|---|---|---|---|---|---|---|
 | Production Start Date | `productionStartDate` or `timeline.startDate` | `timeline.startDate` | `production_plan_details` | `planned_start_date` | DATE | ❌ | Format: YYYY-MM-DD |
 | Estimated Completion Date | `estimatedCompletionDate` or `timeline.endDate` | `timeline.endDate` | `production_plan_details` | `planned_end_date` | DATE | ❌ | Format: YYYY-MM-DD |
-| Selected Phases | `selectedProductionPhases` | `selectedPhases` | `production_plan_details` | `selected_phases` (JSON) | JSON | ❌ | Stored as JSON |
+| Selected Phases | `selectedPhases` | `selectedPhases` | `production_plan_details` | `selected_phases` (JSON) | JSON | ❌ | Stored as JSON |
 | Root Card No. | `rootCardNo` | `rootCardNo` | `production_plan_details` | `root_card_no` | VARCHAR(100) | ❌ | Auto from system |
 | Revision No. | `revisionNo` | `revisionNo` | `production_plan_details` | `revision_no` | VARCHAR(50) | ❌ | Default: "1" |
 | Material Type | `materialInfo.materialType` | `materialInfo.materialType` | `production_plan_details` | `material_info` (JSON) | JSON | ❌ | Stored in JSON |

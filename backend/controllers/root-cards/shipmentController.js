@@ -40,11 +40,11 @@ class ShipmentController {
           
           if (existingTasks.length === 0) {
             await EmployeeTask.createAssignedTask(assignedTo, {
-              title: `Shipment Preparation: ${rootCard.project_name || rootCard.title || 'Project'}`,
-              description: `Prepare shipment and logistics for Root Card ${rootCard.po_number || ''}`,
+              title: `Shipment Preparation: ${rootCard?.project_name || rootCard?.title || 'Project'}`,
+              description: `Prepare shipment and logistics for Root Card ${rootCard?.po_number || ''}`,
               type: 'shipment',
-              priority: rootCard.priority || 'medium',
-              dueDate: rootCard.due_date,
+              priority: rootCard?.priority || 'medium',
+              dueDate: rootCard?.due_date,
               salesOrderId: rootCardId,
               notes: `Auto-assigned from Admin Root Card flow`
             });
@@ -87,7 +87,13 @@ class ShipmentController {
         return res.status(400).json(formatErrorResponse('Invalid shipment status'));
       }
 
-      await ShipmentDetail.updateShipmentStatus(rootCardId, status);
+      let detail = await ShipmentDetail.findByRootCardId(rootCardId);
+      if (!detail) {
+        await ShipmentDetail.create({ rootCardId, shipmentStatus: status });
+      } else {
+        await ShipmentDetail.updateShipmentStatus(rootCardId, status);
+      }
+      
       await RootCardStep.update(rootCardId, 6, { status: 'in_progress' });
 
       const updated = await ShipmentDetail.findByRootCardId(rootCardId);
@@ -102,9 +108,14 @@ class ShipmentController {
       const { rootCardId } = req.params;
       const deliveryTermsData = req.body;
 
-      await ShipmentDetail.updateDeliveryTerms(rootCardId, deliveryTermsData);
-      const updated = await ShipmentDetail.findByRootCardId(rootCardId);
+      let detail = await ShipmentDetail.findByRootCardId(rootCardId);
+      if (!detail) {
+        await ShipmentDetail.create({ rootCardId, deliveryTerms: deliveryTermsData });
+      } else {
+        await ShipmentDetail.updateDeliveryTerms(rootCardId, deliveryTermsData);
+      }
 
+      const updated = await ShipmentDetail.findByRootCardId(rootCardId);
       res.json(formatSuccessResponse(updated, 'Delivery terms updated'));
     } catch (error) {
       res.status(500).json(formatErrorResponse(error.message));
@@ -116,9 +127,14 @@ class ShipmentController {
       const { rootCardId } = req.params;
       const shipmentProcessData = req.body;
 
-      await ShipmentDetail.updateShipmentProcess(rootCardId, shipmentProcessData);
-      const updated = await ShipmentDetail.findByRootCardId(rootCardId);
+      let detail = await ShipmentDetail.findByRootCardId(rootCardId);
+      if (!detail) {
+        await ShipmentDetail.create({ rootCardId, shipment: shipmentProcessData });
+      } else {
+        await ShipmentDetail.updateShipmentProcess(rootCardId, shipmentProcessData);
+      }
 
+      const updated = await ShipmentDetail.findByRootCardId(rootCardId);
       res.json(formatSuccessResponse(updated, 'Shipment process updated'));
     } catch (error) {
       res.status(500).json(formatErrorResponse(error.message));
@@ -130,9 +146,14 @@ class ShipmentController {
       const { rootCardId } = req.params;
       const shippingData = req.body;
 
-      await ShipmentDetail.updateShippingDetails(rootCardId, shippingData);
-      const updated = await ShipmentDetail.findByRootCardId(rootCardId);
+      let detail = await ShipmentDetail.findByRootCardId(rootCardId);
+      if (!detail) {
+        await ShipmentDetail.create({ rootCardId, ...shippingData });
+      } else {
+        await ShipmentDetail.updateShippingDetails(rootCardId, shippingData);
+      }
 
+      const updated = await ShipmentDetail.findByRootCardId(rootCardId);
       res.json(formatSuccessResponse(updated, 'Shipping details updated'));
     } catch (error) {
       res.status(500).json(formatErrorResponse(error.message));
@@ -145,7 +166,12 @@ class ShipmentController {
 
       const detail = await ShipmentDetail.findByRootCardId(rootCardId);
       if (!detail) {
-        return res.status(404).json(formatErrorResponse('Shipment not found'));
+        return res.json(formatSuccessResponse({
+          isValid: true,
+          errors: [],
+          warnings: ['Shipment data not yet initialized'],
+          shipmentData: null
+        }, 'Shipment validation completed (no data)'));
       }
 
       const errors = [];

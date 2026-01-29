@@ -219,7 +219,7 @@ const QCManagerDashboard = () => {
                         {task.rootCard?.title || task.title}
                       </h4>
                       <p className="text-xs text-slate-500 dark:text-slate-400">
-                        {task.salesOrder?.customer || "No Customer"}
+                        {task.rootCard?.customer || task.salesOrder?.customer || "No Customer"}
                       </p>
                     </div>
                     <span
@@ -234,7 +234,7 @@ const QCManagerDashboard = () => {
                   </div>
                   <div className="flex items-center justify-between mt-4">
                     <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
-                      PO: {task.salesOrder?.poNumber || "N/A"}
+                      PO: {task.rootCard?.poNumber || task.salesOrder?.poNumber || "N/A"}
                     </span>
                     <Link
                       to={`/qc-manager/qc/pending`}

@@ -171,56 +171,60 @@ const ProjectDetailViewPage = () => {
     try {
       setLoading(true);
 
-      const response = await axios.get(`/design/projects/${projectId}`);
-      const project = response.data;
+      const response = await axios.get(`/root-cards/${projectId}`);
+      const rootCard = response.data.rootCard;
       
-      console.log("Loaded unified project details:", project);
-      setSelectedProject(project);
+      console.log("Loaded Root Card details:", rootCard);
+      setSelectedProject(rootCard);
+
+      const step1 = rootCard.steps?.step1_clientPO || {};
+      const step2 = rootCard.steps?.step2_design || {};
+      const prodDetails = step1.productDetails || {};
+      const specs = step2.specifications || {};
 
       const dataToSet = {
-        designId: project.designId || project.projectCode || "",
-        projectName: project.projectName || "",
-        productName: project.productName || "",
-        designStatus: project.designStatus || project.status || "draft",
-        designEngineerName: project.designEngineerName || "",
-        systemLength: project.systemLength || "",
-        systemWidth: project.systemWidth || "",
-        systemHeight: project.systemHeight || "",
-        loadCapacity: project.loadCapacity || "",
-        operatingEnvironment: project.operatingEnvironment || "",
-        materialGrade: project.materialGrade || "",
-        surfaceFinish: project.surfaceFinish || "",
-        steelSections: project.steelSections || [],
-        plates: project.plates || [],
-        fasteners: project.fasteners || [],
-        components: project.components || [],
-        electrical: project.electrical || [],
-        consumables: project.consumables || [],
-        designSpecifications: project.designSpecifications || "",
-        manufacturingInstructions: project.manufacturingInstructions || "",
-        qualitySafety: project.qualitySafety || "",
-        additionalNotes: project.additionalNotes || "",
+        designId: step2.id || rootCard.id || "",
+        projectName: step1.projectName || rootCard.projectName || "",
+        productName: prodDetails.itemName || rootCard.customer || "",
+        designStatus: step2.designStatus || "draft",
+        designEngineerName: rootCard.assigned_to_name || "",
+        systemLength: specs.length || prodDetails.length || "",
+        systemWidth: specs.width || prodDetails.width || "",
+        systemHeight: specs.height || prodDetails.height || "",
+        loadCapacity: specs.loadCapacity || prodDetails.loadCapacity || "",
+        operatingEnvironment: specs.operatingEnvironment || "",
+        materialGrade: specs.materialGrade || "",
+        surfaceFinish: specs.surfaceFinish || "",
+        steelSections: specs.steelSections || [],
+        plates: specs.plates || [],
+        fasteners: specs.fasteners || [],
+        components: specs.components || [],
+        electrical: specs.electrical || [],
+        consumables: specs.consumables || [],
+        designSpecifications: specs.designSpecifications || "",
+        manufacturingInstructions: specs.manufacturingInstructions || "",
+        qualitySafety: specs.qualitySafety || "",
+        additionalNotes: step2.designNotes || "",
       };
 
       const safeData = ensureMaterialsAreArrays(dataToSet);
       setProjectData(safeData);
 
-      if (project.referenceDocuments) {
+      if (step2.documents) {
         setUploadedFiles({
-          references: project.referenceDocuments,
+          references: step2.documents,
         });
       }
 
-      // Fetch tasks if it's a root card
-      if (roleId && projectId.startsWith("RC-")) {
-        const realId = projectId.replace("RC-", "");
+      // Fetch tasks for this root card
+      if (roleId) {
         try {
           const response = await axios.get(
             `/department/portal/tasks/${roleId}`
           );
           setTasks(
             response.data.filter(
-              (t) => t.salesOrder?.id === parseInt(realId)
+              (t) => (t.salesOrderId || t.rootCardId) === parseInt(projectId)
             )
           );
         } catch (err) {
@@ -299,17 +303,41 @@ const ProjectDetailViewPage = () => {
         return;
       }
 
-      await axios.put(`/design/projects/${projectId}`, {
-        ...projectData,
-        referenceDocuments: uploadedFiles.references,
-      });
+      const designEngineeringData = {
+        designStatus: projectData.designStatus,
+        designNotes: projectData.additionalNotes,
+        documents: uploadedFiles.references,
+        specifications: {
+          length: projectData.systemLength,
+          width: projectData.systemWidth,
+          height: projectData.systemHeight,
+          loadCapacity: projectData.loadCapacity,
+          operatingEnvironment: projectData.operatingEnvironment,
+          materialGrade: projectData.materialGrade,
+          surfaceFinish: projectData.surfaceFinish,
+          steelSections: projectData.steelSections,
+          plates: projectData.plates,
+          fasteners: projectData.fasteners,
+          components: projectData.components,
+          electrical: projectData.electrical,
+          consumables: projectData.consumables,
+          designSpecifications: projectData.designSpecifications,
+          manufacturingInstructions: projectData.manufacturingInstructions,
+          qualitySafety: projectData.qualitySafety,
+        },
+      };
 
-      alert("Project details saved successfully!");
+      await axios.post(
+        `/root-cards/steps/${projectId}/design-engineering`,
+        designEngineeringData
+      );
+
+      alert("Design engineering details saved successfully!");
       navigate("/design-engineer/project-details");
     } catch (error) {
-      console.error("Error saving project:", error);
+      console.error("Error saving design details:", error);
       alert(
-        "Failed to save project details: " +
+        "Failed to save design details: " +
           (error.response?.data?.message || error.message)
       );
     } finally {

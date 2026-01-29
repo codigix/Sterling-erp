@@ -44,11 +44,11 @@ class DesignEngineeringController {
           
           if (existingTasks.length === 0) {
             await EmployeeTask.createAssignedTask(assignedTo, {
-              title: `Design Engineering: ${rootCard.project_name || rootCard.title || 'Project'}`,
-              description: `Complete design engineering for Root Card ${rootCard.po_number || ''}`,
+              title: `Design Engineering: ${rootCard?.project_name || rootCard?.title || 'Project'}`,
+              description: `Complete design engineering for Root Card ${rootCard?.po_number || ''}`,
               type: 'design_engineering',
-              priority: rootCard.priority || 'medium',
-              dueDate: rootCard.due_date,
+              priority: rootCard?.priority || 'medium',
+              dueDate: rootCard?.due_date,
               salesOrderId: rootCardId,
               notes: `Auto-assigned from Admin Root Card flow`
             });
@@ -130,28 +130,66 @@ class DesignEngineeringController {
         return res.status(400).json(formatErrorResponse('No files uploaded'));
       }
 
-      const design = await DesignEngineeringDetail.findByRootCardId(rootCardId);
-      if (!design) {
-        return res.status(404).json(formatErrorResponse('Design engineering details not found. Create design first.'));
+      const RootCard = require('../../models/RootCard');
+      const rootCard = await RootCard.findById(rootCardId);
+      
+      let isDraft = false;
+      if (!rootCard) {
+        const RootCardDraft = require('../../models/RootCardDraft');
+        const draft = await RootCardDraft.findById(rootCardId, userId);
+        if (draft) {
+          isDraft = true;
+          console.log(`[DesignEngineeringController] Root Card ${rootCardId} not found in sales_orders, but found in drafts. Handling as draft upload.`);
+        } else {
+          return res.status(404).json(formatErrorResponse('Root Card not found'));
+        }
+      }
+
+      let design = null;
+      if (!isDraft) {
+        design = await DesignEngineeringDetail.findByRootCardId(rootCardId);
+        if (!design) {
+          console.log(`[DesignEngineeringController] Design record not found for Root Card ${rootCardId}. Creating initial record.`);
+          await DesignEngineeringDetail.create({
+            rootCardId: rootCardId,
+            designStatus: 'draft',
+            designNotes: 'Initial record created during document upload'
+          });
+          design = await DesignEngineeringDetail.findByRootCardId(rootCardId);
+        }
       }
 
       const uploadedDocs = [];
       for (const file of files) {
-        const doc = await DesignEngineeringDetail.addDocument(rootCardId, {
-          name: file.originalname,
-          path: file.path,
-          size: file.size,
-          mimeType: file.mimetype,
-          uploadedBy: userId
-        });
-        uploadedDocs.push(doc);
+        if (!isDraft) {
+          const doc = await DesignEngineeringDetail.addDocument(rootCardId, {
+            name: file.originalname,
+            path: file.path,
+            size: file.size,
+            mimeType: file.mimetype,
+            uploadedBy: userId
+          });
+          uploadedDocs.push(doc);
+        } else {
+          // For drafts, we just return the file info. 
+          // The frontend will save it to the draft via updateDraft call on Next.
+          uploadedDocs.push({
+            id: Date.now() + Math.random(),
+            name: file.originalname,
+            path: file.path,
+            size: file.size,
+            mimeType: file.mimetype,
+            uploadedAt: new Date().toISOString(),
+            uploadedBy: userId
+          });
+        }
       }
 
-      const updated = await DesignEngineeringDetail.findByRootCardId(rootCardId);
+      const updated = !isDraft ? await DesignEngineeringDetail.findByRootCardId(rootCardId) : null;
       res.json(formatSuccessResponse({
         uploaded: uploadedDocs,
         design: updated
-      }, `${uploadedDocs.length} document(s) uploaded successfully`));
+      }, `${uploadedDocs.length} document(s) uploaded successfully${isDraft ? ' (Draft)' : ''}`));
     } catch (error) {
       console.error('Error uploading design documents:', error);
       res.status(500).json(formatErrorResponse(error.message));
@@ -190,7 +228,12 @@ class DesignEngineeringController {
 
       const design = await DesignEngineeringDetail.findByRootCardId(rootCardId);
       if (!design) {
-        return res.status(404).json(formatErrorResponse('Design not found'));
+        return res.json(formatSuccessResponse({
+          isValid: true,
+          errors: [],
+          warnings: ['Design data not yet initialized'],
+          status: 'pending'
+        }, 'Design validation completed (no data)'));
       }
 
       const validationResult = {
@@ -228,11 +271,7 @@ class DesignEngineeringController {
       const { rootCardId } = req.params;
 
       const history = await DesignEngineeringDetail.getApprovalHistory(rootCardId);
-      if (history.length === 0) {
-        return res.status(404).json(formatErrorResponse('No review history found'));
-      }
-
-      res.json(formatSuccessResponse(history, 'Design review history retrieved'));
+      res.json(formatSuccessResponse(history || [], 'Design review history retrieved'));
     } catch (error) {
       res.status(500).json(formatErrorResponse(error.message));
     }

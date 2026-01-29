@@ -37,6 +37,27 @@ const designUpload = multer({
   }
 });
 
+const poUpload = multer({
+  dest: path.join(__dirname, '../../uploads/client-po'),
+  limits: { fileSize: 20 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowedMimes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'image/png',
+      'image/jpeg'
+    ];
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type'));
+    }
+  }
+});
+
 router.use(authMiddleware);
 
 router.get('/:rootCardId/steps', rootCardStepController.getSteps);
@@ -50,6 +71,8 @@ router.get('/:rootCardId/pending-steps', rootCardStepController.getPendingSteps)
 
 router.post('/:rootCardId/client-po', clientPOController.createOrUpdate);
 router.get('/:rootCardId/client-po', clientPOController.getClientPO);
+router.get('/:rootCardId/client-po/validate', clientPOController.validatePO);
+router.post('/:rootCardId/client-po/upload', poUpload.array('documents'), clientPOController.uploadPODocuments);
 router.delete('/:rootCardId/client-po', clientPOController.delete);
 router.get('/client-po/verify/:poNumber', clientPOController.verifyPONumber);
 router.get('/client-po/all', clientPOController.getAll);
@@ -91,6 +114,7 @@ router.post('/:rootCardId/material-requirements/materials/:materialId/assign', m
 
 router.post('/:rootCardId/production-plan', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer'), productionPlanController.createOrUpdate);
 router.get('/:rootCardId/production-plan', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer'), productionPlanController.getProductionPlan);
+router.get('/:rootCardId/production-plan/validate', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer'), productionPlanController.validateProductionPlan);
 router.post('/:rootCardId/production-plan/validate-timeline', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer'), productionPlanController.validateTimeline);
 router.get('/:rootCardId/production-plan/validate-phases', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer'), productionPlanController.validatePhases);
 router.post('/:rootCardId/production-plan/phases', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer'), productionPlanController.addPhase);

@@ -1,19 +1,19 @@
 import axios from './api';
 
 const DEPARTMENT_MANAGERS = {
-  design_engineering: {
+  designEngineering: {
     department: 'Design Engineering',
     manager: 'Design Engineer'
   },
-  material_requirement: {
+  materialRequirements: {
     department: 'Inventory Management',
     manager: 'Inventory Manager'
   },
-  production_plan: {
+  productionPlan: {
     department: 'Production',
     manager: 'Production Manager'
   },
-  quality_check: {
+  qualityCheck: {
     department: 'Quality Control',
     manager: 'QC Manager'
   },
@@ -29,13 +29,12 @@ const DEPARTMENT_MANAGERS = {
 
 const STEP_DESCRIPTIONS = {
   1: 'Client PO',
-  2: 'Root Card',
-  3: 'Design Engineering',
-  4: 'Material Requirement',
-  5: 'Production Plan',
-  6: 'Quality Check',
-  7: 'Shipment',
-  8: 'Delivery'
+  2: 'Design Engineering',
+  3: 'Material Requirements',
+  4: 'Production Plan',
+  5: 'Quality Check',
+  6: 'Shipment',
+  7: 'Delivery'
 };
 
 export const sendAssignmentNotifications = async (rootCardData, formData) => {
@@ -43,12 +42,12 @@ export const sendAssignmentNotifications = async (rootCardData, formData) => {
     const assignmentNotifications = [];
 
     const stepAssignees = [
-      { stepType: 'design_engineering', assignee: formData.design_engineeringAssignedTo },
-      { stepType: 'material_requirement', assignee: formData.material_requirementAssignedTo },
-      { stepType: 'production_plan', assignee: formData.production_planAssignedTo },
-      { stepType: 'quality_check', assignee: formData.quality_checkAssignedTo },
+      { stepType: 'designEngineering', assignee: formData.designEngineeringAssignedTo },
+      { stepType: 'materialRequirements', assignee: formData.materialRequirementsAssignedTo },
+      { stepType: 'productionPlan', assignee: formData.productionPlanAssignedTo },
+      { stepType: 'qualityCheck', assignee: formData.qualityCheckAssignedTo },
       { stepType: 'shipment', assignee: formData.shipmentAssignedTo },
-      { stepType: 'delivery', assignee: formData.deliveryAssignedToManager }
+      { stepType: 'delivery', assignee: formData.deliveryAssignedTo }
     ];
 
     stepAssignees.forEach(({ stepType, assignee }) => {

@@ -1,52 +1,41 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useCallback } from "react";
 import { FileText, Upload, X, File, Loader2 } from "lucide-react";
 import FormSection from "../shared/FormSection";
 import AssigneeField from "../shared/AssigneeField";
 import { useRootCardContext } from "../hooks";
 import axios from "../../../../utils/api";
 
-export default function Step2_DesignEngineering() {
+export default function Step2_DesignEngineering({ readOnly = false }) {
   const { state, updateDeepNestedField, updateField, initialData } = useRootCardContext();
   const rootCardId = initialData?.id || state.createdOrderId;
   const designEng = state.formData.designEngineering || {};
   
+  const drawings = React.useMemo(() => designEng.attachments?.drawings || [], [designEng.attachments]);
+  const documents = React.useMemo(() => designEng.attachments?.documents || [], [designEng.attachments]);
+  
   const [uploading, setUploading] = useState(false);
-  const [uploadedFiles, setUploadedFiles] = useState({
-    drawings: designEng.attachments?.drawings || [],
-    documents: designEng.attachments?.documents || [],
-  });
 
-  useEffect(() => {
-    if (designEng.attachments) {
-      setUploadedFiles({
-        drawings: designEng.attachments.drawings || [],
-        documents: designEng.attachments.documents || [],
-      });
-    }
-  }, [designEng.attachments]);
-
-  const updateDesignField = (subsection, field, value) => {
+  const updateDesignField = useCallback((subsection, field, value) => {
     updateDeepNestedField("designEngineering", subsection, field, value);
-  };
+  }, [updateDeepNestedField]);
 
-  const handleFileUpload = async (e, type) => {
+  const handleFileUpload = useCallback(async (e, type) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
 
     if (!rootCardId) {
-      // If no rootCardId yet (still a draft), we can't upload to the design-engineering endpoint
-      // We'll just keep them as File objects for now, but this is why we need a better strategy
-      const newFilesData = files.map((f) => ({ name: f.name, size: f.size, type: f.type, isLocal: true, file: f }));
-      
-      setUploadedFiles((prev) => ({
-        ...prev,
-        [type]: [...(prev[type] || []), ...newFilesData],
+      const newFilesData = files.map((f) => ({ 
+        name: f.name, 
+        size: f.size, 
+        type: f.type, 
+        isLocal: true, 
+        file: f 
       }));
+      
+      const currentFiles = type === "drawings" ? (designEng.attachments?.drawings || []) : (designEng.attachments?.documents || []);
+      const updatedFiles = [...currentFiles, ...newFilesData];
 
-      updateDesignField("attachments", type, [
-        ...(designEng.attachments?.[type] || []),
-        ...files,
-      ]);
+      updateDesignField("attachments", type, updatedFiles);
       return;
     }
 
@@ -63,14 +52,8 @@ export default function Step2_DesignEngineering() {
 
       if (response.data?.success) {
         const newlyUploaded = response.data.data.uploaded;
-        // In the backend, uploadDesignDocuments adds to 'documents' JSON field.
-        // But our frontend distinguishes between drawings and documents.
-        // For now, we'll just add them to the requested type.
-        
-        const updatedFiles = [
-          ...(designEng.attachments?.[type] || []),
-          ...newlyUploaded
-        ];
+        const currentFiles = type === "drawings" ? (designEng.attachments?.drawings || []) : (designEng.attachments?.documents || []);
+        const updatedFiles = [...currentFiles, ...newlyUploaded];
 
         updateDesignField("attachments", type, updatedFiles);
       }
@@ -80,20 +63,22 @@ export default function Step2_DesignEngineering() {
     } finally {
       setUploading(false);
     }
-  };
+  }, [rootCardId, designEng.attachments, updateDesignField]);
 
-  const removeFile = (index, type) => {
-    const updatedContextFiles = (designEng.attachments?.[type] || []).filter((_, i) => i !== index);
-    updateDesignField("attachments", type, updatedContextFiles);
-  };
+  const removeFile = useCallback((index, type) => {
+    const currentFiles = type === "drawings" ? (designEng.attachments?.drawings || []) : (designEng.attachments?.documents || []);
+    const updatedFiles = currentFiles.filter((_, i) => i !== index);
+    updateDesignField("attachments", type, updatedFiles);
+  }, [designEng.attachments, updateDesignField]);
 
-  return (
+  const content = React.useMemo(() => (
     <div className="space-y-6">
       <AssigneeField
-        stepType="design_engineering"
+        stepType="designEngineering"
         formData={state.formData}
         updateField={updateField}
         employees={state.employees}
+        readOnly={readOnly}
       />
       <FormSection
         title="Design Documentation"
@@ -102,10 +87,10 @@ export default function Step2_DesignEngineering() {
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-medium text-slate-900 text-left mb-3 text-left">
+            <label className="block text-sm font-medium text-slate-900 text-left mb-3">
               Raw Design Drawings *
             </label>
-            <div className={`border-2 border-dashed border-slate-300 bg-slate-50 rounded-lg p-6 text-center hover:border-purple-500 hover:bg-purple-50 transition cursor-pointer relative ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
+            <div className={`border-2 border-dashed border-slate-300 bg-slate-50 rounded-lg p-6 text-center hover:border-purple-500 hover:bg-purple-50 transition cursor-pointer relative ${uploading || readOnly ? 'opacity-50 pointer-events-none' : ''}`}>
               <input
                 type="file"
                 multiple
@@ -113,7 +98,7 @@ export default function Step2_DesignEngineering() {
                 className="hidden"
                 id="drawingsUpload"
                 accept=".pdf,.dwg,.dxf,.step,.igs,.png,.jpg,.jpeg"
-                disabled={uploading}
+                disabled={uploading || readOnly}
               />
               <label htmlFor="drawingsUpload" className="cursor-pointer block">
                 {uploading ? (
@@ -129,12 +114,12 @@ export default function Step2_DesignEngineering() {
                 </p>
               </label>
             </div>
-            {uploadedFiles.drawings.length > 0 && (
+            {drawings.length > 0 && (
               <div className="mt-4 space-y-2">
                 <h4 className="text-sm font-medium text-slate-900 text-left">
                   Uploaded Drawings:
                 </h4>
-                {uploadedFiles.drawings.map((file, idx) => (
+                {drawings.map((file, idx) => (
                   <div
                     key={idx}
                     className="flex items-center text-xs justify-between bg-purple-50 border border-purple-200 p-3 rounded-lg"
@@ -145,12 +130,14 @@ export default function Step2_DesignEngineering() {
                         {file.name}
                       </span>
                     </div>
-                    <button
-                      onClick={() => removeFile(idx, "drawings")}
-                      className="text-red-500 hover:text-red-700"
-                    >
-                      <X size={16} />
-                    </button>
+                    {!readOnly && (
+                      <button
+                        onClick={() => removeFile(idx, "drawings")}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <X size={16} />
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -158,10 +145,10 @@ export default function Step2_DesignEngineering() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-900 text-left mb-3 text-left">
+            <label className="block text-sm font-medium text-slate-900 text-left mb-3">
               Required Documents *
             </label>
-            <div className={`border-2 border-dashed border-slate-300 bg-slate-50 rounded-lg p-6 text-center hover:border-purple-500 hover:bg-purple-50 transition cursor-pointer relative ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
+            <div className={`border-2 border-dashed border-slate-300 bg-slate-50 rounded-lg p-6 text-center hover:border-purple-500 hover:bg-purple-50 transition cursor-pointer relative ${uploading || readOnly ? 'opacity-50 pointer-events-none' : ''}`}>
               <input
                 type="file"
                 multiple
@@ -169,7 +156,7 @@ export default function Step2_DesignEngineering() {
                 className="hidden"
                 id="documentsUpload"
                 accept=".pdf,.doc,.docx,.xlsx,.txt"
-                disabled={uploading}
+                disabled={uploading || readOnly}
               />
               <label htmlFor="documentsUpload" className="cursor-pointer block">
                 {uploading ? (
@@ -185,12 +172,12 @@ export default function Step2_DesignEngineering() {
                 </p>
               </label>
             </div>
-            {uploadedFiles.documents.length > 0 && (
+            {documents.length > 0 && (
               <div className="mt-4 space-y-2">
                 <h4 className="text-sm font-medium text-slate-900 text-left">
                   Uploaded Documents:
                 </h4>
-                {uploadedFiles.documents.map((file, idx) => (
+                {documents.map((file, idx) => (
                   <div
                     key={idx}
                     className="flex items-center text-xs justify-between bg-purple-50 border border-purple-200 p-3 rounded-lg"
@@ -201,12 +188,14 @@ export default function Step2_DesignEngineering() {
                         {file.name}
                       </span>
                     </div>
-                    <button
-                      onClick={() => removeFile(idx, "documents")}
-                      className="text-red-500 hover:text-red-700"
-                    >
-                      <X size={16} />
-                    </button>
+                    {!readOnly && (
+                      <button
+                        onClick={() => removeFile(idx, "documents")}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <X size={16} />
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -220,5 +209,17 @@ export default function Step2_DesignEngineering() {
         </div>
       </FormSection>
     </div>
-  );
+  ), [
+    state.formData, 
+    state.employees, 
+    readOnly, 
+    uploading, 
+    drawings, 
+    documents, 
+    handleFileUpload, 
+    removeFile, 
+    updateField
+  ]);
+
+  return content;
 }

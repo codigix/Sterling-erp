@@ -60,11 +60,11 @@ class MaterialRequirementsController {
           
           if (existingTasks.length === 0) {
             await EmployeeTask.createAssignedTask(assignedTo, {
-              title: `Material Requirements: ${rootCard.project_name || rootCard.title || 'Project'}`,
-              description: `Define material requirements for Root Card ${rootCard.po_number || ''}`,
+              title: `Material Requirements: ${rootCard?.project_name || rootCard?.title || 'Project'}`,
+              description: `Define material requirements for Root Card ${rootCard?.po_number || ''}`,
               type: 'material_requirement',
-              priority: rootCard.priority || 'medium',
-              dueDate: rootCard.due_date,
+              priority: rootCard?.priority || 'medium',
+              dueDate: rootCard?.due_date,
               salesOrderId: rootCardId,
               notes: `Auto-assigned from Admin Root Card flow`
             });
@@ -93,7 +93,7 @@ class MaterialRequirementsController {
       const detail = await MaterialRequirementsDetail.findByRootCardId(rootCardId);
       
       if (!detail) {
-        return res.status(404).json(formatErrorResponse('Material requirements not found'));
+        return res.json(formatSuccessResponse(null, 'Material requirements retrieved (empty)'));
       }
 
       // Fetch live stock levels from inventory
@@ -121,8 +121,11 @@ class MaterialRequirementsController {
                 valuationRate: inventoryItem.valuationRate || 0,
                 sellingRate: inventoryItem.sellingRate || 0,
                 itemGroupId: inventoryItem.itemGroupId,
+                itemGroupName: inventoryItem.itemGroupName,
                 category: inventoryItem.category,
                 unit: inventoryItem.unit,
+                location: inventoryItem.location,
+                warehouse: inventoryItem.warehouse,
                 gstPercent: inventoryItem.gstPercent
               };
             }
@@ -168,19 +171,25 @@ class MaterialRequirementsController {
       const { rootCardId } = req.params;
 
       const detail = await MaterialRequirementsDetail.findByRootCardId(rootCardId);
-      if (!detail) {
-        return res.status(404).json(formatErrorResponse('Material requirements not found'));
-      }
-
+      
       const errors = [];
       const warnings = [];
+
+      if (!detail) {
+        return res.json(formatSuccessResponse({
+          isValid: true,
+          errors: [],
+          warnings: ['Material requirements not yet initialized'],
+          materialData: null
+        }, 'Material validation completed (no data)'));
+      }
 
       if (!detail.materials || detail.materials.length === 0) {
         warnings.push('No materials added');
       } else {
         detail.materials.forEach((material, index) => {
-          if (!material.materialType) {
-            errors.push(`Material ${index + 1}: Type is missing`);
+          if (!material.materialType && !material.category && !material.itemGroup && !material.itemGroupName) {
+            errors.push(`Material ${index + 1}: Type/Category is missing`);
           }
           if (!material.quantity || material.quantity <= 0) {
             errors.push(`Material ${index + 1}: Invalid quantity`);
@@ -191,7 +200,8 @@ class MaterialRequirementsController {
       res.json(formatSuccessResponse({
         isValid: errors.length === 0,
         errors,
-        warnings
+        warnings,
+        materialData: detail
       }, 'Material validation completed'));
     } catch (error) {
       res.status(500).json(formatErrorResponse(error.message));

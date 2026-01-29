@@ -155,13 +155,17 @@ exports.assignEmployeeToStep = async (req, res) => {
 
     // Create task in employee dashboard
     try {
+      const RootCard = require('../../models/RootCard');
+      const rootCard = await RootCard.findById(step.sales_order_id);
+      
       await EmployeeTask.createAssignedTask(
         employeeId,
         {
-          title: `${step.step_name} - Root Card #${step.sales_order_id}`,
-          description: `Please complete: ${step.step_name} for Root Card #${step.sales_order_id}`,
+          title: `${step.step_name}: ${rootCard?.project_name || rootCard?.title || 'Project'}`,
+          description: `Complete: ${step.step_name} for Root Card ${rootCard?.po_number || '#' + step.sales_order_id}`,
           type: step.step_type,
-          priority: 'high',
+          priority: rootCard?.priority || 'medium',
+          dueDate: rootCard?.due_date,
           salesOrderId: step.sales_order_id,
           assignedBy: userId
         },
@@ -243,7 +247,7 @@ exports.updateStepStatus = async (req, res) => {
 
     if (isMaterialRequestCompletion || isProductionPlanStart) {
       const [boms] = await connection.execute(
-        'SELECT id FROM bill_of_materials WHERE sales_order_id = ? AND status = "active"',
+        'SELECT id FROM bill_of_materials WHERE root_card_id = ? AND status = "active"',
         [step.sales_order_id]
       );
       if (boms.length === 0) {
@@ -344,9 +348,9 @@ exports.uploadStepDocuments = async (req, res) => {
       return res.status(400).json({ message: 'No files uploaded' });
     }
 
-    // Get current documents
+    // Get current documents and step details
     const [steps] = await pool.execute(
-      'SELECT documents FROM sales_order_workflow_steps WHERE id = ?',
+      'SELECT documents, sales_order_id, step_number FROM sales_order_workflow_steps WHERE id = ?',
       [stepId]
     );
 
@@ -354,6 +358,7 @@ exports.uploadStepDocuments = async (req, res) => {
       return res.status(404).json({ message: 'Workflow step not found' });
     }
 
+    const { sales_order_id, step_number } = steps[0];
     let currentDocs = [];
     try {
       currentDocs = JSON.parse(steps[0].documents || '[]');
@@ -371,11 +376,71 @@ exports.uploadStepDocuments = async (req, res) => {
 
     const allDocs = [...currentDocs, ...newDocs];
 
-    // Save documents
+    // Save documents to workflow table
     await pool.execute(
       'UPDATE sales_order_workflow_steps SET documents = ? WHERE id = ?',
       [JSON.stringify(allDocs), stepId]
     );
+
+    // SYNCHRONIZATION: Handle specialized table synchronization
+    if (step_number === 1) {
+      // Step 1: Client PO
+      try {
+        const ClientPODetail = require('../../models/ClientPODetail');
+        let poDetail = await ClientPODetail.findByRootCardId(sales_order_id);
+        
+        if (!poDetail) {
+          await ClientPODetail.create({
+            rootCardId: sales_order_id,
+            poNumber: `TEMP-${Date.now()}`,
+            poDate: new Date().toISOString().split('T')[0],
+            clientName: 'TBD',
+            clientEmail: 'TBD',
+            clientPhone: 'TBD',
+            projectName: 'TBD',
+            projectCode: 'TBD',
+            attachments: newDocs
+          });
+        } else {
+          const currentAttachments = Array.isArray(poDetail.attachments) ? poDetail.attachments : [];
+          await ClientPODetail.update(sales_order_id, {
+            ...poDetail,
+            attachments: [...currentAttachments, ...newDocs]
+          });
+        }
+        console.log(`[WorkflowController] Synchronized ${newDocs.length} documents to client_po_details for SO ${sales_order_id}`);
+      } catch (syncError) {
+        console.error('[WorkflowController] Sync to ClientPODetail failed:', syncError.message);
+      }
+    } else if (step_number === 2) {
+      // Step 2: Design Engineering
+      try {
+        const DesignEngineeringDetail = require('../../models/DesignEngineeringDetail');
+        let designDetail = await DesignEngineeringDetail.findByRootCardId(sales_order_id);
+        
+        // If it doesn't exist, create a basic one
+        if (!designDetail) {
+          await DesignEngineeringDetail.create({
+            rootCardId: sales_order_id,
+            documents: newDocs,
+            designStatus: 'draft'
+          });
+        } else {
+          // Add each new document
+          for (const doc of newDocs) {
+            await DesignEngineeringDetail.addDocument(sales_order_id, {
+              ...doc,
+              mimeType: files.find(f => f.originalname === doc.name)?.mimetype || 'application/octet-stream',
+              uploadedBy: req.user?.id || req.user?.userId
+            });
+          }
+        }
+        console.log(`[WorkflowController] Synchronized ${newDocs.length} documents to design_engineering_details for SO ${sales_order_id}`);
+      } catch (syncError) {
+        console.error('[WorkflowController] Sync to DesignEngineeringDetail failed:', syncError.message);
+        // We don't fail the whole request because workflow update succeeded
+      }
+    }
 
     res.json({
       message: 'Documents uploaded successfully',
@@ -424,7 +489,7 @@ exports.getWorkflowDetails = async (req, res) => {
 
         if (step.assigned_employee_id) {
           const [employees] = await pool.execute(
-            'SELECT id, username, email FROM users WHERE id = ?',
+            'SELECT id, first_name, last_name, email FROM employees WHERE id = ?',
             [step.assigned_employee_id]
           );
           assignedEmployee = employees[0] || null;

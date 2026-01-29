@@ -22,6 +22,7 @@ const ProductionPlanFormPage = () => {
   });
   const [employees, setEmployees] = useState([]);
   const [facilities, setFacilities] = useState([]);
+  const [warehouses, setWarehouses] = useState([]);
   const [newStage, setNewStage] = useState({
     stageName: '',
     stageType: 'in_house',
@@ -29,6 +30,7 @@ const ProductionPlanFormPage = () => {
     plannedEndDate: '',
     assignedEmployeeId: '',
     facilityId: '',
+    targetWarehouse: '',
     notes: ''
   });
   const [productionPhases, setProductionPhases] = useState([]);
@@ -70,6 +72,18 @@ const ProductionPlanFormPage = () => {
     }
   };
 
+  const fetchWarehouses = async () => {
+    try {
+      const response = await axios.get('/inventory/materials', { __sessionGuard: true });
+      const fetchedMaterials = response.data.materials || [];
+      const uniqueWarehouses = [...new Set(fetchedMaterials.map(m => m.location).filter(loc => loc && loc.trim() !== ""))];
+      setWarehouses(uniqueWarehouses.length > 0 ? uniqueWarehouses : ["Main Warehouse", "Secondary Warehouse"]);
+    } catch (err) {
+      console.error('Failed to fetch warehouses:', err);
+      setWarehouses(["Main Warehouse", "Secondary Warehouse"]);
+    }
+  };
+
   const handleRootCardSelect = useCallback(async (rootCardId) => {
     if (!rootCardId) {
       setProductionPhases([]);
@@ -89,47 +103,80 @@ const ProductionPlanFormPage = () => {
       const response = await axios.get(`/production/portal/root-cards/${rootCardId}?all=true`, { __sessionGuard: true });
       const rootCard = response.data;
 
-      const step4 = rootCard.stepData?.step4_productionPlan;
+      const step4 = rootCard.stepData?.step4_productionPlan || rootCard.steps?.step4_production || {};
+      const step1 = rootCard.stepData?.step1_clientPO || rootCard.steps?.step1_clientPO || {};
+      
       console.log('Full response:', rootCard);
       console.log('Step 4 Data:', step4);
+      console.log('Step 1 Data:', step1);
       
-      const phasesArray = step4?.selectedPhases 
-        ? Object.keys(step4.selectedPhases)
-        : [];
-      setProductionPhases(phasesArray);
+      const activeBOM = rootCard.stepData?.activeBOM;
+      const bomOperations = activeBOM?.operations || [];
+      console.log('Active BOM Operations:', bomOperations);
 
-      const autoCreatedStages = phasesArray.map((phase, index) => ({
-        id: `auto_${Date.now()}_${index}`,
-        stageName: phase,
-        stageType: 'in_house',
-        plannedStartDate: step4?.timeline?.startDate || '',
-        plannedEndDate: step4?.timeline?.endDate || '',
-        estimatedDurationDays: '',
-        assignedEmployeeId: null,
-        facilityId: null,
-        notes: `Auto-created from Phase: ${phase}`
-      }));
+      let autoCreatedStages = [];
+      let dataSource = '';
 
-      const projectName = rootCard.project?.name || '';
+      if (bomOperations.length > 0) {
+        dataSource = 'BOM operations';
+        autoCreatedStages = bomOperations.map((op, index) => ({
+          id: `bom_${op.id || index}_${Date.now()}`,
+          stageName: op.operationName,
+          stageType: op.type === 'outsource' ? 'outsource' : 'in_house',
+          plannedStartDate: step4?.timeline?.startDate || formData.productionStartDate || '',
+          plannedEndDate: step4?.timeline?.endDate || formData.estimatedCompletionDate || '',
+          estimatedDurationDays: '',
+          assignedEmployeeId: null,
+          facilityId: null,
+          targetWarehouse: op.target_warehouse || op.targetWarehouse || '',
+          notes: `Auto-populated from BOM Operation: ${op.operationName}${op.workstation ? ` (${op.workstation})` : ''}`
+        }));
+        
+        // Also update production phases for UI consistency if needed
+        setProductionPhases(bomOperations.map(op => op.operationName));
+      } else {
+        dataSource = 'project phases';
+        const phasesArray = step4?.selectedPhases 
+          ? Object.keys(step4.selectedPhases)
+          : [];
+        setProductionPhases(phasesArray);
+
+        autoCreatedStages = phasesArray.map((phase, index) => ({
+          id: `auto_${Date.now()}_${index}`,
+          stageName: phase,
+          stageType: 'in_house',
+          plannedStartDate: step4?.timeline?.startDate || formData.productionStartDate || '',
+          plannedEndDate: step4?.timeline?.endDate || formData.estimatedCompletionDate || '',
+          estimatedDurationDays: '',
+          assignedEmployeeId: null,
+          facilityId: null,
+          targetWarehouse: '',
+          notes: `Auto-created from Phase: ${phase}`
+        }));
+      }
+
+      const projectName = step1.projectName || rootCard.project?.name || rootCard.project_name || '';
+      const productName = step1.productDetails?.itemName || rootCard.product_name || '';
+      
       const newFormData = {
         ...formData,
-        rootCardId: rootCardId || rootCard.id || rootCard.sales_order_id || '',
-        productName: rootCard.product_name || '',
+        rootCardId: rootCardId || rootCard.id || rootCard.root_card_id || rootCard.sales_order_id || '',
+        productName: productName,
         planName: projectName ? `${projectName} - Production Plan` : '',
-        productionStartDate: step4?.timeline?.startDate || '',
-        estimatedCompletionDate: step4?.timeline?.endDate || '',
-        procurementStatus: step4?.timeline?.procurementStatus || '',
+        productionStartDate: step4?.timeline?.startDate || formData.productionStartDate || '',
+        estimatedCompletionDate: step4?.timeline?.endDate || formData.estimatedCompletionDate || '',
+        procurementStatus: step4?.timeline?.procurementStatus || formData.procurementStatus || '',
         stages: autoCreatedStages
       };
       setFormData(newFormData);
 
-      console.log('Auto-created stages:', autoCreatedStages);
+      console.log(`Auto-created stages from ${dataSource}:`, autoCreatedStages);
       
       if (autoCreatedStages.length > 0) {
-        setSuccess(`✓ Auto-populated ${autoCreatedStages.length} production stage(s) from project phases`);
+        setSuccess(`✓ Auto-populated ${autoCreatedStages.length} production stage(s) from ${dataSource}`);
         setTimeout(() => setSuccess(''), 5000);
       } else {
-        setError('⚠ No production phases found. Please complete Step 4 (Production Plan) in the root card first.');
+        setError('⚠ No production operations or phases found. Please complete the BOM or Step 4 (Production Plan) first.');
         setTimeout(() => setError(''), 6000);
       }
     } catch (err) {
@@ -143,6 +190,7 @@ const ProductionPlanFormPage = () => {
     fetchRootCards();
     fetchEmployees();
     fetchFacilities();
+    fetchWarehouses();
     
     if (location.state?.rootCardId) {
       handleRootCardSelect(location.state.rootCardId.toString());
@@ -188,6 +236,7 @@ const ProductionPlanFormPage = () => {
       plannedEndDate: '',
       assignedEmployeeId: '',
       facilityId: '',
+      targetWarehouse: '',
       notes: ''
     });
 
@@ -322,6 +371,7 @@ const ProductionPlanFormPage = () => {
               stageType: stage.stageType || 'in_house',
               plannedStartDate: stage.plannedStartDate || null,
               plannedEndDate: stage.plannedEndDate || null,
+              targetWarehouse: stage.targetWarehouse || null,
               assignedVendorId: null,
               notes: stage.notes || null
             };
@@ -681,6 +731,25 @@ const ProductionPlanFormPage = () => {
                       ))}
                     </select>
                   </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                      Target Warehouse
+                    </label>
+                    <select
+                      name="targetWarehouse"
+                      value={newStage.targetWarehouse}
+                      onChange={handleStageInputChange}
+                      className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500"
+                    >
+                      <option value="">Select Warehouse</option>
+                      {warehouses.map(wh => (
+                        <option key={wh} value={wh}>
+                          {wh}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               )}
 
@@ -791,6 +860,7 @@ const ProductionPlanFormPage = () => {
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-slate-600 dark:text-slate-400">
                                   {stage.assignedEmployeeId && <p><span className="font-medium">Assigned:</span> {getEmployeeName(stage.assignedEmployeeId)}</p>}
                                   {stage.facilityId && <p><span className="font-medium">Facility:</span> {getFacilityName(stage.facilityId)}</p>}
+                                  {stage.targetWarehouse && <p><span className="font-medium">Target Wh:</span> {stage.targetWarehouse}</p>}
                                   {stage.plannedStartDate && <p><span className="font-medium">Start:</span> {stage.plannedStartDate}</p>}
                                   {stage.plannedEndDate && <p><span className="font-medium">End:</span> {stage.plannedEndDate}</p>}
                                   {stage.plannedStartDate && stage.plannedEndDate && (
@@ -878,6 +948,24 @@ const ProductionPlanFormPage = () => {
                                       {facilities.map(fac => (
                                         <option key={fac.id} value={fac.id}>
                                           {fac.name}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </div>
+
+                                  <div>
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                      Target Warehouse
+                                    </label>
+                                    <select
+                                      value={editedStage?.targetWarehouse || ''}
+                                      onChange={(e) => handleEditedStageChange('targetWarehouse', e.target.value)}
+                                      className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                    >
+                                      <option value="">Select Warehouse</option>
+                                      {warehouses.map(wh => (
+                                        <option key={wh} value={wh}>
+                                          {wh}
                                         </option>
                                       ))}
                                     </select>

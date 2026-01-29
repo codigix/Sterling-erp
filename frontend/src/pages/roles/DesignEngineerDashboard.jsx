@@ -370,7 +370,7 @@ const DesignEngineerDashboard = () => {
                       {task.rootCard?.title || "N/A"}
                     </p>
                     <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
-                      {task.salesOrder?.customer || "No Customer"}
+                      {task.rootCard?.customer || task.salesOrder?.customer || "No Customer"}
                     </p>
                   </div>
                   <span
@@ -394,9 +394,9 @@ const DesignEngineerDashboard = () => {
                       {task.priority}
                     </span>
                   </span>
-                  {task.salesOrder?.poNumber && (
+                  {(task.rootCard?.poNumber || task.salesOrder?.poNumber) && (
                     <span className="text-xs font-semibold text-slate-900 dark:text-white">
-                      PO: {task.salesOrder.poNumber}
+                      PO: {task.rootCard?.poNumber || task.salesOrder?.poNumber}
                     </span>
                   )}
                 </div>

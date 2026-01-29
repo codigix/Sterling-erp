@@ -36,7 +36,20 @@ class EngineeringDocument {
         ORDER BY ed.created_at DESC`,
         [rootCardId]
       );
-      return rows;
+      return (rows || []).map(row => ({
+        id: row.id,
+        rootCardId: row.sales_order_id,
+        documentType: row.document_type,
+        documentName: row.document_name,
+        filePath: row.file_path,
+        uploadedBy: row.uploaded_by,
+        uploadedByName: row.uploaded_by_name,
+        status: row.status,
+        approvalComments: row.approval_comments,
+        approvedBy: row.approved_by,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at
+      }));
     } finally {
       conn.release();
     }
@@ -66,7 +79,22 @@ class EngineeringDocument {
         WHERE ed.id = ?`,
         [id]
       );
-      return rows[0];
+      if (!rows[0]) return null;
+      const row = rows[0];
+      return {
+        id: row.id,
+        rootCardId: row.sales_order_id,
+        documentType: row.document_type,
+        documentName: row.document_name,
+        filePath: row.file_path,
+        uploadedBy: row.uploaded_by,
+        uploadedByName: row.uploaded_by_name,
+        status: row.status,
+        approvalComments: row.approval_comments,
+        approvedBy: row.approved_by,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at
+      };
     } finally {
       conn.release();
     }
@@ -81,7 +109,17 @@ class EngineeringDocument {
         ORDER BY version DESC`,
         [rootCardId, documentType]
       );
-      return rows;
+      return (rows || []).map(row => ({
+        id: row.id,
+        rootCardId: row.sales_order_id,
+        documentType: row.document_type,
+        documentName: row.document_name,
+        filePath: row.file_path,
+        uploadedBy: row.uploaded_by,
+        status: row.status,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at
+      }));
     } finally {
       conn.release();
     }

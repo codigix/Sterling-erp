@@ -4,7 +4,6 @@ import { sendAssignmentNotifications, sendOrderCreatedNotification } from "../..
 import { RootCardProvider } from "./context";
 import { useFormUI } from "./hooks";
 import { useRootCardContext } from "./hooks";
-import { validateStep1, validateStep2, validateStep3, validateStep4, validateStep5, validateStep6, validateStep7 } from "./utils";
 import { updateDraftWithStepData, saveAllStepsToRootCard, saveStepDataToAPI } from "./stepDataHandler";
 import WizardHeader from "./shared/WizardHeader";
 import FormActions from "./shared/FormActions";
@@ -28,56 +27,11 @@ export default function RootCardForm({ mode = 'create', initialData = null, onSu
 }
 
 function RootCardFormContent({ onSubmit, onCancel, mode = 'create', initialData = null }) {
-  const { state, setStep, setLoading, setError, setSuccess, setOrderId, setConfigData, setEmployees, updateField, setPoDocuments } = useRootCardContext();
+  const { state, setStep, setLoading, setError, setSuccess, setOrderId, setConfigData, setEmployees, updateField, setPoDocuments, setMaterialDetailsTable, setProductionPhaseDetails, setDraftData } = useRootCardContext();
   const { currentStep, loading, error, successMessage } = useFormUI();
   const { formData } = state;
 
-  useEffect(() => {
-    const fetchConfigData = async () => {
-      try {
-        const response = await axios.get("/root-cards/config/all");
-        const { projectCategories, materialUnits, materialSources, priorityLevels } = response.data;
-        setConfigData(projectCategories, materialUnits, materialSources, priorityLevels);
-      } catch (err) {
-        console.error("Failed to fetch config data:", err);
-      }
-    };
-
-    const fetchEmployees = async () => {
-      try {
-        const response = await axios.get("/employees");
-        setEmployees(response.data || []);
-      } catch (err) {
-        console.error("Failed to fetch employees:", err);
-      }
-    };
-
-    fetchConfigData();
-    fetchEmployees();
-  }, [setConfigData, setEmployees]);
-
-  useEffect(() => {
-    if (mode === 'assign') {
-      setStep(6);
-    }
-  }, [mode, setStep]);
-
-  useEffect(() => {
-    if ((mode === 'view' || mode === 'edit' || mode === 'assign') && initialData) {
-      updateField('poNumber', initialData.po_number || '');
-      updateField('clientName', initialData.customer || '');
-      updateField('projectName', initialData.project_name || '');
-      updateField('orderDate', initialData.order_date || '');
-      updateField('estimatedEndDate', initialData.due_date || '');
-      updateField('projectPriority', initialData.priority || 'medium');
-      updateField('status', initialData.status || 'pending');
-      updateField('totalAmount', initialData.total?.toString() || '');
-      
-      loadAllStepData(initialData.id);
-    }
-  }, [mode, initialData, updateField]);
-
-  const loadAllStepData = async (rootCardId) => {
+  const loadAllStepData = React.useCallback(async (rootCardId) => {
     try {
       setLoading(true);
       
@@ -96,7 +50,7 @@ function RootCardFormContent({ onSubmit, onCancel, mode = 'create', initialData 
           const d = new Date(dateStr);
           if (isNaN(d.getTime())) return '';
           return d.toISOString().split('T')[0];
-        } catch (e) {
+        } catch {
           return '';
         }
       };
@@ -104,9 +58,18 @@ function RootCardFormContent({ onSubmit, onCancel, mode = 'create', initialData 
       // Set assignees from all steps
       if (allStepsResponse?.data?.data?.steps) {
         const steps = allStepsResponse.data.data.steps;
+        const stepKeyMapping = {
+          'design_engineering': 'designEngineering',
+          'material_requirement': 'materialRequirements',
+          'production_plan': 'productionPlan',
+          'quality_check': 'qualityCheck',
+          'shipment': 'shipment',
+          'delivery': 'delivery'
+        };
         steps.forEach(step => {
           if (step.assignedTo) {
-            const assigneeKey = `${step.stepKey}AssignedTo`;
+            const camelKey = stepKeyMapping[step.stepKey] || step.stepKey;
+            const assigneeKey = `${camelKey}AssignedTo`;
             updateField(assigneeKey, step.assignedTo);
           }
         });
@@ -153,6 +116,9 @@ function RootCardFormContent({ onSubmit, onCancel, mode = 'create', initialData 
         if (materialsData.materials) {
           updateField('materials', materialsData.materials);
         }
+        if (materialsData.materialDetailsTable) {
+          setMaterialDetailsTable(materialsData.materialDetailsTable);
+        }
       }
 
       if (productionResponse?.data?.data) {
@@ -161,6 +127,9 @@ function RootCardFormContent({ onSubmit, onCancel, mode = 'create', initialData 
         updateField('productionStartDate', formatDateForInput(productionData.productionStartDate));
         updateField('estimatedCompletionDate', formatDateForInput(productionData.estimatedCompletionDate));
         updateField('selectedPhases', productionData.selectedPhases || {});
+        if (productionData.phaseDetails) {
+          setProductionPhaseDetails(productionData.phaseDetails);
+        }
       }
 
       if (qcResponse?.data?.data) {
@@ -214,7 +183,79 @@ function RootCardFormContent({ onSubmit, onCancel, mode = 'create', initialData 
       console.error('Error loading step data:', error);
       setLoading(false);
     }
-  };
+  }, [setLoading, updateField, setPoDocuments, setMaterialDetailsTable, setProductionPhaseDetails]);
+
+  const loadDraft = React.useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get('/root-cards/drafts/latest');
+      if (response.data?.draft) {
+        const draft = response.data.draft;
+        
+        setDraftData({
+          id: draft.id,
+          currentStep: draft.current_step,
+          formData: draft.formData,
+          materialDetailsTable: draft.formData?.materialDetailsTable,
+          productionPhaseDetails: draft.formData?.productionPhaseDetails,
+          poDocuments: draft.poDocuments
+        });
+        
+        setSuccess(`Resumed draft from ${new Date(draft.updated_at).toLocaleString()}`);
+      }
+      setLoading(false);
+    } catch (err) {
+      console.error('Error loading draft:', err);
+      setLoading(false);
+    }
+  }, [setLoading, setDraftData, setSuccess]);
+
+  useEffect(() => {
+    const fetchConfigData = async () => {
+      try {
+        const response = await axios.get("/root-cards/config/all");
+        const { projectCategories, materialUnits, materialSources, priorityLevels } = response.data;
+        setConfigData(projectCategories, materialUnits, materialSources, priorityLevels);
+      } catch (err) {
+        console.error("Failed to fetch config data:", err);
+      }
+    };
+
+    const fetchEmployees = async () => {
+      try {
+        const response = await axios.get("/employees");
+        setEmployees(response.data || []);
+      } catch (err) {
+        console.error("Failed to fetch employees:", err);
+      }
+    };
+
+    fetchConfigData();
+    fetchEmployees();
+  }, [setConfigData, setEmployees]);
+
+  useEffect(() => {
+    if (mode === 'assign') {
+      setStep(6);
+    }
+  }, [mode, setStep]);
+
+  useEffect(() => {
+    if ((mode === 'view' || mode === 'edit' || mode === 'assign') && initialData) {
+      updateField('poNumber', initialData.po_number || '');
+      updateField('clientName', initialData.customer || '');
+      updateField('projectName', initialData.project_name || '');
+      updateField('orderDate', initialData.order_date || '');
+      updateField('estimatedEndDate', initialData.due_date || '');
+      updateField('projectPriority', initialData.priority || 'medium');
+      updateField('status', initialData.status || 'pending');
+      updateField('totalAmount', initialData.total?.toString() || '');
+      
+      loadAllStepData(initialData.id);
+    } else if (mode === 'create') {
+      loadDraft();
+    }
+  }, [mode, initialData, updateField, loadAllStepData, loadDraft]);
 
   const renderStep = () => {
     switch (currentStep) {
@@ -237,20 +278,6 @@ function RootCardFormContent({ onSubmit, onCancel, mode = 'create', initialData 
     }
   };
 
-  const validateCurrentStep = () => {
-    const validators = {
-      1: validateStep1,
-      2: validateStep2,
-      3: validateStep3,
-      4: validateStep4,
-      5: validateStep5,
-      6: validateStep6,
-      7: validateStep7,
-    };
-    const validator = validators[currentStep];
-    return validator ? validator(formData) : [];
-  };
-
   const handleNext = async () => {
     if (mode === 'view' || mode === 'assign') {
       setStep(currentStep + 1);
@@ -260,7 +287,12 @@ function RootCardFormContent({ onSubmit, onCancel, mode = 'create', initialData 
     if (mode === 'edit') {
       setLoading(true);
       try {
-        await saveStepDataToAPI(currentStep, initialData.id, formData, state.poDocuments);
+        const mergedFormData = {
+          ...formData,
+          materialDetailsTable: state.materialDetailsTable,
+          productionPhaseDetails: state.productionPhaseDetails
+        };
+        await saveStepDataToAPI(currentStep, initialData.id, mergedFormData, state.poDocuments);
         setStep(currentStep + 1);
       } catch (err) {
         console.error('Error saving step:', err);
@@ -283,7 +315,9 @@ function RootCardFormContent({ onSubmit, onCancel, mode = 'create', initialData 
     setError(null);
     
     try {
-      if (currentStep === 1) {
+      const draftId = state.createdOrderId || initialData?.id || initialData?._id;
+      
+      if (!draftId && mode === 'create') {
         await createDraft();
       } else {
         await updateDraft();
@@ -301,7 +335,12 @@ function RootCardFormContent({ onSubmit, onCancel, mode = 'create', initialData 
     if (mode === 'edit') {
       setLoading(true);
       try {
-        await saveStepDataToAPI(currentStep, initialData.id, formData, state.poDocuments);
+        const mergedFormData = {
+          ...formData,
+          materialDetailsTable: state.materialDetailsTable,
+          productionPhaseDetails: state.productionPhaseDetails
+        };
+        await saveStepDataToAPI(currentStep, initialData.id, mergedFormData, state.poDocuments);
         setStep(currentStep - 1);
       } catch (err) {
         console.error('Error saving step:', err);
@@ -317,15 +356,22 @@ function RootCardFormContent({ onSubmit, onCancel, mode = 'create', initialData 
 
   const createDraft = async () => {
     try {
+      const mergedFormData = {
+        ...formData,
+        materialDetailsTable: state.materialDetailsTable,
+        productionPhaseDetails: state.productionPhaseDetails
+      };
+      
       const response = await axios.post("/root-cards/drafts", {
-        formData,
-        currentStep: 1,
+        formData: mergedFormData,
+        currentStep: currentStep,
+        poDocuments: state.poDocuments || []
       });
 
       const draftId = response.data.id || response.data._id;
       setOrderId(draftId);
-      setSuccess("Step 1 saved successfully!");
-      setStep(2);
+      setSuccess(`Step ${currentStep} saved successfully!`);
+      setStep(currentStep + 1);
     } catch (err) {
       throw new Error(err.response?.data?.message || "Failed to create draft");
     }
@@ -333,13 +379,23 @@ function RootCardFormContent({ onSubmit, onCancel, mode = 'create', initialData 
 
   const updateDraft = async () => {
     try {
-      if (!state.createdOrderId) {
-        throw new Error('Draft ID not found');
+      const draftId = state.createdOrderId || initialData?.id || initialData?._id;
+      
+      if (!draftId) {
+        console.error('Draft ID not found. State:', state, 'InitialData:', initialData);
+        throw new Error(`Draft ID not found. Current Step: ${currentStep}`);
       }
 
-      await updateDraftWithStepData(state.createdOrderId, formData, currentStep, state.poDocuments || []);
+      const mergedFormData = {
+        ...formData,
+        materialDetailsTable: state.materialDetailsTable,
+        productionPhaseDetails: state.productionPhaseDetails
+      };
+
+      await updateDraftWithStepData(draftId, mergedFormData, currentStep, state.poDocuments || []);
       setSuccess(`Step ${currentStep} saved successfully!`);
     } catch (err) {
+      console.error('updateDraft error:', err);
       throw new Error(err.message || `Failed to save step ${currentStep}`);
     }
   };
@@ -349,7 +405,12 @@ function RootCardFormContent({ onSubmit, onCancel, mode = 'create', initialData 
       setLoading(true);
       setError(null);
       try {
-        await saveStepDataToAPI(currentStep, initialData.id, formData, state.poDocuments);
+        const mergedFormData = {
+          ...formData,
+          materialDetailsTable: state.materialDetailsTable,
+          productionPhaseDetails: state.productionPhaseDetails
+        };
+        await saveStepDataToAPI(currentStep, initialData.id, mergedFormData, state.poDocuments);
         
         await axios.put(`/root-cards/${initialData.id}`, {
           clientName: formData.clientName || formData.customer,
@@ -440,7 +501,6 @@ function RootCardFormContent({ onSubmit, onCancel, mode = 'create', initialData 
         const mergedFormData = {
           ...formData,
           materialDetailsTable: state.materialDetailsTable,
-          selectedProductionPhases: state.selectedProductionPhases,
           productionPhaseDetails: state.productionPhaseDetails
         };
         const summary = await saveAllStepsToRootCard(createdOrderId, mergedFormData);
@@ -485,6 +545,7 @@ function RootCardFormContent({ onSubmit, onCancel, mode = 'create', initialData 
         formData={formData} 
         initialData={initialData} 
         onBack={onCancel} 
+        employees={state.employees}
       />
     );
   }

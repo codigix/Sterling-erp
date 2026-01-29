@@ -5,6 +5,7 @@ const path = require('path');
 const authMiddleware = require('../../middleware/authMiddleware');
 const roleMiddleware = require('../../middleware/roleMiddleware');
 const productionController = require('../../controllers/production/productionController');
+const designEngineeringController = require('../../controllers/root-cards/designEngineeringController');
 const drawingController = require('../../controllers/production/drawingController');
 const specificationController = require('../../controllers/production/specificationController');
 const technicalFileController = require('../../controllers/production/technicalFileController');
@@ -57,27 +58,10 @@ router.post('/technical-files', roleMiddleware('Admin', 'Management', 'Design En
 router.get('/technical-files/:id/download', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer'), technicalFileController.downloadTechnicalFile);
 router.delete('/technical-files/:id', roleMiddleware('Admin', 'Management', 'Design Engineer'), technicalFileController.deleteTechnicalFile);
 
-router.post('/design-projects', roleMiddleware('Admin', 'Management', 'Design Engineer'), productionController.createDesignProject);
-router.post('/root-cards/:rootCardId/design-details', roleMiddleware('Admin', 'Management', 'Design Engineer'), productionController.saveDesignProjectDetails);
-router.get('/root-cards/:rootCardId/design-details', roleMiddleware('Admin', 'Management', 'Design Engineer'), productionController.getDesignProjectDetails);
+router.post('/root-cards/:rootCardId/design-details', roleMiddleware('Admin', 'Management', 'Design Engineer'), designEngineeringController.createOrUpdate);
+router.get('/root-cards/:rootCardId/design-details', roleMiddleware('Admin', 'Management', 'Design Engineer'), designEngineeringController.getDesignEngineering);
 
-router.get('/designs', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer'), productionController.getAllDesignsWithDetails);
-router.get('/designs/:id', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer'), productionController.getDesignWithDetails);
-router.put('/designs/:id', roleMiddleware('Admin', 'Management', 'Design Engineer'), productionController.updateDesign);
-router.delete('/designs/:id', roleMiddleware('Admin', 'Management', 'Design Engineer'), productionController.deleteDesign);
-router.get('/designs/:id/download', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer'), productionController.downloadDesign);
-
-// BOM routes (forwarded to engineering controller)
-const engineeringController = require('../../controllers/engineering/engineeringController');
-router.post('/bom', roleMiddleware('Admin', 'Management', 'Design Engineer', 'Engineering'), engineeringController.generateBOM);
-router.get('/bom/all', roleMiddleware('Admin', 'Management', 'Design Engineer', 'Engineering', 'Production'), engineeringController.getAllBOMs);
-router.get('/bom', roleMiddleware('Admin', 'Management', 'Design Engineer', 'Engineering', 'Production'), engineeringController.getRootCardBOMs);
-router.patch('/bom/:id/line-items/:itemId', roleMiddleware('Admin', 'Management', 'Design Engineer', 'Engineering'), engineeringController.updateLineItem);
-router.delete('/bom/:id/line-items/:itemId', roleMiddleware('Admin', 'Management', 'Design Engineer', 'Engineering'), engineeringController.deleteLineItem);
-router.get('/bom/:id', roleMiddleware('Admin', 'Management', 'Design Engineer', 'Engineering', 'Production'), engineeringController.getBOMDetails);
-router.patch('/bom/:id/status', roleMiddleware('Admin', 'Management', 'Design Engineer', 'Engineering'), engineeringController.updateBOMStatus);
-router.delete('/bom/:id', roleMiddleware('Admin', 'Management', 'Design Engineer', 'Engineering'), engineeringController.deleteBOM);
-
+// Production Plan routes
 router.get('/plans', roleMiddleware('Admin', 'Management', 'Production'), productionController.getProductionPlans);
 router.get('/ready-for-production', roleMiddleware('Admin', 'Management', 'Production'), productionController.getReadyForProduction);
 router.post('/plans', roleMiddleware('Admin', 'Management'), productionController.createProductionPlan);

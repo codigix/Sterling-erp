@@ -1,10 +1,12 @@
 const pool = require('../../config/database');
 const RootCard = require('../../models/RootCard');
+const DesignEngineeringDetail = require('../../models/DesignEngineeringDetail');
 const EmployeeTask = require('../../models/EmployeeTask');
 const Project = require('../../models/Project');
 const ProductionRootCard = require('../../models/ProductionRootCard');
 const Material = require('../../models/Material');
 const MaterialRequirementsDetail = require('../../models/MaterialRequirementsDetail');
+const RootCardStep = require('../../models/RootCardStep');
 
 exports.getAssignedRootCards = async (req, res) => {
   try {
@@ -316,37 +318,6 @@ exports.assignRootCard = async (req, res) => {
   }
 };
 
-exports.saveDesignDetails = async (req, res) => {
-  try {
-    const { rootCardId } = req.params;
-    const designDetails = req.body;
-
-    if (!rootCardId) {
-      return res.status(400).json({ message: 'Root card ID is required' });
-    }
-
-    const [result] = await pool.execute(
-      'UPDATE sales_orders SET design_details = ? WHERE id = ?',
-      [JSON.stringify(designDetails), rootCardId]
-    );
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ message: 'Root card not found' });
-    }
-
-    res.json({ 
-      message: 'Design details saved successfully',
-      data: designDetails 
-    });
-  } catch (error) {
-    console.error('Save design details error:', error);
-    res.status(500).json({ 
-      message: 'Failed to save design details',
-      error: error.message 
-    });
-  }
-};
-
 exports.sendToInventory = async (req, res) => {
   try {
     const { rootCardId } = req.params;
@@ -357,7 +328,7 @@ exports.sendToInventory = async (req, res) => {
 
     // 1. Fetch Root Card with Design Details
     const [rows] = await pool.execute(
-      'SELECT design_details, project_name, id FROM sales_orders WHERE id = ?',
+      'SELECT project_name, id FROM sales_orders WHERE id = ?',
       [rootCardId]
     );
 
@@ -365,8 +336,11 @@ exports.sendToInventory = async (req, res) => {
       return res.status(404).json({ message: 'Root Card not found' });
     }
 
-    const designDetails = rows[0].design_details;
     const projectName = rows[0].project_name;
+
+    // Fetch from new Design Engineering model
+    const designDetail = await DesignEngineeringDetail.findByRootCardId(rootCardId);
+    const designDetails = designDetail ? designDetail.specifications : null;
 
     // 2. Ensure project exists for this root card
     let projectId = null;
@@ -444,37 +418,21 @@ exports.sendToInventory = async (req, res) => {
           if (!rawItemName || typeof rawItemName !== 'string' || rawItemName.trim() === '') continue;
           const itemName = rawItemName.trim();
 
-          // Check/Create Master Material
+          // Check Master Material (don't create automatically)
           let material = await Material.findByName(itemName);
-          if (!material) {
-            const itemCode = `MAT-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-            const newId = await Material.create({
-              itemCode,
-              itemName,
-              category,
-              quantity: 0,
-              unit: 'Nos',
-              reorderLevel: 10,
-              location: 'Main Store',
-              vendorId: null,
-              unitCost: 0,
-              batch: '',
-              specification: projectName
-            });
-            material = await Material.findById(newId);
-            addedToMaster.push(itemName);
-          }
-
+          
           // Add to Requirements List
           requirements.push({
             id: Date.now() + Math.random(),
-            itemCode: material.item_code || material.itemCode || 'N/A',
-            itemName: material.item_name || material.itemName || itemName,
-            category: material.category,
+            itemCode: material ? (material.itemCode || material.item_code) : 'PENDING',
+            itemName: itemName,
+            category: material ? material.category : category,
             requiredQuantity: 0, // Default to 0 as we don't have qty from Design
-            currentStock: material.quantity || 0,
+            currentStock: material ? (material.quantity || 0) : 0,
             status: 'pending',
-            notes: 'Auto-generated from Design'
+            notes: material ? 'Auto-sync from Design' : 'Auto-sync from Design (New material - needs registration)',
+            materialId: material ? material.id : null,
+            inInventory: !!material
           });
         }
       }
@@ -489,20 +447,35 @@ exports.sendToInventory = async (req, res) => {
     // 2. Rebuild the list based on current Design Details
     // 3. Re-apply the quantities where names match
 
-    const quantityMap = new Map();
+    const savedDataMap = new Map();
     if (existingReq && existingReq.materials) {
       existingReq.materials.forEach(m => {
-        if (m.itemName && m.requiredQuantity) {
-          quantityMap.set(m.itemName, m.requiredQuantity);
+        if (m.itemName) {
+          savedDataMap.set(m.itemName, {
+            requiredQuantity: m.requiredQuantity || m.quantity,
+            notes: m.notes,
+            materialId: m.materialId,
+            itemCode: m.itemCode
+          });
         }
       });
     }
 
-    // Apply saved quantities to the freshly generated requirements
-    const finalRequirements = requirements.map(req => ({
-      ...req,
-      requiredQuantity: quantityMap.get(req.itemName) || 0
-    }));
+    // Apply saved data to the freshly generated requirements
+    const finalRequirements = requirements.map(req => {
+      const saved = savedDataMap.get(req.itemName);
+      if (saved) {
+        return {
+          ...req,
+          requiredQuantity: saved.requiredQuantity || 0,
+          quantity: saved.requiredQuantity || 0, // Keep both for compatibility
+          notes: saved.notes || req.notes,
+          materialId: saved.materialId || req.materialId,
+          itemCode: (saved.itemCode && saved.itemCode !== 'PENDING') ? saved.itemCode : req.itemCode
+        };
+      }
+      return req;
+    });
 
     if (existingReq) {
       await MaterialRequirementsDetail.update(rootCardId, {
@@ -518,6 +491,13 @@ exports.sendToInventory = async (req, res) => {
       });
     }
 
+    // Start Material Requirements step (Step 3)
+    try {
+      await RootCardStep.startStep(rootCardId, 3);
+    } catch (stepError) {
+      console.warn('Failed to start Material Requirements step:', stepError.message);
+    }
+
     res.json({ 
       message: 'Sent to inventory successfully',
       addedToMasterCount: addedToMaster.length,
@@ -528,37 +508,6 @@ exports.sendToInventory = async (req, res) => {
     console.error('Send to Inventory error:', error);
     res.status(500).json({ 
       message: 'Failed to send to inventory',
-      error: error.message 
-    });
-  }
-};
-
-exports.getDesignDetails = async (req, res) => {
-  try {
-    const { rootCardId } = req.params;
-
-    if (!rootCardId) {
-      return res.status(400).json({ message: 'Root Card ID is required' });
-    }
-
-    const [rows] = await pool.execute(
-      'SELECT design_details FROM sales_orders WHERE id = ?',
-      [rootCardId]
-    );
-
-    if (rows.length === 0) {
-      return res.status(404).json({ message: 'Root Card not found' });
-    }
-
-    const designDetails = rows[0].design_details || null;
-
-    res.json({ 
-      data: designDetails || {}
-    });
-  } catch (error) {
-    console.error('Get design details error:', error);
-    res.status(500).json({ 
-      message: 'Failed to get design details',
       error: error.message 
     });
   }

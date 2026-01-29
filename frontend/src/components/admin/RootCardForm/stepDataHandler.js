@@ -24,13 +24,14 @@ export const buildStepPayload = (stepNumber, formData, poDocuments = []) => {
     
     2: {
       ...(formData.designEngineering || {}),
-      assignedTo: formData.design_engineeringAssignedTo || null
+      assignedTo: formData.designEngineeringAssignedTo || null
     },
     
     3: {
       materials: formData.materials || [],
+      materialDetailsTable: formData.materialDetailsTable || {},
       procurementStatus: formData.procurementStatus || 'pending',
-      assignedTo: formData.material_requirementAssignedTo || null
+      assignedTo: formData.materialRequirementsAssignedTo || null
     },
     
     4: {
@@ -38,7 +39,8 @@ export const buildStepPayload = (stepNumber, formData, poDocuments = []) => {
       estimatedCompletionDate: formData.estimatedCompletionDate,
       procurementStatus: formData.procurementStatus,
       selectedPhases: formData.selectedPhases || {},
-      assignedTo: formData.production_planAssignedTo || null
+      phaseDetails: formData.productionPhaseDetails || {},
+      assignedTo: formData.productionPlanAssignedTo || null
     },
     
     5: {
@@ -62,7 +64,7 @@ export const buildStepPayload = (stepNumber, formData, poDocuments = []) => {
       internalInfo: formData.internalInfo || {},
       specialInstructions: formData.specialInstructions || null,
       internalProjectOwner: formData.internalProjectOwner || null,
-      assignedTo: formData.quality_checkAssignedTo || null
+      assignedTo: formData.qualityCheckAssignedTo || null
     },
     
     6: {

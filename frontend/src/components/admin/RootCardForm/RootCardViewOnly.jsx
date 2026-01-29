@@ -3,8 +3,14 @@ import { Download, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
-export default function RootCardViewOnly({ formData, initialData, onBack }) {
+export default function RootCardViewOnly({ formData, initialData, onBack, employees = [] }) {
   const [isGenerating, setIsGenerating] = useState(false);
+
+  const getEmployeeName = (id) => {
+    if (!id) return 'Not Assigned';
+    const emp = employees.find(e => String(e.id) === String(id));
+    return emp ? `${emp.firstName} ${emp.lastName}` : `ID: ${id}`;
+  };
 
   const generatePDF = async () => {
     try {
@@ -75,6 +81,7 @@ export default function RootCardViewOnly({ formData, initialData, onBack }) {
           'PO Date': formData?.poDate,
           'Billing Address': formData?.billingAddress,
           'Shipping Address': formData?.shippingAddress,
+          'Project Owner': getEmployeeName(formData?.internalProjectOwner),
           'Project Requirements': formData?.projectRequirements,
         });
       }
@@ -85,7 +92,7 @@ export default function RootCardViewOnly({ formData, initialData, onBack }) {
           'Design ID': designData.generalDesignInfo?.designId,
           'Product Name': designData.productSpecification?.productName,
           'Design Status': designData.generalDesignInfo?.designStatus,
-          'Design Engineer Name': designData.generalDesignInfo?.designEngineerName,
+          'Assigned To': getEmployeeName(formData?.designEngineeringAssignedTo),
           // ... rest of design fields
         });
       }
@@ -96,6 +103,7 @@ export default function RootCardViewOnly({ formData, initialData, onBack }) {
         addSection('Step 3: Material Requirements', {
           'Total Material Cost': matData.totalMaterialCost,
           'Procurement Status': matData.procurementStatus,
+          'Assigned To': getEmployeeName(formData?.materialRequirementsAssignedTo),
           'Materials Count': Array.isArray(matData.materials) ? matData.materials.length : 0,
           'Materials Details': materialsDetails,
           'Notes': matData.notes,
@@ -106,6 +114,7 @@ export default function RootCardViewOnly({ formData, initialData, onBack }) {
         const prodData = formData.productionPlan;
         addSection('Step 4: Production Plan', {
           'Selected Phases': prodData.selectedPhases ? Object.keys(prodData.selectedPhases).join(', ') : 'N/A',
+          'Assigned To': getEmployeeName(formData?.productionPlanAssignedTo),
           'Production Notes': prodData.productionNotes,
           'Estimated Completion': prodData.estimatedCompletionDate,
         });
@@ -117,6 +126,7 @@ export default function RootCardViewOnly({ formData, initialData, onBack }) {
         addSection('Step 5: Quality Check & Economics', {
           'Inspection Type': qcData.inspectionType,
           'QC Status': qcData.qcStatus,
+          'Assigned To': getEmployeeName(formData?.qualityCheckAssignedTo),
           'Inspections Count': Array.isArray(qcData.inspections) ? qcData.inspections.length : 0,
           'Inspections Details': inspectionsDetails,
           'Remarks': qcData.remarks,
@@ -136,6 +146,7 @@ export default function RootCardViewOnly({ formData, initialData, onBack }) {
           'Dispatch Mode': formData.deliveryTerms?.dispatchMode,
           'Installation Required': formData.deliveryTerms?.installationRequired,
           'Site Commissioning': formData.deliveryTerms?.siteCommissioning,
+          'Assigned To': getEmployeeName(formData?.shipmentAssignedTo),
           'Marking': formData.shipment?.marking,
           'Dismantling': formData.shipment?.dismantling,
           'Packing': formData.shipment?.packing,
@@ -148,13 +159,13 @@ export default function RootCardViewOnly({ formData, initialData, onBack }) {
         addSection('Step 7: Delivery & Handover', {
           'Actual Delivery Date': delData.actualDeliveryDate,
           'Delivered To': delData.deliveredTo,
+          'Assigned To': getEmployeeName(formData?.deliveryAssignedTo),
           'Installation Completed': delData.installationCompleted,
           'Site Commissioning Completed': delData.siteCommissioningCompleted,
           'Warranty Terms Acceptance': delData.warrantyTermsAcceptance,
           'Completion Remarks': delData.completionRemarks,
           'Project Manager': delData.projectManager,
           'Production Supervisor': delData.productionSupervisor,
-          'Assigned To': formData.deliveryAssignedTo,
           'Customer Contact': formData.customerContact,
         });
       }
@@ -243,6 +254,7 @@ export default function RootCardViewOnly({ formData, initialData, onBack }) {
                   <DetailField label="PO Date" value={formData?.poDate} />
                   <DetailField label="Order Date" value={initialData?.order_date || formData?.orderDate} />
                   <DetailField label="Estimated End Date" value={initialData?.due_date || formData?.estimatedEndDate} />
+                  <DetailField label="Project Owner" value={getEmployeeName(formData?.internalProjectOwner)} />
                 </div>
               </div>
 
@@ -296,7 +308,7 @@ export default function RootCardViewOnly({ formData, initialData, onBack }) {
                   <DetailField label="Design ID" value={formData.designEngineering.generalDesignInfo?.designId} />
                   <DetailField label="Product Name" value={formData.designEngineering.productSpecification?.productName} />
                   <DetailField label="Design Status" value={formData.designEngineering.generalDesignInfo?.designStatus} />
-                  <DetailField label="Design Engineer Name" value={formData.designEngineering.generalDesignInfo?.designEngineerName} />
+                  <DetailField label="Assigned To" value={getEmployeeName(formData?.designEngineeringAssignedTo)} />
                 </div>
               </div>
 
@@ -377,6 +389,7 @@ export default function RootCardViewOnly({ formData, initialData, onBack }) {
                   <DetailField label="Procurement Status" value={formData.materialProcurement.procurementStatus || 'Not specified'} />
                   <DetailField label="Total Material Cost" value={formData.materialProcurement.totalMaterialCost || '0'} />
                   <DetailField label="Materials Count" value={Array.isArray(formData.materialProcurement.materials) ? formData.materialProcurement.materials.length : 0} />
+                  <DetailField label="Assigned To" value={getEmployeeName(formData?.materialRequirementsAssignedTo)} />
                 </div>
               </div>
 
@@ -419,6 +432,7 @@ export default function RootCardViewOnly({ formData, initialData, onBack }) {
                   <DetailField label="Production Start Date" value={formData.productionPlan.timeline?.startDate} />
                   <DetailField label="Production End Date" value={formData.productionPlan.timeline?.endDate} />
                   <DetailField label="Estimated Completion Date" value={formData.productionPlan.estimatedCompletionDate} />
+                  <DetailField label="Assigned To" value={getEmployeeName(formData?.productionPlanAssignedTo)} />
                 </div>
               </div>
 
@@ -459,6 +473,7 @@ export default function RootCardViewOnly({ formData, initialData, onBack }) {
                   <DetailField label="Inspection Type" value={formData.qualityCheck?.inspectionType} />
                   <DetailField label="QC Status" value={formData.qualityCheck?.qcStatus} />
                   <DetailField label="Remarks" value={formData.qualityCheck?.remarks} />
+                  <DetailField label="Assigned To" value={getEmployeeName(formData?.qualityCheckAssignedTo)} />
                   <DetailField label="Inspection Count" value={Array.isArray(formData.qualityCheck?.inspections) ? formData.qualityCheck.inspections.length : 0} />
                 </div>
 
@@ -531,16 +546,17 @@ export default function RootCardViewOnly({ formData, initialData, onBack }) {
                   <DetailField label="Dispatch Mode" value={formData.deliveryTerms?.dispatchMode} />
                   <DetailField label="Installation Required" value={formData.deliveryTerms?.installationRequired} />
                   <DetailField label="Site Commissioning" value={formData.deliveryTerms?.siteCommissioning} />
+                  <DetailField label="Assigned To" value={getEmployeeName(formData?.shipmentAssignedTo)} />
                 </div>
               </div>
 
               <div className="bg-white border-b border-slate-200  p-2 mb-0">
                 <h3 className="text-md font-semibold text-slate-900 mb-2">Shipment Process</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <DetailField label="Marking" value={formData.shipment.marking} />
-                  <DetailField label="Dismantling" value={formData.shipment.dismantling} />
-                  <DetailField label="Packing" value={formData.shipment.packing} />
-                  <DetailField label="Dispatch" value={formData.shipment.dispatch} />
+                  <DetailField label="Marking" value={formData.shipment?.marking} />
+                  <DetailField label="Dismantling" value={formData.shipment?.dismantling} />
+                  <DetailField label="Packing" value={formData.shipment?.packing} />
+                  <DetailField label="Dispatch" value={formData.shipment?.dispatch} />
                 </div>
               </div>
             </div>
@@ -550,13 +566,14 @@ export default function RootCardViewOnly({ formData, initialData, onBack }) {
         {/* Step 7: Delivery */}
         {formData?.delivery && (
           <section>
-            <SectionHeader number="7" title="Delivery & Assignment" />
+            <SectionHeader number="7" title="Delivery & Handover" />
             <div className="space-y-6">
               <div className="bg-white border-b border-slate-200  p-2 mb-0">
                 <h3 className="text-md font-semibold text-slate-900 mb-2">Delivery Confirmation</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <DetailField label="Actual Delivery Date" value={formData.delivery.actualDeliveryDate} />
-                  <DetailField label="Delivered To" value={formData.delivery.deliveredTo} />
+                  <DetailField label="Actual Delivery Date" value={formData.delivery?.actualDeliveryDate} />
+                  <DetailField label="Delivered To" value={formData.delivery?.deliveredTo} />
+                  <DetailField label="Assigned To" value={getEmployeeName(formData?.deliveryAssignedTo)} />
                 </div>
               </div>
 
@@ -570,16 +587,15 @@ export default function RootCardViewOnly({ formData, initialData, onBack }) {
               </div>
 
               <div className="bg-white border-b border-slate-200  p-2 mb-0">
-                <h3 className="text-md font-semibold text-slate-900 mb-2">Project Assignment</h3>
+                <h3 className="text-md font-semibold text-slate-900 mb-2">Internal Info</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <DetailField label="Project Manager" value={formData.delivery.projectManager} />
-                  <DetailField label="Production Supervisor" value={formData.delivery.productionSupervisor} />
-                  <DetailField label="Assigned To" value={formData.deliveryAssignedTo} />
+                  <DetailField label="Project Manager" value={formData.delivery?.projectManager} />
+                  <DetailField label="Production Supervisor" value={formData.delivery?.productionSupervisor} />
                   <DetailField label="Customer Contact" value={formData.customerContact} />
                 </div>
               </div>
 
-              {formData.delivery.completionRemarks && (
+              {formData.delivery?.completionRemarks && (
                 <div className="bg-white border-b border-slate-200  p-2 mb-0">
                   <h3 className="text-md font-semibold text-slate-900 mb-2">Completion Remarks</h3>
                   <p className="text-slate-700 text-sm">{formData.delivery.completionRemarks}</p>

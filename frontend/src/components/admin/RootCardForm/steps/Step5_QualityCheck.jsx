@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback, useMemo } from "react";
 import { Check, Plus, Trash2, Shield, DollarSign } from "lucide-react";
 import Input from "../../../ui/Input";
 import Select from "../../../ui/Select";
@@ -9,15 +9,13 @@ import Tabs from "../../../ui/Tabs";
 import { useFormData, useRootCardContext } from "../hooks";
 import { PRIORITY_LEVELS, STATUS_LEVELS } from "../constants";
 
-export default function Step5_QualityCheck({ readOnly = false, isAssignMode = false }) {
+export default function Step5_QualityCheck({ readOnly = false }) {
   const { formData, updateField } = useFormData();
   const { state, setNestedField } = useRootCardContext();
 
-  const handleAddInspection = () => {
-    const currentInspections = Array.isArray(formData.qualityCheck?.inspections) 
-      ? formData.qualityCheck.inspections 
-      : [];
-    
+  const inspections = useMemo(() => formData.qualityCheck?.inspections || [], [formData.qualityCheck?.inspections]);
+
+  const handleAddInspection = useCallback(() => {
     const newInspection = {
       type: "",
       date: new Date().toISOString().split('T')[0],
@@ -25,22 +23,22 @@ export default function Step5_QualityCheck({ readOnly = false, isAssignMode = fa
       result: "Pending"
     };
 
-    setNestedField("qualityCheck", "inspections", [...currentInspections, newInspection]);
-  };
+    setNestedField("qualityCheck", "inspections", [...inspections, newInspection]);
+  }, [inspections, setNestedField]);
 
-  const handleRemoveInspection = (index) => {
-    const currentInspections = [...(formData.qualityCheck?.inspections || [])];
+  const handleRemoveInspection = useCallback((index) => {
+    const currentInspections = [...inspections];
     currentInspections.splice(index, 1);
     setNestedField("qualityCheck", "inspections", currentInspections);
-  };
+  }, [inspections, setNestedField]);
 
-  const handleUpdateInspection = (index, field, value) => {
-    const currentInspections = [...(formData.qualityCheck?.inspections || [])];
+  const handleUpdateInspection = useCallback((index, field, value) => {
+    const currentInspections = [...inspections];
     currentInspections[index] = { ...currentInspections[index], [field]: value };
     setNestedField("qualityCheck", "inspections", currentInspections);
-  };
+  }, [inspections, setNestedField]);
 
-  const qualityRequirementsContent = (
+  const qualityRequirementsContent = useMemo(() => (
     <div className="space-y-3">
       <div>
         <h5 className="text-sm font-semibold text-slate-900 mb-2 text-left">Quality Standards</h5>
@@ -112,9 +110,9 @@ export default function Step5_QualityCheck({ readOnly = false, isAssignMode = fa
         </FormRow>
       </div>
     </div>
-  );
+  ), [formData.qualityCompliance, formData.warrantySupport, setNestedField, readOnly]);
 
-  const inspectionResultsContent = (
+  const inspectionResultsContent = useMemo(() => (
     <div className="space-y-6">
       <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
         <h5 className="text-sm font-semibold text-slate-900 mb-3 text-left">Overall QC Summary</h5>
@@ -132,7 +130,7 @@ export default function Step5_QualityCheck({ readOnly = false, isAssignMode = fa
               { label: "Pending", value: "pending" },
               { label: "Passed", value: "passed" },
               { label: "Failed", value: "failed" },
-              { label: "Conditional Pass", value: "conditional_pass" }
+              { label: "Conditional Pass", value: "conditional" }
             ]}
             value={formData.qualityCheck?.qcStatus || "pending"}
             onChange={(e) => setNestedField("qualityCheck", "qcStatus", e.target.value)}
@@ -168,12 +166,12 @@ export default function Step5_QualityCheck({ readOnly = false, isAssignMode = fa
         </div>
 
         <div className="space-y-4">
-          {(!formData.qualityCheck?.inspections || formData.qualityCheck.inspections.length === 0) ? (
+          {(inspections.length === 0) ? (
             <div className="text-center py-8 bg-slate-50 rounded-lg border border-dashed border-slate-300">
               <p className="text-sm text-slate-500">No inspection logs recorded yet.</p>
             </div>
           ) : (
-            formData.qualityCheck.inspections.map((inspection, index) => (
+            inspections.map((inspection, index) => (
               <div key={index} className="p-4 bg-white border border-slate-200 rounded-lg relative">
                 {!readOnly && (
                   <button
@@ -226,9 +224,9 @@ export default function Step5_QualityCheck({ readOnly = false, isAssignMode = fa
         </div>
       </div>
     </div>
-  );
+  ), [formData.qualityCheck, inspections, handleAddInspection, handleRemoveInspection, handleUpdateInspection, setNestedField, readOnly]);
 
-  const paymentAndInternalContent = (
+  const paymentAndInternalContent = useMemo(() => (
     <div className="space-y-3">
       <div>
         <h5 className="text-sm font-semibold text-slate-900 mb-2 text-left">Payment & Priority</h5>
@@ -323,21 +321,22 @@ export default function Step5_QualityCheck({ readOnly = false, isAssignMode = fa
         />
       </div>
     </div>
-  );
+  ), [formData.paymentTerms, formData.projectPriority, formData.totalAmount, formData.status, formData.internalInfo, formData.specialInstructions, updateField, setNestedField, readOnly]);
 
-  const tabs = [
+  const tabs = useMemo(() => [
     { label: "Requirements", content: qualityRequirementsContent },
     { label: "Inspections", content: inspectionResultsContent },
     { label: "Payment & Internal", content: paymentAndInternalContent },
-  ];
+  ], [qualityRequirementsContent, inspectionResultsContent, paymentAndInternalContent]);
 
   return (
     <div className="space-y-6">
       <AssigneeField
-        stepType="quality_check"
+        stepType="qualityCheck"
         formData={state.formData}
         updateField={updateField}
         employees={state.employees}
+        readOnly={readOnly}
       />
       
       <FormSection
@@ -347,25 +346,6 @@ export default function Step5_QualityCheck({ readOnly = false, isAssignMode = fa
       >
         <div className="space-y-6">
           <Tabs tabs={tabs} defaultTab={1} />
-
-          {(isAssignMode || !readOnly) && (
-            <div className="border-t border-slate-200 pt-4">
-              <h5 className="text-sm font-semibold text-slate-900 mb-2 text-left">QC In-charge</h5>
-              <FormRow cols={1}>
-                <Select
-                  label="Assign QC In-charge"
-                  options={(Array.isArray(state.employees) ? state.employees : []).map((emp) => ({
-                    label: `${emp.firstName} ${emp.lastName} (${emp.designation})`,
-                    value: emp.id.toString(),
-                  }))}
-                  value={formData.internalProjectOwner?.toString() || ""}
-                  onChange={(e) => updateField("internalProjectOwner", e.target.value)}
-                  placeholder="Select QC personnel..."
-                  disabled={readOnly && !isAssignMode}
-                />
-              </FormRow>
-            </div>
-          )}
         </div>
       </FormSection>
     </div>

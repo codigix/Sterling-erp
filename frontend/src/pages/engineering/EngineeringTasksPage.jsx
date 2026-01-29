@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { Plus, Upload, Download, CheckCircle, Clock, AlertCircle, Eye, Edit2, Trash2 } from 'lucide-react';
 import axios from '../../utils/api';
 import Card from '../../components/ui/Card';
@@ -6,6 +7,7 @@ import Badge from '../../components/ui/Badge';
 import '../../styles/TaskPage.css';
 
 const EngineeringTasksPage = () => {
+  const navigate = useNavigate();
   const [rootCards, setRootCards] = useState([]);
   const [selectedRootCard, setSelectedRootCard] = useState(null);
   const [documents, setDocuments] = useState([]);
@@ -14,18 +16,11 @@ const EngineeringTasksPage = () => {
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('documents');
   const [showUploadForm, setShowUploadForm] = useState(false);
-  const [showBOMForm, setShowBOMForm] = useState(false);
 
   const [uploadForm, setUploadForm] = useState({
     documentType: 'qap',
     documentName: '',
     file: null
-  });
-
-  const [bomForm, setBomForm] = useState({
-    bomName: '',
-    description: '',
-    lineItems: [{ itemCode: '', itemDescription: '', quantity: 1, unit: 'Nos', unitCost: 0, partType: 'raw_material' }]
   });
 
   const fetchRootCards = useCallback(async () => {
@@ -59,8 +54,7 @@ const EngineeringTasksPage = () => {
   const fetchBOMs = useCallback(async () => {
     if (!selectedRootCard) return;
     try {
-      const response = await axios.get('/engineering/bom', {
-        params: { rootCardId: selectedRootCard },
+      const response = await axios.get(`/engineering/bom/comprehensive/root-card/${selectedRootCard}/all`, {
         __sessionGuard: true
       });
       setBoms(response.data || []);
@@ -113,51 +107,10 @@ const EngineeringTasksPage = () => {
     }
   };
 
-  const handleBOMLineChange = (index, field, value) => {
-    setBomForm(prev => ({
-      ...prev,
-      lineItems: prev.lineItems.map((item, i) =>
-        i === index ? { ...item, [field]: value } : item
-      )
-    }));
-  };
-
-  const addLineItem = () => {
-    setBomForm(prev => ({
-      ...prev,
-      lineItems: [...prev.lineItems, { itemCode: '', itemDescription: '', quantity: 1, unit: 'Nos', unitCost: 0, partType: 'raw_material' }]
-    }));
-  };
-
-  const removeBOMLineItem = (index) => {
-    if (bomForm.lineItems.length === 1) return;
-    setBomForm(prev => ({
-      ...prev,
-      lineItems: prev.lineItems.filter((_, i) => i !== index)
-    }));
-  };
-
-  const handleGenerateBOM = async (e) => {
-    e.preventDefault();
-    if (!bomForm.bomName || bomForm.lineItems.length === 0) {
-      setError('Please provide BOM name and at least one line item');
-      return;
-    }
-
-    try {
-      await axios.post('/engineering/bom/generate', {
-        rootCardId: selectedRootCard,
-        bomName: bomForm.bomName,
-        description: bomForm.description,
-        lineItems: bomForm.lineItems.filter(item => item.itemCode && item.itemDescription)
-      }, { __sessionGuard: true });
-
-      setBomForm({ bomName: '', description: '', lineItems: [{ itemCode: '', itemDescription: '', quantity: 1, unit: 'Nos', unitCost: 0, partType: 'raw_material' }] });
-      setShowBOMForm(false);
-      fetchBOMs();
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to generate BOM');
-    }
+  const handleCreateBOMRedirect = () => {
+    if (!selectedRootCard) return;
+    const rc = rootCards.find(r => r.id === selectedRootCard);
+    navigate(`/design-engineer/bom/create?rootCardId=${selectedRootCard}&projectId=${rc?.project_id || ''}`);
   };
 
   const getDocumentTypeLabel = (type) => {
@@ -357,9 +310,9 @@ const EngineeringTasksPage = () => {
                   )}
                   {documents.map(doc => (
                     <tr key={doc.id} className="border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs transition-colors">
-                      <td className="p-1 text-sm font-medium  dark:">{doc.document_name}</td>
-                      <td className="p-1 text-sm text-slate-700 dark:text-slate-300">{getDocumentTypeLabel(doc.document_type)}</td>
-                      <td className="p-1 text-sm text-slate-700 dark:text-slate-300">{doc.uploaded_by_name}</td>
+                      <td className="p-1 text-sm font-medium  dark:">{doc.documentName}</td>
+                      <td className="p-1 text-sm text-slate-700 dark:text-slate-300">{getDocumentTypeLabel(doc.documentType)}</td>
+                      <td className="p-1 text-sm text-slate-700 dark:text-slate-300">{doc.uploadedByName}</td>
                       <td className="p-1">
                         <Badge className={`flex items-center text-xs gap-1 w-fit ${getStatusColor(doc.status)}`}>
                           {getStatusIcon(doc.status)}
@@ -387,154 +340,22 @@ const EngineeringTasksPage = () => {
 
       {activeTab === 'bom' && (
         <div className="space-y-6">
-          {!showBOMForm && (
-            <button
-              onClick={() => setShowBOMForm(true)}
-              className="flex items-center text-xs gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-            >
-              <Plus size={18} />
-              Generate BOM
-            </button>
-          )}
-
-          {showBOMForm && (
-            <Card className="mb-6 p-6">
-              <h3 className="text-lg font-bold  dark: mb-4">Generate Bill of Materials</h3>
-              <form onSubmit={handleGenerateBOM} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                      BOM Name
-                    </label>
-                    <input
-                      type="text"
-                      value={bomForm.bomName}
-                      onChange={(e) => setBomForm(prev => ({ ...prev, bomName: e.target.value }))}
-                      placeholder="e.g., Assembly - Main Unit"
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700  dark:"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    Description
-                  </label>
-                  <textarea
-                    value={bomForm.description}
-                    onChange={(e) => setBomForm(prev => ({ ...prev, description: e.target.value }))}
-                    placeholder="Optional BOM description"
-                    rows="3"
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700  dark:"
-                  />
-                </div>
-
-                <div>
-                  <div className="flex items-center text-xs justify-between mb-3">
-                    <h4 className="text-md font-semibold  dark:">Line Items</h4>
-                    <button
-                      type="button"
-                      onClick={addLineItem}
-                      className="text-sm font-medium text-blue-600 hover:text-blue-700"
-                    >
-                      + Add Line
-                    </button>
-                  </div>
-                  <div className="space-y-3">
-                    {bomForm.lineItems.map((item, index) => (
-                      <div key={`line-${index}`} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end p-3 border border-slate-200 dark:border-slate-600 rounded-lg">
-                        <div className="md:col-span-3">
-                          <label className="text-xs text-slate-500">Item Code</label>
-                          <input
-                            type="text"
-                            value={item.itemCode}
-                            onChange={(e) => handleBOMLineChange(index, 'itemCode', e.target.value)}
-                            placeholder="Item code"
-                            className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700  dark: text-sm"
-                          />
-                        </div>
-                        <div className="md:col-span-3">
-                          <label className="text-xs text-slate-500">Description</label>
-                          <input
-                            type="text"
-                            value={item.itemDescription}
-                            onChange={(e) => handleBOMLineChange(index, 'itemDescription', e.target.value)}
-                            placeholder="Item description"
-                            className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700  dark: text-sm"
-                          />
-                        </div>
-                        <div className="md:col-span-1">
-                          <label className="text-xs text-slate-500">Qty</label>
-                          <input
-                            type="number"
-                            value={item.quantity}
-                            onChange={(e) => handleBOMLineChange(index, 'quantity', Number(e.target.value))}
-                            min="1"
-                            className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700  dark: text-sm"
-                          />
-                        </div>
-                        <div className="md:col-span-2">
-                          <label className="text-xs text-slate-500">Unit Cost</label>
-                          <input
-                            type="number"
-                            value={item.unitCost}
-                            onChange={(e) => handleBOMLineChange(index, 'unitCost', Number(e.target.value))}
-                            step="0.01"
-                            className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700  dark: text-sm"
-                          />
-                        </div>
-                        <div className="md:col-span-2">
-                          <label className="text-xs text-slate-500">Type</label>
-                          <select
-                            value={item.partType}
-                            onChange={(e) => handleBOMLineChange(index, 'partType', e.target.value)}
-                            className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700  dark: text-sm"
-                          >
-                            <option value="raw_material">Raw Material</option>
-                            <option value="component">Component</option>
-                            <option value="assembly">Assembly</option>
-                          </select>
-                        </div>
-                        <div className="md:col-span-1 flex justify-end">
-                          <button
-                            type="button"
-                            onClick={() => removeBOMLineItem(index)}
-                            disabled={bomForm.lineItems.length === 1}
-                            className="p-1 text-red-600 disabled:text-slate-400 hover:bg-red-50 rounded"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex gap-2">
-                  <button
-                    type="submit"
-                    className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-                  >
-                    Generate BOM
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowBOMForm(false)}
-                    className="px-4 py-2 rounded-lg  dark:bg-slate-600  dark: hover:bg-slate-400"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            </Card>
-          )}
+          <button
+            onClick={handleCreateBOMRedirect}
+            className="flex items-center text-xs gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+          >
+            <Plus size={18} />
+            Create Comprehensive BOM
+          </button>
 
           <Card>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-slate-200 dark:border-slate-700">
-                    <th className="px-6 py-3 text-left text-sm font-semibold  dark:">BOM Name</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold  dark:">Items</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold  dark:">Product Name</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold  dark:">Item Code</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold  dark:">Revision</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold  dark:">Status</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold  dark:">Actions</th>
                   </tr>
@@ -542,15 +363,16 @@ const EngineeringTasksPage = () => {
                 <tbody>
                   {boms.length === 0 && (
                     <tr>
-                      <td colSpan="4" className="px-6 py-6 text-center text-sm text-slate-500">
-                        No BOMs generated for this root card
+                      <td colSpan="5" className="px-6 py-6 text-center text-sm text-slate-500">
+                        No BOMs found for this root card
                       </td>
                     </tr>
                   )}
                   {boms.map(bom => (
                     <tr key={bom.id} className="border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs transition-colors">
-                      <td className="p-1 text-sm font-medium  dark:">{bom.bom_name}</td>
-                      <td className="p-1 text-sm text-slate-700 dark:text-slate-300">View Details</td>
+                      <td className="p-1 text-sm font-medium  dark:">{bom.productName}</td>
+                      <td className="p-1 text-sm text-slate-700 dark:text-slate-300">{bom.itemCode}</td>
+                      <td className="p-1 text-sm text-slate-700 dark:text-slate-300">Rev {bom.revision}</td>
                       <td className="p-1">
                         <Badge className={`flex items-center text-xs gap-1 w-fit ${getStatusColor(bom.status)}`}>
                           {bom.status.replace(/_/g, ' ')}
@@ -558,9 +380,12 @@ const EngineeringTasksPage = () => {
                       </td>
                       <td className="p-1">
                         <div className="flex gap-2">
-                          <button className="p-2 rounded-lg bg-slate-200 dark:bg-slate-700  dark: hover: transition-colors">
+                          <Link 
+                            to={`/design-engineer/bom/view?bomId=${bom.id}`}
+                            className="p-2 rounded-lg bg-slate-200 dark:bg-slate-700  dark: hover: transition-colors"
+                          >
                             <Eye size={16} />
-                          </button>
+                          </Link>
                           <button className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 hover:bg-blue-200 transition-colors">
                             <Download size={16} />
                           </button>

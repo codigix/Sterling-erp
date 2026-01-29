@@ -7,6 +7,7 @@ class ComprehensiveBOM {
       const {
         productName,
         itemCode,
+        bomNumber,
         itemGroup,
         quantity,
         uom,
@@ -16,18 +17,20 @@ class ComprehensiveBOM {
         isDefault,
         projectId,
         rootCardId,
-        createdBy
+        createdBy,
+        status,
+        lossPercent
       } = data;
 
       const [result] = await conn.execute(
         `INSERT INTO bill_of_materials 
-        (product_name, item_code, item_group, quantity, uom, revision, description, 
-         is_active, is_default, project_id, root_card_id, created_by, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft')`,
+        (product_name, item_code, bom_number, item_group, quantity, uom, revision, description, 
+         is_active, is_default, project_id, root_card_id, created_by, status, loss_percent)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-          productName, itemCode, itemGroup, quantity, uom, revision || 1, 
+          productName, itemCode, bomNumber || null, itemGroup, quantity, uom, revision || 1, 
           description, isActive ? 1 : 0, isDefault ? 1 : 0, 
-          projectId || null, rootCardId || null, createdBy
+          projectId || null, rootCardId || null, createdBy, status || 'draft', lossPercent || 0
         ]
       );
 
@@ -66,6 +69,7 @@ class ComprehensiveBOM {
     const conn = connection || await pool.getConnection();
     try {
       const {
+        itemCode,
         itemName,
         quantity,
         uom,
@@ -77,9 +81,9 @@ class ComprehensiveBOM {
 
       const [result] = await conn.execute(
         `INSERT INTO bom_materials 
-        (bom_id, item_name, quantity, uom, item_group, rate, warehouse, operation)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [bomId, itemName, quantity, uom, itemGroup, rate || 0, warehouse || null, operation || null]
+        (bom_id, item_code, item_name, quantity, uom, item_group, rate, warehouse, operation)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [bomId, itemCode || null, itemName, quantity, uom, itemGroup, rate || 0, warehouse || null, operation || null]
       );
 
       return result.insertId;
@@ -156,11 +160,49 @@ class ComprehensiveBOM {
     return rows[0];
   }
 
+  static async findAllByRootCardId(rootCardId) {
+    const [rows] = await pool.execute(
+      `SELECT bom.*, CONCAT(u.first_name, ' ', u.last_name) as created_by_name 
+       FROM bill_of_materials bom
+       LEFT JOIN employees u ON bom.created_by = u.id
+       WHERE bom.root_card_id = ? 
+       ORDER BY bom.revision DESC`,
+      [rootCardId]
+    );
+    return (rows || []).map(row => this.transformBOMRow(row));
+  }
+
+  static transformBOMRow(bom) {
+    if (!bom) return null;
+    return {
+      id: bom.id,
+      productName: bom.product_name,
+      itemCode: bom.item_code,
+      bomNumber: bom.bom_number,
+      itemGroup: bom.item_group,
+      quantity: bom.quantity,
+      uom: bom.uom,
+      revision: bom.revision,
+      description: bom.description,
+      isActive: bom.is_active === 1,
+      isDefault: bom.is_default === 1,
+      projectId: bom.project_id,
+      rootCardId: bom.root_card_id,
+      status: bom.status,
+      totalCost: bom.total_cost || 0,
+      lossPercent: bom.loss_percent || 0,
+      createdBy: bom.created_by,
+      createdByName: bom.created_by_name,
+      createdAt: bom.created_at,
+      updatedAt: bom.updated_at
+    };
+  }
+
   static async findById(id) {
     const conn = await pool.getConnection();
     try {
       const [rows] = await conn.execute(
-        `SELECT bom.*, u.name as created_by_name 
+        `SELECT bom.*, CONCAT(u.first_name, ' ', u.last_name) as created_by_name 
         FROM bill_of_materials bom
         LEFT JOIN employees u ON bom.created_by = u.id
         WHERE bom.id = ?`,
@@ -169,7 +211,7 @@ class ComprehensiveBOM {
 
       if (!rows[0]) return null;
 
-      const bom = rows[0];
+      const bom = this.transformBOMRow(rows[0]);
       const [components] = await conn.execute(
         'SELECT * FROM bom_components WHERE bom_id = ?',
         [id]
@@ -189,10 +231,49 @@ class ComprehensiveBOM {
 
       return {
         ...bom,
-        components: components || [],
-        materials: materials || [],
-        operations: operations || [],
-        scrapLoss: scrapLoss || []
+        components: (components || []).map(c => ({
+          id: c.id,
+          bomId: c.bom_id,
+          componentCode: c.component_code,
+          quantity: c.quantity,
+          uom: c.uom,
+          rate: c.rate,
+          lossPercent: c.loss_percent,
+          notes: c.notes
+        })),
+        materials: (materials || []).map(m => ({
+          id: m.id,
+          bomId: m.bom_id,
+          itemCode: m.item_code,
+          itemName: m.item_name,
+          quantity: m.quantity,
+          uom: m.uom,
+          itemGroup: m.item_group,
+          rate: m.rate,
+          warehouse: m.warehouse,
+          operation: m.operation
+        })),
+        operations: (operations || []).map(o => ({
+          id: o.id,
+          bomId: o.bom_id,
+          operationName: o.operation_name,
+          workstation: o.workstation,
+          cycleTime: o.cycle_time,
+          setupTime: o.setup_time,
+          hourlyRate: o.hourly_rate,
+          cost: o.cost,
+          type: o.type,
+          targetWarehouse: o.target_warehouse
+        })),
+        scrapLoss: (scrapLoss || []).map(s => ({
+          id: s.id,
+          bomId: s.bom_id,
+          itemCode: s.item_code,
+          name: s.name,
+          inputQty: s.input_qty,
+          lossPercent: s.loss_percent,
+          rate: s.rate
+        }))
       };
     } finally {
       conn.release();
@@ -203,12 +284,12 @@ class ComprehensiveBOM {
     const conn = await pool.getConnection();
     try {
       const [rows] = await conn.execute(
-        `SELECT bom.*, u.name as created_by_name 
+        `SELECT bom.*, CONCAT(u.first_name, ' ', u.last_name) as created_by_name 
         FROM bill_of_materials bom
         LEFT JOIN employees u ON bom.created_by = u.id
         ORDER BY bom.created_at DESC`
       );
-      return rows || [];
+      return (rows || []).map(row => this.transformBOMRow(row));
     } finally {
       conn.release();
     }
@@ -220,6 +301,7 @@ class ComprehensiveBOM {
       const {
         productName,
         itemCode,
+        bomNumber,
         itemGroup,
         quantity,
         uom,
@@ -229,21 +311,22 @@ class ComprehensiveBOM {
         isDefault,
         projectId,
         rootCardId,
-        status
+        status,
+        lossPercent
       } = data;
 
       await conn.execute(
         `UPDATE bill_of_materials 
-        SET product_name = ?, item_code = ?, item_group = ?, quantity = ?, 
+        SET product_name = ?, item_code = ?, bom_number = ?, item_group = ?, quantity = ?, 
             uom = ?, revision = ?, description = ?, is_active = ?, 
             is_default = ?, project_id = ?, root_card_id = ?,
-            status = ?
+            status = ?, loss_percent = ?
         WHERE id = ?`,
         [
-          productName, itemCode, itemGroup, quantity, uom, revision, 
+          productName, itemCode, bomNumber || null, itemGroup, quantity, uom, revision, 
           description, isActive ? 1 : 0, isDefault ? 1 : 0, 
           projectId || null, rootCardId || null,
-          status || 'draft', id
+          status || 'draft', lossPercent || 0, id
         ]
       );
     } finally {
@@ -313,10 +396,10 @@ class ComprehensiveBOM {
         [bomId]
       );
 
-      const componentCost = components[0]?.total || 0;
-      const materialCost = materials[0]?.total || 0;
-      const operationCost = operations[0]?.total || 0;
-      const scrapLossCost = scrapLoss[0]?.total || 0;
+      const componentCost = parseFloat(components[0]?.total || 0);
+      const materialCost = parseFloat(materials[0]?.total || 0);
+      const operationCost = parseFloat(operations[0]?.total || 0);
+      const scrapLossCost = parseFloat(scrapLoss[0]?.total || 0);
       
       // Follow point 123: total_bom_cost = material_cost + labor_cost - scrap_loss_cost
       // We include componentCost in material_cost sum

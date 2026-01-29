@@ -1,7 +1,6 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { CheckCircle } from "lucide-react";
 import Input from "../../../ui/Input";
-import Select from "../../../ui/Select";
 import FormSection from "../shared/FormSection";
 import FormRow from "../shared/FormRow";
 import AssigneeField from "../shared/AssigneeField";
@@ -11,13 +10,14 @@ export default function Step7_Delivery({ readOnly = false }) {
   const { formData, updateField, setNestedField } = useFormData();
   const { state } = useRootCardContext();
 
-  return (
+  const content = useMemo(() => (
     <div className="space-y-3">
       <AssigneeField
         stepType="delivery"
         formData={state.formData}
         updateField={updateField}
         employees={state.employees}
+        readOnly={readOnly}
       />
       <FormSection
         title="Delivery & Handover"
@@ -127,26 +127,10 @@ export default function Step7_Delivery({ readOnly = false }) {
               />
             </FormRow>
           </div>
-
-          {/* Delivery Assignment */}
-          <div className="border-t border-slate-200 pt-4">
-            <h5 className="text-sm font-semibold text-slate-900 mb-2 text-left">Delivery Assignment</h5>
-            <FormRow cols={1}>
-              <Select
-                label="Assign Delivery to Employee"
-                options={(Array.isArray(state.employees) ? state.employees : []).map((emp) => ({
-                  label: `${emp.firstName} ${emp.lastName} (${emp.designation})`,
-                  value: emp.id.toString(),
-                }))}
-                value={formData.deliveryAssignedTo?.toString() || ""}
-                onChange={(e) => updateField("deliveryAssignedTo", e.target.value)}
-                placeholder="Select an employee for delivery..."
-                disabled={readOnly}
-              />
-            </FormRow>
-          </div>
         </div>
       </FormSection>
     </div>
-  );
+  ), [formData.delivery, state.employees, state.formData, readOnly, setNestedField, updateField]);
+
+  return content;
 }

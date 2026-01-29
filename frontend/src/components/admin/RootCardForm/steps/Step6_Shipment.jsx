@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Truck } from "lucide-react";
 import Input from "../../../ui/Input";
 import FormSection from "../shared/FormSection";
@@ -10,13 +10,14 @@ export default function Step6_Shipment({ readOnly = false }) {
   const { formData, setNestedField, updateField } = useFormData();
   const { state } = useRootCardContext();
 
-  return (
+  const content = useMemo(() => (
     <div className="space-y-3">
       <AssigneeField
         stepType="shipment"
         formData={state.formData}
         updateField={updateField}
         employees={state.employees}
+        readOnly={readOnly}
       />
       <FormSection
         title="Shipment & Logistics"
@@ -34,6 +35,7 @@ export default function Step6_Shipment({ readOnly = false }) {
                 setNestedField("deliveryTerms", "deliverySchedule", e.target.value)
               }
               placeholder="e.g., 12-16 weeks from PO"
+              disabled={readOnly}
             />
           </div>
 
@@ -48,6 +50,7 @@ export default function Step6_Shipment({ readOnly = false }) {
                   setNestedField("deliveryTerms", "packagingInfo", e.target.value)
                 }
                 placeholder="e.g., Wooden box, anti-rust oil"
+                disabled={readOnly}
               />
               <Input
                 label="Dispatch Mode"
@@ -56,6 +59,7 @@ export default function Step6_Shipment({ readOnly = false }) {
                   setNestedField("deliveryTerms", "dispatchMode", e.target.value)
                 }
                 placeholder="e.g., Road transport"
+                disabled={readOnly}
               />
             </FormRow>
           </div>
@@ -71,6 +75,7 @@ export default function Step6_Shipment({ readOnly = false }) {
                   setNestedField("deliveryTerms", "installationRequired", e.target.value)
                 }
                 placeholder="e.g., Yes, on-site installation"
+                disabled={readOnly}
               />
               <Input
                 label="Site Commissioning"
@@ -79,6 +84,7 @@ export default function Step6_Shipment({ readOnly = false }) {
                   setNestedField("deliveryTerms", "siteCommissioning", e.target.value)
                 }
                 placeholder="e.g., Yes, commissioning required"
+                disabled={readOnly}
               />
             </FormRow>
           </div>
@@ -94,6 +100,7 @@ export default function Step6_Shipment({ readOnly = false }) {
                   setNestedField("shipment", "marking", e.target.value)
                 }
                 placeholder="e.g., Marked and labeled"
+                disabled={readOnly}
               />
               <Input
                 label="Dismantling (if needed)"
@@ -102,6 +109,7 @@ export default function Step6_Shipment({ readOnly = false }) {
                   setNestedField("shipment", "dismantling", e.target.value)
                 }
                 placeholder="e.g., Not required"
+                disabled={readOnly}
               />
             </FormRow>
             <FormRow cols={2}>
@@ -112,6 +120,7 @@ export default function Step6_Shipment({ readOnly = false }) {
                   setNestedField("shipment", "packing", e.target.value)
                 }
                 placeholder="e.g., Industrial packing applied"
+                disabled={readOnly}
               />
               <Input
                 label="Dispatch"
@@ -120,11 +129,14 @@ export default function Step6_Shipment({ readOnly = false }) {
                   setNestedField("shipment", "dispatch", e.target.value)
                 }
                 placeholder="e.g., Ready for dispatch"
+                disabled={readOnly}
               />
             </FormRow>
           </div>
         </div>
       </FormSection>
     </div>
-  );
+  ), [formData.deliveryTerms, formData.shipment, state.employees, state.formData, readOnly, setNestedField, updateField]);
+
+  return content;
 }

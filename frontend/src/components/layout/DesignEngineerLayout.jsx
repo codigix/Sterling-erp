@@ -22,6 +22,7 @@ import TechnicalFilesPage from '../../pages/design-engineer/documents/TechnicalF
 // BOM
 import CreateBOMPage from '../../pages/design-engineer/bom/CreateBOMPage';
 import ViewBOMsPage from '../../pages/design-engineer/bom/ViewBOMsPage';
+import BOMDetailsPage from '../../pages/design-engineer/bom/BOMDetailsPage';
 import BOMHistoryPage from '../../pages/design-engineer/bom/BOMHistoryPage';
 
 // Reviews
@@ -114,6 +115,7 @@ const DesignEngineerLayout = () => {
         {/* BOM Routes */}
         <Route path="bom/create" element={<CreateBOMPage />} />
         <Route path="bom/view" element={<ViewBOMsPage />} />
+        <Route path="bom/view/:id" element={<BOMDetailsPage />} />
         <Route path="bom/history" element={<BOMHistoryPage />} />
         
         {/* Reviews Routes */}

@@ -10,18 +10,31 @@ class RootCardStepController {
   static async getSteps(req, res) {
     try {
       const { rootCardId } = req.params;
+      const userId = req.user?.id;
 
-      const rootCard = await RootCard.findById(rootCardId);
+      let rootCard = await RootCard.findById(rootCardId);
+      let isDraft = false;
+
+      if (!rootCard && userId) {
+        const RootCardDraft = require('../../models/RootCardDraft');
+        rootCard = await RootCardDraft.findById(rootCardId, userId);
+        if (rootCard) {
+          isDraft = true;
+        }
+      }
+
       if (!rootCard) {
         return res.status(404).json(formatErrorResponse('Root Card not found'));
       }
 
-      const steps = await RootCardStep.findByRootCardId(rootCardId);
+      const steps = isDraft ? [] : await RootCardStep.findByRootCardId(rootCardId);
+      const progress = isDraft ? { totalSteps: 7, completedSteps: 0, percentage: 0 } : await RootCardStep.getStepProgress(rootCardId);
 
       res.json(formatSuccessResponse({
         rootCardId,
         steps,
-        progress: await RootCardStep.getStepProgress(rootCardId)
+        progress,
+        isDraft
       }, 'Steps retrieved successfully'));
     } catch (error) {
       console.error('Error getting steps:', error);
@@ -34,11 +47,7 @@ class RootCardStepController {
       const { rootCardId, stepKey } = req.params;
 
       const step = await RootCardStep.findByStepKey(rootCardId, stepKey);
-      if (!step) {
-        return res.status(404).json(formatErrorResponse('Step not found'));
-      }
-
-      res.json(formatSuccessResponse(step, 'Step retrieved successfully'));
+      res.json(formatSuccessResponse(step || null, 'Step retrieved successfully'));
     } catch (error) {
       console.error('Error getting step:', error);
       res.status(500).json(formatErrorResponse(error.message));

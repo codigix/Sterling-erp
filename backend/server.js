@@ -39,7 +39,6 @@ const inventoryPortalRoutes = require('./routes/inventory/inventoryPortalRoutes'
 const rootCardInventoryTaskRoutes = require('./routes/inventory/rootCardInventoryTaskRoutes');
 const qcPortalRoutes = require('./routes/qc/qcPortalRoutes');
 const productionPortalRoutes = require('./routes/production/productionPortalRoutes');
-const designProjectRoutes = require('./routes/design/designProjectRoutes');
 const departmentPortalRoutes = require('./routes/department/departmentPortalRoutes');
 const outsourcingRoutes = require('./routes/production/outsourcingRoutes');
 const comprehensiveBOMRoutes = require('./routes/engineering/comprehensiveBOMRoutes');
@@ -96,7 +95,6 @@ app.use('/api/procurement/purchase-orders', purchaseOrderRoutes);
 app.use('/api/procurement/material-requests', materialRequestRoutes);
 app.use('/api/procurement/portal', procurementPortalRoutes);
 app.use('/api/qc/portal', qcPortalRoutes);
-app.use('/api/design/projects', designProjectRoutes);
 app.use('/api/department/portal', departmentPortalRoutes);
 app.use('/api/tracking', trackingRoutes);
 app.use('/api/engineering/bom/comprehensive', comprehensiveBOMRoutes);

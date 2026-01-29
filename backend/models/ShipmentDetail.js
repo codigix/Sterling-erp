@@ -68,7 +68,7 @@ class ShipmentDetail {
         shipping_address, shipment_date, shipment_status, shipment_cost, notes)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        normalized.rootCardId,
+        normalized.rootCardId || null,
         normalized.deliverySchedule || null,
         normalized.packagingInfo || null,
         normalized.dispatchMode || null,

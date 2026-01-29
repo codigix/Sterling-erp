@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { History, Download, RotateCcw, AlertCircle } from "lucide-react";
 import axios from "../../../utils/api";
 import Swal from "sweetalert2";
@@ -10,103 +10,117 @@ const BOMHistoryPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [restoring, setRestoring] = useState(false);
-  const [comparing, setComparing] = useState(null);
 
-  useEffect(() => {
-    fetchBOMs();
-  }, []);
-
-  const fetchBOMs = async () => {
+  const fetchBOMHistory = useCallback(async (group) => {
     try {
       setLoading(true);
-      setError("");
-      const response = await axios.get("/production/bom/all");
-      const formattedBoms = (response.data || []).map(bom => ({
+      const versions = group.revisions.map(bom => ({
         id: bom.id,
-        name: bom.bom_number,
-        created_at: bom.created_at,
+        version: `Rev ${bom.revision}`,
+        date: new Date(bom.createdAt).toLocaleDateString(),
+        author: bom.createdByName || "System",
         status: bom.status,
-        created_by_name: bom.created_by_name || "System"
+        itemCode: bom.itemCode,
+        revision: bom.revision,
+        totalCost: bom.totalCost,
+        itemGroup: bom.itemGroup,
+        description: bom.description
       }));
-      setBoms(formattedBoms);
-      if (formattedBoms.length > 0) {
-        setSelectedBOM(formattedBoms[0].id);
-        fetchBOMDetails(formattedBoms[0].id);
-      }
-    } catch (err) {
-      console.error("Failed to fetch BOMs:", err);
-      setError("Failed to load BOMs");
-      Swal.fire({
-        icon: "error",
-        title: "Failed to Load",
-        text: "Could not fetch BOMs. Please try again.",
-        confirmButtonColor: "#3b82f6",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchBOMDetails = async (bomId) => {
-    try {
-      const response = await axios.get(`/production/bom/${bomId}`);
-      const bomData = response.data;
-      
-      const versionNumber = bomData.bom.status === 'approved' ? '1.0' : 
-                           bomData.bom.status === 'pending_approval' ? '0.9' : '0.1';
-      
-      const bomVersions = [
-        {
-          id: bomData.bom.id,
-          version: `v${versionNumber}`,
-          date: new Date(bomData.bom.created_at).toLocaleDateString(),
-          author: bomData.bom.created_by_name || "System",
-          changes: `${bomData.lineItems?.length || 0} items configured - Status: ${bomData.bom.status.replace(/_/g, ' ')}`,
-          status: bomData.bom.status,
-          lineItemCount: bomData.lineItems?.length || 0
-        }
-      ];
 
       setSelectedBOMData({
-        bom: bomData.bom,
-        lineItems: bomData.lineItems || [],
-        versions: bomVersions
+        itemCode: group.itemCode,
+        productName: group.name,
+        versions: versions
       });
       setError("");
     } catch (err) {
       console.error("Failed to fetch BOM details:", err);
-      setError("Failed to load BOM details");
-      Swal.fire({
-        icon: "error",
-        title: "Failed to Load Details",
-        text: "Could not fetch BOM details. Please try again.",
-        confirmButtonColor: "#3b82f6",
-      });
+      setError("Failed to load BOM history");
+    } finally {
+      setLoading(false);
     }
-  };
+  }, []);
 
-  const handleSelectBOM = (bomId) => {
-    setSelectedBOM(bomId);
-    fetchBOMDetails(bomId);
+  const fetchBOMs = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const response = await axios.get("/engineering/bom/comprehensive");
+      const allBoms = response.data.boms || [];
+      
+      // Group by itemCode
+      const grouped = {};
+      allBoms.forEach(bom => {
+        const key = bom.itemCode || "unknown";
+        if (!grouped[key]) {
+          grouped[key] = {
+            itemCode: key,
+            productName: bom.productName,
+            revisions: []
+          };
+        }
+        grouped[key].revisions.push(bom);
+      });
+
+      const formattedBoms = Object.values(grouped).map(group => ({
+        id: group.itemCode,
+        name: group.productName,
+        itemCode: group.itemCode,
+        revisions: group.revisions.sort((a, b) => b.revision - a.revision)
+      }));
+
+      setBoms(formattedBoms);
+      if (formattedBoms.length > 0) {
+        setSelectedBOM(formattedBoms[0].itemCode);
+        fetchBOMHistory(formattedBoms[0]);
+      }
+    } catch (err) {
+      console.error("Failed to fetch BOMs:", err);
+      setError("Failed to load BOMs");
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchBOMHistory]);
+
+  useEffect(() => {
+    fetchBOMs();
+  }, [fetchBOMs]);
+
+  const handleSelectBOM = (group) => {
+    setSelectedBOM(group.itemCode);
+    fetchBOMHistory(group);
   };
 
   const handleDownloadBOM = async (version) => {
     try {
-      const response = await axios.get(`/production/bom/${version.id}`, {
-        responseType: 'json'
-      });
-      
+      const response = await axios.get(`/engineering/bom/comprehensive/${version.id}`);
       const bomData = response.data;
+      
       const csvContent = [
-        ['Item Code', 'Description', 'Quantity', 'Unit', 'Unit Cost', 'Specification', 'Part Type'],
-        ...bomData.lineItems.map(item => [
-          item.item_code,
-          item.item_description,
+        ['Type', 'Item Code / Name', 'Group', 'Quantity', 'Unit', 'Rate'],
+        ...(bomData.components || []).map(item => [
+          'Sub Assembly / Component',
+          item.componentCode,
+          'Sub Assemblies',
           item.quantity,
-          item.unit || 'N/A',
-          item.unit_cost || 'N/A',
-          item.specification || 'N/A',
-          item.part_type || 'N/A'
+          item.uom,
+          item.rate
+        ]),
+        ...(bomData.materials || []).map(item => [
+          'Material',
+          item.itemName,
+          item.itemGroup || '',
+          item.quantity,
+          item.uom,
+          item.rate
+        ]),
+        ...(bomData.operations || []).map(item => [
+          'Operation',
+          item.operationName,
+          item.workstation || '',
+          item.cycleTime,
+          'min',
+          item.cost
         ])
       ];
 
@@ -118,7 +132,7 @@ const BOMHistoryPage = () => {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${bomData.bom.bom_number}_${version.version}.csv`;
+      a.download = `BOM_${bomData.itemCode}_Rev${bomData.revision}.csv`;
       a.click();
       window.URL.revokeObjectURL(url);
 
@@ -141,16 +155,17 @@ const BOMHistoryPage = () => {
   };
 
   const handleCompareBOM = (version) => {
-    setComparing(version);
     Swal.fire({
       icon: 'info',
-      title: 'Comparison',
-      html: `<div class="text-left">
-        <p><strong>Version:</strong> ${version.version}</p>
+      title: 'BOM Details',
+      html: `<div class="text-left space-y-2">
+        <p><strong>Revision:</strong> ${version.version}</p>
         <p><strong>Date:</strong> ${version.date}</p>
         <p><strong>Author:</strong> ${version.author}</p>
-        <p><strong>Status:</strong> ${version.status}</p>
-        <p><strong>Items:</strong> ${version.lineItemCount}</p>
+        <p><strong>Status:</strong> <span class="capitalize">${version.status}</span></p>
+        <p><strong>Item Group:</strong> ${version.itemGroup || 'N/A'}</p>
+        <p><strong>Total Cost:</strong> ₹${parseFloat(version.totalCost || 0).toLocaleString()}</p>
+        ${version.description ? `<p><strong>Description:</strong> ${version.description}</p>` : ''}
       </div>`,
       confirmButtonColor: '#3b82f6'
     });
@@ -159,9 +174,9 @@ const BOMHistoryPage = () => {
   const handleRestoreBOM = async (version) => {
     const result = await Swal.fire({
       icon: 'warning',
-      title: 'Restore Version?',
-      text: `Are you sure you want to restore ${version.version}? Current changes will be replaced.`,
-      confirmButtonText: 'Restore',
+      title: 'Revert to Draft?',
+      text: `Are you sure you want to revert ${version.version} to draft status?`,
+      confirmButtonText: 'Revert',
       cancelButtonText: 'Cancel',
       confirmButtonColor: '#ef4444',
       showCancelButton: true
@@ -170,15 +185,15 @@ const BOMHistoryPage = () => {
     if (result.isConfirmed) {
       setRestoring(true);
       try {
-        await axios.patch(`/production/bom/${selectedBOM}/status`, {
+        await axios.patch(`/engineering/bom/comprehensive/${version.id}/status`, {
           status: 'draft'
         });
-        await fetchBOMDetails(selectedBOM);
+        await fetchBOMs();
         
         Swal.fire({
           icon: 'success',
-          title: 'Restored',
-          text: `BOM restored to ${version.version}`,
+          title: 'Reverted',
+          text: `BOM reverted to draft status`,
           confirmButtonColor: '#3b82f6',
           timer: 2000
         });
@@ -186,8 +201,8 @@ const BOMHistoryPage = () => {
         console.error('Restore error:', err);
         Swal.fire({
           icon: 'error',
-          title: 'Restore Failed',
-          text: 'Could not restore BOM version',
+          title: 'Revert Failed',
+          text: 'Could not update BOM status',
           confirmButtonColor: '#3b82f6'
         });
       } finally {
@@ -199,10 +214,10 @@ const BOMHistoryPage = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold text-slate-900 dark:text-white text-xs">
+        <h2 className="text-xl font-bold text-slate-900 dark:text-white">
           BOM History
         </h2>
-        <p className="text-slate-600 dark:text-slate-400 mt-1 text-xs">
+        <p className="text-slate-600 dark:text-slate-400 mt-1 text-sm">
           View version history and rollback changes
         </p>
       </div>
@@ -232,18 +247,19 @@ const BOMHistoryPage = () => {
               BOMs
             </h3>
             <div className="space-y-2">
-              {boms.map((bom) => (
+              {boms.map((group) => (
                 <button
-                  key={bom.id}
-                  onClick={() => handleSelectBOM(bom.id)}
+                  key={group.id}
+                  onClick={() => handleSelectBOM(group)}
                   className={`w-full text-left p-2 rounded-lg transition-colors text-xs ${
-                    selectedBOM === bom.id
+                    selectedBOM === group.itemCode
                       ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"
                       : "hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300"
                   }`}
                 >
-                  <div className="font-semibold">{bom.name}</div>
-                  <div className="text-xs opacity-75">{new Date(bom.created_at).toLocaleDateString()}</div>
+                  <div className="font-semibold">{group.name}</div>
+                  <div className="text-xs opacity-75">{group.itemCode}</div>
+                  <div className="text-[10px] mt-1 text-slate-500">{group.revisions.length} Revisions</div>
                 </button>
               ))}
             </div>
@@ -251,7 +267,7 @@ const BOMHistoryPage = () => {
 
           {/* Version History */}
           <div className="lg:col-span-3 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6">
-            <h3 className="font-semibold text-slate-900 dark:text-white mb-4 flex items-center text-xs gap-2">
+            <h3 className="font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
               <History size={20} />
               Version History
             </h3>
@@ -283,7 +299,7 @@ const BOMHistoryPage = () => {
                       )}
                     </div>
                     <p className="text-sm text-slate-700 dark:text-slate-300">
-                      {version.changes}
+                      {version.description}
                     </p>
                     <div className="mt-3 flex gap-2">
                       <button 

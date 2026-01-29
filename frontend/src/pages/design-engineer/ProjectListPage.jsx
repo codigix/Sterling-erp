@@ -31,20 +31,18 @@ const ProjectListPage = () => {
   const fetchProjects = async () => {
     try {
       setLoading(true);
-      const response = await axios.get("/design/projects");
-      const projectsData = Array.isArray(response.data)
-        ? response.data
-        : response.data?.projects || [];
+      const response = await axios.get("/root-cards");
+      const projectsData = response.data.rootCards || [];
       const mapped = projectsData.map((project) => ({
         id: project.id,
-        title: project.projectName,
-        code: project.projectCode,
+        title: project.projectName || project.customer,
+        code: project.poNumber,
         status: project.status || "draft",
         priority: project.priority || "medium",
-        planned_start: project.createdAt,
-        planned_end: null,
+        planned_start: project.created_at,
+        planned_end: project.due_date,
         project_name: project.projectName,
-        customer: project.clientName
+        customer: project.customer
       }));
       setProjects(mapped);
     } catch (error) {

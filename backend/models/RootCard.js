@@ -23,8 +23,7 @@ class RootCard {
       ...row,
       items: parseJson(row.items),
       documents: parseJson(row.documents),
-      project_scope: parseJson(row.project_scope, null),
-      design_details: parseJson(row.design_details, null)
+      project_scope: parseJson(row.project_scope, null)
     };
   }
 
@@ -33,23 +32,27 @@ class RootCard {
     const params = [];
 
     if (filters.status && filters.status !== 'all') {
-      conditions.push('status = ?');
+      conditions.push('so.status = ?');
       params.push(filters.status);
     }
 
     if (filters.search) {
-      conditions.push('(customer LIKE ? OR po_number LIKE ? OR project_name LIKE ? OR notes LIKE ?)');
+      conditions.push('(so.customer LIKE ? OR so.po_number LIKE ? OR so.project_name LIKE ? OR so.notes LIKE ?)');
       const like = `%${filters.search}%`;
       params.push(like, like, like, like);
     }
 
-    let query = 'SELECT * FROM sales_orders';
+    let query = `
+      SELECT so.*, p.id as project_id, p.code as project_code 
+      FROM sales_orders so
+      LEFT JOIN projects p ON p.sales_order_id = so.id
+    `;
 
     if (conditions.length) {
       query += ` WHERE ${conditions.join(' AND ')}`;
     }
 
-    query += ' ORDER BY created_at DESC';
+    query += ' ORDER BY so.created_at DESC';
 
     const [rows] = await pool.execute(query, params);
     const formattedCards = rows.map(RootCard.formatRow);
@@ -62,7 +65,12 @@ class RootCard {
   }
 
   static async findById(id) {
-    const [rows] = await pool.execute('SELECT * FROM sales_orders WHERE id = ?', [id]);
+    const [rows] = await pool.execute(`
+      SELECT so.*, p.id as project_id, p.code as project_code 
+      FROM sales_orders so
+      LEFT JOIN projects p ON p.sales_order_id = so.id
+      WHERE so.id = ?
+    `, [id]);
     const rootCard = RootCard.formatRow(rows[0]);
     if (!rootCard) return null;
     return RootCard.enrichRootCardWithSteps(rootCard);

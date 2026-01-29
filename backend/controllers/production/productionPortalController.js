@@ -166,6 +166,16 @@ exports.getRootCardById = async (req, res) => {
     const step7 = await DeliveryDetail.findByRootCardId(rootCard.rootCardId);
     if (step7) stepData.step7_delivery = step7;
 
+    // Active BOM & Operations
+    const ComprehensiveBOM = require('../../models/ComprehensiveBOM');
+    const activeBOMRef = await ComprehensiveBOM.findByRootCardId(rootCard.rootCardId);
+    if (activeBOMRef) {
+      const fullBOM = await ComprehensiveBOM.findById(activeBOMRef.id);
+      if (fullBOM) {
+        stepData.activeBOM = fullBOM;
+      }
+    }
+
     res.json({
       ...rootCard,
       allSteps,
@@ -362,7 +372,7 @@ exports.updateManufacturingStage = async (req, res) => {
   try {
     const ManufacturingStage = require('../../models/ManufacturingStage');
     const { id } = req.params;
-    const { stageName, stageType, assignedWorker, plannedStart, plannedEnd, status, notes } = req.body;
+    const { stageName, stageType, assignedWorker, plannedStart, plannedEnd, status, targetWarehouse, notes } = req.body;
 
     const stage = await ManufacturingStage.findById(id);
     if (!stage) {
@@ -376,6 +386,7 @@ exports.updateManufacturingStage = async (req, res) => {
       plannedStart,
       plannedEnd,
       status,
+      targetWarehouse,
       notes
     });
 

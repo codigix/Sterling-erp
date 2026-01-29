@@ -9,8 +9,8 @@ class ProductionStage {
         `INSERT INTO production_stages 
          (production_plan_id, stage_sequence, stage_name, stage_type, execution_type, 
           assigned_employee_id, assigned_vendor_id, planned_start_date, planned_end_date, 
-          estimated_duration_days, delay_tolerance_days, status, notes)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          estimated_duration_days, delay_tolerance_days, status, target_warehouse, notes)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           data.productionPlanId,
           data.stageSequence,
@@ -24,6 +24,7 @@ class ProductionStage {
           data.estimatedDurationDays || null,
           data.delayToleranceDays || null,
           data.status || 'pending',
+          data.targetWarehouse || null,
           data.notes || null
         ]
       );
@@ -205,6 +206,10 @@ class ProductionStage {
     if (data.status !== undefined) {
       updates.push('status = ?');
       params.push(data.status);
+    }
+    if (data.targetWarehouse !== undefined) {
+      updates.push('target_warehouse = ?');
+      params.push(data.targetWarehouse);
     }
     if (data.notes !== undefined) {
       updates.push('notes = ?');

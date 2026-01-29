@@ -385,6 +385,7 @@ class ProductionPlan {
           employeeId,
           facilityId,
           vendorId,
+          stage.targetWarehouse || null,
           stage.notes || null,
           isBlocked ? 1 : 0,
           null
@@ -394,11 +395,12 @@ class ProductionPlan {
       console.log('[ProductionPlan.addStages] Inserting stages with values:', JSON.stringify(values, null, 2));
 
       const flattenedValues = values.reduce((acc, val) => acc.concat(val), []);
-      const placeholders = values.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').join(', ');
+      const placeholders = values.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').join(', ');
 
       const query = `INSERT INTO production_plan_stages 
          (production_plan_id, stage_name, sequence, stage_type, duration_days, estimated_delay_days, 
-          planned_start_date, planned_end_date, assigned_employee_id, assigned_facility_id, assigned_vendor_id, notes, is_blocked, blocked_by_stage_id)
+          planned_start_date, planned_end_date, assigned_employee_id, assigned_facility_id, assigned_vendor_id, 
+          target_warehouse, notes, is_blocked, blocked_by_stage_id)
          VALUES ${placeholders}`;
       
       console.log('[ProductionPlan.addStages] Query:', query);

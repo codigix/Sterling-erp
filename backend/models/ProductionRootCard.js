@@ -23,8 +23,14 @@ class ProductionRootCard {
       ...row,
       stages: parseJson(row.stages, []),
       product_details: row.product_details ? parseJson(row.product_details, null) : null,
+      design_details: row.design_specifications ? parseJson(row.design_specifications, null) : null,
+      design_documents: parseJson(row.design_documents, []),
+      design_bom_data: parseJson(row.design_bom_data, []),
+      design_status: row.design_status || 'draft',
       sales_order_items: row.sales_order_items ? parseJson(row.sales_order_items, []) : [],
+      root_card_items: row.sales_order_items ? parseJson(row.sales_order_items, []) : [],
       product_name: row.product_details ? parseJson(row.product_details).itemName : null,
+      root_card_id: row.sales_order_id,
       project: row.project_id
         ? {
             id: row.project_id,
@@ -64,11 +70,16 @@ class ProductionRootCard {
              so.currency,
              so.status AS so_status,
              so.items AS sales_order_items,
+             ded.specifications AS design_specifications,
+             ded.documents AS design_documents,
+             ded.bom_data AS design_bom_data,
+             ded.design_status,
              sod.product_details,
              u.username AS assigned_supervisor_name
       FROM root_cards rc
       LEFT JOIN projects p ON p.id = rc.project_id
       LEFT JOIN sales_orders so ON so.id = p.sales_order_id
+      LEFT JOIN design_engineering_details ded ON ded.sales_order_id = so.id
       LEFT JOIN sales_order_details sod ON sod.sales_order_id = so.id
       LEFT JOIN users u ON u.id = rc.assigned_supervisor
     `;
@@ -122,11 +133,16 @@ class ProductionRootCard {
                so.currency,
                so.status AS so_status,
                so.items AS sales_order_items,
+               ded.specifications AS design_specifications,
+               ded.documents AS design_documents,
+               ded.bom_data AS design_bom_data,
+               ded.design_status,
                sod.product_details,
                u.username AS assigned_supervisor_name
         FROM root_cards rc
         LEFT JOIN projects p ON p.id = rc.project_id
         LEFT JOIN sales_orders so ON so.id = p.sales_order_id
+        LEFT JOIN design_engineering_details ded ON ded.sales_order_id = so.id
         LEFT JOIN sales_order_details sod ON sod.sales_order_id = so.id
         LEFT JOIN users u ON u.id = rc.assigned_supervisor
         WHERE rc.id = ?
@@ -152,11 +168,16 @@ class ProductionRootCard {
                so.currency,
                so.status AS so_status,
                so.items AS sales_order_items,
+               ded.specifications AS design_specifications,
+               ded.documents AS design_documents,
+               ded.bom_data AS design_bom_data,
+               ded.design_status,
                sod.product_details,
                u.username AS assigned_supervisor_name
         FROM root_cards rc
         LEFT JOIN projects p ON p.id = rc.project_id
         LEFT JOIN sales_orders so ON so.id = p.sales_order_id
+        LEFT JOIN design_engineering_details ded ON ded.sales_order_id = so.id
         LEFT JOIN sales_order_details sod ON sod.sales_order_id = so.id
         LEFT JOIN users u ON u.id = rc.assigned_supervisor
         WHERE so.id = ?

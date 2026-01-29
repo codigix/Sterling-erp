@@ -1,5 +1,5 @@
 const pool = require('../config/database');
-const { parseJsonField, stringifyJsonField, ensureArray } = require('../utils/rootCardHelpers');
+const { parseJsonField, stringifyJsonField, normalizeStepData, ensureArray } = require('../utils/rootCardHelpers');
 
 class QualityCheckDetail {
   static async createTable() {
@@ -58,7 +58,7 @@ class QualityCheckDetail {
         qc_status, inspection_type, inspections, inspected_by, qc_report, remarks)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        normalized.rootCardId,
+        normalized.rootCardId || null,
         normalized.qualityCompliance?.qualityStandards || null,
         normalized.qualityCompliance?.weldingStandards || null,
         normalized.qualityCompliance?.surfaceFinish || null,
@@ -70,7 +70,7 @@ class QualityCheckDetail {
         normalized.internalProjectOwner || null,
         normalized.qcStatus || 'pending',
         normalized.inspectionType || null,
-        stringifyJsonField(ensureArray(normalized.inspections)),
+        stringifyJsonField(ensureArray(normalized.inspections)) || '[]',
         normalized.inspectedBy || null,
         normalized.qcReport || null,
         normalized.remarks || null
@@ -108,7 +108,7 @@ class QualityCheckDetail {
         normalized.internalProjectOwner || null,
         normalized.qcStatus || 'pending',
         normalized.inspectionType || null,
-        stringifyJsonField(ensureArray(normalized.inspections)),
+        stringifyJsonField(ensureArray(normalized.inspections)) || '[]',
         normalized.inspectedBy || null,
         normalized.qcStatus !== 'pending' && !normalized.inspectionDate ? new Date() : normalized.inspectionDate || null,
         normalized.qcReport || null,
@@ -129,9 +129,7 @@ class QualityCheckDetail {
 
   static async addCompliance(rootCardId, complianceData) {
     const detail = await this.findByRootCardId(rootCardId);
-    if (!detail) {
-      throw new Error('Quality check data not found');
-    }
+    if (!detail) return null;
 
     await pool.execute(
       `UPDATE quality_check_details 
@@ -154,9 +152,7 @@ class QualityCheckDetail {
 
   static async addWarrantySupport(rootCardId, warrantyData) {
     const detail = await this.findByRootCardId(rootCardId);
-    if (!detail) {
-      throw new Error('Quality check data not found');
-    }
+    if (!detail) return null;
 
     await pool.execute(
       `UPDATE quality_check_details 
@@ -174,9 +170,7 @@ class QualityCheckDetail {
 
   static async assignProjectOwner(rootCardId, employeeId) {
     const detail = await this.findByRootCardId(rootCardId);
-    if (!detail) {
-      throw new Error('Quality check data not found');
-    }
+    if (!detail) return null;
 
     await pool.execute(
       `UPDATE quality_check_details SET internal_project_owner = ? WHERE sales_order_id = ?`,
@@ -188,8 +182,15 @@ class QualityCheckDetail {
 
   static async validateCompliance(rootCardId) {
     const detail = await this.findByRootCardId(rootCardId);
+    
     if (!detail) {
-      throw new Error('Quality check data not found');
+      return {
+        isValid: true,
+        errors: [],
+        warnings: ['No quality check data found'],
+        hasCompliance: false,
+        hasWarranty: false
+      };
     }
 
     const errors = [];

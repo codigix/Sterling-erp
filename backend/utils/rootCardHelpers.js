@@ -179,7 +179,7 @@ const calculateMaterialCost = (materials) => {
   return materials.reduce((total, material) => {
     const quantity = parseFloat(material.quantity) || 0;
     // Check multiple possible price/cost fields
-    const price = parseFloat(material.unitPrice || material.unitCost || material.valuationRate || 0);
+    const price = parseFloat(material.sellingRate || material.selling_rate || material.unitPrice || material.unitCost || material.valuationRate || material.valuation_rate || 0);
     return total + (quantity * price);
   }, 0);
 };

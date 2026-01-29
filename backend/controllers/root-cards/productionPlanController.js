@@ -52,7 +52,7 @@ class ProductionPlanController {
         }
 
         const planData = {
-          rootCardId: parseInt(rootCardId),
+          salesOrderId: parseInt(rootCardId),
           rootCardId: data.rootCardId ? parseInt(data.rootCardId) : null,
           planName: data.planName || 'Production Plan',
           status: 'draft',
@@ -94,11 +94,11 @@ class ProductionPlanController {
           
           if (existingTasks.length === 0) {
             await EmployeeTask.createAssignedTask(assignedTo, {
-              title: `Production Plan: ${rootCard.project_name || rootCard.title || 'Project'}`,
-              description: `Create production plan for Root Card ${rootCard.po_number || ''}`,
+              title: `Production Plan: ${rootCard?.project_name || rootCard?.title || 'Project'}`,
+              description: `Create production plan for Root Card ${rootCard?.po_number || ''}`,
               type: 'production_plan',
-              priority: rootCard.priority || 'medium',
-              dueDate: rootCard.due_date,
+              priority: rootCard?.priority || 'medium',
+              dueDate: rootCard?.due_date,
               salesOrderId: rootCardId,
               notes: `Auto-assigned from Admin Root Card flow`
             });
@@ -131,10 +131,7 @@ class ProductionPlanController {
     try {
       const { rootCardId } = req.params;
       const detail = await ProductionPlanDetail.findByRootCardId(rootCardId);
-      if (!detail) {
-        return res.status(404).json(formatErrorResponse('Production plan not found'));
-      }
-      res.json(formatSuccessResponse(detail, 'Production plan retrieved'));
+      res.json(formatSuccessResponse(detail || null, 'Production plan retrieved'));
     } catch (error) {
       res.status(500).json(formatErrorResponse(error.message));
     }
@@ -176,14 +173,18 @@ class ProductionPlanController {
 
       const detail = await ProductionPlanDetail.findByRootCardId(rootCardId);
       if (!detail) {
-        return res.status(404).json(formatErrorResponse('Production plan not found'));
+        return res.json(formatSuccessResponse({
+          isValid: true,
+          errors: [],
+          warnings: ['Production plan not yet initialized']
+        }, 'Phases validation completed (no data)'));
       }
 
       const errors = [];
       const warnings = [];
 
       if (!detail.selectedPhases || Object.keys(detail.selectedPhases).length === 0) {
-        errors.push('At least one phase must be selected');
+        warnings.push('No production phases selected');
       }
 
       Object.entries(detail.selectedPhases || {}).forEach(([key, phase]) => {
@@ -205,6 +206,44 @@ class ProductionPlanController {
     }
   }
 
+  static async validateProductionPlan(req, res) {
+    try {
+      const { rootCardId } = req.params;
+
+      const detail = await ProductionPlanDetail.findByRootCardId(rootCardId);
+      
+      const errors = [];
+      const warnings = [];
+
+      if (!detail) {
+        return res.json(formatSuccessResponse({
+          isValid: true,
+          errors: [],
+          warnings: ['Production plan not yet initialized'],
+          planData: null
+        }, 'Production plan validation completed (no data)'));
+      }
+
+      if (!detail.timeline || !detail.timeline.startDate || !detail.timeline.endDate) {
+        errors.push('Timeline (start and end dates) is incomplete');
+      }
+
+      if (!detail.selectedPhases || Object.keys(detail.selectedPhases).length === 0) {
+        warnings.push('No production phases selected');
+      }
+
+      res.json(formatSuccessResponse({
+        isValid: errors.length === 0,
+        errors,
+        warnings,
+        planData: detail
+      }, 'Production plan validation completed'));
+    } catch (error) {
+      console.error('Error validating Production Plan:', error);
+      res.status(500).json(formatErrorResponse(error.message));
+    }
+  }
+
   static async addPhase(req, res) {
     try {
       const { rootCardId } = req.params;
@@ -217,13 +256,15 @@ class ProductionPlanController {
       let detail = await ProductionPlanDetail.findByRootCardId(rootCardId);
 
       if (!detail) {
-        return res.status(404).json(formatErrorResponse('Production plan not found'));
+        await ProductionPlanDetail.create({
+          rootCardId,
+          selectedPhases: { [phaseKey]: phase }
+        });
+      } else {
+        const selectedPhases = detail.selectedPhases || {};
+        selectedPhases[phaseKey] = phase;
+        await ProductionPlanDetail.update(rootCardId, { selectedPhases });
       }
-
-      const selectedPhases = detail.selectedPhases || {};
-      selectedPhases[phaseKey] = phase;
-
-      await ProductionPlanDetail.update(rootCardId, { selectedPhases });
 
       const updated = await ProductionPlanDetail.findByRootCardId(rootCardId);
       res.json(formatSuccessResponse(updated, 'Phase added'));
@@ -236,10 +277,7 @@ class ProductionPlanController {
     try {
       const { rootCardId } = req.params;
       const detail = await ProductionPlanDetail.findByRootCardId(rootCardId);
-      if (!detail) {
-        return res.status(404).json(formatErrorResponse('Production plan not found'));
-      }
-      res.json(formatSuccessResponse(detail.selectedPhases || {}, 'Phases retrieved'));
+      res.json(formatSuccessResponse(detail?.selectedPhases || {}, 'Phases retrieved'));
     } catch (error) {
       res.status(500).json(formatErrorResponse(error.message));
     }
@@ -249,14 +287,8 @@ class ProductionPlanController {
     try {
       const { rootCardId, phaseKey } = req.params;
       const detail = await ProductionPlanDetail.findByRootCardId(rootCardId);
-      if (!detail) {
-        return res.status(404).json(formatErrorResponse('Production plan not found'));
-      }
-      const phase = detail.selectedPhases?.[phaseKey];
-      if (!phase) {
-        return res.status(404).json(formatErrorResponse('Phase not found'));
-      }
-      res.json(formatSuccessResponse(phase, 'Phase retrieved'));
+      const phase = detail?.selectedPhases?.[phaseKey];
+      res.json(formatSuccessResponse(phase || null, 'Phase retrieved'));
     } catch (error) {
       res.status(500).json(formatErrorResponse(error.message));
     }
@@ -269,13 +301,15 @@ class ProductionPlanController {
 
       let detail = await ProductionPlanDetail.findByRootCardId(rootCardId);
       if (!detail) {
-        return res.status(404).json(formatErrorResponse('Production plan not found'));
+        await ProductionPlanDetail.create({
+          rootCardId,
+          selectedPhases: { [phaseKey]: phase }
+        });
+      } else {
+        const selectedPhases = detail.selectedPhases || {};
+        selectedPhases[phaseKey] = { ...selectedPhases[phaseKey], ...phase };
+        await ProductionPlanDetail.update(rootCardId, { selectedPhases });
       }
-
-      const selectedPhases = detail.selectedPhases || {};
-      selectedPhases[phaseKey] = { ...selectedPhases[phaseKey], ...phase };
-
-      await ProductionPlanDetail.update(rootCardId, { selectedPhases });
 
       const updated = await ProductionPlanDetail.findByRootCardId(rootCardId);
       res.json(formatSuccessResponse(updated, 'Phase updated'));
@@ -289,14 +323,11 @@ class ProductionPlanController {
       const { rootCardId, phaseKey } = req.params;
 
       let detail = await ProductionPlanDetail.findByRootCardId(rootCardId);
-      if (!detail) {
-        return res.status(404).json(formatErrorResponse('Production plan not found'));
+      if (detail) {
+        const selectedPhases = detail.selectedPhases || {};
+        delete selectedPhases[phaseKey];
+        await ProductionPlanDetail.update(rootCardId, { selectedPhases });
       }
-
-      const selectedPhases = detail.selectedPhases || {};
-      delete selectedPhases[phaseKey];
-
-      await ProductionPlanDetail.update(rootCardId, { selectedPhases });
 
       const updated = await ProductionPlanDetail.findByRootCardId(rootCardId);
       res.json(formatSuccessResponse(updated, 'Phase removed'));
@@ -316,17 +347,19 @@ class ProductionPlanController {
 
       let detail = await ProductionPlanDetail.findByRootCardId(rootCardId);
       if (!detail) {
-        return res.status(404).json(formatErrorResponse('Production plan not found'));
+        await ProductionPlanDetail.create({
+          rootCardId,
+          selectedPhases: { [phaseKey]: { status } }
+        });
+      } else {
+        const selectedPhases = detail.selectedPhases || {};
+        if (selectedPhases[phaseKey]) {
+          selectedPhases[phaseKey].status = status;
+        } else {
+          selectedPhases[phaseKey] = { status };
+        }
+        await ProductionPlanDetail.update(rootCardId, { selectedPhases });
       }
-
-      const selectedPhases = detail.selectedPhases || {};
-      if (!selectedPhases[phaseKey]) {
-        return res.status(404).json(formatErrorResponse('Phase not found'));
-      }
-
-      selectedPhases[phaseKey].status = status;
-
-      await ProductionPlanDetail.update(rootCardId, { selectedPhases });
 
       const updated = await ProductionPlanDetail.findByRootCardId(rootCardId);
       res.json(formatSuccessResponse(updated, 'Phase status updated'));

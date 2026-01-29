@@ -1,63 +1,21 @@
 import React, { useMemo } from 'react';
 import { Users } from 'lucide-react';
 import Input from '../../../ui/Input';
+import { DEPARTMENT_MANAGERS } from './constants';
 
-const DEPARTMENT_MANAGERS = {
-  design_engineering: {
-    department: 'Design Engineering',
-    manager: 'Design Engineer',
-    defaultManager: 'design.engineer',
-    color: 'bg-purple-50 border-purple-200'
-  },
-  material_requirement: {
-    department: 'Inventory Management',
-    manager: 'Inventory Manager',
-    defaultManager: 'inventory.manager',
-    color: 'bg-blue-50 border-blue-200'
-  },
-  production_plan: {
-    department: 'Production',
-    manager: 'Production Manager',
-    defaultManager: 'production.manager',
-    color: 'bg-orange-50 border-orange-200'
-  },
-  quality_check: {
-    department: 'Quality Control',
-    manager: 'QC Manager',
-    defaultManager: 'qc.manager',
-    color: 'bg-green-50 border-green-200'
-  },
-  shipment: {
-    department: 'Logistics',
-    manager: 'Logistics Manager',
-    defaultManager: 'inventory.manager',
-    color: 'bg-yellow-50 border-yellow-200'
-  },
-  delivery: {
-    department: 'Delivery',
-    manager: 'Logistics Manager',
-    defaultManager: 'inventory.manager',
-    color: 'bg-red-50 border-red-200'
-  }
-};
-
-const AssigneeField = ({ stepType, formData, updateField, employees = [] }) => {
+const AssigneeField = ({ stepType, formData, updateField, employees = [], readOnly = false }) => {
   const deptConfig = DEPARTMENT_MANAGERS[stepType];
   
-  if (!deptConfig) return null;
-
   const assigneeKey = `${stepType}AssignedTo`;
   
   // Resolve default assignee ID from loginId if needed
   const defaultEmployee = useMemo(() => 
-    employees.find(emp => emp.loginId === deptConfig.defaultManager),
-    [employees, deptConfig.defaultManager]
+    deptConfig ? employees.find(emp => emp.loginId === deptConfig.defaultManager) : null,
+    [employees, deptConfig]
   );
   
-  const defaultValue = defaultEmployee ? defaultEmployee.id : deptConfig.defaultManager;
-  const assigneeValue = formData[assigneeKey] || defaultValue;
-
   const departmentEmployees = useMemo(() => {
+    if (!deptConfig) return [];
     return employees.filter(emp => {
       const deptName = deptConfig.manager.toLowerCase();
       const loginIdMatch = emp.loginId === deptConfig.defaultManager;
@@ -67,6 +25,11 @@ const AssigneeField = ({ stepType, formData, updateField, employees = [] }) => {
       return designationMatch || roleMatch || loginIdMatch;
     });
   }, [employees, deptConfig]);
+
+  if (!deptConfig) return null;
+
+  const defaultValue = defaultEmployee ? defaultEmployee.id : deptConfig.defaultManager;
+  const assigneeValue = formData[assigneeKey] || defaultValue;
 
   return (
     <div className={`p-4 rounded-lg border ${deptConfig.color} mb-4`}>
@@ -91,7 +54,8 @@ const AssigneeField = ({ stepType, formData, updateField, employees = [] }) => {
           <select
             value={assigneeValue}
             onChange={(e) => updateField(assigneeKey, e.target.value)}
-            className="w-full p-2 text-xs border border-slate-300 rounded-lg bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={readOnly}
+            className="w-full p-2 text-xs border border-slate-300 rounded-lg bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
           >
             <option value="">Select {deptConfig.manager}</option>
             {departmentEmployees.length > 0 ? (
@@ -117,4 +81,3 @@ const AssigneeField = ({ stepType, formData, updateField, employees = [] }) => {
 };
 
 export default AssigneeField;
-export { DEPARTMENT_MANAGERS };
