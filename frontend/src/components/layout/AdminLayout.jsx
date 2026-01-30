@@ -55,6 +55,12 @@ const AdminLayout = () => {
       badge: null,
     },
     {
+      title: "Sales Order",
+      path: "/admin/sales-order",
+      icon: FileText,
+      badge: null,
+    },
+    {
       title: "Analytics & Reports",
       path: "/admin/analytics-reports",
       icon: BarChart3,

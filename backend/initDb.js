@@ -34,6 +34,44 @@ async function initDatabase() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       )`,
 
+      `CREATE TABLE departments (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        name VARCHAR(100) UNIQUE NOT NULL,
+        description TEXT,
+        code VARCHAR(50),
+        status ENUM('active', 'inactive') DEFAULT 'active',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_name (name),
+        INDEX idx_status (status)
+      )`,
+
+      `CREATE TABLE customers (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        name VARCHAR(255) NOT NULL,
+        email VARCHAR(100),
+        phone VARCHAR(20),
+        address TEXT,
+        gst_number VARCHAR(20),
+        contact_person VARCHAR(255),
+        status ENUM('active', 'inactive') DEFAULT 'active',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_customer_name (name),
+        INDEX idx_customer_status (status)
+      )`,
+
+      `CREATE TABLE warehouses (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        name VARCHAR(255) NOT NULL,
+        code VARCHAR(50) UNIQUE NOT NULL,
+        location VARCHAR(255),
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_warehouse_code (code)
+      )`,
+
       `CREATE TABLE vendors (
         id INT PRIMARY KEY AUTO_INCREMENT,
         name VARCHAR(255) NOT NULL,
@@ -107,6 +145,27 @@ async function initDatabase() {
       )`,
 
       // Tables with foreign keys
+      `CREATE TABLE employees (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        first_name VARCHAR(100) NOT NULL,
+        last_name VARCHAR(100) NOT NULL,
+        email VARCHAR(150) UNIQUE NOT NULL,
+        designation VARCHAR(100) NOT NULL,
+        department_id INT,
+        role_id INT NOT NULL,
+        login_id VARCHAR(100) UNIQUE NOT NULL,
+        password VARCHAR(255) NOT NULL,
+        actions JSON,
+        status ENUM('active', 'inactive', 'suspended') DEFAULT 'active',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (role_id) REFERENCES roles(id),
+        FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE SET NULL,
+        INDEX idx_login_id (login_id),
+        INDEX idx_department_id (department_id),
+        INDEX idx_status (status)
+      )`,
+
       `CREATE TABLE users (
         id INT PRIMARY KEY AUTO_INCREMENT,
         username VARCHAR(50) UNIQUE NOT NULL,
@@ -406,6 +465,36 @@ async function initDatabase() {
         INDEX idx_challan (inward_challan_id),
         INDEX idx_material (material_id),
         INDEX idx_quality_status (quality_status)
+      )`,
+
+      `CREATE TABLE IF NOT EXISTS sales_orders_management (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        root_card_id INT,
+        bom_id INT NOT NULL,
+        so_number VARCHAR(100) UNIQUE NOT NULL,
+        customer_id INT NOT NULL,
+        warehouse_id INT,
+        quantity DECIMAL(12, 4) NOT NULL,
+        unit_price DECIMAL(12, 2) NOT NULL DEFAULT 0,
+        tax_percent DECIMAL(5, 2) DEFAULT 18,
+        discount DECIMAL(12, 2) DEFAULT 0,
+        order_date DATE NOT NULL,
+        delivery_date DATE NOT NULL,
+        status ENUM('pending', 'in_progress', 'completed', 'cancelled') DEFAULT 'pending',
+        notes TEXT,
+        created_by INT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (root_card_id) REFERENCES root_cards(id) ON DELETE SET NULL,
+        FOREIGN KEY (bom_id) REFERENCES bill_of_materials(id) ON DELETE RESTRICT,
+        FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE RESTRICT,
+        FOREIGN KEY (warehouse_id) REFERENCES warehouses(id) ON DELETE SET NULL,
+        FOREIGN KEY (created_by) REFERENCES employees(id),
+        INDEX idx_root_card_id (root_card_id),
+        INDEX idx_bom_id (bom_id),
+        INDEX idx_customer_id (customer_id),
+        INDEX idx_warehouse_id (warehouse_id),
+        INDEX idx_status (status)
       )`
     ];
 

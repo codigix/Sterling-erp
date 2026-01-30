@@ -7,6 +7,7 @@ class ComprehensiveBOM {
       const {
         productName,
         itemCode,
+        customer,
         bomNumber,
         itemGroup,
         quantity,
@@ -24,11 +25,11 @@ class ComprehensiveBOM {
 
       const [result] = await conn.execute(
         `INSERT INTO bill_of_materials 
-        (product_name, item_code, bom_number, item_group, quantity, uom, revision, description, 
+        (product_name, item_code, customer, bom_number, item_group, quantity, uom, revision, description, 
          is_active, is_default, project_id, root_card_id, created_by, status, loss_percent)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-          productName, itemCode, bomNumber || null, itemGroup, quantity, uom, revision || 1, 
+          productName, itemCode, customer || null, bomNumber || null, itemGroup, quantity, uom, revision || 1, 
           description, isActive ? 1 : 0, isDefault ? 1 : 0, 
           projectId || null, rootCardId || null, createdBy, status || 'draft', lossPercent || 0
         ]
@@ -152,6 +153,17 @@ class ComprehensiveBOM {
     return rows[0];
   }
 
+  static async findLatestByItemCode(itemCode) {
+    const [rows] = await pool.execute(
+      `SELECT id FROM bill_of_materials 
+       WHERE item_code = ? 
+       ORDER BY CASE WHEN status = 'approved' THEN 1 WHEN status = 'active' THEN 2 ELSE 3 END, 
+       revision DESC LIMIT 1`,
+      [itemCode]
+    );
+    return rows[0];
+  }
+
   static async findByRootCardId(rootCardId) {
     const [rows] = await pool.execute(
       'SELECT id FROM bill_of_materials WHERE root_card_id = ? ORDER BY revision DESC LIMIT 1',
@@ -162,9 +174,9 @@ class ComprehensiveBOM {
 
   static async findAllByRootCardId(rootCardId) {
     const [rows] = await pool.execute(
-      `SELECT bom.*, CONCAT(u.first_name, ' ', u.last_name) as created_by_name 
+      `SELECT bom.*, u.username as created_by_name 
        FROM bill_of_materials bom
-       LEFT JOIN employees u ON bom.created_by = u.id
+       LEFT JOIN users u ON bom.created_by = u.id
        WHERE bom.root_card_id = ? 
        ORDER BY bom.revision DESC`,
       [rootCardId]
@@ -178,6 +190,7 @@ class ComprehensiveBOM {
       id: bom.id,
       productName: bom.product_name,
       itemCode: bom.item_code,
+      customer: bom.customer,
       bomNumber: bom.bom_number,
       itemGroup: bom.item_group,
       quantity: bom.quantity,
@@ -202,9 +215,9 @@ class ComprehensiveBOM {
     const conn = await pool.getConnection();
     try {
       const [rows] = await conn.execute(
-        `SELECT bom.*, CONCAT(u.first_name, ' ', u.last_name) as created_by_name 
+        `SELECT bom.*, u.username as created_by_name 
         FROM bill_of_materials bom
-        LEFT JOIN employees u ON bom.created_by = u.id
+        LEFT JOIN users u ON bom.created_by = u.id
         WHERE bom.id = ?`,
         [id]
       );
@@ -231,15 +244,48 @@ class ComprehensiveBOM {
 
       return {
         ...bom,
-        components: (components || []).map(c => ({
-          id: c.id,
-          bomId: c.bom_id,
-          componentCode: c.component_code,
-          quantity: c.quantity,
-          uom: c.uom,
-          rate: c.rate,
-          lossPercent: c.loss_percent,
-          notes: c.notes
+        components: await Promise.all((components || []).map(async c => {
+          const componentData = {
+            id: c.id,
+            bomId: c.bom_id,
+            componentCode: c.component_code,
+            quantity: c.quantity,
+            uom: c.uom,
+            rate: c.rate,
+            lossPercent: c.loss_percent,
+            notes: c.notes
+          };
+
+          // Check if this component has its own BOM (is a sub-assembly)
+          const subBOMRef = await this.findLatestByItemCode(c.component_code);
+          if (subBOMRef) {
+            const [subMaterials] = await conn.execute(
+              'SELECT * FROM bom_materials WHERE bom_id = ?',
+              [subBOMRef.id]
+            );
+            const [subOperations] = await conn.execute(
+              'SELECT * FROM bom_operations WHERE bom_id = ?',
+              [subBOMRef.id]
+            );
+
+            componentData.subAssemblyDetails = {
+              bomId: subBOMRef.id,
+              materials: (subMaterials || []).map(m => ({
+                itemCode: m.item_code,
+                itemName: m.item_name,
+                quantity: m.quantity,
+                uom: m.uom,
+                rate: m.rate
+              })),
+              operations: (subOperations || []).map(o => ({
+                operationName: o.operation_name,
+                workstation: o.workstation,
+                cost: o.cost
+              }))
+            };
+          }
+
+          return componentData;
         })),
         materials: (materials || []).map(m => ({
           id: m.id,
@@ -284,11 +330,34 @@ class ComprehensiveBOM {
     const conn = await pool.getConnection();
     try {
       const [rows] = await conn.execute(
-        `SELECT bom.*, CONCAT(u.first_name, ' ', u.last_name) as created_by_name 
+        `SELECT bom.*, u.username as created_by_name 
         FROM bill_of_materials bom
-        LEFT JOIN employees u ON bom.created_by = u.id
+        LEFT JOIN users u ON bom.created_by = u.id
         ORDER BY bom.created_at DESC`
       );
+      return (rows || []).map(row => this.transformBOMRow(row));
+    } finally {
+      conn.release();
+    }
+  }
+
+  static async getApproved(itemGroup = null) {
+    const conn = await pool.getConnection();
+    try {
+      let query = `SELECT bom.*, u.username as created_by_name 
+        FROM bill_of_materials bom
+        LEFT JOIN users u ON bom.created_by = u.id
+        WHERE bom.status = 'approved'`;
+      
+      const params = [];
+      if (itemGroup) {
+        query += ` AND bom.item_group = ?`;
+        params.push(itemGroup);
+      }
+      
+      query += ` ORDER BY bom.created_at DESC`;
+      
+      const [rows] = await conn.execute(query, params);
       return (rows || []).map(row => this.transformBOMRow(row));
     } finally {
       conn.release();
@@ -301,6 +370,7 @@ class ComprehensiveBOM {
       const {
         productName,
         itemCode,
+        customer,
         bomNumber,
         itemGroup,
         quantity,
@@ -317,13 +387,13 @@ class ComprehensiveBOM {
 
       await conn.execute(
         `UPDATE bill_of_materials 
-        SET product_name = ?, item_code = ?, bom_number = ?, item_group = ?, quantity = ?, 
+        SET product_name = ?, item_code = ?, customer = ?, bom_number = ?, item_group = ?, quantity = ?, 
             uom = ?, revision = ?, description = ?, is_active = ?, 
             is_default = ?, project_id = ?, root_card_id = ?,
             status = ?, loss_percent = ?
         WHERE id = ?`,
         [
-          productName, itemCode, bomNumber || null, itemGroup, quantity, uom, revision, 
+          productName, itemCode, customer || null, bomNumber || null, itemGroup, quantity, uom, revision, 
           description, isActive ? 1 : 0, isDefault ? 1 : 0, 
           projectId || null, rootCardId || null,
           status || 'draft', lossPercent || 0, id

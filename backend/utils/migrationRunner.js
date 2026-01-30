@@ -1272,6 +1272,85 @@ async function runMigrations() {
       console.error('Migration 053 failed:', err.message);
     }
 
+    try {
+      const { createSalesManagementTable } = require('../migrations/057_create_sales_orders_management.js');
+      await createSalesManagementTable();
+    } catch (err) {
+      console.error('Migration 057 failed:', err.message);
+    }
+
+    try {
+      const { createCustomersAndWarehouses } = require('../migrations/058_create_customers_and_warehouses.js');
+      await createCustomersAndWarehouses();
+    } catch (err) {
+      console.error('Migration 058 failed:', err.message);
+    }
+
+    try {
+      // Inline migration for updating sales_orders_management schema if needed
+      const [columns] = await connection.execute("SHOW COLUMNS FROM sales_orders_management");
+      const hasCustomerId = columns.some(col => col.Field === 'customer_id');
+      if (!hasCustomerId) {
+        console.log("Updating sales_orders_management schema via migration...");
+        await connection.execute("SET FOREIGN_KEY_CHECKS = 0");
+        await connection.execute("DROP TABLE IF EXISTS sales_orders_management");
+        await connection.execute(`
+          CREATE TABLE sales_orders_management (
+            id INT PRIMARY KEY AUTO_INCREMENT,
+            root_card_id INT,
+            bom_id INT NOT NULL,
+            so_number VARCHAR(100) UNIQUE NOT NULL,
+            customer_id INT NOT NULL,
+            warehouse_id INT,
+            quantity DECIMAL(12, 4) NOT NULL,
+            unit_price DECIMAL(12, 2) NOT NULL DEFAULT 0,
+            tax_percent DECIMAL(5, 2) DEFAULT 18,
+            discount DECIMAL(12, 2) DEFAULT 0,
+            order_date DATE NOT NULL,
+            delivery_date DATE NOT NULL,
+            status ENUM('pending', 'in_progress', 'completed', 'cancelled') DEFAULT 'pending',
+            notes TEXT,
+            created_by INT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            FOREIGN KEY (root_card_id) REFERENCES root_cards(id) ON DELETE SET NULL,
+            FOREIGN KEY (bom_id) REFERENCES bill_of_materials(id) ON DELETE RESTRICT,
+            FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE RESTRICT,
+            FOREIGN KEY (warehouse_id) REFERENCES warehouses(id) ON DELETE SET NULL,
+            FOREIGN KEY (created_by) REFERENCES employees(id),
+            INDEX idx_root_card_id (root_card_id),
+            INDEX idx_bom_id (bom_id),
+            INDEX idx_customer_id (customer_id),
+            INDEX idx_warehouse_id (warehouse_id),
+            INDEX idx_status (status)
+          )
+        `);
+        await connection.execute("SET FOREIGN_KEY_CHECKS = 1");
+        console.log("✅ sales_orders_management schema updated");
+      }
+
+      // Check for financial fields
+      const hasUnitPrice = columns.some(col => col.Field === 'unit_price');
+      if (!hasUnitPrice) {
+        console.log("Adding financial fields to sales_orders_management...");
+        await connection.execute("ALTER TABLE sales_orders_management ADD COLUMN unit_price DECIMAL(12, 2) NOT NULL DEFAULT 0 AFTER quantity");
+        await connection.execute("ALTER TABLE sales_orders_management ADD COLUMN tax_percent DECIMAL(5, 2) DEFAULT 18 AFTER unit_price");
+        await connection.execute("ALTER TABLE sales_orders_management ADD COLUMN discount DECIMAL(12, 2) DEFAULT 0 AFTER tax_percent");
+        console.log("✅ Financial fields added to sales_orders_management");
+      }
+
+      const hasRootCardId = columns.some(col => col.Field === 'root_card_id');
+      if (!hasRootCardId) {
+        console.log("Adding root_card_id to sales_orders_management...");
+        await connection.execute("ALTER TABLE sales_orders_management ADD COLUMN root_card_id INT AFTER id");
+        await connection.execute("ALTER TABLE sales_orders_management ADD FOREIGN KEY (root_card_id) REFERENCES root_cards(id) ON DELETE SET NULL");
+        await connection.execute("ALTER TABLE sales_orders_management ADD INDEX idx_root_card_id (root_card_id)");
+        console.log("✅ root_card_id added to sales_orders_management");
+      }
+    } catch (err) {
+      console.error('Migration for sales_orders_management update failed:', err.message);
+    }
+
     console.log('\n✅ All migrations completed successfully!');
   } catch (error) {
     console.error('❌ Migration failed:', error.message);

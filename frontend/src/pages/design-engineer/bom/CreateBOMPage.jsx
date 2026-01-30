@@ -19,6 +19,7 @@ const initialBOMState = {
   productInfo: {
     productName: "",
     itemCode: "",
+    customer: "",
     bomNumber: "",
     itemGroup: "",
     quantity: 1,
@@ -348,6 +349,7 @@ const CreateBOMPage = () => {
         productInfo: {
           productName: bom.productName,
           itemCode: bom.itemCode,
+          customer: bom.customer || "",
           bomNumber: bom.bomNumber,
           itemGroup: bom.itemGroup,
           quantity: bom.quantity,
@@ -410,6 +412,7 @@ const CreateBOMPage = () => {
       let newProductInfo = { 
         ...initialBOMState.productInfo,
         productName: "",
+        customer: rootCard.steps?.step1_clientPO?.clientName || rootCard.customer || "",
         rootCardId: rootCard.id,
         projectId: rootCard.project_id || null,
         description: rootCard.notes || ""
@@ -919,6 +922,25 @@ const CreateBOMPage = () => {
                   placeholder="Select or type item code"
                   disabled={loadingMaterials}
                   allowCustom={true}
+                />
+              </div>
+              <div>
+                <label htmlFor="customer" className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Customer
+                </label>
+                <input
+                  type="text"
+                  id="customer"
+                  name="customer"
+                  value={bomData.productInfo.customer || ""}
+                  onChange={(e) =>
+                    setBomData({
+                      ...bomData,
+                      productInfo: { ...bomData.productInfo, customer: e.target.value },
+                    })
+                  }
+                  placeholder="Customer Name"
+                  className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs"
                 />
               </div>
               <div>

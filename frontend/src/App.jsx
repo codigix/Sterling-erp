@@ -32,6 +32,7 @@ import SystemSettings from "./pages/admin/SystemSettings";
 import RoleManagement from "./pages/admin/RoleManagement";
 import EmployeeManagement from "./pages/admin/EmployeeManagement";
 import TaskAssignmentPage from "./pages/admin/TaskAssignmentPage";
+import SalesOrderPage from "./pages/admin/SalesOrderPage";
 
 // Sales Pages
 import RootCardDashboard from "./pages/sales/RootCardDashboard";
@@ -143,6 +144,7 @@ function App() {
               <Route path="roles" element={<RoleManagement />} />
               <Route path="employee-management" element={<EmployeeManagement />} />
               <Route path="task-assignment" element={<TaskAssignmentPage />} />
+              <Route path="sales-order" element={<SalesOrderPage />} />
               <Route path="analytics-reports" element={<AnalyticsReportsPage />} />
               <Route path="reports" element={<ReportsAnalytics />} />
               <Route path="audit-logs" element={<AuditLogs />} />
