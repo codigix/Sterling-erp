@@ -6,9 +6,10 @@ class Specification {
     try {
       const [result] = await connection.execute(
         `INSERT INTO specifications (
-          title, description, version, file_path, file_name, uploaded_by
-        ) VALUES (?, ?, ?, ?, ?, ?)`,
+          root_card_id, title, description, version, file_path, file_name, uploaded_by
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [
+          data.rootCardId || null,
           data.title,
           data.description,
           data.version,
@@ -39,6 +40,11 @@ class Specification {
         params.push(`%${filters.search}%`);
       }
 
+      if (filters.rootCardId) {
+        query += ` AND s.root_card_id = ?`;
+        params.push(filters.rootCardId);
+      }
+
       query += ` ORDER BY s.created_at DESC`;
 
       const [rows] = await connection.execute(query, params);
@@ -65,6 +71,49 @@ class Specification {
     const connection = await pool.getConnection();
     try {
       await connection.execute('DELETE FROM specifications WHERE id = ?', [id]);
+    } finally {
+      connection.release();
+    }
+  }
+
+  static async update(id, data) {
+    const connection = await pool.getConnection();
+    try {
+      const sets = [];
+      const params = [];
+
+      if (data.title) {
+        sets.push('title = ?');
+        params.push(data.title);
+      }
+      if (data.description !== undefined) {
+        sets.push('description = ?');
+        params.push(data.description);
+      }
+      if (data.version) {
+        sets.push('version = ?');
+        params.push(data.version);
+      }
+      if (data.filePath) {
+        sets.push('file_path = ?');
+        params.push(data.filePath);
+      }
+      if (data.fileName) {
+        sets.push('file_name = ?');
+        params.push(data.fileName);
+      }
+      if (data.rootCardId) {
+        sets.push('root_card_id = ?');
+        params.push(data.rootCardId);
+      }
+
+      if (sets.length === 0) return;
+
+      params.push(id);
+      await connection.execute(
+        `UPDATE specifications SET ${sets.join(', ')} WHERE id = ?`,
+        params
+      );
     } finally {
       connection.release();
     }

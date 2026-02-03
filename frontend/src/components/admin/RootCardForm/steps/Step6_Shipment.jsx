@@ -133,6 +133,76 @@ export default function Step6_Shipment({ readOnly = false }) {
               />
             </FormRow>
           </div>
+
+          {/* Shipping Logistics */}
+          <div className="border-t border-slate-200 pt-3">
+            <h5 className="text-sm font-semibold text-slate-900 mb-2 text-left">Shipping Details</h5>
+            <FormRow cols={2}>
+              <Input
+                label="Shipment Method"
+                value={formData.shipment?.shipmentMethod || ""}
+                onChange={(e) => setNestedField("shipment", "shipmentMethod", e.target.value)}
+                placeholder="e.g., Lorry, Courier, Air"
+                disabled={readOnly}
+              />
+              <Input
+                label="Carrier Name"
+                value={formData.shipment?.carrierName || ""}
+                onChange={(e) => setNestedField("shipment", "carrierName", e.target.value)}
+                placeholder="e.g., BlueDart, TCI"
+                disabled={readOnly}
+              />
+            </FormRow>
+            <FormRow cols={2}>
+              <Input
+                label="Tracking Number"
+                value={formData.shipment?.trackingNumber || ""}
+                onChange={(e) => setNestedField("shipment", "trackingNumber", e.target.value)}
+                placeholder="Enter tracking ID"
+                disabled={readOnly}
+              />
+              <Input
+                label="Estimated Delivery Date"
+                type="date"
+                value={formData.shipment?.estimatedDeliveryDate || ""}
+                onChange={(e) => setNestedField("shipment", "estimatedDeliveryDate", e.target.value)}
+                disabled={readOnly}
+              />
+            </FormRow>
+            <FormRow cols={2}>
+              <Input
+                label="Shipment Cost (₹)"
+                type="number"
+                value={formData.shipment?.shipmentCost || ""}
+                onChange={(e) => setNestedField("shipment", "shipmentCost", e.target.value)}
+                placeholder="0.00"
+                disabled={readOnly}
+              />
+              <div className="hidden md:block"></div>
+            </FormRow>
+            <div className="mt-3">
+              <label className="block text-sm font-medium text-slate-900 text-left mb-2">Shipping Address</label>
+              <textarea
+                value={formData.shipment?.shippingAddress || ""}
+                onChange={(e) => setNestedField("shipment", "shippingAddress", e.target.value)}
+                disabled={readOnly}
+                rows="3"
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter destination address"
+              />
+            </div>
+            <div className="mt-3">
+              <label className="block text-sm font-medium text-slate-900 text-left mb-2">Shipping Notes</label>
+              <textarea
+                value={formData.shipment?.notes || ""}
+                onChange={(e) => setNestedField("shipment", "notes", e.target.value)}
+                disabled={readOnly}
+                rows="2"
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Any special notes for shipment"
+              />
+            </div>
+          </div>
         </div>
       </FormSection>
     </div>

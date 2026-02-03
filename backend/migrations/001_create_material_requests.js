@@ -17,7 +17,7 @@ async function createMaterialRequestsTable() {
         unit VARCHAR(50) DEFAULT 'Nos',
         specification TEXT,
         required_date DATE,
-        priority ENUM('low', 'medium', 'high', 'urgent') DEFAULT 'medium',
+        priority ENUM('low', 'medium', 'high', 'critical', 'urgent') DEFAULT 'medium',
         status ENUM('draft', 'submitted', 'approved', 'ordered', 'received', 'rejected', 'cancelled') DEFAULT 'draft',
         created_by INT,
         remarks TEXT,

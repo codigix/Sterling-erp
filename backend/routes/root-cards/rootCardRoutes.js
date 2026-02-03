@@ -2,6 +2,7 @@ const express = require('express');
 const authMiddleware = require('../../middleware/authMiddleware');
 const roleMiddleware = require('../../middleware/roleMiddleware');
 const rootCardController = require('../../controllers/root-cards/rootCardController');
+const productionController = require('../../controllers/production/productionController');
 const designEngineeringController = require('../../controllers/root-cards/designEngineeringController');
 const draftController = require('../../controllers/root-cards/draftController');
 const employeeController = require('../../controllers/admin/employeeController');
@@ -34,6 +35,7 @@ router.put('/drafts/:id', draftController.updateDraft);
 router.delete('/drafts/:id', draftController.deleteDraft);
 
 router.post('/:rootCardId/design-details', designEngineeringController.createOrUpdate);
+router.post('/:rootCardId/workflow-tasks', roleMiddleware('Admin', 'Management', 'Design Engineer'), productionController.createWorkflowBasedTasks);
 router.post('/:rootCardId/send-to-inventory', rootCardController.sendToInventory);
 router.get('/:rootCardId/design-details', designEngineeringController.getDesignEngineering);
 

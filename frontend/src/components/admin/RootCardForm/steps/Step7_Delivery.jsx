@@ -48,6 +48,68 @@ export default function Step7_Delivery({ readOnly = false }) {
                 disabled={readOnly}
               />
             </FormRow>
+            <FormRow cols={2}>
+              <Input
+                label="Customer Contact Person"
+                value={formData.delivery?.customerContact || ""}
+                onChange={(e) =>
+                  setNestedField("delivery", "customerContact", e.target.value)
+                }
+                placeholder="Enter contact person name"
+                disabled={readOnly}
+              />
+              <div className="hidden md:block"></div>
+            </FormRow>
+          </div>
+
+          {/* Delivery Details */}
+          <div className="border-t border-slate-200 pt-3">
+            <h5 className="text-sm font-semibold text-slate-900 mb-2 text-left">Delivery Logistics</h5>
+            <FormRow cols={2}>
+              <Input
+                label="Delivery Date"
+                type="date"
+                value={formData.delivery?.deliveryDate || ""}
+                onChange={(e) => setNestedField("delivery", "deliveryDate", e.target.value)}
+                disabled={readOnly}
+              />
+              <Input
+                label="POD / LR Number"
+                value={formData.delivery?.podNumber || ""}
+                onChange={(e) => setNestedField("delivery", "podNumber", e.target.value)}
+                placeholder="Proof of delivery number"
+                disabled={readOnly}
+              />
+            </FormRow>
+            <FormRow cols={2}>
+              <Input
+                label="Delivered Quantity"
+                type="number"
+                value={formData.delivery?.deliveredQuantity || ""}
+                onChange={(e) => setNestedField("delivery", "deliveredQuantity", e.target.value)}
+                placeholder="Total units delivered"
+                disabled={readOnly}
+              />
+              <Input
+                label="Delivery Cost (₹)"
+                type="number"
+                value={formData.delivery?.deliveryCost || ""}
+                onChange={(e) => setNestedField("delivery", "deliveryCost", e.target.value)}
+                placeholder="0.00"
+                disabled={readOnly}
+              />
+            </FormRow>
+            <div className="mt-3">
+              <label className="block text-sm font-medium text-slate-900 text-left mb-2">Delivery Notes</label>
+              <textarea
+                value={formData.delivery?.deliveryNotes || ""}
+                onChange={(e) => setNestedField("delivery", "deliveryNotes", e.target.value)}
+                disabled={readOnly}
+                rows="2"
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Any special notes for delivery"
+              />
+            </div>
           </div>
 
           {/* Installation Status */}

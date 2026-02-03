@@ -97,6 +97,7 @@ const AccordionSection = memo(({ title, section, children, itemCount = 0, expand
 const CreateBOMPage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const taskId = searchParams.get("taskId");
   const [saving, setSaving] = useState(false);
   const [materials, setMaterials] = useState([]);
   const [requirementMaterials, setRequirementMaterials] = useState([]);
@@ -824,6 +825,17 @@ const CreateBOMPage = () => {
         if (result.isConfirmed) {
           fetchBOMData(response.data.bomId);
           return;
+        }
+      }
+
+      if (taskId) {
+        try {
+          await axios.patch(`/department/portal/tasks/${taskId}`, {
+            status: "completed",
+          });
+          console.log(`Task ${taskId} marked as completed`);
+        } catch (taskErr) {
+          console.error("Error marking task as completed:", taskErr);
         }
       }
 

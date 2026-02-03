@@ -103,35 +103,45 @@ exports.getGRNInspections = async (req, res) => {
 
 exports.getStageQC = async (req, res) => {
   try {
-    const stageQC = [
-      {
-        id: 'STQC-001',
-        stage: 'In-house Assembly Stage 1',
-        projectId: 'PROJ-001',
-        status: 'pending',
-        dueDate: '2025-02-05'
-      },
-      {
-        id: 'STQC-002',
-        stage: 'Outsourced - Painting',
-        projectId: 'PROJ-002',
-        status: 'pending',
-        dueDate: '2025-02-08'
-      },
-      {
-        id: 'STQC-003',
-        stage: 'Testing & Assembly',
-        projectId: 'PROJ-001',
-        status: 'completed',
-        dueDate: '2025-01-20'
-      }
-    ];
+    const conn = await pool.getConnection();
+    // Fetch production stages that might need QC (usually when completed or in progress)
+    // and join with their plan and project details
+    const [rows] = await conn.query(`
+        SELECT 
+            ps.id as stage_id, 
+            ps.stage_name,
+            ps.status as stage_status,
+            ps.planned_end_date,
+            pp.plan_name,
+            so.id as sales_order_id,
+            p.project_name,
+            qi.id as inspection_id,
+            qi.status as inspection_status
+        FROM production_stages ps
+        JOIN production_plans pp ON ps.production_plan_id = pp.id
+        LEFT JOIN sales_orders so ON pp.sales_order_id = so.id
+        LEFT JOIN projects p ON pp.project_id = p.id
+        LEFT JOIN qc_inspections qi ON qi.production_stage_id = ps.id AND qi.inspection_type = 'stage'
+        WHERE ps.status IN ('in_progress', 'completed')
+        ORDER BY ps.updated_at DESC
+    `);
+    conn.release();
+
+    const stageQC = rows.map(row => ({
+      id: `STQC-${row.stage_id.toString().padStart(3, '0')}`,
+      dbId: row.stage_id,
+      stage: row.stage_name,
+      project: row.project_name || `SO #${row.sales_order_id}`,
+      status: row.inspection_status || 'pending',
+      dueDate: row.planned_end_date,
+      inspectionId: row.inspection_id
+    }));
 
     const stats = {
       totalStageQC: stageQC.length,
       pendingStageQC: stageQC.filter(s => s.status === 'pending').length,
-      inProgressStageQC: stageQC.filter(s => s.status === 'in-progress').length,
-      completedStageQC: stageQC.filter(s => s.status === 'completed').length
+      inProgressStageQC: stageQC.filter(s => s.status === 'in_progress').length,
+      completedStageQC: stageQC.filter(s => s.status === 'passed' || s.status === 'completed').length
     };
 
     res.json({ stageQC, stats });

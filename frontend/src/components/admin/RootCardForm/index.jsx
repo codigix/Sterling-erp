@@ -136,14 +136,15 @@ function RootCardFormContent({ onSubmit, onCancel, mode = 'create', initialData 
         const qcData = qcResponse.data.data;
         
         // Format dates in inspections
-        if (qcData.inspections && Array.isArray(qcData.inspections)) {
-          qcData.inspections = qcData.inspections.map(insp => ({
+        if (qcData.qualityCheck?.inspections && Array.isArray(qcData.qualityCheck.inspections)) {
+          qcData.qualityCheck.inspections = qcData.qualityCheck.inspections.map(insp => ({
             ...insp,
             date: formatDateForInput(insp.date)
           }));
         }
         
-        updateField('qualityCheck', qcData);
+        // Set the qualityCheck sub-object directly to match the form structure
+        updateField('qualityCheck', qcData.qualityCheck || {});
         
         // Load quality and economics fields from Step 5
         if (qcData.qualityCompliance) updateField('qualityCompliance', qcData.qualityCompliance);
@@ -159,19 +160,28 @@ function RootCardFormContent({ onSubmit, onCancel, mode = 'create', initialData 
 
       if (shipmentResponse?.data?.data) {
         const shipmentData = shipmentResponse.data.data;
+        
+        // Format date in shipment
+        if (shipmentData.shipment?.estimatedDeliveryDate) {
+          shipmentData.shipment.estimatedDeliveryDate = formatDateForInput(shipmentData.shipment.estimatedDeliveryDate);
+        }
+        
         updateField('shipment', shipmentData.shipment || {});
         if (shipmentData.deliveryTerms) updateField('deliveryTerms', shipmentData.deliveryTerms);
       }
 
       if (deliveryResponse?.data?.data) {
         const deliveryData = deliveryResponse.data.data;
-        // Format date for delivery
-        if (deliveryData.actualDeliveryDate) {
-          deliveryData.actualDeliveryDate = formatDateForInput(deliveryData.actualDeliveryDate);
+        
+        // Format dates in delivery
+        if (deliveryData.delivery?.actualDeliveryDate) {
+          deliveryData.delivery.actualDeliveryDate = formatDateForInput(deliveryData.delivery.actualDeliveryDate);
         }
-        updateField('delivery', deliveryData);
-        updateField('deliveryAssignedTo', deliveryData.assignedTo || '');
-        updateField('customerContact', deliveryData.customerContact || '');
+        if (deliveryData.delivery?.deliveryDate) {
+          deliveryData.delivery.deliveryDate = formatDateForInput(deliveryData.delivery.deliveryDate);
+        }
+        
+        updateField('delivery', deliveryData.delivery || {});
         if (deliveryData.deliveryTerms) updateField('deliveryTerms', deliveryData.deliveryTerms);
         if (deliveryData.warrantySupport) updateField('warrantySupport', deliveryData.warrantySupport);
         if (deliveryData.projectRequirements) updateField('projectRequirements', deliveryData.projectRequirements);

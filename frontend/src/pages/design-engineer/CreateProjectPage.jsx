@@ -173,6 +173,28 @@ const CreateProjectPage = () => {
             rootCard.end_date ||
             "",
         }));
+
+        // Aggregate documents from Sales Order and Client PO
+        const projectDocs = Array.isArray(rootCard.documents) ? rootCard.documents : [];
+        const poAttachments = Array.isArray(rootCard.steps?.step1_clientPO?.attachments) 
+          ? rootCard.steps.step1_clientPO.attachments 
+          : [];
+        
+        const allDocuments = [...projectDocs, ...poAttachments];
+        const uniqueDocuments = allDocuments.filter((doc, index, self) => 
+          index === self.findIndex((d) => (
+            (d.name || d) === (doc.name || doc)
+          ))
+        );
+
+        setUploadedFiles({
+          references: uniqueDocuments.map(doc => ({
+            name: doc.name || doc,
+            size: doc.size,
+            type: doc.type,
+            isExisting: true
+          }))
+        });
       } else {
         setProjectData((prev) => ({
           ...prev,

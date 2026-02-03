@@ -55,12 +55,16 @@ class RootCardStep {
     return rows[0] ? this.formatRow(rows[0]) : null;
   }
 
-  static async findByRootCardId(rootCardId) {
+  static async findBySalesOrderId(salesOrderId) {
     const [rows] = await pool.execute(
       `SELECT * FROM sales_order_steps WHERE sales_order_id = ? ORDER BY step_id ASC`,
-      [rootCardId]
+      [salesOrderId]
     );
     return rows.map(this.formatRow);
+  }
+
+  static async findByRootCardId(rootCardId) {
+    return this.findBySalesOrderId(rootCardId);
   }
 
   static async findByStepKey(rootCardId, stepKey) {

@@ -51,7 +51,7 @@ async function createProductionStagesTable() {
         end_date DATETIME,
         estimated_hours INT,
         actual_hours INT,
-        priority ENUM('low', 'medium', 'high', 'urgent') DEFAULT 'medium',
+        priority ENUM('low', 'medium', 'high', 'critical', 'urgent') DEFAULT 'medium',
         blocked_reason TEXT,
         assigned_manager_id INT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

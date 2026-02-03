@@ -1,9 +1,26 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Search, Filter, Eye, BarChart3, Trash2, Play } from 'lucide-react';
+import { Plus, Search, Filter, Eye, BarChart3, Trash2, Play, IndianRupee } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import axios from '../../utils/api';
-import Card from '../../components/ui/Card';
+import Card, { CardContent } from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
+import DataTable from '../../components/ui/DataTable/DataTable';
+
+const formatIndianCurrency = (value) => {
+  const num = parseInt(value);
+  if (isNaN(num)) return '0';
+  if (num < 1000) return num.toString();
+  if (num < 100000) {
+    const k = (num / 1000).toFixed(num % 1000 === 0 ? 0 : 1);
+    return `${k}K`;
+  }
+  if (num < 10000000) {
+    const lc = (num / 100000).toFixed(num % 100000 === 0 ? 0 : 1);
+    return `${lc}Lc`;
+  }
+  const cr = (num / 10000000).toFixed(num % 10000000 === 0 ? 0 : 1);
+  return `${cr}Cr`;
+};
 
 const RootCardBuilderPage = () => {
   const navigate = useNavigate();
@@ -140,8 +157,98 @@ const RootCardBuilderPage = () => {
     navigate(`/department/production/root-cards/${cardId}`);
   };
 
+  const columns = [
+    {
+      key: 'project_code',
+      label: 'Code',
+      sortable: true,
+      render: (value, row) => (
+        <span className="font-semibold text-slate-900 dark:text-white">
+          {value || row.steps?.step1_clientPO?.projectCode || row.code || '-'}
+        </span>
+      ),
+    },
+    {
+      key: 'po_number',
+      label: 'PO No & Project',
+      sortable: true,
+      render: (value, row) => (
+        <div className="flex flex-col gap-0.5">
+          <span className="font-semibold text-slate-900 dark:text-white">
+            {value || row.steps?.step1_clientPO?.poNumber || '-'}
+          </span>
+          <span className="text-xs text-slate-500 dark:text-slate-400">
+            {row.project_name || row.steps?.step1_clientPO?.projectName || '-'}
+          </span>
+        </div>
+      ),
+    },
+    {
+      key: 'customer',
+      label: 'Customer',
+      sortable: true,
+      render: (value, row) => (
+        <span className="text-slate-600 dark:text-slate-400">
+          {value || row.steps?.step1_clientPO?.clientName || row.rootCardDetails?.customer || row.customer_name || '-'}
+        </span>
+      ),
+    },
+    {
+      key: 'assignedSteps',
+      label: 'Assigned Steps',
+      sortable: false,
+      render: (value, row) => (
+        <div className="flex flex-wrap gap-1">
+          {value && value.length > 0 ? (
+            value.map((step, index) => (
+              <Badge 
+                key={`${row.id}-step-${step.stepId || index}`}
+                className={`text-[10px] px-1.5 py-0.5 rounded ${getStepColor(step.stepId)}`}
+              >
+                {getStepLabel(step.stepId)}
+              </Badge>
+            ))
+          ) : (
+            <span className="text-slate-400">-</span>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'total',
+      label: 'Amount',
+      sortable: true,
+      render: (value, row) => (
+        <div className="flex items-center gap-1 text-slate-900 dark:text-white font-medium">
+          <IndianRupee size={12} className="text-green-600 dark:text-green-400" />
+          <span>{formatIndianCurrency(value || row.rootCardDetails?.total)}</span>
+        </div>
+      ),
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      sortable: true,
+      render: (value) => (
+        <Badge className={`px-2 py-1 rounded-full text-[10px] font-bold ${getStatusColor(value)}`}>
+          {getStatusLabel(value)}
+        </Badge>
+      ),
+    },
+    {
+      key: 'priority',
+      label: 'Priority',
+      sortable: true,
+      render: (value) => (
+        <span className={`text-[10px] font-bold ${getPriorityColor(value)}`}>
+          {value ? value.toUpperCase() : '-'}
+        </span>
+      ),
+    },
+  ];
+
   return (
-    <div className="space-y-8 pb-8">
+    <div className="space-y-6 pb-8">
       {error && (
         <div className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-4 text-sm text-red-700 dark:text-red-300">
           {error}
@@ -158,75 +265,71 @@ const RootCardBuilderPage = () => {
         <div>
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Overview</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="p-6 hover:shadow-lg transition-shadow">
+            <Card shadow="sm" className="p-6 hover:shadow-md transition-shadow">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-2">Total Root Cards</p>
-                  <p className="text-4xl font-bold text-slate-900 dark:text-white">{stats.totalRootCards || 0}</p>
+                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Total Root Cards</p>
+                  <p className="text-3xl font-bold text-slate-900 dark:text-white">{stats.totalRootCards || 0}</p>
                 </div>
-                <BarChart3 size={40} className="text-blue-500 opacity-30 flex-shrink-0 ml-4" />
+                <BarChart3 size={32} className="text-blue-500 opacity-20 flex-shrink-0" />
               </div>
             </Card>
-            <Card className="p-6 hover:shadow-lg transition-shadow">
+            <Card shadow="sm" className="p-6 hover:shadow-md transition-shadow">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-2">In Progress</p>
-                  <p className="text-4xl font-bold text-purple-600 dark:text-purple-400">{stats.inProgressRootCards || 0}</p>
+                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">In Progress</p>
+                  <p className="text-3xl font-bold text-purple-600 dark:text-purple-400">{stats.inProgressRootCards || 0}</p>
                 </div>
-                <div className="h-14 w-14 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex-shrink-0 ml-4"></div>
+                <div className="h-10 w-10 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex-shrink-0"></div>
               </div>
             </Card>
-            <Card className="p-6 hover:shadow-lg transition-shadow">
+            <Card shadow="sm" className="p-6 hover:shadow-md transition-shadow">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-2">Planning</p>
-                  <p className="text-4xl font-bold text-orange-600 dark:text-orange-400">{stats.planningRootCards || 0}</p>
+                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Planning</p>
+                  <p className="text-3xl font-bold text-orange-600 dark:text-orange-400">{stats.planningRootCards || 0}</p>
                 </div>
-                <div className="h-14 w-14 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex-shrink-0 ml-4"></div>
+                <div className="h-10 w-10 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex-shrink-0"></div>
               </div>
             </Card>
-            <Card className="p-6 hover:shadow-lg transition-shadow">
+            <Card shadow="sm" className="p-6 hover:shadow-md transition-shadow">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-2">Completed</p>
-                  <p className="text-4xl font-bold text-green-600 dark:text-green-400">{stats.completedRootCards || 0}</p>
+                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Completed</p>
+                  <p className="text-3xl font-bold text-green-600 dark:text-green-400">{stats.completedRootCards || 0}</p>
                 </div>
-                <div className="h-14 w-14 rounded-lg bg-green-100 dark:bg-green-900/30 flex-shrink-0 ml-4"></div>
+                <div className="h-10 w-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex-shrink-0"></div>
               </div>
             </Card>
           </div>
         </div>
       )}
 
-      <Card className="p-8">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+      <Card shadow="md" padding="none" className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
+        <div className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Root Cards</h2>
-            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Manage and track all production root cards</p>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Root Cards</h2>
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">Manage and track all production root cards</p>
           </div>
-          <button className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors whitespace-nowrap">
-            <Plus size={20} />
-            Create Root Card
-          </button>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 mb-8">
+        <div className="px-6 pb-6 flex flex-col sm:flex-row gap-3">
           <div className="flex-1 relative">
-            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               placeholder="Search by title, code, or customer..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-10 pr-4 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          <div className="flex items-center gap-2 px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700">
-            <Filter size={18} className="text-slate-600 dark:text-slate-400" />
+          <div className="flex items-center gap-2 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700">
+            <Filter size={16} className="text-slate-600 dark:text-slate-400" />
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="flex-1 bg-transparent text-slate-900 dark:text-white outline-none cursor-pointer"
+              className="bg-transparent text-sm text-slate-900 dark:text-white outline-none cursor-pointer"
             >
               <option value="all">All Status</option>
               <option value="draft">Draft</option>
@@ -239,124 +342,17 @@ const RootCardBuilderPage = () => {
           </div>
         </div>
 
-        {loading ? (
-          <div className="text-center py-16">
-            <div className="inline-block animate-spin rounded-full h-10 w-10 border-3 border-blue-200 border-b-blue-600"></div>
-            <p className="mt-4 text-slate-600 dark:text-slate-400">Loading root cards...</p>
-          </div>
-        ) : rootCards.length === 0 ? (
-          <div className="text-center py-16">
-            <p className="text-lg text-slate-500 dark:text-slate-400">No root cards found</p>
-            <p className="text-sm text-slate-500 dark:text-slate-500 mt-1">Create a new root card to get started</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto -mx-8 px-8">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b-2 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-900 dark:text-white">Code</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-900 dark:text-white">Title</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-900 dark:text-white">Project</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-900 dark:text-white">Customer</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-900 dark:text-white">PO Number</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-900 dark:text-white">Assigned Steps</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-900 dark:text-white">Amount</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-900 dark:text-white">Status</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-900 dark:text-white">Priority</th>
-                  <th className="px-6 py-4 text-center text-sm font-semibold text-slate-900 dark:text-white">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rootCards.map((card) => {
-                  const step1 = card.steps?.step1_clientPO || {};
-                  const productDetails = step1.productDetails || {};
-                  
-                  return (
-                    <tr key={card.id} className="border-b border-slate-200 dark:border-slate-700 hover:bg-blue-50/50 dark:hover:bg-slate-700/30 transition-colors group">
-                      <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">
-                        {step1.projectCode || card.code || `-`}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-900 dark:text-white font-medium">
-                        {productDetails.itemName || card.title || `-`}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
-                        {step1.projectName || card.projectDetails?.code || card.project_code || `-`}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
-                        {step1.clientName || card.rootCardDetails?.customer || card.customer_name || `-`}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
-                        {step1.poNumber || card.rootCardDetails?.poNumber || `-`}
-                      </td>
-                    <td className="px-6 py-4 text-sm">
-                      <div className="flex flex-wrap gap-1">
-                        {card.assignedSteps && card.assignedSteps.length > 0 ? (
-                          card.assignedSteps.map((step, index) => (
-                            <Badge 
-                              key={`${card.id}-step-${step.stepId || index}`}
-                              className={`inline-block text-xs font-semibold px-2 py-1 rounded ${getStepColor(step.stepId)}`}
-                            >
-                              {getStepLabel(step.stepId)}
-                            </Badge>
-                          ))
-                        ) : (
-                          <span className="text-slate-400">-</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
-                      {card.rootCardDetails?.total ? `${card.rootCardDetails?.currency || 'INR'} ${card.rootCardDetails?.total}` : `-`}
-                    </td>
-                    <td className="px-6 py-4">
-                      <Badge className={`inline-block text-xs font-semibold px-3 py-1.5 rounded-full ${getStatusColor(card.status)}`}>
-                        {getStatusLabel(card.status)}
-                      </Badge>
-                    </td>
-                    <td className={`px-6 py-4 text-sm font-semibold ${getPriorityColor(card.priority)}`}>
-                      {card.priority ? card.priority.toUpperCase() : `-`}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => handleViewDetails(card.id)}
-                          disabled={actionLoading === card.id}
-                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400 transition-colors text-sm font-medium disabled:opacity-50"
-                        >
-                          <Eye size={16} />
-                          View
-                        </button>
-                        {card.status === 'planning' && (
-                          <button
-                            onClick={(e) => handleStartProduction(e, card.id)}
-                            disabled={actionLoading === card.id}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30 text-green-700 dark:text-green-400 transition-colors text-sm font-medium disabled:opacity-50"
-                          >
-                            <Play size={14} />
-                            Start
-                          </button>
-                        )}
-                        {card.status === 'in_progress' && (
-                          <span className="inline-flex items-center gap-1 px-3 py-1.5 text-amber-700 dark:text-amber-400 text-sm font-medium">
-                            Running...
-                          </span>
-                        )}
-                        <button
-                          onClick={(e) => handleDeleteCard(e, card.id)}
-                          disabled={actionLoading === card.id}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 transition-colors text-sm font-medium disabled:opacity-50"
-                        >
-                          <Trash2 size={14} />
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <CardContent className="p-0 border-t border-slate-200 dark:border-slate-700">
+          <DataTable
+            columns={columns}
+            data={rootCards}
+            loading={loading}
+            emptyMessage="No root cards found"
+            sortable={true}
+            striped={true}
+            hover={true}
+          />
+        </CardContent>
       </Card>
     </div>
   );

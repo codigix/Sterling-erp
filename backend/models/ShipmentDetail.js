@@ -57,7 +57,14 @@ class ShipmentDetail {
       marking: 'shipment.marking',
       dismantling: 'shipment.dismantling',
       packing: 'shipment.packing',
-      dispatch: 'shipment.dispatch'
+      dispatch: 'shipment.dispatch',
+      shipmentMethod: 'shipment.shipmentMethod',
+      carrierName: 'shipment.carrierName',
+      trackingNumber: 'shipment.trackingNumber',
+      estimatedDeliveryDate: 'shipment.estimatedDeliveryDate',
+      shippingAddress: 'shipment.shippingAddress',
+      shipmentCost: 'shipment.shipmentCost',
+      notes: 'shipment.notes'
     });
 
     const [result] = await pool.execute(
@@ -102,7 +109,14 @@ class ShipmentDetail {
       marking: 'shipment.marking',
       dismantling: 'shipment.dismantling',
       packing: 'shipment.packing',
-      dispatch: 'shipment.dispatch'
+      dispatch: 'shipment.dispatch',
+      shipmentMethod: 'shipment.shipmentMethod',
+      carrierName: 'shipment.carrierName',
+      trackingNumber: 'shipment.trackingNumber',
+      estimatedDeliveryDate: 'shipment.estimatedDeliveryDate',
+      shippingAddress: 'shipment.shippingAddress',
+      shipmentCost: 'shipment.shipmentCost',
+      notes: 'shipment.notes'
     });
 
     await pool.execute(
@@ -256,7 +270,14 @@ class ShipmentDetail {
         marking: row.marking,
         dismantling: row.dismantling,
         packing: row.packing,
-        dispatch: row.dispatch
+        dispatch: row.dispatch,
+        shipmentMethod: row.shipment_method,
+        carrierName: row.carrier_name,
+        trackingNumber: row.tracking_number,
+        estimatedDeliveryDate: row.estimated_delivery_date,
+        shippingAddress: row.shipping_address,
+        shipmentCost: row.shipment_cost,
+        notes: row.notes
       },
       shipmentMethod: row.shipment_method,
       carrierName: row.carrier_name,

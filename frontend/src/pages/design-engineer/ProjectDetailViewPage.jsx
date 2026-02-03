@@ -210,11 +210,41 @@ const ProjectDetailViewPage = () => {
       const safeData = ensureMaterialsAreArrays(dataToSet);
       setProjectData(safeData);
 
-      if (step2.documents) {
-        setUploadedFiles({
-          references: step2.documents,
+      // Fetch technical specifications
+      let technicalSpecs = [];
+      try {
+        const specsResponse = await axios.get("/production/specifications", {
+          params: { rootCardId: projectId }
         });
+        technicalSpecs = Array.isArray(specsResponse.data) ? specsResponse.data : [];
+      } catch (err) {
+        console.error("Error fetching technical specifications:", err);
       }
+
+      // Aggregate all documents from different sources
+      const projectDocs = Array.isArray(rootCard.documents) ? rootCard.documents : [];
+      const poAttachments = Array.isArray(step1.attachments) ? step1.attachments : [];
+      const designDocs = Array.isArray(step2.documents) ? step2.documents : [];
+      const designDrawings = Array.isArray(step2.drawings3D) ? step2.drawings3D : [];
+      const referenceDocs = Array.isArray(specs.referenceDocuments) ? specs.referenceDocuments : [];
+      const specDocs = technicalSpecs.map(s => ({
+        name: s.title,
+        fileName: s.fileName,
+        version: s.version,
+        id: s.id,
+        type: 'specification'
+      }));
+
+      const allDocuments = [...projectDocs, ...poAttachments, ...designDocs, ...designDrawings, ...referenceDocs, ...specDocs];
+      const uniqueDocuments = allDocuments.filter((doc, index, self) => 
+        index === self.findIndex((d) => (
+          (d.name || d) === (doc.name || doc)
+        ))
+      );
+
+      setUploadedFiles({
+        references: uniqueDocuments,
+      });
 
       // Fetch tasks for this root card
       if (roleId) {

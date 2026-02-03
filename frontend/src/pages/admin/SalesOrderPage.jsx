@@ -7,18 +7,21 @@ import {
   Download,
   AlertCircle,
   Loader2,
-  X
+  X,
+  ClipboardList
 } from 'lucide-react';
 import CreateSalesOrderModal from './CreateSalesOrderModal';
 import Swal from 'sweetalert2';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { useNavigate } from 'react-router-dom';
 
 const SalesOrderPage = () => {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
+  const navigate = useNavigate();
 
   const fetchData = async () => {
     setLoading(true);
@@ -282,6 +285,15 @@ const SalesOrderPage = () => {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-2">
+                        {order.status?.toLowerCase() === 'pending' && (
+                          <button 
+                            onClick={() => navigate('/department/production/plans', { state: { createPlan: true, order: order } })}
+                            className="p-2 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-lg transition-colors"
+                            title="Create Production Plan"
+                          >
+                            <ClipboardList size={18} />
+                          </button>
+                        )}
                         <button 
                           onClick={() => handleDownloadPDF(order)}
                           className="p-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"

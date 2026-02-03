@@ -24,6 +24,17 @@ class QualityCheckController {
         await QualityCheckDetail.create(data);
       }
 
+      // Update Root Card (Sales Order) with fields from Step 5 if present
+      const RootCard = require('../../models/RootCard');
+      const rootCardUpdates = {};
+      if (data.projectPriority) rootCardUpdates.priority = data.projectPriority;
+      if (data.totalAmount) rootCardUpdates.total = data.totalAmount;
+      if (data.status) rootCardUpdates.status = data.status;
+      
+      if (Object.keys(rootCardUpdates).length > 0) {
+        await RootCard.update(rootCardId, rootCardUpdates);
+      }
+
       const updated = await QualityCheckDetail.findByRootCardId(rootCardId);
       await RootCardStep.update(rootCardId, 5, { status: 'in_progress', data: updated, assignedTo });
       

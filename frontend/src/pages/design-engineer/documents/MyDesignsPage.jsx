@@ -11,6 +11,7 @@ import {
   X,
   ChevronLeft,
   Loader2,
+  Send,
 } from "lucide-react";
 import axios from "../../../utils/api";
 import DataTable from "../../../components/ui/DataTable/DataTable";
@@ -21,6 +22,7 @@ const MyDesignsPage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const projectId = searchParams.get("projectId");
+  const taskId = searchParams.get("taskId");
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDesign, setSelectedDesign] = useState(null);
@@ -63,7 +65,7 @@ const MyDesignsPage = () => {
       const projectsList = orders.map((order) => ({
         value: String(order.id),
         id: String(order.id),
-        label: `${order.project_name} - ${order.po_number}`,
+        label: `${order.po_number} - ${order.project_name}`,
         projectName: order.project_name,
         productName: order.po_number,
         customer: order.customer,
@@ -120,10 +122,9 @@ const MyDesignsPage = () => {
         version: design.details?.version || "v1.0",
         date: design.createdAt ? new Date(design.createdAt).toISOString().split("T")[0] : "N/A",
         category: design.details?.designCategory || design.category || "Part",
-        uploads: design.details?.referenceDocuments
-          ? Array.isArray(design.details.referenceDocuments)
-            ? design.details.referenceDocuments.join(", ")
-            : design.details.referenceDocuments
+        documents: design.documents || [],
+        uploads: design.documents?.length > 0
+          ? design.documents.map(doc => doc.name).join(", ")
           : "No uploads",
       }));
 
@@ -170,18 +171,73 @@ const MyDesignsPage = () => {
     }
   };
 
-  const handleDownload = async (design) => {
+  const handleSubmitForReview = async (design) => {
+    if (
+      !window.confirm(
+        `Are you sure you want to submit "${design.name}" for review?`
+      )
+    ) {
+      return;
+    }
+
     try {
-      const downloadUrl = `/production/designs/${design.id}/download`;
-      const link = document.createElement("a");
-      link.href = downloadUrl;
-      link.download = `${design.designId}-${design.name}.pdf`;
+      setLoading(true);
+      await axios.patch(`/production/designs/${design.id}/status`, {
+        status: "in_review",
+      });
+
+      if (taskId) {
+        try {
+          await axios.patch(`/department/portal/tasks/${taskId}`, {
+            status: "completed",
+          });
+        } catch (taskErr) {
+          console.error("Error marking task as completed:", taskErr);
+        }
+      }
+
+      alert(`Design "${design.name}" has been submitted for review!`);
+      await fetchDesigns();
+    } catch (error) {
+      console.error("Failed to submit design for review:", error);
+      alert("Failed to submit design for review. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDownload = async (design) => {
+    if (!design.documents || design.documents.length === 0) {
+      alert("No documents available for download.");
+      return;
+    }
+    // If only one document, download it directly
+    if (design.documents.length === 1) {
+      handleDownloadDocument(design.id, design.documents[0]);
+    } else {
+      // If multiple, show the view modal so they can choose
+      setSelectedDesign(design);
+    }
+  };
+
+  const handleDownloadDocument = async (designId, document) => {
+    try {
+      const response = await axios.get(`/production/designs/${designId}/download`, {
+        params: { documentId: document.id },
+        responseType: 'blob',
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', document.name);
       document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
     } catch (error) {
-      console.error("Failed to download design:", error);
-      alert("Failed to download design. The file may not be available.");
+      console.error("Failed to download document:", error);
+      alert("Failed to download document. Please try again.");
     }
   };
 
@@ -219,8 +275,8 @@ const MyDesignsPage = () => {
   };
 
   const handleCreateDesign = async () => {
-    if (!formData.designName.trim() || !formData.jobNo.trim()) {
-      alert("Please fill in all required fields");
+    if (!formData.designName.trim() || !formData.rootCardId) {
+      alert("Please fill in all required fields and select a Root Card");
       return;
     }
 
@@ -229,26 +285,42 @@ const MyDesignsPage = () => {
       const finalDesignId =
         formData.designId || generateDesignId(formData.designName);
 
-      const payload = {
-        designId: finalDesignId,
-        designName: formData.designName,
-        projectName: formData.jobNo,
-        productName: formData.productAssemblyName || formData.designName,
-        designStatus: "planning",
-        designType: formData.designType,
-        designCategory: formData.designCategory,
-        priority: formData.priority,
-        designEngineerName: "Current User",
-        additionalNotes: formData.description,
-        rootCardId: formData.rootCardId,
-        referenceDocuments: uploadedFiles,
-      };
+      const submitData = new FormData();
+      submitData.append("designId", finalDesignId);
+      submitData.append("designName", formData.designName);
+      submitData.append("designType", formData.designType);
+      submitData.append("designCategory", formData.designCategory);
+      submitData.append("priority", formData.priority);
+      submitData.append("additionalNotes", formData.description);
+      submitData.append("rootCardId", formData.rootCardId);
 
-      await axios.post("/production/design-projects", payload);
+      // Append files
+      uploadedFiles.forEach((fileObj) => {
+        if (fileObj.file) {
+          submitData.append("documents", fileObj.file);
+        }
+      });
+
+      await axios.post("/production/design-projects", submitData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      if (taskId) {
+        try {
+          await axios.patch(`/department/portal/tasks/${taskId}`, {
+            status: "completed",
+          });
+          console.log(`Task ${taskId} marked as completed`);
+        } catch (taskErr) {
+          console.error("Error marking task as completed:", taskErr);
+        }
+      }
 
       await fetchDesigns();
       alert(
-        `Design "${formData.designName}" created successfully!\nDesign ID: ${finalDesignId}`
+        `Design "${formData.designName}" created successfully for Root Card ${formData.selectedRootCardId}!\nDesign ID: ${finalDesignId}`
       );
       setShowCreateForm(false);
       setUploadedFiles([]);
@@ -276,7 +348,7 @@ const MyDesignsPage = () => {
     }
   };
 
-  const handleJobNoChange = (selectedRootCardId) => {
+  const handleRootCardChange = (selectedRootCardId) => {
     const selectedProject = projects.find(
       (p) => p.value === String(selectedRootCardId)
     );
@@ -305,7 +377,7 @@ const MyDesignsPage = () => {
     },
     {
       key: "designId",
-      label: "Design ID",
+      label: "Root Card ID",
       sortable: true,
       render: (value) => (
         <span className="font-mono text-xs text-slate-600 dark:text-slate-400">
@@ -350,6 +422,15 @@ const MyDesignsPage = () => {
           >
             <Download size={16} />
           </button>
+          {design.status === "In Progress" && (
+            <button
+              onClick={() => handleSubmitForReview(design)}
+              className="p-1 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-lg transition-colors text-purple-600 dark:text-purple-400"
+              title="Submit for Review"
+            >
+              <Send size={16} />
+            </button>
+          )}
           <button
             onClick={() => handleEdit(design)}
             className="p-1 hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded-lg transition-colors text-amber-600 dark:text-amber-400"
@@ -486,15 +567,15 @@ const MyDesignsPage = () => {
                 />
               </div>
 
-              {/* Project / Job No. and Customer Name */}
+              {/* Root Card selection */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <SearchableSelect
-                    label="Project / Job No. *"
+                    label="Select Root Card *"
                     options={projects}
                     value={String(formData.selectedRootCardId || "")}
-                    onChange={handleJobNoChange}
-                    placeholder="Select Project..."
+                    onChange={handleRootCardChange}
+                    placeholder="Select Root Card..."
                   />
                 </div>
                 <div>
@@ -766,6 +847,46 @@ const MyDesignsPage = () => {
                     {selectedDesign.category}
                   </p>
                 </div>
+              </div>
+
+              <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
+                <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase mb-3">
+                  Design Documents
+                </p>
+                {selectedDesign.documents && selectedDesign.documents.length > 0 ? (
+                  <div className="space-y-2">
+                    {selectedDesign.documents.map((doc, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg border border-slate-200 dark:border-slate-600"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded">
+                            <Download size={16} />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-slate-900 dark:text-white">
+                              {doc.name}
+                            </p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                              {(doc.size / 1024).toFixed(1)} KB • {new Date(doc.uploadedAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleDownloadDocument(selectedDesign.id, doc)}
+                          className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                        >
+                          Download
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-500 dark:text-slate-400 italic">
+                    No documents uploaded for this design.
+                  </p>
+                )}
               </div>
             </div>
           </div>

@@ -134,7 +134,7 @@ async function runMigrations() {
           title VARCHAR(255) NOT NULL,
           description TEXT,
           type VARCHAR(100) NOT NULL,
-          priority ENUM('low', 'medium', 'high', 'urgent') DEFAULT 'medium',
+          priority ENUM('low', 'medium', 'high', 'critical', 'urgent') DEFAULT 'medium',
           status ENUM('pending', 'in_progress', 'completed', 'on_hold', 'cancelled') DEFAULT 'pending',
           related_id INT,
           related_type VARCHAR(100),
@@ -509,7 +509,8 @@ async function runMigrations() {
         ['priority_level', 'low', 'Low', 1],
         ['priority_level', 'medium', 'Medium', 2],
         ['priority_level', 'high', 'High', 3],
-        ['priority_level', 'urgent', 'Urgent', 4],
+        ['priority_level', 'critical', 'Critical', 4],
+        ['priority_level', 'urgent', 'Urgent', 5],
         ['process_type', 'in_house', 'In-House', 1],
         ['process_type', 'outsourced', 'Outsourced', 2]
       ];

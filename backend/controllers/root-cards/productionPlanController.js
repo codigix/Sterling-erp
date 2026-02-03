@@ -52,8 +52,8 @@ class ProductionPlanController {
         }
 
         const planData = {
-          salesOrderId: parseInt(rootCardId),
-          rootCardId: data.rootCardId ? parseInt(data.rootCardId) : null,
+          salesOrderId: data.salesOrderId ? parseInt(data.salesOrderId) : (data.rootCardId ? parseInt(data.rootCardId) : parseInt(rootCardId)),
+          rootCardId: data.rootCardId ? parseInt(data.rootCardId) : parseInt(rootCardId),
           planName: data.planName || 'Production Plan',
           status: 'draft',
           plannedStartDate: data.timeline?.startDate || null,

@@ -322,7 +322,7 @@ class EmployeeTask {
 
   static async updateAssignedTaskStatus(taskId, status, notes = null) {
     const [taskRows] = await pool.execute(
-      `SELECT id, production_plan_stage_id, sales_order_id, type FROM employee_tasks WHERE id = ?`,
+      `SELECT * FROM employee_tasks WHERE id = ?`,
       [taskId]
     );
     
@@ -354,6 +354,36 @@ class EmployeeTask {
       `UPDATE employee_tasks SET ${updateFields.join(', ')} WHERE id = ?`,
       values
     );
+
+    // Synchronize with department_tasks if it's a workflow task
+    // Workflow tasks are usually linked via title and related_id (root_card_id) OR sales_order_id
+    try {
+      const syncFields = ['status = ?', 'updated_at = CURRENT_TIMESTAMP'];
+      const syncValues = [status];
+      
+      let syncQuery = `UPDATE department_tasks SET ${syncFields.join(', ')} WHERE task_title = ? AND `;
+      let syncParams = [...syncValues, task.title];
+
+      const conditions = [];
+      if (task.related_id && task.related_type === 'root_card') {
+        conditions.push('root_card_id = ?');
+        syncParams.push(task.related_id);
+      }
+      
+      if (task.sales_order_id) {
+        conditions.push('sales_order_id = ?');
+        syncParams.push(task.sales_order_id);
+      }
+
+      if (conditions.length > 0) {
+        syncQuery += `(${conditions.join(' OR ')})`;
+        await pool.execute(syncQuery, syncParams);
+        console.log(`[EmployeeTask] Synchronized status '${status}' with department_tasks for task: ${task.title}`);
+      }
+    } catch (syncError) {
+      console.error('[EmployeeTask] Sync with department_tasks failed:', syncError.message);
+      // Don't throw error, we want the main update to succeed
+    }
 
     // Synchronize with RootCardStep workflow if applicable
     if (task.sales_order_id && task.type) {

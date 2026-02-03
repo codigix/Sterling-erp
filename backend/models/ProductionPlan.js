@@ -64,7 +64,7 @@ class ProductionPlan {
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
-          data.rootCardId || null,
+          data.salesOrderId || null,
           data.rootCardId || null,
           data.bomId || null,
           data.planName,
@@ -143,7 +143,7 @@ class ProductionPlan {
     return rows[0];
   }
 
-  static async findByRootCardId(rootCardId) {
+  static async findBySalesOrderId(salesOrderId) {
     const [rows] = await pool.execute(
       `
         SELECT pp.*, 
@@ -158,7 +158,7 @@ class ProductionPlan {
         LEFT JOIN sales_order_details sod ON sod.sales_order_id = pp.sales_order_id
         WHERE pp.sales_order_id = ?
       `,
-      [rootCardId]
+      [salesOrderId]
     );
     
     if (rows[0]) {
@@ -185,13 +185,17 @@ class ProductionPlan {
           rows[0].phases = [];
         }
       } catch (parseError) {
-        console.warn(`Could not parse selected_phases for root card ${rootCardId}:`, parseError.message);
+        console.warn(`Could not parse selected_phases for sales order ${salesOrderId}:`, parseError.message);
         rows[0].phases = [];
       }
       delete rows[0].selected_phases;
     }
     
     return rows[0];
+  }
+
+  static async findByRootCardId(rootCardId) {
+    return this.findBySalesOrderId(rootCardId);
   }
 
   static async findAll(filters = {}) {

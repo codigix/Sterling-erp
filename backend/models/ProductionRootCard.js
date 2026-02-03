@@ -194,8 +194,8 @@ class ProductionRootCard {
       const [result] = await connection.execute(
         `
           INSERT INTO root_cards
-          (project_id, sales_order_id, code, title, status, priority, planned_start, planned_end, created_by, assigned_supervisor, notes, stages)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          (project_id, sales_order_id, code, title, status, priority, planned_start, planned_end, created_by, assigned_supervisor, notes, stages, parent_root_card_id)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
           data.projectId,
@@ -210,6 +210,7 @@ class ProductionRootCard {
           data.assignedSupervisor || null,
           data.notes || null,
           JSON.stringify(data.stages || []),
+          data.parentRootCardId || null,
         ]
       );
 

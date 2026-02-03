@@ -71,6 +71,8 @@ import PerformancePage from "./pages/production/PerformancePage";
 import PerformanceMetricsPage from "./pages/production/PerformanceMetricsPage";
 import ProductionPlanFormPage from "./pages/production/ProductionPlanFormPage";
 import OutsourceTasksPage from "./pages/production/OutsourceTasksPage";
+import WorkOrdersPage from "./pages/production/WorkOrdersPage";
+import WorkOrderFormPage from "./pages/production/WorkOrderFormPage";
 
 // Employee Portal
 import EmployeePortalPage from "./pages/employee/EmployeePortalPage";
@@ -96,6 +98,7 @@ import InventoryManagerDashboard from "./pages/roles/InventoryManagerDashboard";
 import QCManagerDashboard from "./pages/roles/QCManagerDashboard";
 import AccountantDashboard from "./pages/roles/AccountantDashboard";
 import WorkerDashboard from "./pages/roles/WorkerDashboard";
+import ProductionManagerDashboard from "./pages/roles/ProductionManagerDashboard";
 
 import "./App.css";
 
@@ -166,6 +169,9 @@ function App() {
               <Route path="production/plans" element={<ProductionPlansPage />} />
               <Route path="production/plans/new" element={<ProductionPlanFormPage />} />
               <Route path="production/plans/:id" element={<ProductionPlanDetailPage />} />
+              <Route path="production/work-orders" element={<WorkOrdersPage />} />
+              <Route path="production/work-orders/new" element={<WorkOrderFormPage />} />
+              <Route path="production/work-orders/edit/:id" element={<WorkOrderFormPage />} />
               <Route path="production/scheduling" element={<SchedulingPage />} />
               <Route path="production/resources" element={<ResourceAllocationPage />} />
               <Route path="production/assign-tasks" element={<AssignTasksPage />} />
@@ -220,6 +226,7 @@ function App() {
             <Route path="/design-engineer/*" element={<DesignEngineerLayout />} />
             <Route path="/qc-manager/*" element={<QCManagerDashboard />} />
             <Route path="/accountant/*" element={<AccountantDashboard />} />
+            <Route path="/production-manager/*" element={<ProductionManagerDashboard />} />
             <Route path="/worker/*" element={<WorkerDashboard />} />
 
             <Route path="/" element={<Navigate to="/login" replace />} />

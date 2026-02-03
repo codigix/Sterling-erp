@@ -10,6 +10,9 @@ class ProductionPlanDetail {
         timeline JSON,
         selected_phases JSON,
         phase_details JSON,
+        materials JSON,
+        sub_assemblies JSON,
+        finished_goods JSON,
         production_notes TEXT,
         estimated_completion_date DATE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -20,15 +23,19 @@ class ProductionPlanDetail {
     `);
   }
 
-  static async findByRootCardId(rootCardId) {
+  static async findBySalesOrderId(salesOrderId) {
     const [rows] = await pool.execute(
       `SELECT ppd.*, sod.product_details 
        FROM production_plan_details ppd
        LEFT JOIN sales_order_details sod ON sod.sales_order_id = ppd.sales_order_id
        WHERE ppd.sales_order_id = ?`,
-      [rootCardId]
+      [salesOrderId]
     );
     return rows[0] ? this.formatRow(rows[0]) : null;
+  }
+
+  static async findByRootCardId(rootCardId) {
+    return this.findBySalesOrderId(rootCardId);
   }
 
   static async create(data) {
@@ -49,14 +56,17 @@ class ProductionPlanDetail {
       stringifyJsonField(timeline) || '{}',
       stringifyJsonField(normalized.selectedPhases) || '{}',
       stringifyJsonField(normalized.phaseDetails) || '{}',
+      stringifyJsonField(data.materials) || '[]',
+      stringifyJsonField(data.subAssemblies) || '[]',
+      stringifyJsonField(data.finishedGoods) || '[]',
       normalized.productionNotes || null,
       normalized.estimatedCompletionDate || null
     ];
 
     const [result] = await pool.execute(
       `INSERT INTO production_plan_details 
-       (sales_order_id, timeline, selected_phases, phase_details, production_notes, estimated_completion_date)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+       (sales_order_id, timeline, selected_phases, phase_details, materials, sub_assemblies, finished_goods, production_notes, estimated_completion_date)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       params
     );
     return result.insertId;
@@ -79,6 +89,9 @@ class ProductionPlanDetail {
       stringifyJsonField(timeline) || '{}',
       stringifyJsonField(normalized.selectedPhases) || '{}',
       stringifyJsonField(normalized.phaseDetails) || '{}',
+      stringifyJsonField(data.materials) || '[]',
+      stringifyJsonField(data.subAssemblies) || '[]',
+      stringifyJsonField(data.finishedGoods) || '[]',
       normalized.productionNotes || null,
       normalized.estimatedCompletionDate || null,
       rootCardId
@@ -87,6 +100,7 @@ class ProductionPlanDetail {
     await pool.execute(
       `UPDATE production_plan_details 
        SET timeline = ?, selected_phases = ?, phase_details = ?, 
+           materials = ?, sub_assemblies = ?, finished_goods = ?,
            production_notes = ?, estimated_completion_date = ?, updated_at = CURRENT_TIMESTAMP
        WHERE sales_order_id = ?`,
       params
@@ -285,6 +299,9 @@ class ProductionPlanDetail {
       timeline: timeline,
       selectedPhases: parseJsonField(row.selected_phases),
       phaseDetails: parseJsonField(row.phase_details),
+      materials: parseJsonField(row.materials) || [],
+      subAssemblies: parseJsonField(row.sub_assemblies) || [],
+      finishedGoods: parseJsonField(row.finished_goods) || [],
       productionNotes: row.production_notes,
       procurementStatus: timeline.procurementStatus,
       productionStartDate: timeline.productionStartDate,

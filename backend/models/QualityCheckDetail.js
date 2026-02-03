@@ -23,6 +23,11 @@ class QualityCheckDetail {
         inspection_date TIMESTAMP NULL,
         qc_report TEXT,
         remarks TEXT,
+        payment_terms VARCHAR(255),
+        special_instructions TEXT,
+        estimated_costing DECIMAL(12,2),
+        estimated_profit DECIMAL(12,2),
+        job_card_no VARCHAR(100),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         FOREIGN KEY (sales_order_id) REFERENCES sales_orders(id) ON DELETE CASCADE,
@@ -48,15 +53,22 @@ class QualityCheckDetail {
       inspectionType: 'qualityCheck.inspectionType',
       inspections: 'qualityCheck.inspections',
       qcReport: 'qualityCheck.qcReport',
-      remarks: 'qualityCheck.remarks'
+      remarks: 'qualityCheck.remarks',
+      paymentTerms: 'paymentTerms',
+      specialInstructions: 'specialInstructions',
+      estimatedCosting: 'internalInfo.estimatedCosting',
+      estimatedProfit: 'internalInfo.estimatedProfit',
+      jobCardNo: 'internalInfo.jobCardNo',
+      inspectedBy: 'assignedTo'
     });
 
     const [result] = await pool.execute(
       `INSERT INTO quality_check_details 
        (sales_order_id, quality_standards, welding_standards, surface_finish, mechanical_load_testing,
         electrical_compliance, documents_required, warranty_period, service_support, internal_project_owner,
-        qc_status, inspection_type, inspections, inspected_by, qc_report, remarks)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        qc_status, inspection_type, inspections, inspected_by, qc_report, remarks,
+        payment_terms, special_instructions, estimated_costing, estimated_profit, job_card_no)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         normalized.rootCardId || null,
         normalized.qualityCompliance?.qualityStandards || null,
@@ -73,7 +85,12 @@ class QualityCheckDetail {
         stringifyJsonField(ensureArray(normalized.inspections)) || '[]',
         normalized.inspectedBy || null,
         normalized.qcReport || null,
-        normalized.remarks || null
+        normalized.remarks || null,
+        normalized.paymentTerms || null,
+        normalized.specialInstructions || null,
+        normalized.estimatedCosting || null,
+        normalized.estimatedProfit || null,
+        normalized.jobCardNo || null
       ]
     );
     return result.insertId;
@@ -85,7 +102,13 @@ class QualityCheckDetail {
       inspectionType: 'qualityCheck.inspectionType',
       inspections: 'qualityCheck.inspections',
       qcReport: 'qualityCheck.qcReport',
-      remarks: 'qualityCheck.remarks'
+      remarks: 'qualityCheck.remarks',
+      paymentTerms: 'paymentTerms',
+      specialInstructions: 'specialInstructions',
+      estimatedCosting: 'internalInfo.estimatedCosting',
+      estimatedProfit: 'internalInfo.estimatedProfit',
+      jobCardNo: 'internalInfo.jobCardNo',
+      inspectedBy: 'assignedTo'
     });
 
     await pool.execute(
@@ -94,7 +117,9 @@ class QualityCheckDetail {
            electrical_compliance = ?, documents_required = ?, warranty_period = ?, service_support = ?,
            internal_project_owner = ?, qc_status = ?, inspection_type = ?, inspections = ?, 
            inspected_by = ?, inspection_date = ?, 
-           qc_report = ?, remarks = ?, updated_at = CURRENT_TIMESTAMP
+           qc_report = ?, remarks = ?, 
+           payment_terms = ?, special_instructions = ?, estimated_costing = ?, 
+           estimated_profit = ?, job_card_no = ?, updated_at = CURRENT_TIMESTAMP
        WHERE sales_order_id = ?`,
       [
         normalized.qualityCompliance?.qualityStandards || null,
@@ -113,6 +138,11 @@ class QualityCheckDetail {
         normalized.qcStatus !== 'pending' && !normalized.inspectionDate ? new Date() : normalized.inspectionDate || null,
         normalized.qcReport || null,
         normalized.remarks || null,
+        normalized.paymentTerms || null,
+        normalized.specialInstructions || null,
+        normalized.estimatedCosting || null,
+        normalized.estimatedProfit || null,
+        normalized.jobCardNo || null,
         rootCardId
       ]
     );
@@ -250,6 +280,13 @@ class QualityCheckDetail {
       inspectedBy: row.inspected_by,
       inspectionDate: row.inspection_date,
       remarks: row.remarks,
+      paymentTerms: row.payment_terms,
+      specialInstructions: row.special_instructions,
+      internalInfo: {
+        estimatedCosting: row.estimated_costing,
+        estimatedProfit: row.estimated_profit,
+        jobCardNo: row.job_card_no
+      },
       createdAt: row.created_at,
       updatedAt: row.updated_at
     };

@@ -112,7 +112,7 @@ async function runMigrations() {
           title VARCHAR(255) NOT NULL,
           description TEXT,
           type VARCHAR(100) NOT NULL,
-          priority ENUM('low', 'medium', 'high', 'urgent') DEFAULT 'medium',
+          priority ENUM('low', 'medium', 'high', 'critical', 'urgent') DEFAULT 'medium',
           status ENUM('pending', 'in_progress', 'completed', 'on_hold', 'cancelled') DEFAULT 'pending',
           related_id INT,
           related_type VARCHAR(100),
@@ -242,7 +242,8 @@ async function runMigrations() {
         ['priority_level', 'low', 'Low', 1],
         ['priority_level', 'medium', 'Medium', 2],
         ['priority_level', 'high', 'High', 3],
-        ['priority_level', 'urgent', 'Urgent', 4],
+        ['priority_level', 'critical', 'Critical', 4],
+        ['priority_level', 'urgent', 'Urgent', 5],
         ['process_type', 'in_house', 'In-House', 1],
         ['process_type', 'outsourced', 'Outsourced', 2]
       ];
@@ -1349,6 +1350,27 @@ async function runMigrations() {
       }
     } catch (err) {
       console.error('Migration for sales_orders_management update failed:', err.message);
+    }
+
+    // Migration: Update production_plan_details with recursive explosion columns
+    try {
+      const [columns] = await connection.execute('SHOW COLUMNS FROM production_plan_details');
+      const columnNames = columns.map(c => c.Field);
+      
+      if (!columnNames.includes('materials')) {
+        await connection.execute('ALTER TABLE production_plan_details ADD COLUMN materials JSON');
+        console.log('✅ Added materials column to production_plan_details');
+      }
+      if (!columnNames.includes('sub_assemblies')) {
+        await connection.execute('ALTER TABLE production_plan_details ADD COLUMN sub_assemblies JSON');
+        console.log('✅ Added sub_assemblies column to production_plan_details');
+      }
+      if (!columnNames.includes('finished_goods')) {
+        await connection.execute('ALTER TABLE production_plan_details ADD COLUMN finished_goods JSON');
+        console.log('✅ Added finished_goods column to production_plan_details');
+      }
+    } catch (err) {
+      console.log('⚠️ Could not update production_plan_details columns:', err.message);
     }
 
     console.log('\n✅ All migrations completed successfully!');

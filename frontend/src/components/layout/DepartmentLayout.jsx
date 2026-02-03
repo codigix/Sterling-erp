@@ -24,6 +24,7 @@ import {
   Layers,
   Truck,
   ClipboardList,
+  FileText,
 } from "lucide-react";
 
 const DepartmentLayout = () => {
@@ -196,38 +197,40 @@ const DepartmentLayout = () => {
           {/* Navigation */}
           <nav className="flex-1 overflow-y-auto p-4 space-y-6">
             {/* Your Department */}
-            <div>
-              <h6
-                className={`text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3 ${
-                  sidebarCollapsed ? "text-center" : ""
-                }`}
-              >
-                {!sidebarCollapsed && "My Department"}
-              </h6>
-              <ul className="space-y-1">
-                {(() => {
-                  const dept = getDepartmentRole();
-                  const IconComponent = dept.icon;
-                  return (
-                    <li>
-                      <Link
-                        to={dept.path}
-                        className={`flex items-center text-xs px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
-                          isActive(dept.path)
-                            ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"
-                            : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
-                        }`}
-                      >
-                        <IconComponent size={18} className="flex-shrink-0" />
-                        {!sidebarCollapsed && (
-                          <span className="ml-3">{dept.title} Tasks</span>
-                        )}
-                      </Link>
-                    </li>
-                  );
-                })()}
-              </ul>
-            </div>
+            {getDepartmentRole().title !== "Production" && (
+              <div>
+                <h6
+                  className={`text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3 ${
+                    sidebarCollapsed ? "text-center" : ""
+                  }`}
+                >
+                  {!sidebarCollapsed && "My Department"}
+                </h6>
+                <ul className="space-y-1">
+                  {(() => {
+                    const dept = getDepartmentRole();
+                    const IconComponent = dept.icon;
+                    return (
+                      <li>
+                        <Link
+                          to={dept.path}
+                          className={`flex items-center text-xs px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                            isActive(dept.path)
+                              ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"
+                              : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+                          }`}
+                        >
+                          <IconComponent size={18} className="flex-shrink-0" />
+                          {!sidebarCollapsed && (
+                            <span className="ml-3">{dept.title} Tasks</span>
+                          )}
+                        </Link>
+                      </li>
+                    );
+                  })()}
+                </ul>
+              </div>
+            )}
 
             {/* Production Flow Menu - Only show for Production department */}
             {getDepartmentRole().title === "Production" && (
@@ -264,6 +267,19 @@ const DepartmentLayout = () => {
                     >
                       <ClipboardList size={18} className="flex-shrink-0" />
                       {!sidebarCollapsed && <span className="ml-3">Production Plans</span>}
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      to="/department/production/work-orders"
+                      className={`flex items-center text-xs px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                        isActive("/department/production/work-orders")
+                          ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"
+                          : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+                      }`}
+                    >
+                      <FileText size={18} className="flex-shrink-0" />
+                      {!sidebarCollapsed && <span className="ml-3">Work Orders</span>}
                     </Link>
                   </li>
                   <li>

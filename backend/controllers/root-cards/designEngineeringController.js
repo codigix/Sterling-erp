@@ -39,6 +39,21 @@ class DesignEngineeringController {
         try {
           const EmployeeTask = require('../../models/EmployeeTask');
           const pool = require('../../config/database');
+          const productionController = require('../production/productionController');
+          
+          // Create workflow based tasks automatically if an employee is assigned
+          const connection = await pool.getConnection();
+          try {
+            await connection.beginTransaction();
+            const created = await productionController.internalCreateWorkflowTasks(rootCardId, assignedTo, connection);
+            await connection.commit();
+            console.log(`[DesignEngineeringController] ✓ Generated ${created.length} workflow tasks for employee ${assignedTo}`);
+          } catch (workflowError) {
+            await connection.rollback();
+            throw workflowError;
+          } finally {
+            connection.release();
+          }
           
           const existingTasks = await EmployeeTask.findByRelatedId(rootCardId, 'design_engineering');
           

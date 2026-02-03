@@ -31,14 +31,37 @@ const ProjectCard = ({
 
   const extractWorkflowTasks = () => {
     const workflow = tasks.filter((task) => {
+      const taskTitle = (task.task_title || task.title || "").toLowerCase();
+      
+      // 1. Check for explicit workflow flag in notes
       if (task.notes) {
         try {
-          const notes = JSON.parse(task.notes);
-          return notes.workflow_step;
+          const notes = typeof task.notes === 'string' ? JSON.parse(task.notes) : task.notes;
+          if (notes && notes.workflow_step) return true;
         } catch (e) {
-          return false;
+          // Check if notes text contains indicators
+          const notesText = String(task.notes).toLowerCase();
+          if (notesText.includes("workflow_step") || notesText.includes("auto_generated")) return true;
         }
       }
+      
+      // 2. Check for step patterns in title
+      if (
+        taskTitle.startsWith("step ") || 
+        taskTitle.includes("project details") || 
+        taskTitle.includes("design document") ||
+        taskTitle.includes("my designs") ||
+        taskTitle.includes("drawing") ||
+        taskTitle.includes("specification") ||
+        taskTitle.includes("bill of materials") ||
+        taskTitle.includes("bom") ||
+        taskTitle.includes("submit design") ||
+        taskTitle.includes("submit for review") ||
+        taskTitle.includes("technical file")
+      ) {
+        return true;
+      }
+      
       return false;
     });
     setWorkflowTasks(workflow);
@@ -47,7 +70,7 @@ const ProjectCard = ({
   const getTaskNavigationUrl = (task) => {
     const baseParams = `taskId=${task.id}&taskTitle=${encodeURIComponent(
       task.task_title || task.title
-    )}&rootCardId=${project.id}&projectName=${encodeURIComponent(
+    )}&rootCardId=${project.id}&projectId=${project.id}&projectName=${encodeURIComponent(
       project.project_name || ""
     )}&poNumber=${encodeURIComponent(
       project.po_number || ""
@@ -61,16 +84,32 @@ const ProjectCard = ({
     // Step 1: Enter Project Details
     if (
       taskTitle.includes("project details") ||
-      taskTitle.includes("enter project")
+      taskTitle.includes("enter project") ||
+      taskTitle.includes("requirement analysis")
     ) {
-      return `/design-engineer/root-cards?rootCardId=${project.id}`;
+      return `/design-engineer/root-cards?rootCardId=${project.id}&taskId=${task.id}`;
     }
     // Step 2: Prepare Design Documents
     else if (
       taskTitle.includes("prepare design") ||
-      taskTitle.includes("design document")
+      taskTitle.includes("design document") ||
+      taskTitle.includes("my design") ||
+      taskTitle.includes("cad modeling")
     ) {
       return `/design-engineer/documents/designs?${baseParams}`;
+    }
+    // New Step: Drawings
+    else if (
+      taskTitle.includes("drawing") ||
+      taskTitle.includes("cad drawing")
+    ) {
+      return `/design-engineer/documents/drawings?${baseParams}`;
+    }
+    // New Step: Specifications
+    else if (
+      taskTitle.includes("specification")
+    ) {
+      return `/design-engineer/documents/specs?${baseParams}`;
     }
     // Step 3: Create and Validate BOM
     else if (
@@ -169,6 +208,19 @@ const ProjectCard = ({
 
   const progress = calculateProgress();
 
+  const getProjectName = () => {
+    // Check if there's a design name in step 2 (Design Engineering)
+    const designName = project.steps?.step2_design?.specifications?.designName;
+    if (designName && designName.trim()) {
+      return designName;
+    }
+    
+    // Fallback to project_name
+    return project.project_name || project.customer || "Unnamed Project";
+  };
+
+  const projectName = getProjectName();
+
   return (
     <div className="bg-white dark:bg-slate-800  border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
       {/* Header Section */}
@@ -176,14 +228,14 @@ const ProjectCard = ({
         <div className="">
           <div className="flex items-start justify-between mb-3">
             <div className="flex-1">
-              {project.project_name && (
+              {(project.project_name || project.steps?.step2_design?.specifications?.designName) && (
                 <div>
                   <p className="text-xs font-medium text-slate-500 dark:text-slate-400  tracking-wide">
                     Project Name
                   </p>
                   <div className="flex gap-2">
                     <p className="font-semibold text-lg text-slate-900 dark:text-white">
-                      {project.project_name}
+                      {projectName}
                     </p>
                     {project.priority && (
                       <div>
@@ -205,13 +257,13 @@ const ProjectCard = ({
                   </div>
                 </div>
               )}
-              <p className="text-xs font-mono text-blue-600 dark:text-blue-400">
-                {project.project_code && (
+              {project.project_code && (
+                <div className="text-xs font-mono text-blue-600 dark:text-blue-400">
                   <p className="text-xs font-medium text-slate-500 dark:text-slate-400 tracking-wide">
                     {project.project_code}
                   </p>
-                )}
-              </p>
+                </div>
+              )}
             </div>
             <button
               onClick={() => setIsExpanded(!isExpanded)}
@@ -380,7 +432,7 @@ const ProjectCard = ({
                   key={task.id}
                   className={`bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4 hover:shadow-md transition-shadow cursor-pointer hover:border-blue-300 dark:hover:border-blue-600 ${
                     task.status === "completed"
-                      ? "opacity-50 pointer-events-none"
+                      ? "opacity-60 grayscale-[0.5]"
                       : ""
                   }`}
                   onClick={() => navigate(getTaskNavigationUrl(task))}
@@ -424,6 +476,20 @@ const ProjectCard = ({
                       <option value="completed">Completed</option>
                       <option value="on_hold">On Hold</option>
                     </select>
+
+                    {task.status !== "completed" && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleTaskStatusUpdate(task.id, "completed");
+                        }}
+                        disabled={updatingTaskId === task.id}
+                        className="p-1 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded transition-colors"
+                        title="Mark as Complete"
+                      >
+                        <CheckCircle size={18} />
+                      </button>
+                    )}
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2 mb-3">

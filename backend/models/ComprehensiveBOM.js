@@ -214,116 +214,97 @@ class ComprehensiveBOM {
   static async findById(id) {
     const conn = await pool.getConnection();
     try {
-      const [rows] = await conn.execute(
-        `SELECT bom.*, u.username as created_by_name 
-        FROM bill_of_materials bom
-        LEFT JOIN users u ON bom.created_by = u.id
-        WHERE bom.id = ?`,
-        [id]
-      );
-
-      if (!rows[0]) return null;
-
-      const bom = this.transformBOMRow(rows[0]);
-      const [components] = await conn.execute(
-        'SELECT * FROM bom_components WHERE bom_id = ?',
-        [id]
-      );
-      const [materials] = await conn.execute(
-        'SELECT * FROM bom_materials WHERE bom_id = ?',
-        [id]
-      );
-      const [operations] = await conn.execute(
-        'SELECT * FROM bom_operations WHERE bom_id = ?',
-        [id]
-      );
-      const [scrapLoss] = await conn.execute(
-        'SELECT * FROM bom_scrap_loss WHERE bom_id = ?',
-        [id]
-      );
-
-      return {
-        ...bom,
-        components: await Promise.all((components || []).map(async c => {
-          const componentData = {
-            id: c.id,
-            bomId: c.bom_id,
-            componentCode: c.component_code,
-            quantity: c.quantity,
-            uom: c.uom,
-            rate: c.rate,
-            lossPercent: c.loss_percent,
-            notes: c.notes
-          };
-
-          // Check if this component has its own BOM (is a sub-assembly)
-          const subBOMRef = await this.findLatestByItemCode(c.component_code);
-          if (subBOMRef) {
-            const [subMaterials] = await conn.execute(
-              'SELECT * FROM bom_materials WHERE bom_id = ?',
-              [subBOMRef.id]
-            );
-            const [subOperations] = await conn.execute(
-              'SELECT * FROM bom_operations WHERE bom_id = ?',
-              [subBOMRef.id]
-            );
-
-            componentData.subAssemblyDetails = {
-              bomId: subBOMRef.id,
-              materials: (subMaterials || []).map(m => ({
-                itemCode: m.item_code,
-                itemName: m.item_name,
-                quantity: m.quantity,
-                uom: m.uom,
-                rate: m.rate
-              })),
-              operations: (subOperations || []).map(o => ({
-                operationName: o.operation_name,
-                workstation: o.workstation,
-                cost: o.cost
-              }))
-            };
-          }
-
-          return componentData;
-        })),
-        materials: (materials || []).map(m => ({
-          id: m.id,
-          bomId: m.bom_id,
-          itemCode: m.item_code,
-          itemName: m.item_name,
-          quantity: m.quantity,
-          uom: m.uom,
-          itemGroup: m.item_group,
-          rate: m.rate,
-          warehouse: m.warehouse,
-          operation: m.operation
-        })),
-        operations: (operations || []).map(o => ({
-          id: o.id,
-          bomId: o.bom_id,
-          operationName: o.operation_name,
-          workstation: o.workstation,
-          cycleTime: o.cycle_time,
-          setupTime: o.setup_time,
-          hourlyRate: o.hourly_rate,
-          cost: o.cost,
-          type: o.type,
-          targetWarehouse: o.target_warehouse
-        })),
-        scrapLoss: (scrapLoss || []).map(s => ({
-          id: s.id,
-          bomId: s.bom_id,
-          itemCode: s.item_code,
-          name: s.name,
-          inputQty: s.input_qty,
-          lossPercent: s.loss_percent,
-          rate: s.rate
-        }))
-      };
+      return await this.fetchBOMRecursive(id, conn);
     } finally {
       conn.release();
     }
+  }
+
+  static async fetchBOMRecursive(id, conn) {
+    const [rows] = await conn.execute(
+      `SELECT bom.*, u.username as created_by_name 
+      FROM bill_of_materials bom
+      LEFT JOIN users u ON bom.created_by = u.id
+      WHERE bom.id = ?`,
+      [id]
+    );
+
+    if (!rows[0]) return null;
+
+    const bom = this.transformBOMRow(rows[0]);
+    const [components] = await conn.execute(
+      'SELECT * FROM bom_components WHERE bom_id = ?',
+      [id]
+    );
+    const [materials] = await conn.execute(
+      'SELECT * FROM bom_materials WHERE bom_id = ?',
+      [id]
+    );
+    const [operations] = await conn.execute(
+      'SELECT * FROM bom_operations WHERE bom_id = ?',
+      [id]
+    );
+    const [scrapLoss] = await conn.execute(
+      'SELECT * FROM bom_scrap_loss WHERE bom_id = ?',
+      [id]
+    );
+
+    return {
+      ...bom,
+      components: await Promise.all((components || []).map(async c => {
+        const componentData = {
+          id: c.id,
+          bomId: c.bom_id,
+          componentCode: c.component_code,
+          quantity: c.quantity,
+          uom: c.uom,
+          rate: c.rate,
+          lossPercent: c.loss_percent,
+          notes: c.notes
+        };
+
+        // Check if this component has its own BOM (is a sub-assembly)
+        const subBOMRef = await this.findLatestByItemCode(c.component_code);
+        if (subBOMRef && subBOMRef.id !== id) { // Prevent infinite recursion
+          componentData.subAssemblyDetails = await this.fetchBOMRecursive(subBOMRef.id, conn);
+        }
+
+        return componentData;
+      })),
+      materials: (materials || []).map(m => ({
+        id: m.id,
+        bomId: m.bom_id,
+        itemCode: m.item_code,
+        itemName: m.item_name,
+        quantity: m.quantity,
+        uom: m.uom,
+        itemGroup: m.item_group,
+        rate: m.rate,
+        warehouse: m.warehouse,
+        operation: m.operation
+      })),
+      operations: (operations || []).map(o => ({
+        id: o.id,
+        bomId: o.bom_id,
+        operationName: o.operation_name,
+        workstation: o.workstation,
+        cycleTime: o.cycle_time,
+        setupTime: o.setup_time,
+        hourlyRate: o.hourly_rate,
+        cost: o.cost,
+        type: o.type,
+        targetWarehouse: o.target_warehouse
+      })),
+      scrapLoss: (scrapLoss || []).map(s => ({
+        id: s.id,
+        bomId: s.bom_id,
+        itemCode: s.item_code,
+        name: s.name,
+        inputQty: s.input_qty,
+        lossPercent: s.loss_percent,
+        rate: s.rate
+      }))
+    };
   }
 
   static async getAll() {

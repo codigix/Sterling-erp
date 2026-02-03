@@ -126,14 +126,24 @@ export default function RootCardViewOnly({ formData, initialData, onBack, employ
         addSection('Step 5: Quality Check & Economics', {
           'Inspection Type': qcData.inspectionType,
           'QC Status': qcData.qcStatus,
+          'Project Owner': getEmployeeName(formData?.internalProjectOwner),
           'Assigned To': getEmployeeName(formData?.qualityCheckAssignedTo),
           'Inspections Count': Array.isArray(qcData.inspections) ? qcData.inspections.length : 0,
           'Inspections Details': inspectionsDetails,
           'Remarks': qcData.remarks,
+          'Job Card Number': formData.internalInfo?.jobCardNo,
           'Quality Standards': formData.qualityCompliance?.qualityStandards,
+          'Welding Standards': formData.qualityCompliance?.weldingStandards,
+          'Surface Finish': formData.qualityCompliance?.surfaceFinish,
+          'Mechanical Load Testing': formData.qualityCompliance?.mechanicalLoadTesting,
+          'Electrical Compliance': formData.qualityCompliance?.electricalCompliance,
+          'Documents Required': formData.qualityCompliance?.documentsRequired,
           'Warranty Period': formData.warrantySupport?.warrantyPeriod,
+          'Service Support': formData.warrantySupport?.serviceSupport,
           'Payment Terms': formData.paymentTerms,
           'Total Amount': initialData?.total || formData.totalAmount,
+          'Estimated Costing': formData.internalInfo?.estimatedCosting,
+          'Estimated Profit': formData.internalInfo?.estimatedProfit,
           'Priority': initialData?.priority || formData.projectPriority,
           'Special Instructions': formData.specialInstructions,
         });
@@ -151,6 +161,13 @@ export default function RootCardViewOnly({ formData, initialData, onBack, employ
           'Dismantling': formData.shipment?.dismantling,
           'Packing': formData.shipment?.packing,
           'Dispatch': formData.shipment?.dispatch,
+          'Shipment Method': formData.shipment?.shipmentMethod,
+          'Carrier Name': formData.shipment?.carrierName,
+          'Tracking Number': formData.shipment?.trackingNumber,
+          'Estimated Delivery Date': formData.shipment?.estimatedDeliveryDate,
+          'Shipment Cost': formData.shipment?.shipmentCost,
+          'Shipping Address': formData.shipment?.shippingAddress,
+          'Shipping Notes': formData.shipment?.notes,
         });
       }
 
@@ -159,14 +176,19 @@ export default function RootCardViewOnly({ formData, initialData, onBack, employ
         addSection('Step 7: Delivery & Handover', {
           'Actual Delivery Date': delData.actualDeliveryDate,
           'Delivered To': delData.deliveredTo,
+          'Customer Contact': delData.customerContact,
           'Assigned To': getEmployeeName(formData?.deliveryAssignedTo),
+          'Delivery Date': delData.deliveryDate,
+          'POD Number': delData.podNumber,
+          'Delivered Quantity': delData.deliveredQuantity,
+          'Delivery Cost': delData.deliveryCost,
           'Installation Completed': delData.installationCompleted,
           'Site Commissioning Completed': delData.siteCommissioningCompleted,
           'Warranty Terms Acceptance': delData.warrantyTermsAcceptance,
           'Completion Remarks': delData.completionRemarks,
           'Project Manager': delData.projectManager,
           'Production Supervisor': delData.productionSupervisor,
-          'Customer Contact': formData.customerContact,
+          'Delivery Notes': delData.deliveryNotes,
         });
       }
 
@@ -472,9 +494,16 @@ export default function RootCardViewOnly({ formData, initialData, onBack, employ
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                   <DetailField label="Inspection Type" value={formData.qualityCheck?.inspectionType} />
                   <DetailField label="QC Status" value={formData.qualityCheck?.qcStatus} />
+                  <DetailField label="Internal Project Owner" value={getEmployeeName(formData?.internalProjectOwner)} />
                   <DetailField label="Remarks" value={formData.qualityCheck?.remarks} />
                   <DetailField label="Assigned To" value={getEmployeeName(formData?.qualityCheckAssignedTo)} />
+                  <DetailField label="Job Card Number" value={formData.internalInfo?.jobCardNo} />
                   <DetailField label="Inspection Count" value={Array.isArray(formData.qualityCheck?.inspections) ? formData.qualityCheck.inspections.length : 0} />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  <DetailField label="Estimated Costing (₹)" value={formData.internalInfo?.estimatedCosting} />
+                  <DetailField label="Estimated Profit (₹)" value={formData.internalInfo?.estimatedProfit} />
                 </div>
 
                 {Array.isArray(formData.qualityCheck?.inspections) && formData.qualityCheck.inspections.length > 0 && (
@@ -559,6 +588,21 @@ export default function RootCardViewOnly({ formData, initialData, onBack, employ
                   <DetailField label="Dispatch" value={formData.shipment?.dispatch} />
                 </div>
               </div>
+
+              <div className="bg-white border-b border-slate-200  p-2 mb-0">
+                <h3 className="text-md font-semibold text-slate-900 mb-2">Shipping Logistics</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <DetailField label="Shipment Method" value={formData.shipment?.shipmentMethod} />
+                  <DetailField label="Carrier Name" value={formData.shipment?.carrierName} />
+                  <DetailField label="Tracking Number" value={formData.shipment?.trackingNumber} />
+                  <DetailField label="Estimated Delivery Date" value={formData.shipment?.estimatedDeliveryDate} />
+                  <DetailField label="Shipment Cost (₹)" value={formData.shipment?.shipmentCost} />
+                </div>
+                <div className="mt-4">
+                  <DetailField label="Shipping Address" value={formData.shipment?.shippingAddress} />
+                  <DetailField label="Shipping Notes" value={formData.shipment?.notes} />
+                </div>
+              </div>
             </div>
           </section>
         )}
@@ -569,11 +613,25 @@ export default function RootCardViewOnly({ formData, initialData, onBack, employ
             <SectionHeader number="7" title="Delivery & Handover" />
             <div className="space-y-6">
               <div className="bg-white border-b border-slate-200  p-2 mb-0">
-                <h3 className="text-md font-semibold text-slate-900 mb-2">Delivery Confirmation</h3>
+                <h3 className="text-md font-semibold text-slate-900 mb-2">Delivery Details</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <DetailField label="Actual Delivery Date" value={formData.delivery?.actualDeliveryDate} />
                   <DetailField label="Delivered To" value={formData.delivery?.deliveredTo} />
+                  <DetailField label="Customer Contact Person" value={formData.delivery?.customerContact} />
                   <DetailField label="Assigned To" value={getEmployeeName(formData?.deliveryAssignedTo)} />
+                </div>
+              </div>
+
+              <div className="bg-white border-b border-slate-200  p-2 mb-0">
+                <h3 className="text-md font-semibold text-slate-900 mb-2">Logistics & Proof of Delivery</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <DetailField label="Delivery Date" value={formData.delivery?.deliveryDate} />
+                  <DetailField label="POD / LR Number" value={formData.delivery?.podNumber} />
+                  <DetailField label="Delivered Quantity" value={formData.delivery?.deliveredQuantity} />
+                  <DetailField label="Delivery Cost (₹)" value={formData.delivery?.deliveryCost} />
+                </div>
+                <div className="mt-4">
+                  <DetailField label="Delivery Notes" value={formData.delivery?.deliveryNotes} />
                 </div>
               </div>
 

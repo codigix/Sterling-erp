@@ -26,12 +26,16 @@ class DesignEngineeringDetail {
     `);
   }
 
-  static async findByRootCardId(rootCardId) {
+  static async findBySalesOrderId(salesOrderId) {
     const [rows] = await pool.execute(
       `SELECT * FROM design_engineering_details WHERE sales_order_id = ?`,
-      [rootCardId]
+      [salesOrderId]
     );
     return rows[0] ? this.formatRow(rows[0]) : null;
+  }
+
+  static async findByRootCardId(rootCardId) {
+    return this.findBySalesOrderId(rootCardId);
   }
 
   static async create(data) {
@@ -45,7 +49,7 @@ class DesignEngineeringDetail {
     });
 
     // Fallback to direct keys if designEngineering prefix not present
-    if (normalized.documents === undefined) normalized.documents = data.attachments?.documents || data.documents;
+    if (normalized.documents === undefined) normalized.documents = data.attachments?.documents || data.documents || data.referenceDocuments;
     if (normalized.drawings3D === undefined) normalized.drawings3D = data.attachments?.drawings || data.drawings3D;
     if (normalized.designStatus === undefined) normalized.designStatus = data.designStatus || data.generalDesignInfo?.designStatus;
     if (normalized.bomData === undefined) normalized.bomData = data.bomData || data.bomSheet;
@@ -84,7 +88,7 @@ class DesignEngineeringDetail {
     });
 
     // Fallback to direct keys if designEngineering prefix not present
-    if (normalized.documents === undefined) normalized.documents = data.attachments?.documents || data.documents;
+    if (normalized.documents === undefined) normalized.documents = data.attachments?.documents || data.documents || data.referenceDocuments;
     if (normalized.drawings3D === undefined) normalized.drawings3D = data.attachments?.drawings || data.drawings3D;
     if (normalized.designStatus === undefined) normalized.designStatus = data.designStatus || data.generalDesignInfo?.designStatus;
     if (normalized.bomData === undefined) normalized.bomData = data.bomData || data.bomSheet;

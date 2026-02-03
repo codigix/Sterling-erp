@@ -4,11 +4,12 @@ const fs = require('fs');
 
 exports.getSpecifications = async (req, res) => {
   try {
-    const { search } = req.query;
-    const specifications = await Specification.findAll({ search });
+    const { search, rootCardId } = req.query;
+    const specifications = await Specification.findAll({ search, rootCardId });
     
     const formattedSpecs = specifications.map(s => ({
       id: s.id,
+      rootCardId: s.root_card_id,
       title: s.title,
       description: s.description,
       version: s.version,
@@ -31,7 +32,8 @@ exports.createSpecification = async (req, res) => {
     const { 
       title, 
       description, 
-      version
+      version,
+      rootCardId
     } = req.body;
 
     const file = req.file;
@@ -47,6 +49,7 @@ exports.createSpecification = async (req, res) => {
       title,
       description: description || '',
       version: version || 'v1.0',
+      rootCardId,
       filePath: file.path,
       fileName: file.originalname,
       uploadedBy: req.user.id
@@ -123,6 +126,53 @@ exports.deleteSpecification = async (req, res) => {
     res.json({ message: 'Specification deleted successfully' });
   } catch (error) {
     console.error('Delete specification error:', error);
+    res.status(500).json({ message: 'Internal server error', error: error.message });
+  }
+};
+
+exports.updateSpecification = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, description, version, rootCardId } = req.body;
+    const file = req.file;
+
+    const specification = await Specification.findById(id);
+    if (!specification) {
+      return res.status(404).json({ message: 'Specification not found' });
+    }
+
+    const updateData = {};
+    if (title) updateData.title = title;
+    if (description !== undefined) updateData.description = description;
+    if (version) updateData.version = version;
+    if (rootCardId) updateData.rootCardId = rootCardId;
+
+    if (file) {
+      updateData.filePath = file.path;
+      updateData.fileName = file.originalname;
+
+      // Delete old file if it exists
+      if (specification.file_path && fs.existsSync(specification.file_path)) {
+        try {
+          fs.unlinkSync(specification.file_path);
+        } catch (err) {
+          console.error('Failed to delete old file:', err);
+        }
+      }
+    }
+
+    await Specification.update(id, updateData);
+
+    res.json({ message: 'Specification updated successfully' });
+  } catch (error) {
+    console.error('Update specification error:', error);
+    if (req.file) {
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (e) {
+        console.error('Failed to delete file after error:', e);
+      }
+    }
     res.status(500).json({ message: 'Internal server error', error: error.message });
   }
 };

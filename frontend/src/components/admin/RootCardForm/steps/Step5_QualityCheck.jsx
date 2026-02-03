@@ -138,6 +138,17 @@ export default function Step5_QualityCheck({ readOnly = false }) {
           />
         </FormRow>
         <div className="mt-3">
+          <label className="block text-sm font-medium text-slate-900 text-left mb-2">Detailed QC Report</label>
+          <textarea
+            value={formData.qualityCheck?.qcReport || ""}
+            onChange={(e) => setNestedField("qualityCheck", "qcReport", e.target.value)}
+            disabled={readOnly}
+            rows="4"
+            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Enter detailed quality control report or findings"
+          />
+        </div>
+        <div className="mt-3">
           <label className="block text-sm font-medium text-slate-900 text-left mb-2">Final Remarks</label>
           <textarea
             value={formData.qualityCheck?.remarks || ""}
@@ -281,6 +292,17 @@ export default function Step5_QualityCheck({ readOnly = false }) {
       <div className="border-t border-slate-200 pt-3">
         <h5 className="text-sm font-semibold text-slate-900 mb-2 text-left">Internal Information</h5>
         <FormRow cols={2}>
+          <Select
+            label="Internal Project Owner"
+            options={state.employees?.map(emp => ({ label: emp.full_name || emp.name, value: emp.id })) || []}
+            value={formData.internalProjectOwner || ""}
+            onChange={(e) => updateField("internalProjectOwner", e.target.value)}
+            placeholder="Select Project Owner"
+            disabled={readOnly}
+          />
+          <div className="hidden md:block"></div>
+        </FormRow>
+        <FormRow cols={2}>
           <Input
             label="Estimated Costing (₹)"
             type="number"
@@ -321,7 +343,7 @@ export default function Step5_QualityCheck({ readOnly = false }) {
         />
       </div>
     </div>
-  ), [formData.paymentTerms, formData.projectPriority, formData.totalAmount, formData.status, formData.internalInfo, formData.specialInstructions, updateField, setNestedField, readOnly]);
+  ), [formData.paymentTerms, formData.projectPriority, formData.totalAmount, formData.status, formData.internalInfo, formData.specialInstructions, formData.internalProjectOwner, state.employees, updateField, setNestedField, readOnly]);
 
   const tabs = useMemo(() => [
     { label: "Requirements", content: qualityRequirementsContent },

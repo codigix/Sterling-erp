@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Plus,
   Search,
@@ -13,6 +14,9 @@ import {
 import axios from "../../../utils/api";
 
 const TechnicalFilesPage = () => {
+  const [searchParams] = useSearchParams();
+  const taskId = searchParams.get("taskId");
+
   const [searchTerm, setSearchTerm] = useState("");
   const [filter, setFilter] = useState("all");
   const [files, setFiles] = useState([]);
@@ -75,6 +79,17 @@ const TechnicalFilesPage = () => {
       await axios.post("/production/technical-files", payload, {
         headers: { "Content-Type": "multipart/form-data" },
       });
+
+      if (taskId) {
+        try {
+          await axios.patch(`/department/portal/tasks/${taskId}`, {
+            status: "completed",
+          });
+          console.log(`Task ${taskId} marked as completed`);
+        } catch (taskErr) {
+          console.error("Error marking task as completed:", taskErr);
+        }
+      }
 
       alert(`File "${formData.name}" uploaded successfully!`);
       setShowUploadModal(false);

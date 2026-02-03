@@ -58,6 +58,11 @@ class DeliveryDetail {
       projectManager: 'delivery.projectManager',
       productionSupervisor: 'delivery.productionSupervisor',
       receivedBy: 'delivery.deliveredTo',
+      deliveryDate: 'delivery.deliveryDate',
+      podNumber: 'delivery.podNumber',
+      deliveredQuantity: 'delivery.deliveredQuantity',
+      deliveryCost: 'delivery.deliveryCost',
+      deliveryNotes: 'delivery.deliveryNotes',
       assignedTo: 'deliveryAssignedTo'
     });
 
@@ -103,6 +108,11 @@ class DeliveryDetail {
       projectManager: 'delivery.projectManager',
       productionSupervisor: 'delivery.productionSupervisor',
       receivedBy: 'delivery.deliveredTo',
+      deliveryDate: 'delivery.deliveryDate',
+      podNumber: 'delivery.podNumber',
+      deliveredQuantity: 'delivery.deliveredQuantity',
+      deliveryCost: 'delivery.deliveryCost',
+      deliveryNotes: 'delivery.deliveryNotes',
       assignedTo: 'deliveryAssignedTo'
     });
 
@@ -267,7 +277,14 @@ class DeliveryDetail {
         siteCommissioningCompleted: row.site_commissioning_completed,
         warrantyTermsAcceptance: row.warranty_terms_acceptance,
         completionRemarks: row.completion_remarks,
-        deliveredTo: row.received_by
+        deliveredTo: row.received_by,
+        projectManager: row.project_manager,
+        productionSupervisor: row.production_supervisor,
+        deliveryDate: row.delivery_date,
+        podNumber: row.pod_number,
+        deliveredQuantity: row.delivered_quantity,
+        deliveryCost: row.delivery_cost,
+        deliveryNotes: row.delivery_notes
       },
       internalInfo: {
         projectManager: row.project_manager,

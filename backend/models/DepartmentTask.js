@@ -146,11 +146,62 @@ class DepartmentTask {
       return { affectedRows: 0 };
     }
 
+    // Get current task details for synchronization before update
+    const [currentTaskRows] = await pool.execute(
+      'SELECT root_card_id, task_title, sales_order_id FROM department_tasks WHERE id = ?',
+      [taskId]
+    );
+
     fields.push('updated_at = CURRENT_TIMESTAMP');
     values.push(taskId);
 
     const query = `UPDATE department_tasks SET ${fields.join(', ')} WHERE id = ?`;
     const [result] = await pool.execute(query, values);
+
+    // Synchronize with employee_tasks if status or priority changed
+    if (currentTaskRows.length > 0 && (updates.status || updates.priority)) {
+      const task = currentTaskRows[0];
+      const syncFields = [];
+      const syncValues = [];
+
+      if (updates.status) {
+        syncFields.push('status = ?');
+        syncValues.push(updates.status);
+        if (updates.status === 'completed') {
+          syncFields.push('completed_at = CURRENT_TIMESTAMP');
+        } else if (updates.status === 'in_progress') {
+          syncFields.push('started_at = COALESCE(started_at, CURRENT_TIMESTAMP)');
+        }
+      }
+
+      if (updates.priority) {
+        syncFields.push('priority = ?');
+        syncValues.push(updates.priority);
+      }
+
+      if (syncFields.length > 0) {
+        // Find employee tasks that match this department task
+        // We match by title and root_card_id (related_id) OR sales_order_id
+        const syncQuery = `
+          UPDATE employee_tasks 
+          SET ${syncFields.join(', ')}, updated_at = CURRENT_TIMESTAMP 
+          WHERE title = ? 
+          AND (
+            (related_id = ? AND related_type = 'root_card')
+            ${task.sales_order_id ? 'OR sales_order_id = ?' : ''}
+          )
+        `;
+
+        const syncParams = [...syncValues, task.task_title, task.root_card_id];
+        if (task.sales_order_id) {
+          syncParams.push(task.sales_order_id);
+        }
+
+        await pool.execute(syncQuery, syncParams);
+        console.log(`[DepartmentTask] Synchronized ${updates.status ? 'status' : ''} ${updates.priority ? 'priority' : ''} with employee_tasks for task: ${task.task_title}`);
+      }
+    }
+
     return result;
   }
 

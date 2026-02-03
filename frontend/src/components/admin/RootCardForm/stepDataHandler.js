@@ -77,7 +77,6 @@ export const buildStepPayload = (stepNumber, formData, poDocuments = []) => {
       delivery: formData.delivery || {},
       deliveryTerms: formData.deliveryTerms || {},
       warrantySupport: formData.warrantySupport || {},
-      customerContact: formData.customerContact || '',
       projectRequirements: formData.projectRequirements || {},
       internalInfo: formData.internalInfo || {},
       assignedTo: formData.deliveryAssignedTo || null

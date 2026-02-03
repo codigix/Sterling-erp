@@ -1,12 +1,18 @@
 import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Plus, Search, Edit, Download, Trash2, FileText, X, Loader2 } from "lucide-react";
 import axios from "../../../utils/api";
 
 const SpecificationsPage = () => {
+  const [searchParams] = useSearchParams();
+  const taskId = searchParams.get("taskId");
+  const rootCardId = searchParams.get("rootCardId");
+
   const [searchTerm, setSearchTerm] = useState("");
   const [specs, setSpecs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
@@ -29,8 +35,11 @@ const SpecificationsPage = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.get("/production/specifications");
-      const specList = Array.isArray(response.data) ? response.data : response.data?.specifications || [];
+      const response = await axios.get("/production/specifications", {
+        params: rootCardId ? { rootCardId } : {}
+      });
+      let specList = Array.isArray(response.data) ? response.data : response.data?.specifications || [];
+      
       setSpecs(specList);
     } catch (err) {
       console.error("Failed to fetch specifications:", err);
@@ -77,6 +86,17 @@ const SpecificationsPage = () => {
       await axios.post("/production/specifications", payload, {
         headers: { "Content-Type": "multipart/form-data" },
       });
+
+      if (taskId) {
+        try {
+          await axios.patch(`/department/portal/tasks/${taskId}`, {
+            status: "completed",
+          });
+          console.log(`Task ${taskId} marked as completed`);
+        } catch (taskErr) {
+          console.error("Error marking task as completed:", taskErr);
+        }
+      }
 
       alert(`Specification "${formData.title}" created successfully!`);
       setShowCreateModal(false);
@@ -145,7 +165,68 @@ const SpecificationsPage = () => {
       specificationFile: null,
     });
     setSelectedSpec(spec);
-    // TODO: Implement edit functionality
+    setIsEditing(true);
+    setShowCreateModal(true);
+  };
+
+  const handleSubmit = async () => {
+    if (!formData.title.trim()) {
+      alert("Please enter a title");
+      return;
+    }
+
+    if (!isEditing && !uploadedFile) {
+      alert("Please upload a file");
+      return;
+    }
+
+    try {
+      setCreating(true);
+      const payload = new FormData();
+      payload.append("title", formData.title);
+      payload.append("description", formData.description);
+      payload.append("version", formData.version);
+      if (rootCardId) {
+        payload.append("rootCardId", rootCardId);
+      }
+      if (uploadedFile) {
+        payload.append("file", uploadedFile);
+      }
+
+      if (isEditing) {
+        await axios.patch(`/production/specifications/${selectedSpec.id}`, payload, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+        alert(`Specification "${formData.title}" updated successfully!`);
+      } else {
+        await axios.post("/production/specifications", payload, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+
+        if (taskId) {
+          try {
+            await axios.patch(`/department/portal/tasks/${taskId}`, {
+              status: "completed",
+            });
+          } catch (taskErr) {
+            console.error("Error marking task as completed:", taskErr);
+          }
+        }
+        alert(`Specification "${formData.title}" created successfully!`);
+      }
+
+      setShowCreateModal(false);
+      setFormData({ title: "", description: "", version: "v1.0", specificationFile: null });
+      setUploadedFile(null);
+      setIsEditing(false);
+      setSelectedSpec(null);
+      await fetchSpecifications();
+    } catch (err) {
+      console.error("Failed to save specification:", err);
+      alert("Failed to save specification. Please try again.");
+    } finally {
+      setCreating(false);
+    }
   };
 
   const filteredSpecs = specs.filter((s) =>
@@ -237,15 +318,22 @@ const SpecificationsPage = () => {
                   View
                 </button>
                 <button
+                  onClick={() => handleEditSpecification(spec)}
+                  className="px-3 py-2 bg-amber-50 dark:bg-amber-900 text-amber-600 dark:text-amber-400 rounded text-sm hover:bg-amber-100 dark:hover:bg-amber-800 transition-colors flex items-center justify-center"
+                  title="Edit"
+                >
+                  <Edit size={16} />
+                </button>
+                <button
                   onClick={() => handleDownloadSpecification(spec)}
-                  className="flex-1 px-3 py-2 bg-green-50 dark:bg-green-900 text-green-600 dark:text-green-400 rounded text-sm hover:bg-green-100 dark:hover:bg-green-800 transition-colors flex items-center text-xs justify-center gap-2"
+                  className="px-3 py-2 bg-green-50 dark:bg-green-900 text-green-600 dark:text-green-400 rounded text-sm hover:bg-green-100 dark:hover:bg-green-800 transition-colors flex items-center justify-center"
+                  title="Download"
                 >
                   <Download size={16} />
-                  Download
                 </button>
                 <button
                   onClick={() => handleDeleteClick(spec)}
-                  className="px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-red-600 dark:text-red-400 transition-colors"
+                  className="px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-red-600 dark:text-red-400 transition-colors flex items-center justify-center"
                   title="Delete"
                 >
                   <Trash2 size={16} />
@@ -261,13 +349,15 @@ const SpecificationsPage = () => {
           <div className="bg-white dark:bg-slate-800 rounded-lg max-w-2xl w-full shadow-2xl border border-slate-200 dark:border-slate-700 max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
               <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-                Create New Specification
+                {isEditing ? "Edit Specification" : "Create New Specification"}
               </h3>
               <button
                 onClick={() => {
                   setShowCreateModal(false);
                   setFormData({ title: "", description: "", version: "v1.0", specificationFile: null });
                   setUploadedFile(null);
+                  setIsEditing(false);
+                  setSelectedSpec(null);
                 }}
                 className="text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
               >
@@ -316,7 +406,7 @@ const SpecificationsPage = () => {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                  Upload File *
+                  {isEditing ? "Update File (Optional)" : "Upload File *"}
                 </label>
                 <input
                   type="file"
@@ -335,6 +425,9 @@ const SpecificationsPage = () => {
                     </button>
                   </div>
                 )}
+                {isEditing && !uploadedFile && selectedSpec?.fileName && (
+                   <p className="text-xs text-slate-500 mt-1">Current file: {selectedSpec.fileName}</p>
+                )}
               </div>
             </div>
 
@@ -344,6 +437,8 @@ const SpecificationsPage = () => {
                   setShowCreateModal(false);
                   setFormData({ title: "", description: "", version: "v1.0", specificationFile: null });
                   setUploadedFile(null);
+                  setIsEditing(false);
+                  setSelectedSpec(null);
                 }}
                 className="flex-1 px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors font-medium text-sm"
                 disabled={creating}
@@ -351,12 +446,12 @@ const SpecificationsPage = () => {
                 Cancel
               </button>
               <button
-                onClick={handleCreateSpecification}
+                onClick={handleSubmit}
                 disabled={creating}
                 className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {creating && <Loader2 size={16} className="animate-spin" />}
-                Create Specification
+                {isEditing ? "Update Specification" : "Create Specification"}
               </button>
             </div>
           </div>

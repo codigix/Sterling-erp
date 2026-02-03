@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Plus,
   Search,
@@ -14,6 +15,10 @@ import {
 import axios from "../../../utils/api";
 
 const DrawingsPage = () => {
+  const [searchParams] = useSearchParams();
+  const taskId = searchParams.get("taskId");
+  const rootCardId = searchParams.get("rootCardId");
+
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState("list");
   const [drawings, setDrawings] = useState([]);
@@ -48,7 +53,14 @@ const DrawingsPage = () => {
       setLoading(true);
       setError(null);
       const response = await axios.get("/production/drawings");
-      setDrawings(response.data.drawings || []);
+      let drawingList = response.data.drawings || [];
+      
+      // Filter by rootCardId if present
+      if (rootCardId) {
+        drawingList = drawingList.filter(d => String(d.rootCardId) === String(rootCardId));
+      }
+      
+      setDrawings(drawingList);
     } catch (err) {
       console.error("Failed to fetch drawings:", err);
       setDrawings([]);
@@ -109,6 +121,17 @@ const DrawingsPage = () => {
       await axios.post("/production/drawings", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
+
+      if (taskId) {
+        try {
+          await axios.patch(`/department/portal/tasks/${taskId}`, {
+            status: "completed",
+          });
+          console.log(`Task ${taskId} marked as completed`);
+        } catch (taskErr) {
+          console.error("Error marking task as completed:", taskErr);
+        }
+      }
 
       alert("Drawing uploaded successfully!");
       setShowUploadModal(false);

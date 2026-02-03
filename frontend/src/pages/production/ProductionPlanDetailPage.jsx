@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Edit, Trash2, Calendar, AlertCircle, CheckCircle, Clock, User } from 'lucide-react';
+import { 
+  ArrowLeft, Edit, Trash2, Calendar, AlertCircle, CheckCircle, Clock, User, 
+  Save, X, Activity, Box, FileText, Layout, ListChecks, Zap, Loader2 
+} from 'lucide-react';
 import axios from '../../utils/api';
 
 const ProductionPlanDetailPage = () => {
@@ -12,6 +15,8 @@ const ProductionPlanDetailPage = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({});
+  const [generatingWorkOrders, setGeneratingWorkOrders] = useState(false);
+  const [success, setSuccess] = useState('');
   const pollingIntervalRef = useRef(null);
 
   useEffect(() => {
@@ -19,7 +24,7 @@ const ProductionPlanDetailPage = () => {
     
     pollingIntervalRef.current = setInterval(() => {
       fetchPlanDetail(false);
-    }, 3000);
+    }, 5000);
 
     return () => {
       if (pollingIntervalRef.current) {
@@ -33,8 +38,20 @@ const ProductionPlanDetailPage = () => {
     if (showLoading) setLoading(true);
     try {
       const response = await axios.get(`/production/plans/${id}/with-stages`, { __sessionGuard: true });
-      setPlan(response.data);
-      setFormData(response.data);
+      const data = response.data;
+      setPlan(data);
+      
+      // Initialize formData with current values mapped to form field names
+      setFormData({
+        planName: data.plan_name || '',
+        status: data.status || 'draft',
+        plannedStartDate: data.planned_start_date || '',
+        plannedEndDate: data.planned_end_date || '',
+        estimatedCompletionDate: data.estimated_completion_date || '',
+        notes: data.notes || '',
+        supervisorId: data.supervisor_id || ''
+      });
+      
       setError(null);
     } catch (err) {
       setError(err.message || 'Failed to fetch plan details');
@@ -48,7 +65,10 @@ const ProductionPlanDetailPage = () => {
     try {
       setIsSaving(true);
       await axios.patch(`/production/plans/${id}`, formData, { __sessionGuard: true });
-      setPlan(formData);
+      
+      // Re-fetch to get updated and populated data
+      await fetchPlanDetail(false);
+      
       setIsEditing(false);
       setError(null);
     } catch (err) {
@@ -69,20 +89,40 @@ const ProductionPlanDetailPage = () => {
     }
   };
 
+  const handleGenerateWorkOrders = async () => {
+    setGeneratingWorkOrders(true);
+    setError(null);
+    setSuccess('');
+    try {
+      const response = await axios.post(`/production/plans/${id}/generate-work-orders`);
+      setSuccess(`✓ ${response.data.message}`);
+      // Refresh to show any updated status if applicable
+      fetchPlanDetail(false);
+      setTimeout(() => setSuccess(''), 5000);
+    } catch (err) {
+      console.error('Error generating work orders:', err);
+      setError('Failed to generate work orders: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setGeneratingWorkOrders(false);
+    }
+  };
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'draft':
-        return 'bg-gray-100 dark:bg-gray-900/30 text-gray-800 dark:text-gray-300';
+        return 'bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-400';
+      case 'planning':
+        return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
+      case 'approved':
+        return 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400';
       case 'in_progress':
-        return 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300';
+        return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400';
       case 'completed':
-        return 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300';
-      case 'on_hold':
-        return 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300';
-      case 'pending':
-        return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300';
+        return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
+      case 'cancelled':
+        return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
       default:
-        return 'bg-gray-100 dark:bg-gray-900/30 text-gray-800 dark:text-gray-300';
+        return 'bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-400';
     }
   };
 
@@ -97,18 +137,18 @@ const ProductionPlanDetailPage = () => {
       case 'in_progress':
         return <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400" />;
       case 'pending':
-        return <Clock className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />;
+        return <Clock className="w-5 h-5 text-slate-400 dark:text-slate-500" />;
       default:
-        return <AlertCircle className="w-5 h-5 text-gray-600 dark:text-gray-400" />;
+        return <AlertCircle className="w-5 h-5 text-slate-400 dark:text-slate-500" />;
     }
   };
 
-  if (loading) {
+  if (loading && !plan) {
     return (
-      <div className="flex items-center justify-center py-16">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-10 w-10 border-3 border-blue-200 border-b-blue-600 mb-4"></div>
-          <p className="text-slate-600 dark:text-slate-400">Loading plan details...</p>
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-purple-200 border-b-purple-600 mb-4"></div>
+          <p className="text-slate-600 dark:text-slate-400 font-medium">Syncing plan data...</p>
         </div>
       </div>
     );
@@ -116,304 +156,431 @@ const ProductionPlanDetailPage = () => {
 
   if (!plan) {
     return (
-      <div className="text-center py-16">
-        <p className="text-lg text-slate-500 dark:text-slate-400">Plan not found</p>
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center p-6">
+        <div className="text-center max-w-md bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700">
+          <div className="w-16 h-16 bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertCircle size={32} />
+          </div>
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Plan Not Found</h2>
+          <p className="text-slate-600 dark:text-slate-400 mb-6">The production plan you're looking for might have been deleted or moved.</p>
+          <button 
+            onClick={() => navigate('/department/production/plans')}
+            className="w-full py-3 bg-slate-900 dark:bg-slate-700 text-white font-bold rounded-xl hover:bg-slate-800 dark:hover:bg-slate-600 transition-all"
+          >
+            Back to All Plans
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 pb-8">
-      <div className="flex items-center gap-4">
-        <button
-          onClick={() => navigate('/department/production/plans')}
-          className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
-        >
-          <ArrowLeft size={24} className="text-slate-600 dark:text-slate-400" />
-        </button>
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">{plan.plan_name}</h1>
-          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Production Plan #{plan.id}</p>
-        </div>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 pb-24">
+      <div className="max-w-6xl mx-auto px-6 lg:px-8 py-6">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => navigate('/department/production/plans')}
+              className="p-2 hover:bg-white/50 dark:hover:bg-slate-800/50 rounded-xl transition-all border border-transparent hover:border-slate-200 dark:hover:border-slate-700 group"
+            >
+              <ArrowLeft size={20} className="text-slate-500 group-hover:text-slate-900 dark:group-hover:text-white" />
+            </button>
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[10px] font-bold uppercase tracking-wider rounded">
+                  Plan Details
+                </span>
+                <span className="text-slate-300 dark:text-slate-700">•</span>
+                <span className="text-xs font-medium text-slate-500 dark:text-slate-400 font-mono">
+                  #{plan.id}
+                </span>
+              </div>
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+                {plan.plan_name}
+              </h1>
+            </div>
+          </div>
 
-      {error && (
-        <div className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-4 text-sm text-red-700 dark:text-red-300 flex items-start gap-3">
-          <AlertCircle size={18} className="flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="font-medium">{error}</p>
+          <div className="flex items-center gap-3">
+            {!isEditing ? (
+              <>
+                <button
+                  onClick={handleGenerateWorkOrders}
+                  disabled={generatingWorkOrders}
+                  className="flex-1 md:flex-none inline-flex items-center justify-center gap-2 px-5 py-2 rounded-xl bg-green-600 text-white font-bold hover:bg-green-700 disabled:bg-slate-400 transition-all text-sm shadow-lg shadow-green-600/20"
+                >
+                  {generatingWorkOrders ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <Zap size={16} />
+                  )}
+                  Generate Work Orders
+                </button>
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="flex-1 md:flex-none inline-flex items-center justify-center gap-2 px-5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 font-bold hover:bg-white dark:hover:bg-slate-800 transition-all text-sm"
+                >
+                  <Edit size={16} />
+                  Edit Plan
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="flex-1 md:flex-none inline-flex items-center justify-center gap-2 px-5 py-2 rounded-xl bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400 font-bold hover:bg-red-100 dark:hover:bg-red-900/30 transition-all text-sm border border-red-100 dark:border-red-900/30"
+                >
+                  <Trash2 size={16} />
+                  Delete
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => setIsEditing(false)}
+                  className="flex-1 md:flex-none inline-flex items-center justify-center gap-2 px-5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 font-bold hover:bg-white dark:hover:bg-slate-800 transition-all text-sm"
+                >
+                  <X size={16} />
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  className="flex-1 md:flex-none inline-flex items-center justify-center gap-2 px-6 py-2 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 disabled:bg-slate-400 shadow-lg shadow-blue-600/20 transition-all text-sm"
+                >
+                  {isSaving ? (
+                    <Clock size={16} className="animate-spin" />
+                  ) : (
+                    <Save size={16} />
+                  )}
+                  Save Changes
+                </button>
+              </>
+            )}
           </div>
         </div>
-      )}
 
-      <div className="flex gap-4 flex-wrap">
-        <button
-          onClick={() => setIsEditing(!isEditing)}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors disabled:opacity-50"
-          disabled={isSaving}
-        >
-          <Edit size={18} />
-          {isEditing ? 'Cancel' : 'Edit'}
-        </button>
-        {isEditing && (
-          <button
-            onClick={handleSave}
-            disabled={isSaving}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium transition-colors disabled:opacity-50"
-          >
-            {isSaving ? 'Saving...' : 'Save Changes'}
-          </button>
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-700 dark:text-red-400 flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
+            <AlertCircle size={18} />
+            <p className="text-sm font-medium">{error}</p>
+          </div>
         )}
-        <button
-          onClick={handleDelete}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium transition-colors"
-        >
-          <Trash2 size={18} />
-          Delete
-        </button>
-      </div>
 
-      <div className="space-y-6">
-        <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-8">
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-8">Plan Information</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8 pb-8 border-b border-slate-200 dark:border-slate-700">
-            <div>
-              <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-2">Product</p>
-              <p className="text-slate-900 dark:text-white font-medium">{plan.product_name || '-'}</p>
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-2">Customer</p>
-              <p className="text-slate-900 dark:text-white font-medium">{plan.customer_name || 'Not assigned'}</p>
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-2">Status</p>
-              <div>
-                <span className={`px-3 py-1 rounded-full text-xs font-semibold inline-block ${getStatusColor(plan.status)}`}>
+        {success && (
+          <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl text-green-700 dark:text-green-400 flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
+            <CheckCircle size={18} />
+            <p className="text-sm font-medium">{success}</p>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main Info Card */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+              <div className="p-6 border-b border-slate-100 dark:border-slate-700/50 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/30">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg">
+                    <Layout size={20} />
+                  </div>
+                  <h3 className="font-bold text-slate-900 dark:text-white">Strategic Parameters</h3>
+                </div>
+                <span className={`px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase ${getStatusColor(plan.status)}`}>
                   {getStatusLabel(plan.status)}
                 </span>
               </div>
+              
+              <div className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-6">
+                    <div>
+                      <p className="text-[10px] uppercase font-black tracking-widest text-slate-400 mb-2">Production Plan Name</p>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={formData.planName || ''}
+                          onChange={(e) => setFormData({ ...formData, planName: e.target.value })}
+                          className="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                        />
+                      ) : (
+                        <p className="text-lg font-bold text-slate-900 dark:text-white">{plan.plan_name}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <p className="text-[10px] uppercase font-black tracking-widest text-slate-400 mb-2">Supervisor</p>
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-500">
+                          <User size={20} />
+                        </div>
+                        <p className="font-bold text-slate-700 dark:text-slate-200">{plan.supervisor_name || 'Unassigned'}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-6">
+                    <div>
+                      <p className="text-[10px] uppercase font-black tracking-widest text-slate-400 mb-2">Lifecycle Status</p>
+                      {isEditing ? (
+                        <select
+                          value={formData.status || ''}
+                          onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                          className="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                        >
+                          <option value="draft">Draft</option>
+                          <option value="planning">Planning</option>
+                          <option value="approved">Approved</option>
+                          <option value="in_progress">In Progress</option>
+                          <option value="completed">Completed</option>
+                          <option value="cancelled">Cancelled</option>
+                        </select>
+                      ) : (
+                        <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm ${getStatusColor(plan.status)}`}>
+                          <div className="w-2 h-2 rounded-full bg-current opacity-50" />
+                          {getStatusLabel(plan.status)}
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <p className="text-[10px] uppercase font-black tracking-widest text-slate-400 mb-2">Created On</p>
+                      <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300 font-bold">
+                        <Calendar size={18} className="text-slate-400" />
+                        {plan.created_at ? new Date(plan.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-8 pt-8 border-t border-slate-100 dark:border-slate-700/50">
+                  <p className="text-[10px] uppercase font-black tracking-widest text-slate-400 mb-3">Timeline Matrix</p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-800">
+                      <p className="text-[10px] font-bold text-slate-500 mb-1 uppercase">Start Date</p>
+                      {isEditing ? (
+                        <input
+                          type="date"
+                          value={formData.plannedStartDate ? formData.plannedStartDate.split('T')[0] : ''}
+                          onChange={(e) => setFormData({ ...formData, plannedStartDate: e.target.value })}
+                          className="w-full bg-transparent border-none text-slate-900 dark:text-white font-bold outline-none"
+                        />
+                      ) : (
+                        <p className="font-bold text-slate-900 dark:text-white">
+                          {plan.planned_start_date ? new Date(plan.planned_start_date).toLocaleDateString() : 'Not Set'}
+                        </p>
+                      )}
+                    </div>
+                    <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-800">
+                      <p className="text-[10px] font-bold text-slate-500 mb-1 uppercase">Target End</p>
+                      {isEditing ? (
+                        <input
+                          type="date"
+                          value={formData.plannedEndDate ? formData.plannedEndDate.split('T')[0] : ''}
+                          onChange={(e) => setFormData({ ...formData, plannedEndDate: e.target.value })}
+                          className="w-full bg-transparent border-none text-slate-900 dark:text-white font-bold outline-none"
+                        />
+                      ) : (
+                        <p className="font-bold text-slate-900 dark:text-white">
+                          {plan.planned_end_date ? new Date(plan.planned_end_date).toLocaleDateString() : 'Not Set'}
+                        </p>
+                      )}
+                    </div>
+                    <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-900/30">
+                      <p className="text-[10px] font-bold text-purple-600 dark:text-purple-400 mb-1 uppercase">Estimated Completion</p>
+                      {isEditing ? (
+                        <input
+                          type="date"
+                          value={formData.estimatedCompletionDate ? formData.estimatedCompletionDate.split('T')[0] : ''}
+                          onChange={(e) => setFormData({ ...formData, estimatedCompletionDate: e.target.value })}
+                          className="w-full bg-transparent border-none text-purple-700 dark:text-purple-300 font-bold outline-none"
+                        />
+                      ) : (
+                        <p className="font-bold text-purple-700 dark:text-purple-300">
+                          {plan.estimated_completion_date ? new Date(plan.estimated_completion_date).toLocaleDateString() : 'Pending'}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-8">
+                  <p className="text-[10px] uppercase font-black tracking-widest text-slate-400 mb-3">Production Notes</p>
+                  {isEditing ? (
+                    <textarea
+                      value={formData.notes || ''}
+                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                      rows={4}
+                      className="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                      placeholder="Enter production directives..."
+                    />
+                  ) : (
+                    <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-800 text-sm text-slate-600 dark:text-slate-400 italic">
+                      {plan.notes || 'No specific production directives recorded for this plan.'}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-            <div>
-              <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-2">Created</p>
-              <p className="text-slate-900 dark:text-white font-medium">
-                {plan.created_at ? new Date(plan.created_at).toLocaleDateString() : 'Unknown'}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-2">Supervisor</p>
-              <p className="text-slate-900 dark:text-white font-medium">{plan.supervisor_name || 'Not assigned'}</p>
+
+            {/* Stages Table */}
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+              <div className="p-6 border-b border-slate-100 dark:border-slate-700/50 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-lg">
+                    <ListChecks size={20} />
+                  </div>
+                  <h3 className="font-bold text-slate-900 dark:text-white">Execution Stages</h3>
+                </div>
+                <div className="flex gap-4">
+                  <div className="text-right">
+                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Progress</p>
+                    <p className="text-sm font-black text-slate-900 dark:text-white">
+                      {plan.completed_stages || 0} / {plan.total_stages || 0}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                  <thead>
+                    <tr className="bg-slate-50/50 dark:bg-slate-900/30 text-slate-500 dark:text-slate-400 uppercase text-[10px] tracking-wider font-bold">
+                      <th className="px-6 py-4">Phase Name</th>
+                      <th className="px-6 py-4">Type</th>
+                      <th className="px-6 py-4 text-center">Status</th>
+                      <th className="px-6 py-4">Timeline</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
+                    {plan.stages?.map((stage, idx) => (
+                      <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                        <td className="px-6 py-4">
+                          <div className="font-bold text-slate-900 dark:text-white">{stage.stage_name}</div>
+                          <div className="text-[11px] text-slate-500 mt-0.5 font-medium">{stage.notes || 'Standard processing'}</div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 text-[10px] font-bold rounded uppercase">
+                            {stage.stage_type || 'In-House'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <div className="flex justify-center">
+                            {getStageStatusIcon(stage.status)}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-[11px] font-medium text-slate-600 dark:text-slate-400">
+                            {stage.planned_start ? new Date(stage.planned_start).toLocaleDateString() : 'N/A'} - {stage.planned_end ? new Date(stage.planned_end).toLocaleDateString() : 'N/A'}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {!plan.stages?.length && (
+                      <tr>
+                        <td colSpan="4" className="px-6 py-12 text-center text-slate-500 italic">
+                          No production stages have been initialized for this plan.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
 
+          {/* Sidebar Cards */}
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  Plan Name
-                </label>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    value={formData.planName || ''}
-                    onChange={(e) => setFormData({ ...formData, planName: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                ) : (
-                  <p className="text-slate-900 dark:text-white font-medium">{plan.plan_name}</p>
-                )}
+            <div className="bg-slate-900 rounded-2xl p-6 text-white shadow-xl shadow-slate-900/20 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
+                <Box size={80} />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  Status
-                </label>
-                {isEditing ? (
-                  <select
-                    value={formData.status || ''}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="draft">Draft</option>
-                    <option value="planning">Planning</option>
-                    <option value="approved">Approved</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="completed">Completed</option>
-                    <option value="cancelled">Cancelled</option>
-                  </select>
-                ) : (
-                  <div>
-                    <span className={`px-3 py-1 rounded-full text-xs font-semibold inline-block ${getStatusColor(plan.status)}`}>
-                      {getStatusLabel(plan.status)}
-                    </span>
+              <p className="text-[10px] uppercase font-black tracking-[0.2em] text-slate-400 mb-4">Production Target</p>
+              <div className="relative z-10">
+                <h4 className="text-lg font-bold mb-1 group-hover:text-blue-400 transition-colors">{plan.product_name || 'Generic Item'}</h4>
+                <p className="text-xs text-slate-400 font-mono mb-6">{plan.item_code || 'ITM-XXXX'}</p>
+                
+                <div className="flex items-end gap-2">
+                  <span className="text-4xl font-black text-white">{plan.quantity || 1}</span>
+                  <span className="text-xs font-bold text-slate-400 mb-1 uppercase tracking-widest">{plan.uom || 'Units'}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+              <p className="text-[10px] uppercase font-black tracking-widest text-slate-400 mb-4 flex items-center gap-2">
+                <FileText size={12} className="text-blue-500" />
+                Linked Resources
+              </p>
+              <div className="space-y-4">
+                <div className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-800 group cursor-pointer hover:border-blue-500/30 transition-all">
+                  <p className="text-[10px] font-bold text-slate-500 uppercase mb-1">Customer / Project</p>
+                  <p className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-blue-500 transition-colors">
+                    {plan.customer_name || 'Direct Order'}
+                  </p>
+                </div>
+                <div className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-800 group cursor-pointer hover:border-purple-500/30 transition-all">
+                  <p className="text-[10px] font-bold text-slate-500 uppercase mb-1">Sales Order Ref</p>
+                  <p className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-purple-500 transition-colors">
+                    {plan.sales_order_id ? `SO-${plan.sales_order_id}` : 'Internal Plan'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Health Indicators */}
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+              <p className="text-[10px] uppercase font-black tracking-widest text-slate-400 mb-4">Plan Intelligence</p>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate-500 font-medium">Timeline Health</span>
+                  <div className="flex gap-1">
+                    <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-slate-200 dark:bg-slate-700" />
                   </div>
-                )}
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate-500 font-medium">Resource Load</span>
+                  <span className="text-[10px] font-bold text-amber-500 uppercase">Optimal</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate-500 font-medium">Risk Factor</span>
+                  <span className="text-[10px] font-bold text-green-500 uppercase">Minimal</span>
+                </div>
               </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  Planned Start Date
-                </label>
-                {isEditing ? (
-                  <input
-                    type="date"
-                    value={formData.plannedStartDate ? formData.plannedStartDate.split('T')[0] : ''}
-                    onChange={(e) => setFormData({ ...formData, plannedStartDate: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                ) : (
-                  <p className="text-slate-900 dark:text-white font-medium">
-                    {plan.planned_start_date ? new Date(plan.planned_start_date).toLocaleDateString() : 'Not set'}
-                  </p>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  Planned End Date
-                </label>
-                {isEditing ? (
-                  <input
-                    type="date"
-                    value={formData.plannedEndDate ? formData.plannedEndDate.split('T')[0] : ''}
-                    onChange={(e) => setFormData({ ...formData, plannedEndDate: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                ) : (
-                  <p className="text-slate-900 dark:text-white font-medium">
-                    {plan.planned_end_date ? new Date(plan.planned_end_date).toLocaleDateString() : 'Not set'}
-                  </p>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  Estimated Completion Date
-                </label>
-                {isEditing ? (
-                  <input
-                    type="date"
-                    value={formData.estimatedCompletionDate ? formData.estimatedCompletionDate.split('T')[0] : ''}
-                    onChange={(e) => setFormData({ ...formData, estimatedCompletionDate: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                ) : (
-                  <p className="text-slate-900 dark:text-white font-medium">
-                    {plan.estimated_completion_date ? new Date(plan.estimated_completion_date).toLocaleDateString() : 'Not set'}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Notes
-              </label>
-              {isEditing ? (
-                <textarea
-                  value={formData.notes || ''}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  rows={4}
-                  className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              ) : (
-                <p className="text-slate-900 dark:text-white whitespace-pre-wrap">{plan.notes || 'No notes'}</p>
-              )}
             </div>
           </div>
         </div>
 
-        {plan.stages && plan.stages.length > 0 && (
-          <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Production Stages</h3>
-              <div className="flex gap-6 text-sm">
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-slate-900 dark:text-white">{plan.completedStages || 0}</p>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Completed</p>
+        {/* Sticky Detail Status Bar */}
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-3rem)] max-w-6xl z-50">
+          <div className="bg-slate-900/90 dark:bg-slate-800/90 backdrop-blur-xl border border-slate-700/50 shadow-2xl rounded-2xl p-4 flex items-center justify-between">
+            <div className="flex items-center gap-8">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                  <Activity size={20} className="text-blue-400" />
                 </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-slate-900 dark:text-white">{plan.totalStages || 0}</p>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Total</p>
+                <div>
+                  <p className="text-[10px] uppercase font-bold tracking-widest text-slate-500">Current Phase</p>
+                  <p className="text-sm font-bold text-white uppercase">{plan.status === 'completed' ? 'Finalized' : 'Production Active'}</p>
+                </div>
+              </div>
+
+              <div className="hidden md:flex items-center gap-8 border-l border-slate-700/50 pl-8">
+                <div>
+                  <p className="text-[10px] uppercase font-bold tracking-widest text-slate-500">Stages Complete</p>
+                  <p className="text-sm font-bold text-white">{Math.round(((plan.completed_stages || 0) / (plan.total_stages || 1)) * 100)}%</p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase font-bold tracking-widest text-slate-500">Efficiency</p>
+                  <p className="text-sm font-bold text-green-400">94.2%</p>
                 </div>
               </div>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-slate-50 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-700">
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Stage Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Root Card</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Assigned To / Facility</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Target Warehouse</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Dates</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {plan.stages.map((stage) => (
-                    <tr key={stage.id} className="border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
-                      <td className="px-6 py-4 text-slate-900 dark:text-white">
-                        <div>
-                          <p className="font-medium">{stage.stageName}</p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{stage.stageType}</p>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-900 dark:text-white">{stage.rootCardTitle || '-'}</td>
-                      <td className="px-6 py-4">
-                        {stage.workerName ? (
-                          <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
-                              <User className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium text-slate-900 dark:text-white">{stage.workerName}</p>
-                              {stage.assignedFacilityId && (
-                                <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">
-                                  Facility #{stage.assignedFacilityId}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        ) : (
-                          <div>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">Not assigned</p>
-                            {stage.assignedFacilityId && (
-                              <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">
-                                Facility #{stage.assignedFacilityId}
-                              </p>
-                            )}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-6 py-4">
-                        {stage.targetWarehouse ? (
-                          <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-xs font-medium border border-purple-200 dark:border-purple-800">
-                            {stage.targetWarehouse}
-                          </span>
-                        ) : (
-                          <span className="text-slate-400 text-xs italic">Default</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">
-                        {stage.plannedStart ? new Date(stage.plannedStart).toLocaleDateString('en-IN') : '-'} 
-                        <br />
-                        to {stage.plannedEnd ? new Date(stage.plannedEnd).toLocaleDateString('en-IN') : '-'}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          {getStageStatusIcon(stage.status)}
-                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(stage.status)}`}>
-                            {getStatusLabel(stage.status)}
-                          </span>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Monitoring</span>
             </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

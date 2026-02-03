@@ -85,8 +85,12 @@ const ProjectTasksPage = () => {
     try {
       if (!roleId) return;
       const response = await axios.get(`/department/portal/tasks/${roleId}`);
+      // The task might be linked via root_card_id or sales_order_id
+      // In the backend, department_tasks uses root_card_id to refer to the sales_order.id
       const filtered = response.data.filter(
-        (t) => t.root_card_id === project.id || t.sales_order_id === project.id
+        (t) => 
+          (t.root_card_id && Number(t.root_card_id) === Number(project.id)) || 
+          (t.sales_order_id && Number(t.sales_order_id) === Number(project.id))
       );
       console.log(
         "Fetched tasks:",
@@ -188,11 +192,11 @@ const ProjectTasksPage = () => {
     setIsCreatingWorkflow(true);
     try {
       const response = await axios.post(
-        `/production/root-cards/${selectedProject.id}/workflow-tasks`
+        `/root-cards/${selectedProject.id}/workflow-tasks`
       );
       if (response.status === 201) {
         alert(
-          `Successfully created ${response.data.totalCreated} workflow-based design tasks across ${response.data.workflowSteps} process steps!`
+          `Successfully created ${response.data.totalCreated} workflow-based design tasks!`
         );
         await fetchTasksForProject(selectedProject);
       }

@@ -1,5 +1,8 @@
 const ProductionPlan = require('../../models/ProductionPlan');
+const ProductionPlanDetail = require('../../models/ProductionPlanDetail');
 const ManufacturingStage = require('../../models/ManufacturingStage');
+const WorkOrder = require('../../models/WorkOrder');
+const ComprehensiveBOM = require('../../models/ComprehensiveBOM');
 const pool = require('../../config/database');
 
 const productionPlanController = {
@@ -271,31 +274,24 @@ const productionPlanController = {
 
       await ProductionPlan.addStages(id, stages);
       
-      // Fetch the created stages to get their IDs for employee/department task creation
       const [createdStages] = await pool.execute(
         `SELECT id, stage_name, assigned_employee_id, stage_type, sequence, is_blocked FROM production_plan_stages WHERE production_plan_id = ? ORDER BY sequence ASC`,
         [id]
       );
       
-      // Create employee tasks ONLY for the first stage (Stage 1)
       const EmployeeTask = require('../../models/EmployeeTask');
-      const Department = require('../../models/Department');
       
-      // Process only the first stage
       if (createdStages.length > 0) {
         const firstStage = createdStages[0];
         console.log(`[ProductionPlanController] Processing first stage: ${firstStage.stage_name} (ID: ${firstStage.id})`);
         
-        // Check if this is an outsourced stage
         if (firstStage.stage_type === 'outsource') {
           try {
             console.log(`[ProductionPlanController] ✓ First stage ${firstStage.stage_name} is outsourced`);
             
-            // Send notification to Production Department about new outsource task
             try {
               const AlertsNotification = require('../../models/AlertsNotification');
               
-              // Get all employees in Production Department
               const [deptMembers] = await pool.execute(`
                 SELECT DISTINCT e.id 
                 FROM employees e
@@ -303,7 +299,6 @@ const productionPlanController = {
                 LIMIT 20
               `);
               
-              // Send notification to each department member
               for (const member of deptMembers) {
                 try {
                   await AlertsNotification.create({
@@ -314,7 +309,6 @@ const productionPlanController = {
                     relatedId: firstStage.id,
                     priority: 'high'
                   });
-                  console.log(`[ProductionPlanController] ✓ Notification sent to employee ${member.id} for outsource task`);
                 } catch (notifErr) {
                   console.warn(`[ProductionPlanController] Warning - could not send notification to employee ${member.id}:`, notifErr.message);
                 }
@@ -326,13 +320,11 @@ const productionPlanController = {
             console.warn(`[ProductionPlanController] Warning - error handling outsource stage:`, taskError.message);
           }
         } else if (firstStage.assigned_employee_id) {
-          // In-house task - assign to employee
           try {
             const taskTitle = plan.product_name 
               ? `Task for ${plan.product_name}: ${firstStage.stage_name}`
               : `Production Stage: ${firstStage.stage_name}`;
               
-            console.log(`[ProductionPlanController] Creating employee task for employee ${firstStage.assigned_employee_id} for stage ${firstStage.stage_name}`);
             await EmployeeTask.createAssignedTask(firstStage.assigned_employee_id, {
               title: taskTitle,
               description: `Assigned to production plan stage`,
@@ -342,24 +334,18 @@ const productionPlanController = {
               notes: `Production Plan ID: ${id}`,
               productionPlanStageId: firstStage.id
             });
-            console.log(`[ProductionPlanController] ✓ Employee task created for employee ${firstStage.assigned_employee_id}`);
           } catch (taskError) {
             console.warn(`[ProductionPlanController] Warning - could not create employee task:`, taskError.message);
           }
         }
       }
       
-      // All other stages remain blocked until the previous one is completed
-      console.log(`[ProductionPlanController] ✓ Stages 2+ are blocked until Stage 1 is completed`);
-      
       res.status(201).json({ 
         message: 'Production plan stages created successfully',
         stageCount: stages.length 
       });
     } catch (error) {
-      console.error('[ProductionPlanController] Error creating stages:', error);
-      console.error('[ProductionPlanController] Error message:', error.message);
-      console.error('[ProductionPlanController] Error stack:', error.stack);
+      console.error('[ProductionPlanController] Error creating stages:', error.message);
       res.status(500).json({ message: 'Error creating production plan stages', error: error.message });
     }
   },
@@ -369,39 +355,28 @@ const productionPlanController = {
       const { id: stageId } = req.params;
       const { stageName, stageType, assignedEmployeeId, assignedFacilityId, plannedStartDate, plannedEndDate, targetWarehouse, notes } = req.body;
 
-      console.log('[ProductionPlanController.updatePlanStage] Updating stage:', stageId);
-      console.log('[ProductionPlanController.updatePlanStage] Data:', { stageName, stageType, assignedEmployeeId, assignedFacilityId, plannedStartDate, plannedEndDate, targetWarehouse, notes });
-
-      // Calculate duration from start and end dates
       let durationDays = null;
       if (plannedStartDate && plannedEndDate) {
         const startDate = new Date(plannedStartDate);
         const endDate = new Date(plannedEndDate);
         const timeDiff = endDate - startDate;
         durationDays = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
-        console.log(`[ProductionPlanController.updatePlanStage] Calculated duration: ${durationDays} days (${plannedStartDate} to ${plannedEndDate})`);
       }
 
-      // Validate employee exists if provided (check in employees table, not users)
       let employeeId = assignedEmployeeId ? parseInt(assignedEmployeeId) : null;
       if (employeeId && employeeId > 0) {
         const [empCheck] = await pool.execute('SELECT id FROM employees WHERE id = ? AND status = "active"', [employeeId]);
         if (empCheck.length === 0) {
-          console.log(`[ProductionPlanController.updatePlanStage] Employee ID ${employeeId} does not exist or is inactive, setting to NULL`);
           employeeId = null;
-        } else {
-          console.log(`[ProductionPlanController.updatePlanStage] ✓ Employee ID ${employeeId} validated successfully`);
         }
       } else {
         employeeId = null;
       }
 
-      // Validate facility if provided
       let facilityId = assignedFacilityId ? parseInt(assignedFacilityId) : null;
       if (facilityId && facilityId > 0) {
         const [facCheck] = await pool.execute('SELECT id FROM manufacturing_facilities WHERE id = ?', [facilityId]);
         if (facCheck.length === 0) {
-          console.log(`[ProductionPlanController.updatePlanStage] Facility ID ${facilityId} does not exist, setting to NULL`);
           facilityId = null;
         }
       } else {
@@ -414,8 +389,6 @@ const productionPlanController = {
             planned_start_date = ?, planned_end_date = ?, duration_days = ?, target_warehouse = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `;
-
-      console.log('[ProductionPlanController.updatePlanStage] Executing query:', query);
 
       await pool.execute(query, [
         stageName,
@@ -430,9 +403,6 @@ const productionPlanController = {
         stageId
       ]);
 
-      console.log('[ProductionPlanController.updatePlanStage] ✓ Stage updated successfully');
-
-      // If updated to outsource, ensure an outsourcing task exists
       if (stageType === 'outsource') {
         const [existingTasks] = await pool.execute(
           'SELECT id FROM outsourcing_tasks WHERE production_plan_stage_id = ?',
@@ -440,9 +410,6 @@ const productionPlanController = {
         );
 
         if (existingTasks.length === 0) {
-          console.log('[ProductionPlanController.updatePlanStage] Creating missing outsourcing_task for stage:', stageId);
-          
-          // Get details for the new task
           const [stageDetails] = await pool.execute(
             `SELECT pps.production_plan_id, pp.root_card_id, pp.sales_order_id, rc.project_id, so.items as so_items, sod.product_details
              FROM production_plan_stages pps
@@ -458,7 +425,6 @@ const productionPlanController = {
             const details = stageDetails[0];
             let productName = '-';
             
-            // Extract product name
             if (details.product_details) {
               try {
                 const pd = typeof details.product_details === 'string' ? JSON.parse(details.product_details) : details.product_details;
@@ -499,8 +465,124 @@ const productionPlanController = {
         stageId 
       });
     } catch (error) {
-      console.error('[ProductionPlanController.updatePlanStage] Error updating stage:', error);
+      console.error('[ProductionPlanController.updatePlanStage] Error updating stage:', error.message);
       res.status(500).json({ message: 'Error updating production plan stage', error: error.message });
+    }
+  },
+
+  async generateWorkOrders(req, res) {
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+      const { id: planId } = req.params;
+
+      console.log(`[ProductionPlanController.generateWorkOrders] Starting for plan ID: ${planId}`);
+
+      const plan = await ProductionPlan.findById(planId);
+      if (!plan) {
+        return res.status(404).json({ message: 'Production plan not found' });
+      }
+
+      let projectId = plan.project_id || plan.projectId;
+      if (!projectId && plan.sales_order_id) {
+        const [projects] = await connection.execute(
+          'SELECT id FROM projects WHERE sales_order_id = ? LIMIT 1',
+          [plan.sales_order_id]
+        );
+        if (projects.length > 0) {
+          projectId = projects[0].id;
+        }
+      }
+
+      const detail = await ProductionPlanDetail.findByRootCardId(plan.sales_order_id);
+      
+      if (!detail) {
+        return res.status(400).json({ message: 'Production plan details not found. Please save the plan first.' });
+      }
+
+      const finishedGoods = detail.finishedGoods || [];
+      const subAssemblies = detail.subAssemblies || [];
+      const generatedWorkOrders = [];
+
+      const processItem = async (item, type) => {
+        const itemCode = item.itemCode;
+        const itemName = item.productName || item.itemName || itemCode;
+        
+        const bomRef = await ComprehensiveBOM.findLatestByItemCode(itemCode);
+        if (!bomRef) {
+          console.warn(`[ProductionPlanController.generateWorkOrders] No BOM found for ${itemCode}`);
+          return null;
+        }
+        
+        const bomData = await ComprehensiveBOM.fetchBOMRecursive(bomRef.id, connection);
+        
+        const workOrderId = await WorkOrder.create({
+          workOrderNo: `WO-${itemCode}-${Date.now().toString().slice(-4)}`,
+          salesOrderId: plan.sales_order_id,
+          projectId: projectId,
+          itemCode: itemCode,
+          itemName: itemName,
+          bomId: bomRef.id,
+          quantity: item.plannedQty || item.requiredQty || 1,
+          unit: item.uom || 'Nos',
+          priority: 'medium',
+          status: 'planning',
+          plannedStartDate: item.startDate || item.scheduledDate || plan.planned_start_date,
+          plannedEndDate: plan.planned_end_date,
+          notes: `Generated from Production Plan: ${plan.plan_name}`,
+          createdBy: req.user?.id
+        }, connection);
+
+        if (bomData.operations && bomData.operations.length > 0) {
+          for (const op of bomData.operations) {
+            await WorkOrder.createOperation({
+              workOrderId,
+              operationName: op.operationName,
+              workstation: op.workstation,
+              sequence: op.sequence || 1,
+              status: 'pending'
+            }, connection);
+          }
+        }
+
+        if (bomData.materials && bomData.materials.length > 0) {
+          for (const mat of bomData.materials) {
+            await WorkOrder.createInventory({
+              workOrderId,
+              itemCode: mat.itemCode,
+              itemName: mat.itemName,
+              requiredQty: (mat.quantity || 0) * (item.plannedQty || item.requiredQty || 1),
+              unit: mat.uom,
+              sourceWarehouse: mat.warehouse
+            }, connection);
+          }
+        }
+
+        return { id: workOrderId, type, item: itemName };
+      };
+
+      for (const fg of finishedGoods) {
+        const result = await processItem(fg, 'Finished Good');
+        if (result) generatedWorkOrders.push(result);
+      }
+
+      for (const sa of subAssemblies) {
+        const result = await processItem(sa, 'Sub-assembly');
+        if (result) generatedWorkOrders.push(result);
+      }
+
+      await connection.commit();
+      res.json({
+        success: true,
+        message: `Successfully generated ${generatedWorkOrders.length} work orders.`,
+        data: generatedWorkOrders
+      });
+    } catch (error) {
+      await connection.rollback();
+      console.error('[ProductionPlanController.generateWorkOrders] Error:', error.message);
+      res.status(500).json({ message: 'Error generating work orders', error: error.message });
+    } finally {
+      connection.release();
     }
   }
 };

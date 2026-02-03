@@ -14,7 +14,7 @@ async function createEmployeeTasksTable() {
         title VARCHAR(255) NOT NULL,
         description TEXT,
         type VARCHAR(100) NOT NULL,
-        priority ENUM('low', 'medium', 'high', 'urgent') DEFAULT 'medium',
+        priority ENUM('low', 'medium', 'high', 'critical', 'urgent') DEFAULT 'medium',
         status ENUM('pending', 'in_progress', 'completed', 'on_hold', 'cancelled') DEFAULT 'pending',
         related_id INT,
         related_type VARCHAR(100),

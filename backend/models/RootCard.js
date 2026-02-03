@@ -21,6 +21,8 @@ class RootCard {
     }
     return {
       ...row,
+      rootCardId: row.id,
+      sales_order_id: row.id,
       items: parseJson(row.items),
       documents: parseJson(row.documents),
       project_scope: parseJson(row.project_scope, null)

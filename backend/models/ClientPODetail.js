@@ -35,12 +35,16 @@ class ClientPODetail {
     `);
   }
 
-  static async findByRootCardId(rootCardId) {
+  static async findBySalesOrderId(salesOrderId) {
     const [rows] = await pool.execute(
       `SELECT * FROM client_po_details WHERE sales_order_id = ?`,
-      [rootCardId]
+      [salesOrderId]
     );
     return rows[0] ? this.formatRow(rows[0]) : null;
+  }
+
+  static async findByRootCardId(rootCardId) {
+    return this.findBySalesOrderId(rootCardId);
   }
 
   static async findByPONumber(poNumber) {
