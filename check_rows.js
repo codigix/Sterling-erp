@@ -1,7 +1,7 @@
 const pool = require('./backend/config/database');
-async function listTables() {
+async function checkData() {
   try {
-    const [rows] = await pool.execute('SHOW TABLES');
+    const [rows] = await pool.execute('SELECT id, plan_name FROM production_plans');
     console.log(rows);
     process.exit(0);
   } catch (err) {
@@ -9,4 +9,4 @@ async function listTables() {
     process.exit(1);
   }
 }
-listTables();
+checkData();

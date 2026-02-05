@@ -13,7 +13,7 @@ require('dotenv').config({ path: path.resolve(__dirname, '.env') });
   try {
     const [rows] = await connection.execute('DESCRIBE production_plans');
     console.log('Columns in production_plans:');
-    rows.forEach(row => console.log(`- ${row.Field}`));
+    rows.forEach(row => console.log(`- ${row.Field} (${row.Type})`));
   } catch (error) {
     console.error('Error:', error.message);
   } finally {

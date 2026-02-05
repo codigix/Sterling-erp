@@ -11,9 +11,9 @@ require('dotenv').config({ path: path.resolve(__dirname, '.env') });
   });
 
   try {
-    const [rows] = await connection.execute('DESCRIBE production_plans');
-    console.log('Columns in production_plans:');
-    rows.forEach(row => console.log(`- ${row.Field}`));
+    console.log('Dropping foreign key constraint work_orders_ibfk_1...');
+    await connection.execute('ALTER TABLE work_orders DROP FOREIGN KEY work_orders_ibfk_1');
+    console.log('✅ Foreign key dropped successfully');
   } catch (error) {
     console.error('Error:', error.message);
   } finally {

@@ -293,7 +293,7 @@ const ResourceAllocationPage = () => {
                     </div>
                   </div>
                   
-                  <button className="w-full py-3 bg-slate-900 dark:bg-slate-700 text-white rounded-xl shadow-lg hover:bg-slate-800 transition-all text-[10px] font-bold uppercase tracking-widest mt-4">
+                  <button className="w-full py-3 bg-slate-900 dark:bg-slate-700 text-white rounded-xl shadow-lg hover:bg-black transition-all text-[10px] font-bold uppercase tracking-widest mt-4">
                     Download Full Audit
                   </button>
                </div>

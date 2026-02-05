@@ -6,7 +6,9 @@ class ProductionPlanDetail {
     await pool.execute(`
       CREATE TABLE IF NOT EXISTS production_plan_details (
         id INT PRIMARY KEY AUTO_INCREMENT,
-        sales_order_id INT NOT NULL UNIQUE,
+        production_plan_id INT NULL,
+        sales_order_id INT NULL,
+        root_card_id INT NULL,
         timeline JSON,
         selected_phases JSON,
         phase_details JSON,
@@ -17,10 +19,26 @@ class ProductionPlanDetail {
         estimated_completion_date DATE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (production_plan_id) REFERENCES production_plans(id) ON DELETE CASCADE,
         FOREIGN KEY (sales_order_id) REFERENCES sales_orders(id) ON DELETE CASCADE,
-        INDEX idx_sales_order (sales_order_id)
+        FOREIGN KEY (root_card_id) REFERENCES root_cards(id) ON DELETE CASCADE,
+        INDEX idx_production_plan (production_plan_id),
+        INDEX idx_sales_order (sales_order_id),
+        INDEX idx_root_card (root_card_id)
       )
     `);
+  }
+
+  static async findByProductionPlanId(planId) {
+    const [rows] = await pool.execute(
+      `SELECT ppd.*, sod.product_details 
+       FROM production_plan_details ppd
+       LEFT JOIN production_plans pp ON pp.id = ppd.production_plan_id
+       LEFT JOIN sales_order_details sod ON sod.sales_order_id = COALESCE(ppd.sales_order_id, pp.sales_order_id)
+       WHERE ppd.production_plan_id = ?`,
+      [planId]
+    );
+    return rows[0] ? this.formatRow(rows[0]) : null;
   }
 
   static async findBySalesOrderId(salesOrderId) {
@@ -35,13 +53,30 @@ class ProductionPlanDetail {
   }
 
   static async findByRootCardId(rootCardId) {
-    return this.findBySalesOrderId(rootCardId);
+    const [rows] = await pool.execute(
+      `SELECT ppd.*
+       FROM production_plan_details ppd
+       WHERE ppd.root_card_id = ?`,
+      [rootCardId]
+    );
+    return rows[0] ? this.formatRow(rows[0]) : null;
+  }
+
+  static async findById(id) {
+    const [rows] = await pool.execute(
+      `SELECT ppd.*, sod.product_details 
+       FROM production_plan_details ppd
+       LEFT JOIN sales_order_details sod ON sod.sales_order_id = ppd.sales_order_id
+       WHERE ppd.id = ?`,
+      [id]
+    );
+    return rows[0] ? this.formatRow(rows[0]) : null;
   }
 
   static async create(data) {
     const normalized = normalizeStepData(data, {
-      productionStartDate: 'timeline.productionStartDate',
-      estimatedCompletionDate: 'timeline.estimatedCompletionDate',
+      productionStartDate: 'timeline.startDate',
+      estimatedCompletionDate: 'timeline.endDate',
       procurementStatus: 'timeline.procurementStatus'
     });
 
@@ -52,7 +87,9 @@ class ProductionPlanDetail {
     };
 
     const params = [
-      normalized.rootCardId || null,
+      data.productionPlanId || null,
+      data.salesOrderId || null,
+      data.rootCardId || null,
       stringifyJsonField(timeline) || '{}',
       stringifyJsonField(normalized.selectedPhases) || '{}',
       stringifyJsonField(normalized.phaseDetails) || '{}',
@@ -65,17 +102,17 @@ class ProductionPlanDetail {
 
     const [result] = await pool.execute(
       `INSERT INTO production_plan_details 
-       (sales_order_id, timeline, selected_phases, phase_details, materials, sub_assemblies, finished_goods, production_notes, estimated_completion_date)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (production_plan_id, sales_order_id, root_card_id, timeline, selected_phases, phase_details, materials, sub_assemblies, finished_goods, production_notes, estimated_completion_date)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       params
     );
     return result.insertId;
   }
 
-  static async update(rootCardId, data) {
+  static async update(id, data, isRootCard = false) {
     const normalized = normalizeStepData(data, {
-      productionStartDate: 'timeline.productionStartDate',
-      estimatedCompletionDate: 'timeline.estimatedCompletionDate',
+      productionStartDate: 'timeline.startDate',
+      estimatedCompletionDate: 'timeline.endDate',
       procurementStatus: 'timeline.procurementStatus'
     });
 
@@ -94,21 +131,40 @@ class ProductionPlanDetail {
       stringifyJsonField(data.finishedGoods) || '[]',
       normalized.productionNotes || null,
       normalized.estimatedCompletionDate || null,
-      rootCardId
+      data.productionPlanId || null,
+      id
     ];
+
+    const whereColumn = isRootCard ? 'root_card_id' : 'sales_order_id';
+
+    // Try to update by production_plan_id first if provided
+    if (data.productionPlanId) {
+      const [updateResult] = await pool.execute(
+        `UPDATE production_plan_details 
+         SET timeline = ?, selected_phases = ?, phase_details = ?, 
+             materials = ?, sub_assemblies = ?, finished_goods = ?,
+             production_notes = ?, estimated_completion_date = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE production_plan_id = ?`,
+        [...params.slice(0, 8), data.productionPlanId]
+      );
+      
+      if (updateResult.affectedRows > 0) return;
+    }
 
     await pool.execute(
       `UPDATE production_plan_details 
        SET timeline = ?, selected_phases = ?, phase_details = ?, 
            materials = ?, sub_assemblies = ?, finished_goods = ?,
-           production_notes = ?, estimated_completion_date = ?, updated_at = CURRENT_TIMESTAMP
-       WHERE sales_order_id = ?`,
+           production_notes = ?, estimated_completion_date = ?, 
+           production_plan_id = COALESCE(production_plan_id, ?),
+           updated_at = CURRENT_TIMESTAMP
+       WHERE ${whereColumn} = ?`,
       params
     );
   }
 
-  static async addPhase(rootCardId, phaseKey, phaseData) {
-    const detail = await this.findByRootCardId(rootCardId);
+  static async addPhase(id, phaseKey, phaseData, isRootCard = true) {
+    const detail = isRootCard ? await this.findByRootCardId(id) : await this.findBySalesOrderId(id);
     if (!detail) {
       throw new Error('Production plan not found');
     }
@@ -116,24 +172,26 @@ class ProductionPlanDetail {
     const phaseDetails = detail.phaseDetails || {};
     phaseDetails[phaseKey] = phaseData;
 
+    const whereColumn = isRootCard ? 'root_card_id' : 'sales_order_id';
+
     await pool.execute(
-      `UPDATE production_plan_details SET phase_details = ? WHERE sales_order_id = ?`,
-      [stringifyJsonField(phaseDetails), rootCardId]
+      `UPDATE production_plan_details SET phase_details = ? WHERE ${whereColumn} = ?`,
+      [stringifyJsonField(phaseDetails), id]
     );
 
     return phaseDetails[phaseKey];
   }
 
-  static async getPhases(rootCardId) {
-    const detail = await this.findByRootCardId(rootCardId);
+  static async getPhases(id, isRootCard = true) {
+    const detail = isRootCard ? await this.findByRootCardId(id) : await this.findBySalesOrderId(id);
     if (!detail) {
       throw new Error('Production plan not found');
     }
     return detail.phaseDetails || {};
   }
 
-  static async getPhase(rootCardId, phaseKey) {
-    const detail = await this.findByRootCardId(rootCardId);
+  static async getPhase(id, phaseKey, isRootCard = true) {
+    const detail = isRootCard ? await this.findByRootCardId(id) : await this.findBySalesOrderId(id);
     if (!detail) {
       throw new Error('Production plan not found');
     }
@@ -141,8 +199,8 @@ class ProductionPlanDetail {
     return phaseDetails[phaseKey] || null;
   }
 
-  static async updatePhase(rootCardId, phaseKey, phaseData) {
-    const detail = await this.findByRootCardId(rootCardId);
+  static async updatePhase(id, phaseKey, phaseData, isRootCard = true) {
+    const detail = isRootCard ? await this.findByRootCardId(id) : await this.findBySalesOrderId(id);
     if (!detail) {
       throw new Error('Production plan not found');
     }
@@ -154,16 +212,18 @@ class ProductionPlanDetail {
 
     phaseDetails[phaseKey] = { ...phaseDetails[phaseKey], ...phaseData };
 
+    const whereColumn = isRootCard ? 'root_card_id' : 'sales_order_id';
+
     await pool.execute(
-      `UPDATE production_plan_details SET phase_details = ? WHERE sales_order_id = ?`,
-      [stringifyJsonField(phaseDetails), rootCardId]
+      `UPDATE production_plan_details SET phase_details = ? WHERE ${whereColumn} = ?`,
+      [stringifyJsonField(phaseDetails), id]
     );
 
     return phaseDetails[phaseKey];
   }
 
-  static async removePhase(rootCardId, phaseKey) {
-    const detail = await this.findByRootCardId(rootCardId);
+  static async removePhase(id, phaseKey, isRootCard = true) {
+    const detail = isRootCard ? await this.findByRootCardId(id) : await this.findBySalesOrderId(id);
     if (!detail) {
       throw new Error('Production plan not found');
     }
@@ -175,16 +235,18 @@ class ProductionPlanDetail {
 
     delete phaseDetails[phaseKey];
 
+    const whereColumn = isRootCard ? 'root_card_id' : 'sales_order_id';
+
     await pool.execute(
-      `UPDATE production_plan_details SET phase_details = ? WHERE sales_order_id = ?`,
-      [stringifyJsonField(phaseDetails), rootCardId]
+      `UPDATE production_plan_details SET phase_details = ? WHERE ${whereColumn} = ?`,
+      [stringifyJsonField(phaseDetails), id]
     );
 
     return true;
   }
 
-  static async updatePhaseStatus(rootCardId, phaseKey, statusData) {
-    const detail = await this.findByRootCardId(rootCardId);
+  static async updatePhaseStatus(id, phaseKey, statusData, isRootCard = true) {
+    const detail = isRootCard ? await this.findByRootCardId(id) : await this.findBySalesOrderId(id);
     if (!detail) {
       throw new Error('Production plan not found');
     }
@@ -201,9 +263,11 @@ class ProductionPlanDetail {
       finishTime: statusData.finishTime || phaseDetails[phaseKey].finishTime
     };
 
+    const whereColumn = isRootCard ? 'root_card_id' : 'sales_order_id';
+
     await pool.execute(
-      `UPDATE production_plan_details SET phase_details = ? WHERE sales_order_id = ?`,
-      [stringifyJsonField(phaseDetails), rootCardId]
+      `UPDATE production_plan_details SET phase_details = ? WHERE ${whereColumn} = ?`,
+      [stringifyJsonField(phaseDetails), id]
     );
 
     return phaseDetails[phaseKey];
@@ -294,7 +358,9 @@ class ProductionPlanDetail {
 
     return {
       id: row.id,
-      rootCardId: row.sales_order_id,
+      productionPlanId: row.production_plan_id,
+      salesOrderId: row.sales_order_id,
+      rootCardId: row.root_card_id,
       productName: productName,
       timeline: timeline,
       selectedPhases: parseJsonField(row.selected_phases),

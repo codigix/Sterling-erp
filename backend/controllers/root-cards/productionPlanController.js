@@ -14,7 +14,11 @@ class ProductionPlanController {
       const userId = parseInt(req.user.id);
       const userRole = req.user.role?.toLowerCase();
 
-      console.log(`[ProductionPlanController] User ${userId} (${userRole}) saving production plan for SO ${rootCardId}`);
+      // Determine if this is a Root Card or a Sales Order
+      const [rcCheck] = await pool.execute('SELECT id FROM root_cards WHERE id = ?', [rootCardId]);
+      const isRootCard = rcCheck.length > 0;
+
+      console.log(`[ProductionPlanController] User ${userId} (${userRole}) saving production plan for ${isRootCard ? 'Root Card' : 'SO'} ${rootCardId}`);
       console.log(`[ProductionPlanController] Received data:`, JSON.stringify(data, null, 2));
 
       const validation = validateProductionPlan(data);
@@ -22,39 +26,34 @@ class ProductionPlanController {
         console.warn('Production Plan validation warnings:', validation.errors);
       }
 
-      let detail = await ProductionPlanDetail.findByRootCardId(rootCardId);
-
-      if (detail) {
-        console.log(`[ProductionPlanController] Updating existing production plan detail`);
-        await ProductionPlanDetail.update(rootCardId, data);
-      } else {
-        console.log(`[ProductionPlanController] Creating new production plan detail`);
-        data.rootCardId = rootCardId;
-        await ProductionPlanDetail.create(data);
-      }
-
-      const updated = await ProductionPlanDetail.findByRootCardId(rootCardId);
-      console.log(`[ProductionPlanController] Saved production plan detail`);
-      
+      // 1. First ensure the production_plan exists in the main production_plans table
       let productionPlanId = null;
-      
-      // Also create/update in production_plans table for visibility in production plans list
       try {
         let supervisorId = data.supervisorId ? parseInt(data.supervisorId) : null;
         
-        // Validate supervisor exists if provided (check employees table)
+        // Validate supervisor exists if provided
         if (supervisorId && supervisorId > 0) {
           const [supervisorCheck] = await pool.execute('SELECT id FROM employees WHERE id = ? AND status = "active"', [supervisorId]);
-          if (supervisorCheck.length === 0) {
-            console.log(`[ProductionPlanController] Supervisor ID ${supervisorId} does not exist, setting to NULL`);
-            supervisorId = null;
+          if (supervisorCheck.length === 0) supervisorId = null;
+        }
+
+        let finalSalesOrderId = data.salesOrderId ? parseInt(data.salesOrderId) : null;
+        if (!finalSalesOrderId && rootCardId) {
+          if (!isRootCard) {
+            const [soCheck] = await pool.execute('SELECT id FROM sales_orders WHERE id = ?', [rootCardId]);
+            if (soCheck.length > 0) finalSalesOrderId = parseInt(rootCardId);
+          } else {
+            const [rcLink] = await pool.execute('SELECT sales_order_id FROM root_cards WHERE id = ?', [rootCardId]);
+            if (rcLink.length > 0 && rcLink[0].sales_order_id) finalSalesOrderId = rcLink[0].sales_order_id;
           }
         }
 
         const planData = {
-          salesOrderId: data.salesOrderId ? parseInt(data.salesOrderId) : (data.rootCardId ? parseInt(data.rootCardId) : parseInt(rootCardId)),
-          rootCardId: data.rootCardId ? parseInt(data.rootCardId) : parseInt(rootCardId),
+          id: data.planName,
+          salesOrderId: finalSalesOrderId,
+          rootCardId: isRootCard ? parseInt(rootCardId) : null,
           planName: data.planName || 'Production Plan',
+          targetQuantity: data.targetQuantity || 1,
           status: 'draft',
           plannedStartDate: data.timeline?.startDate || null,
           plannedEndDate: data.timeline?.endDate || null,
@@ -63,22 +62,53 @@ class ProductionPlanController {
           notes: data.productionNotes || null
         };
 
-        console.log(`[ProductionPlanController] Creating/updating in production_plans table:`, planData);
-        
-        // Check if already exists in production_plans
-        const existingPlan = await ProductionPlan.findByRootCardId(rootCardId);
+        const existingPlan = isRootCard 
+          ? await ProductionPlan.findByRootCardId(rootCardId)
+          : await ProductionPlan.findBySalesOrderId(rootCardId);
+
         if (existingPlan) {
-          console.log(`[ProductionPlanController] Production plan already exists in production_plans table with ID:`, existingPlan.id);
           await ProductionPlan.update(existingPlan.id, planData);
-          console.log(`[ProductionPlanController] Updated production plan with ID:`, existingPlan.id);
           productionPlanId = existingPlan.id;
         } else {
           productionPlanId = await ProductionPlan.create(planData);
-          console.log(`[ProductionPlanController] Created production plan in production_plans table with ID:`, productionPlanId);
         }
       } catch (planError) {
-        console.warn(`[ProductionPlanController] Warning - could not create in production_plans table:`, planError.message);
+        console.error(`[ProductionPlanController] Error in production_plans sync:`, planError);
+        throw planError;
       }
+
+      // 2. Now save the detailed JSON data to production_plan_details
+      let detail = isRootCard 
+        ? await ProductionPlanDetail.findByRootCardId(rootCardId)
+        : await ProductionPlanDetail.findBySalesOrderId(rootCardId);
+
+      // Add the productionPlanId to the data for the model to use
+      data.productionPlanId = productionPlanId;
+
+      if (detail) {
+        console.log(`[ProductionPlanController] Updating existing production plan detail`);
+        // Ensure the update also sets the production_plan_id link if it was missing
+        await pool.execute(
+          'UPDATE production_plan_details SET production_plan_id = ? WHERE id = ?',
+          [productionPlanId, detail.id]
+        );
+        await ProductionPlanDetail.update(rootCardId, data, isRootCard);
+      } else {
+        console.log(`[ProductionPlanController] Creating new production plan detail`);
+        if (isRootCard) {
+          data.rootCardId = rootCardId;
+          data.salesOrderId = null;
+        } else {
+          data.salesOrderId = rootCardId;
+          data.rootCardId = null;
+        }
+        await ProductionPlanDetail.create(data);
+      }
+
+      const updated = isRootCard 
+        ? await ProductionPlanDetail.findByRootCardId(rootCardId)
+        : await ProductionPlanDetail.findBySalesOrderId(rootCardId);
+      console.log(`[ProductionPlanController] Saved production plan detail`);
       
       await RootCardStep.update(rootCardId, 4, { status: 'in_progress', data: updated, assignedTo });
       
@@ -130,7 +160,14 @@ class ProductionPlanController {
   static async getProductionPlan(req, res) {
     try {
       const { rootCardId } = req.params;
-      const detail = await ProductionPlanDetail.findByRootCardId(rootCardId);
+      
+      const [rcCheck] = await pool.execute('SELECT id FROM root_cards WHERE id = ?', [rootCardId]);
+      const isRootCard = rcCheck.length > 0;
+
+      const detail = isRootCard 
+        ? await ProductionPlanDetail.findByRootCardId(rootCardId)
+        : await ProductionPlanDetail.findBySalesOrderId(rootCardId);
+
       res.json(formatSuccessResponse(detail || null, 'Production plan retrieved'));
     } catch (error) {
       res.status(500).json(formatErrorResponse(error.message));
@@ -167,11 +204,19 @@ class ProductionPlanController {
     }
   }
 
+  static async _getIsRootCard(id) {
+    const [rcCheck] = await pool.execute('SELECT id FROM root_cards WHERE id = ?', [id]);
+    return rcCheck.length > 0;
+  }
+
   static async validatePhases(req, res) {
     try {
       const { rootCardId } = req.params;
+      const isRootCard = await this._getIsRootCard(rootCardId);
 
-      const detail = await ProductionPlanDetail.findByRootCardId(rootCardId);
+      const detail = isRootCard 
+        ? await ProductionPlanDetail.findByRootCardId(rootCardId)
+        : await ProductionPlanDetail.findBySalesOrderId(rootCardId);
       if (!detail) {
         return res.json(formatSuccessResponse({
           isValid: true,
@@ -209,8 +254,11 @@ class ProductionPlanController {
   static async validateProductionPlan(req, res) {
     try {
       const { rootCardId } = req.params;
+      const isRootCard = await this._getIsRootCard(rootCardId);
 
-      const detail = await ProductionPlanDetail.findByRootCardId(rootCardId);
+      const detail = isRootCard 
+        ? await ProductionPlanDetail.findByRootCardId(rootCardId)
+        : await ProductionPlanDetail.findBySalesOrderId(rootCardId);
       
       const errors = [];
       const warnings = [];
@@ -248,25 +296,30 @@ class ProductionPlanController {
     try {
       const { rootCardId } = req.params;
       const { phaseKey, phase } = req.body;
+      const isRootCard = await this._getIsRootCard(rootCardId);
 
       if (!phaseKey || !phase) {
         return res.status(400).json(formatErrorResponse('Phase key and data are required'));
       }
 
-      let detail = await ProductionPlanDetail.findByRootCardId(rootCardId);
+      let detail = isRootCard 
+        ? await ProductionPlanDetail.findByRootCardId(rootCardId)
+        : await ProductionPlanDetail.findBySalesOrderId(rootCardId);
 
       if (!detail) {
-        await ProductionPlanDetail.create({
-          rootCardId,
-          selectedPhases: { [phaseKey]: phase }
-        });
+        const createData = isRootCard 
+          ? { rootCardId, selectedPhases: { [phaseKey]: phase } }
+          : { salesOrderId: rootCardId, selectedPhases: { [phaseKey]: phase } };
+        await ProductionPlanDetail.create(createData);
       } else {
         const selectedPhases = detail.selectedPhases || {};
         selectedPhases[phaseKey] = phase;
-        await ProductionPlanDetail.update(rootCardId, { selectedPhases });
+        await ProductionPlanDetail.update(rootCardId, { selectedPhases }, isRootCard);
       }
 
-      const updated = await ProductionPlanDetail.findByRootCardId(rootCardId);
+      const updated = isRootCard 
+        ? await ProductionPlanDetail.findByRootCardId(rootCardId)
+        : await ProductionPlanDetail.findBySalesOrderId(rootCardId);
       res.json(formatSuccessResponse(updated, 'Phase added'));
     } catch (error) {
       res.status(500).json(formatErrorResponse(error.message));
@@ -276,7 +329,10 @@ class ProductionPlanController {
   static async getPhases(req, res) {
     try {
       const { rootCardId } = req.params;
-      const detail = await ProductionPlanDetail.findByRootCardId(rootCardId);
+      const isRootCard = await this._getIsRootCard(rootCardId);
+      const detail = isRootCard 
+        ? await ProductionPlanDetail.findByRootCardId(rootCardId)
+        : await ProductionPlanDetail.findBySalesOrderId(rootCardId);
       res.json(formatSuccessResponse(detail?.selectedPhases || {}, 'Phases retrieved'));
     } catch (error) {
       res.status(500).json(formatErrorResponse(error.message));
@@ -286,7 +342,10 @@ class ProductionPlanController {
   static async getPhase(req, res) {
     try {
       const { rootCardId, phaseKey } = req.params;
-      const detail = await ProductionPlanDetail.findByRootCardId(rootCardId);
+      const isRootCard = await this._getIsRootCard(rootCardId);
+      const detail = isRootCard 
+        ? await ProductionPlanDetail.findByRootCardId(rootCardId)
+        : await ProductionPlanDetail.findBySalesOrderId(rootCardId);
       const phase = detail?.selectedPhases?.[phaseKey];
       res.json(formatSuccessResponse(phase || null, 'Phase retrieved'));
     } catch (error) {
@@ -298,20 +357,25 @@ class ProductionPlanController {
     try {
       const { rootCardId, phaseKey } = req.params;
       const phase = req.body;
+      const isRootCard = await this._getIsRootCard(rootCardId);
 
-      let detail = await ProductionPlanDetail.findByRootCardId(rootCardId);
+      let detail = isRootCard 
+        ? await ProductionPlanDetail.findByRootCardId(rootCardId)
+        : await ProductionPlanDetail.findBySalesOrderId(rootCardId);
       if (!detail) {
-        await ProductionPlanDetail.create({
-          rootCardId,
-          selectedPhases: { [phaseKey]: phase }
-        });
+        const createData = isRootCard 
+          ? { rootCardId, selectedPhases: { [phaseKey]: phase } }
+          : { salesOrderId: rootCardId, selectedPhases: { [phaseKey]: phase } };
+        await ProductionPlanDetail.create(createData);
       } else {
         const selectedPhases = detail.selectedPhases || {};
         selectedPhases[phaseKey] = { ...selectedPhases[phaseKey], ...phase };
-        await ProductionPlanDetail.update(rootCardId, { selectedPhases });
+        await ProductionPlanDetail.update(rootCardId, { selectedPhases }, isRootCard);
       }
 
-      const updated = await ProductionPlanDetail.findByRootCardId(rootCardId);
+      const updated = isRootCard 
+        ? await ProductionPlanDetail.findByRootCardId(rootCardId)
+        : await ProductionPlanDetail.findBySalesOrderId(rootCardId);
       res.json(formatSuccessResponse(updated, 'Phase updated'));
     } catch (error) {
       res.status(500).json(formatErrorResponse(error.message));
@@ -321,15 +385,20 @@ class ProductionPlanController {
   static async removePhase(req, res) {
     try {
       const { rootCardId, phaseKey } = req.params;
+      const isRootCard = await this._getIsRootCard(rootCardId);
 
-      let detail = await ProductionPlanDetail.findByRootCardId(rootCardId);
+      let detail = isRootCard 
+        ? await ProductionPlanDetail.findByRootCardId(rootCardId)
+        : await ProductionPlanDetail.findBySalesOrderId(rootCardId);
       if (detail) {
         const selectedPhases = detail.selectedPhases || {};
         delete selectedPhases[phaseKey];
-        await ProductionPlanDetail.update(rootCardId, { selectedPhases });
+        await ProductionPlanDetail.update(rootCardId, { selectedPhases }, isRootCard);
       }
 
-      const updated = await ProductionPlanDetail.findByRootCardId(rootCardId);
+      const updated = isRootCard 
+        ? await ProductionPlanDetail.findByRootCardId(rootCardId)
+        : await ProductionPlanDetail.findBySalesOrderId(rootCardId);
       res.json(formatSuccessResponse(updated, 'Phase removed'));
     } catch (error) {
       res.status(500).json(formatErrorResponse(error.message));
@@ -340,17 +409,20 @@ class ProductionPlanController {
     try {
       const { rootCardId, phaseKey } = req.params;
       const { status } = req.body;
+      const isRootCard = await this._getIsRootCard(rootCardId);
 
       if (!status) {
         return res.status(400).json(formatErrorResponse('Status is required'));
       }
 
-      let detail = await ProductionPlanDetail.findByRootCardId(rootCardId);
+      let detail = isRootCard 
+        ? await ProductionPlanDetail.findByRootCardId(rootCardId)
+        : await ProductionPlanDetail.findBySalesOrderId(rootCardId);
       if (!detail) {
-        await ProductionPlanDetail.create({
-          rootCardId,
-          selectedPhases: { [phaseKey]: { status } }
-        });
+        const createData = isRootCard 
+          ? { rootCardId, selectedPhases: { [phaseKey]: { status } } }
+          : { salesOrderId: rootCardId, selectedPhases: { [phaseKey]: { status } } };
+        await ProductionPlanDetail.create(createData);
       } else {
         const selectedPhases = detail.selectedPhases || {};
         if (selectedPhases[phaseKey]) {
@@ -358,10 +430,12 @@ class ProductionPlanController {
         } else {
           selectedPhases[phaseKey] = { status };
         }
-        await ProductionPlanDetail.update(rootCardId, { selectedPhases });
+        await ProductionPlanDetail.update(rootCardId, { selectedPhases }, isRootCard);
       }
 
-      const updated = await ProductionPlanDetail.findByRootCardId(rootCardId);
+      const updated = isRootCard 
+        ? await ProductionPlanDetail.findByRootCardId(rootCardId)
+        : await ProductionPlanDetail.findBySalesOrderId(rootCardId);
       res.json(formatSuccessResponse(updated, 'Phase status updated'));
     } catch (error) {
       res.status(500).json(formatErrorResponse(error.message));

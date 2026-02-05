@@ -39,12 +39,57 @@ class MaterialRequest {
     }
   }
 
+  static async bulkCreate(items, connection = null) {
+    const conn = connection || (await pool.getConnection());
+    
+    try {
+      if (!connection) await conn.query('START TRANSACTION');
+
+      const results = [];
+      for (const item of items) {
+        const [result] = await conn.execute(
+          `INSERT INTO material_requests 
+           (sales_order_id, production_plan_id, material_name, material_code, 
+            quantity, unit, specification, required_date, priority, status, created_by, remarks)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            item.rootCardId,
+            item.productionPlanId || null,
+            item.materialName,
+            item.materialCode || null,
+            item.quantity,
+            item.unit || 'Nos',
+            item.specification || null,
+            item.requiredDate || null,
+            item.priority || 'medium',
+            item.status || 'draft',
+            item.createdBy || null,
+            item.remarks || null
+          ]
+        );
+        results.push(result.insertId);
+      }
+
+      if (!connection) await conn.query('COMMIT');
+      if (!connection) conn.release();
+
+      return results;
+    } catch (error) {
+      if (!connection) {
+        await conn.query('ROLLBACK');
+        conn.release();
+      }
+      throw error;
+    }
+  }
+
   static async findById(id) {
     const [rows] = await pool.execute(
-      `SELECT mr.*, so.customer, u.username as created_by_name
+      `SELECT mr.*, so.customer, u.username as created_by_name, pp.plan_name as production_plan_name
        FROM material_requests mr
        LEFT JOIN sales_orders so ON so.id = mr.sales_order_id
        LEFT JOIN users u ON u.id = mr.created_by
+       LEFT JOIN production_plans pp ON pp.id = mr.production_plan_id
        WHERE mr.id = ?`,
       [id]
     );
@@ -63,10 +108,11 @@ class MaterialRequest {
   }
 
   static async findAll(filters = {}) {
-    let query = `SELECT mr.*, so.customer, u.username as created_by_name
+    let query = `SELECT mr.*, so.customer, u.username as created_by_name, pp.plan_name as production_plan_name
                  FROM material_requests mr
                  LEFT JOIN sales_orders so ON so.id = mr.sales_order_id
                  LEFT JOIN users u ON u.id = mr.created_by
+                 LEFT JOIN production_plans pp ON pp.id = mr.production_plan_id
                  WHERE 1=1`;
     const params = [];
 

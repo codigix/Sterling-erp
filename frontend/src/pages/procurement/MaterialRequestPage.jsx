@@ -487,6 +487,9 @@ const MaterialRequestPage = () => {
                   Material
                 </th>
                 <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">
+                  Source
+                </th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">
                   Code
                 </th>
                 <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">
@@ -511,6 +514,18 @@ const MaterialRequestPage = () => {
                 >
                   <td className="p-1 text-sm text-slate-700 dark:text-slate-300">
                     {request.material_name}
+                  </td>
+                  <td className="p-1 text-sm">
+                    <div className="flex flex-col">
+                      <span className="font-medium text-slate-900 dark:text-white">
+                        {request.production_plan_name || request.customer || "Direct Request"}
+                      </span>
+                      {request.production_plan_id && (
+                        <span className="text-[10px] text-blue-500 font-bold uppercase tracking-tighter">
+                          Prod Plan #{request.production_plan_id}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="p-1 text-sm text-slate-700 dark:text-slate-300">
                     {request.material_code || "-"}

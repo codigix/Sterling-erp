@@ -6,6 +6,7 @@ const materialRequestController = require('../../controllers/procurement/materia
 router.use(authMiddleware);
 
 router.post('/', materialRequestController.createMaterialRequest);
+router.post('/bulk', materialRequestController.bulkCreateMaterialRequests);
 
 router.get('/', materialRequestController.getAllMaterialRequests);
 

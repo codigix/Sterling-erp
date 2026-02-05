@@ -51,6 +51,35 @@ exports.createMaterialRequest = async (req, res) => {
   }
 };
 
+exports.bulkCreateMaterialRequests = async (req, res) => {
+  const { requests } = req.body;
+
+  if (!Array.isArray(requests) || requests.length === 0) {
+    return res.status(400).json({ message: 'Valid requests array is required' });
+  }
+
+  try {
+    const createdBy = typeof req.user?.id === 'number' ? req.user.id : null;
+    
+    const preparedRequests = requests.map(req => ({
+      ...req,
+      createdBy,
+      status: 'draft',
+      quantity: Number(req.quantity)
+    }));
+
+    const ids = await MaterialRequest.bulkCreate(preparedRequests);
+
+    res.status(201).json({
+      message: `${ids.length} material requests created successfully`,
+      ids
+    });
+  } catch (error) {
+    console.error('Bulk create material request error:', error.message);
+    res.status(500).json({ message: 'Failed to create material requests' });
+  }
+};
+
 exports.getMaterialRequest = async (req, res) => {
   const { id } = req.params;
 

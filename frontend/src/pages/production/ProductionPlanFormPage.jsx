@@ -1,11 +1,70 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Zap, Calendar, User, FileText, Plus, Trash2, Loader2, Edit2, Save, Settings, Package, Layers, ChevronDown, ChevronUp, Activity, ArrowLeft, AlertCircle, CheckCircle, X, Send } from 'lucide-react';
 import axios from '../../utils/api';
 import Card, { CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
+import Swal from 'sweetalert2';
 
-const MaterialRequestModal = ({ isOpen, onClose, data, materials }) => {
+const MaterialRequestModal = ({ isOpen, onClose, data, materials, planId, onSavePlan }) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   if (!isOpen) return null;
+
+  const handleProcessRequest = async () => {
+    let currentPlanId = planId;
+
+    if (!currentPlanId) {
+      const savedPlanId = await onSavePlan();
+      if (!savedPlanId) return;
+      currentPlanId = savedPlanId;
+    }
+
+    if (!data.salesOrderId) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Missing Source',
+        text: 'A Sales Order must be linked to create Material Requests.',
+        confirmButtonColor: '#0f172a'
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const requests = materials.map(m => ({
+        rootCardId: data.salesOrderId,
+        productionPlanId: currentPlanId,
+        materialName: m.specification,
+        quantity: m.requiredQty,
+        unit: m.uom || 'Nos',
+        specification: m.specification,
+        requiredDate: data.estimatedCompletionDate,
+        priority: 'medium',
+        remarks: `Generated from Production Plan: ${data.planName}`
+      }));
+
+      await axios.post('/procurement/material-requests/bulk', { requests });
+      
+      Swal.fire({
+        icon: 'success',
+        title: 'Requests Generated',
+        text: 'Material requests have been successfully sent to procurement.',
+        confirmButtonColor: '#0f172a'
+      });
+      
+      onClose();
+    } catch (err) {
+      console.error('Error creating material requests:', err);
+      Swal.fire({
+        icon: 'error',
+        title: 'Submission Failed',
+        text: err.response?.data?.message || 'Failed to process material requests.',
+        confirmButtonColor: '#0f172a'
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
@@ -30,12 +89,14 @@ const MaterialRequestModal = ({ isOpen, onClose, data, materials }) => {
         </div>
 
         {/* Modal Content */}
-        <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+        <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto text-slate-900 dark:text-slate-100">
           {/* Metadata Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700/50">
               <span className="text-[10px] uppercase font-bold text-slate-400">Request Identifier</span>
-              <p className="text-sm font-bold text-slate-900 dark:text-white mt-1">MR-{new Date().toISOString().slice(0,10).replace(/-/g,'')}-{Math.floor(Math.random()*1000)}</p>
+              <p className="text-sm font-bold text-slate-900 dark:text-white mt-1 uppercase">
+                {planId ? `PP-MR-${planId}` : 'PENDING SAVE'}
+              </p>
             </div>
             <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700/50">
               <span className="text-[10px] uppercase font-bold text-slate-400">Originating Dept</span>
@@ -43,7 +104,7 @@ const MaterialRequestModal = ({ isOpen, onClose, data, materials }) => {
             </div>
             <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700/50">
               <span className="text-[10px] uppercase font-bold text-slate-400">SLA Target Date</span>
-              <p className="text-sm font-bold text-slate-900 dark:text-white mt-1">{data.estimatedCompletionDate || '10 Feb 2026'}</p>
+              <p className="text-sm font-bold text-slate-900 dark:text-white mt-1">{data.estimatedCompletionDate || 'Not set'}</p>
             </div>
           </div>
 
@@ -56,7 +117,7 @@ const MaterialRequestModal = ({ isOpen, onClose, data, materials }) => {
               <p className="font-bold">Intelligence Strategy Notes</p>
               <p>Material Request for Production Plan: {data.planName || 'N/A'}</p>
               <p>BOM Reference: {materials[0]?.bomRef || 'Consolidated'}</p>
-              <p>Includes raw materials from all sub-assemblies calculated at {new Date().toLocaleTimeString()}</p>
+              <p>Includes raw materials from all sub-assemblies calculated for procurement cycle.</p>
             </div>
           </div>
 
@@ -72,8 +133,7 @@ const MaterialRequestModal = ({ isOpen, onClose, data, materials }) => {
                   <tr className="bg-slate-50 dark:bg-slate-800 text-[10px] uppercase font-bold text-slate-500 tracking-wider">
                     <th className="px-6 py-3 text-left">Component Intelligence</th>
                     <th className="px-6 py-3 text-center">Required</th>
-                    <th className="px-6 py-3 text-center">Inventory</th>
-                    <th className="px-6 py-3 text-center">Status</th>
+                    <th className="px-6 py-3 text-center">Unit</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
@@ -82,22 +142,14 @@ const MaterialRequestModal = ({ isOpen, onClose, data, materials }) => {
                       <td className="px-6 py-4">
                         <div>
                           <p className="font-bold text-slate-900 dark:text-white uppercase text-xs">{m.specification}</p>
-                          <p className="text-[10px] text-slate-500 font-medium mt-0.5 uppercase">Warehouse: {m.sourceAssembly || 'Main'}</p>
+                          <p className="text-[10px] text-slate-500 font-medium mt-0.5 uppercase">Source: {m.sourceAssembly || 'Production Inventory'}</p>
                         </div>
                       </td>
                       <td className="px-6 py-4 text-center">
-                        <div className="flex flex-col items-center">
-                          <span className="font-bold text-slate-900 dark:text-white">{m.requiredQty}</span>
-                          <span className="text-[10px] text-slate-400 font-bold uppercase">{m.uom || 'KG'}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-center text-xs font-bold text-slate-600 dark:text-slate-400">
-                        {Math.floor(Math.random() * 2000).toFixed(2)}
+                        <span className="font-bold text-slate-900 dark:text-white">{m.requiredQty}</span>
                       </td>
                       <td className="px-6 py-4 text-center">
-                        <span className="px-3 py-1 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-full text-[10px] font-bold border border-green-100 dark:border-green-800/50">
-                          ✓ Fully Stocked
-                        </span>
+                        <span className="text-[10px] text-slate-400 font-bold uppercase">{m.uom || 'KG'}</span>
                       </td>
                     </tr>
                   ))}
@@ -109,18 +161,20 @@ const MaterialRequestModal = ({ isOpen, onClose, data, materials }) => {
 
         {/* Modal Footer */}
         <div className="px-6 py-4 bg-slate-50/50 dark:bg-slate-800/30 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-3">
-          <button onClick={onClose} className="px-5 py-2 text-slate-600 dark:text-slate-400 text-xs font-bold hover:text-slate-900 transition-colors">
+          <button 
+            onClick={onClose} 
+            disabled={isSubmitting}
+            className="px-5 py-2 text-slate-600 dark:text-slate-400 text-xs font-bold hover:text-slate-900 transition-colors"
+          >
             Abort Request
           </button>
           <button 
-            onClick={() => {
-              alert('Material Request Processed Successfully!');
-              onClose();
-            }}
-            className="inline-flex items-center gap-2 px-6 py-2 bg-slate-900 dark:bg-slate-700 text-white rounded font-bold hover:bg-slate-800 transition-all text-xs border border-slate-800"
+            onClick={handleProcessRequest}
+            disabled={isSubmitting || materials.length === 0}
+            className="inline-flex items-center gap-2 px-6 py-2 bg-slate-900 dark:bg-slate-700 text-white rounded font-bold hover:bg-black transition-all text-xs border border-slate-800 disabled:bg-slate-400"
           >
-            <Send size={14} />
-            Material Request
+            {isSubmitting ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+            Process Request
           </button>
         </div>
       </div>
@@ -173,7 +227,9 @@ const SectionHeader = ({ title, subtitle, section, isExpanded, onToggle, icon: I
 const ProductionPlanFormPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { id } = useParams();
   const [salesOrders, setSalesOrders] = useState([]);
+  const [isViewMode, setIsViewMode] = useState(false);
   const [expandedSections, setExpandedSections] = useState({
     strategic: true,
     finishedGoods: true,
@@ -216,8 +272,8 @@ const ProductionPlanFormPage = () => {
                 type="text"
                 name="planName"
                 value={formData.planName}
-                onChange={handleInputChange}
-                className="w-full px-4 py-2 border border-slate-200 dark:border-slate-600 rounded bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all outline-none text-sm"
+                readOnly
+                className="w-full px-4 py-2 border border-slate-200 dark:border-slate-600 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 cursor-not-allowed transition-all outline-none text-sm font-mono"
                 placeholder="Auto Generated"
               />
             </div>
@@ -228,9 +284,12 @@ const ProductionPlanFormPage = () => {
               </label>
               <input
                 type="text"
-                value="PP"
-                readOnly
-                className="w-full px-4 py-2 border border-slate-200 dark:border-slate-600 rounded bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all outline-none text-sm"
+                name="namingSeries"
+                value={formData.namingSeries}
+                onChange={handleInputChange}
+                disabled={isViewMode}
+                className={`w-full px-4 py-2 border border-slate-200 dark:border-slate-600 rounded bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all outline-none text-sm ${isViewMode ? 'cursor-not-allowed opacity-75' : ''}`}
+                placeholder="e.g. PP"
               />
             </div>
 
@@ -242,7 +301,8 @@ const ProductionPlanFormPage = () => {
                 name="procurementStatus"
                 value={formData.procurementStatus}
                 onChange={handleInputChange}
-                className="w-full px-4 py-2 border border-slate-200 dark:border-slate-600 rounded bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all outline-none text-sm"
+                disabled={isViewMode}
+                className={`w-full px-4 py-2 border border-slate-200 dark:border-slate-600 rounded bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all outline-none text-sm ${isViewMode ? 'cursor-not-allowed opacity-75' : ''}`}
               >
                 <option value="Draft">Draft</option>
                 <option value="In Progress">In Progress</option>
@@ -260,7 +320,8 @@ const ProductionPlanFormPage = () => {
                 name="salesOrderId"
                 value={formData.salesOrderId}
                 onChange={handleInputChange}
-                className="w-full px-4 py-2 border border-slate-200 dark:border-slate-600 rounded bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all outline-none text-sm"
+                disabled={isViewMode || id}
+                className={`w-full px-4 py-2 border border-slate-200 dark:border-slate-600 rounded bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all outline-none text-sm ${(isViewMode || id) ? 'cursor-not-allowed opacity-75' : ''}`}
               >
                 <option value="">Select Sales Order</option>
                 {salesOrders.map(so => (
@@ -281,7 +342,8 @@ const ProductionPlanFormPage = () => {
                   name="targetQuantity"
                   value={formData.targetQuantity}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-slate-200 dark:border-slate-600 rounded-l bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all outline-none text-sm"
+                  disabled={isViewMode}
+                  className={`w-full px-4 py-2 border border-slate-200 dark:border-slate-600 rounded-l bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all outline-none text-sm ${isViewMode ? 'cursor-not-allowed opacity-75' : ''}`}
                   placeholder="1"
                 />
                 <span className="px-4 py-2 bg-slate-100 dark:bg-slate-700 border border-l-0 border-slate-200 dark:border-slate-600 rounded-r text-xs font-bold text-slate-500 uppercase">
@@ -302,7 +364,8 @@ const ProductionPlanFormPage = () => {
                 name="productionStartDate"
                 value={formData.productionStartDate}
                 onChange={handleInputChange}
-                className="w-full px-4 py-2 border border-slate-200 dark:border-slate-600 rounded bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all outline-none text-sm"
+                disabled={isViewMode}
+                className={`w-full px-4 py-2 border border-slate-200 dark:border-slate-600 rounded bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all outline-none text-sm ${isViewMode ? 'cursor-not-allowed opacity-75' : ''}`}
               />
             </div>
 
@@ -316,7 +379,8 @@ const ProductionPlanFormPage = () => {
                 name="estimatedCompletionDate"
                 value={formData.estimatedCompletionDate}
                 onChange={handleInputChange}
-                className="w-full px-4 py-2 border border-slate-200 dark:border-slate-600 rounded bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all outline-none text-sm"
+                disabled={isViewMode}
+                className={`w-full px-4 py-2 border border-slate-200 dark:border-slate-600 rounded bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all outline-none text-sm ${isViewMode ? 'cursor-not-allowed opacity-75' : ''}`}
               />
             </div>
           </div>
@@ -331,7 +395,8 @@ const ProductionPlanFormPage = () => {
                 name="supervisorId"
                 value={formData.supervisorId}
                 onChange={handleInputChange}
-                className="w-full px-4 py-2 border border-slate-200 dark:border-slate-600 rounded bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all outline-none text-sm"
+                disabled={isViewMode}
+                className={`w-full px-4 py-2 border border-slate-200 dark:border-slate-600 rounded bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all outline-none text-sm ${isViewMode ? 'cursor-not-allowed opacity-75' : ''}`}
               >
                 <option value="">Select Supervisor (Optional)</option>
                 {employees.map(emp => (
@@ -350,7 +415,8 @@ const ProductionPlanFormPage = () => {
                 name="notes"
                 value={formData.notes}
                 onChange={handleInputChange}
-                className="w-full px-4 py-2 border border-slate-200 dark:border-slate-600 rounded bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all outline-none text-sm"
+                disabled={isViewMode}
+                className={`w-full px-4 py-2 border border-slate-200 dark:border-slate-600 rounded bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all outline-none text-sm ${isViewMode ? 'cursor-not-allowed opacity-75' : ''}`}
                 placeholder="Additional notes"
                 rows="1"
               />
@@ -941,7 +1007,8 @@ const ProductionPlanFormPage = () => {
   const [formData, setFormData] = useState({
     rootCardId: '',
     salesOrderId: '',
-    planName: '',
+    namingSeries: 'PP',
+    planName: '', // Will be auto-generated
     productionStartDate: '',
     estimatedCompletionDate: '',
     procurementStatus: 'Draft',
@@ -952,6 +1019,27 @@ const ProductionPlanFormPage = () => {
     notes: '',
     stages: []
   });
+
+  // Auto-generate plan identity on mount and when naming series changes
+  useEffect(() => {
+    if (!planId && !id) {
+      setFormData(prev => {
+        const currentSeries = prev.namingSeries || 'PP';
+        // Only generate if planName is empty, "Auto Generated", or starts with a different prefix
+        const needsNewName = !prev.planName || 
+                             prev.planName === 'Auto Generated' || 
+                             (prev.planName.includes('-') && !prev.planName.startsWith(`${currentSeries}-`));
+        
+        if (needsNewName) {
+          const timestamp = Date.now();
+          // Use a shorter timestamp or more readable format if possible
+          // For now, sticking with namingSeries-timestamp for uniqueness
+          return { ...prev, planName: `${currentSeries}-${timestamp}` };
+        }
+        return prev;
+      });
+    }
+  }, [planId, id, formData.namingSeries]);
   const [finishedGoods, setFinishedGoods] = useState([]);
   const [materials, setMaterials] = useState([]);
   const [subAssemblies, setSubAssemblies] = useState([]);
@@ -975,6 +1063,53 @@ const ProductionPlanFormPage = () => {
   const [showStageForm, setShowStageForm] = useState(false);
   const [editingStageId, setEditingStageId] = useState(null);
   const [editedStage, setEditedStage] = useState(null);
+
+  const fetchPlanDetails = async (planId) => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`/production/plans/${planId}/with-stages`);
+      const plan = response.data.plan || response.data;
+      
+      if (plan) {
+        const formatDate = (dateStr) => {
+          if (!dateStr) return '';
+          try {
+            return new Date(dateStr).toISOString().split('T')[0];
+          } catch (e) {
+            return dateStr || '';
+          }
+        };
+
+        setFormData({
+          id: plan.id,
+          rootCardId: plan.root_card_id || plan.rootCardId,
+          salesOrderId: (plan.sales_order_id || plan.salesOrderId) ? (plan.sales_order_id || plan.salesOrderId).toString() : '',
+          namingSeries: (plan.plan_name || plan.planName)?.split('-')[0] || 'PP',
+          planName: plan.plan_name || plan.planName,
+          productionStartDate: formatDate(plan.planned_start_date || plan.productionStartDate || plan.plannedStartDate),
+          estimatedCompletionDate: formatDate(plan.planned_end_date || plan.estimatedCompletionDate || plan.plannedEndDate),
+          procurementStatus: plan.status || plan.procurementStatus || 'Draft',
+          supervisorId: plan.supervisor_id || plan.supervisorId || '',
+          productName: plan.product_name || plan.productName,
+          itemCode: plan.item_code || plan.itemCode,
+          targetQuantity: plan.target_quantity || plan.targetQuantity || 1,
+          notes: plan.production_notes || plan.notes || plan.productionNotes || '',
+          stages: plan.stages || []
+        });
+        
+        setPlanId(plan.id);
+        
+        setFinishedGoods(plan.finished_goods || plan.finishedGoods || []);
+        setMaterials(plan.materials || []);
+        setSubAssemblies(plan.sub_assemblies || plan.subAssemblies || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch plan details:', err);
+      setError('Failed to load production plan details.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchSalesOrders = async () => {
     try {
@@ -1029,7 +1164,7 @@ const ProductionPlanFormPage = () => {
         ...prev,
         salesOrderId: '',
         rootCardId: '',
-        planName: '',
+        planName: prev.planName,
         productName: '',
         itemCode: '',
         targetQuantity: 1,
@@ -1069,7 +1204,6 @@ const ProductionPlanFormPage = () => {
       }
 
       const step4 = rootCard.stepData?.step4_productionPlan || rootCard.steps?.step4_production || {};
-      const step1 = rootCard.stepData?.step1_clientPO || rootCard.steps?.step1_clientPO || {};
       
       // Fetch BOM Details
       const bomId = selectedSO.bom_id;
@@ -1194,8 +1328,6 @@ const ProductionPlanFormPage = () => {
         setProductionPhases(bomOperations.map(op => op.operationName));
       }
 
-      const projectName = step1.projectName || rootCard.project?.name || rootCard.project_name || '';
-      
       setFormData(prev => ({
         ...prev,
         salesOrderId: salesOrderId,
@@ -1203,7 +1335,7 @@ const ProductionPlanFormPage = () => {
         productName: selectedSO.product_name,
         itemCode: selectedSO.item_code,
         targetQuantity: selectedSO.quantity,
-        planName: projectName ? `${projectName} - Production Plan` : `PP-${selectedSO.so_number}`,
+        planName: prev.planName,
         productionStartDate: step4?.timeline?.startDate || '',
         estimatedCompletionDate: step4?.timeline?.endDate || '',
         procurementStatus: step4?.timeline?.procurementStatus || 'Draft',
@@ -1223,6 +1355,9 @@ const ProductionPlanFormPage = () => {
   const handleRootCardSelect = useCallback(async (rootCardId) => {
     if (!rootCardId) {
       setProductionPhases([]);
+      setFinishedGoods([]);
+      setMaterials([]);
+      setSubAssemblies([]);
       setFormData(prev => ({ ...prev, rootCardId: '', stages: [] }));
       return;
     }
@@ -1256,9 +1391,77 @@ const ProductionPlanFormPage = () => {
 
       const step4 = rootCard.stepData?.step4_productionPlan || rootCard.steps?.step4_production || {};
       const step1 = rootCard.stepData?.step1_clientPO || rootCard.steps?.step1_clientPO || {};
-      const activeBOM = rootCard.stepData?.activeBOM;
-      const bomOperations = activeBOM?.operations || [];
+      const activeBOM = rootCard.stepData?.activeBOM || rootCard.bom_details;
+      
+      // Populate items from BOM if available
+      if (activeBOM) {
+        const explodeBOM = (bom, multiplier, sourceName, bomRef, sourceCode) => {
+          let mats = [];
+          let subAssys = [];
+          if (bom.materials) {
+            bom.materials.forEach(m => {
+              mats.push({
+                specification: m.itemName,
+                requiredQty: m.quantity * multiplier,
+                uom: m.uom,
+                sourceAssembly: sourceName,
+                sourceAssemblyCode: sourceCode,
+                bomRef: bomRef
+              });
+            });
+          }
+          if (bom.components) {
+            bom.components.forEach(comp => {
+              const compMultiplier = comp.quantity * multiplier;
+              const compBomRef = comp.subAssemblyDetails?.bomNumber || `BOM-${comp.subAssemblyDetails?.id || 'N/A'}`;
+              subAssys.push({
+                itemCode: comp.componentCode,
+                itemName: comp.componentName,
+                parentItemCode: sourceCode,
+                parentItemName: sourceName,
+                targetWarehouse: 'Work In Progress - NC',
+                scheduledDate: step4?.timeline?.startDate || new Date().toISOString().split('T')[0],
+                requiredQty: compMultiplier,
+                uom: comp.uom || 'Nos',
+                bomNo: compBomRef,
+                manufacturingType: 'In House'
+              });
+              if (comp.subAssemblyDetails) {
+                const { mats: childMats, subAssys: childSubAssys } = explodeBOM(comp.subAssemblyDetails, compMultiplier, comp.componentCode, compBomRef, comp.componentCode);
+                mats = [...mats, ...childMats];
+                subAssys = [...subAssys, ...childSubAssys];
+              }
+            });
+          }
+          return { mats, subAssys };
+        };
 
+        const targetQty = step1.productDetails?.quantity || 1;
+        const prodName = step1.productDetails?.itemName || rootCard.product_name || 'Product';
+        const itemCode = step1.productDetails?.itemCode || rootCard.item_code || 'ITEM';
+
+        const { mats, subAssys } = explodeBOM(
+          activeBOM,
+          targetQty,
+          prodName,
+          activeBOM.bomNumber || 'N/A',
+          itemCode
+        );
+        setMaterials(mats);
+        setSubAssemblies(subAssys);
+        
+        setFinishedGoods([{
+          itemCode: itemCode,
+          productName: prodName,
+          bomNo: activeBOM.bomNumber || 'N/A',
+          plannedQty: targetQty,
+          uom: 'Nos',
+          warehouse: 'Finished Goods - NC',
+          startDate: step4?.timeline?.startDate || new Date().toISOString().split('T')[0]
+        }]);
+      }
+
+      const bomOperations = activeBOM?.operations || [];
       let autoCreatedStages = [];
       if (bomOperations.length > 0) {
         autoCreatedStages = bomOperations.map((op, index) => ({
@@ -1289,7 +1492,7 @@ const ProductionPlanFormPage = () => {
         ...prev,
         rootCardId: rootCardId,
         productName: step1.productDetails?.itemName || rootCard.product_name || '',
-        planName: (step1.projectName || rootCard.project?.name) ? `${step1.projectName || rootCard.project?.name} - Production Plan` : '',
+        planName: prev.planName,
         productionStartDate: step4?.timeline?.startDate || '',
         estimatedCompletionDate: step4?.timeline?.endDate || '',
         procurementStatus: step4?.timeline?.procurementStatus || '',
@@ -1307,28 +1510,50 @@ const ProductionPlanFormPage = () => {
     fetchEmployees();
     fetchFacilities();
     fetchWarehouses();
-  }, []);
 
-  useEffect(() => {
-    if (location.state?.order?.id) {
-      handleSalesOrderSelect(location.state.order.id.toString());
-    } else if (location.state?.rootCardId) {
-      // Find SO for this root card if possible
-      const so = salesOrders.find(s => s.root_card_id == location.state.rootCardId);
-      if (so) {
-        handleSalesOrderSelect(so.id.toString());
+    if (id) {
+      fetchPlanDetails(id);
+      // Default to view mode if ID exists, unless explicitly specified in state
+      if (location.state?.viewMode === false) {
+        setIsViewMode(false);
       } else {
-        handleRootCardSelect(location.state.rootCardId.toString());
+        setIsViewMode(true);
       }
     }
-  }, [location.state, salesOrders, handleSalesOrderSelect, handleRootCardSelect]);
+  }, [id, location.state]);
+
+  useEffect(() => {
+    if (location.state?.viewMode) {
+      setIsViewMode(true);
+    }
+    
+    // Only handle state-based selection if we're not editing an existing plan (no id)
+    if (!id) {
+      if (location.state?.order?.id) {
+        handleSalesOrderSelect(location.state.order.id.toString());
+      } else if (location.state?.rootCardId) {
+        // Find SO for this root card if possible
+        const so = salesOrders.find(s => s.root_card_id == location.state.rootCardId);
+        if (so) {
+          handleSalesOrderSelect(so.id.toString());
+        } else {
+          handleRootCardSelect(location.state.rootCardId.toString());
+        }
+      }
+    }
+  }, [id, location.state, salesOrders, handleSalesOrderSelect, handleRootCardSelect]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    
+    setFormData(prev => {
+      const newState = {
+        ...prev,
+        [name]: value
+      };
+
+      return newState;
+    });
 
     if (name === 'salesOrderId') {
       handleSalesOrderSelect(value);
@@ -1410,8 +1635,8 @@ const ProductionPlanFormPage = () => {
     setEditedStage(null);
   };
 
-  const handleSubmit = async (e) => {
-    if (e) {
+  const handleSubmit = async (e, shouldNavigate = true) => {
+    if (e && e.preventDefault) {
       e.preventDefault();
       e.stopPropagation();
     }
@@ -1427,32 +1652,25 @@ const ProductionPlanFormPage = () => {
       console.warn('[handleSubmit] Root Card ID is missing');
       setError('Please select a root card/project');
       setLoading(false);
-      return;
+      return null;
     }
 
     if (!formData.planName) {
       console.warn('[handleSubmit] Plan name is missing');
       setError('Plan name is required');
       setLoading(false);
-      return;
-    }
-
-    if (!formData.rootCardId) {
-      console.warn('[handleSubmit] Root Card ID is missing');
-      setError('Root Card ID is missing. Please select a valid root card.');
-      setLoading(false);
-      return;
+      return null;
     }
 
     if (!formData.stages || formData.stages.length === 0) {
       console.warn('[handleSubmit] No manufacturing stages added');
       setError('Please add at least one manufacturing stage');
       setLoading(false);
-      return;
+      return null;
     }
 
     console.log('[handleSubmit] ✓ All validations passed');
-    console.log('[handleSubmit] Making POST to: /root-cards/steps/' + formData.rootCardId + '/production-plan');
+    console.log(`[handleSubmit] Making ${id ? 'PUT' : 'POST'} to: ${id ? `/production/plans/${id}` : `/root-cards/steps/${formData.rootCardId}/production-plan`}`);
     
     setLoading(true);
     setError('');
@@ -1475,70 +1693,40 @@ const ProductionPlanFormPage = () => {
         productionNotes: formData.notes || '',
         materials: materials || [],
         subAssemblies: subAssemblies || [],
-        finishedGoods: finishedGoods || []
+        finishedGoods: finishedGoods || [],
+        stages: formData.stages || []
       };
 
       console.log('[handleSubmit] Payload to send:', JSON.stringify(payload, null, 2));
 
-      const response = await axios.post(`/root-cards/steps/${formData.rootCardId}/production-plan`, payload);
-
-      console.log('[handleSubmit] ✓✓✓ SUCCESS! Response:', response.data);
-      const newPlanId = response.data.data?.planId;
-      console.log('[handleSubmit] Production plan created with ID:', newPlanId);
-      setPlanId(newPlanId);
-
-      if (formData.stages && formData.stages.length > 0) {
-        try {
-          console.log('[handleSubmit] Creating', formData.stages.length, 'production plan stages');
-          
-          const stagesToCreate = formData.stages.map((stage) => {
-            const stageData = {
-              stageName: stage.stageName,
-              stageType: stage.stageType || 'in_house',
-              plannedStartDate: stage.plannedStartDate || null,
-              plannedEndDate: stage.plannedEndDate || null,
-              targetWarehouse: stage.targetWarehouse || null,
-              assignedVendorId: null,
-              notes: stage.notes || null
-            };
-            
-            // Only add employee ID if it has a valid value
-            const empId = stage.assignedEmployeeId ? parseInt(stage.assignedEmployeeId) : null;
-            if (empId && !isNaN(empId) && empId > 0) {
-              stageData.assignedEmployeeId = empId;
-            } else {
-              stageData.assignedEmployeeId = null;
-            }
-            
-            // Only add facility ID if it has a valid value
-            const facId = stage.facilityId ? parseInt(stage.facilityId) : null;
-            if (facId && !isNaN(facId) && facId > 0) {
-              stageData.assignedFacilityId = facId;
-            } else {
-              stageData.assignedFacilityId = null;
-            }
-            
-            return stageData;
-          });
-
-          console.log('[handleSubmit] Stages to create:', JSON.stringify(stagesToCreate, null, 2));
-          const stagesResponse = await axios.post(`/production/plans/${newPlanId}/stages`, stagesToCreate);
-          console.log('[handleSubmit] ✓ Production plan stages created:', stagesResponse.data);
-        } catch (stageErr) {
-          console.error('[handleSubmit] Error creating stages:', stageErr.response?.data || stageErr.message);
-          setError('Production plan created but failed to create stages: ' + (stageErr.response?.data?.message || stageErr.message));
-          setLoading(false);
-          return;
-        }
+      let response;
+      if (id) {
+        response = await axios.put(`/production/plans/${id}`, payload);
+      } else {
+        response = await axios.post(`/root-cards/steps/${formData.rootCardId}/production-plan`, payload);
       }
 
+      console.log('[handleSubmit] ✓✓✓ SUCCESS! Response:', response.data);
+      const newPlanId = id || response.data.data?.planId;
+      console.log('[handleSubmit] Production plan processed with ID:', newPlanId);
+      setPlanId(newPlanId);
+
       // Success - reset form and navigate
-      setSuccess('✓ Production plan created successfully! Redirecting to plan details...');
+      setSuccess(`✓ Production plan ${id ? 'updated' : 'saved'} successfully!`);
       
-      console.log('[handleSubmit] Navigating to /department/production/plans/' + newPlanId);
-      setTimeout(() => {
-        navigate(`/department/production/plans/${newPlanId}`);
-      }, 2000);
+      if (shouldNavigate) {
+        console.log('[handleSubmit] Navigating to /department/production/plans/' + newPlanId);
+        setTimeout(() => {
+          if (id) {
+            setIsViewMode(true);
+            setSuccess('');
+          } else {
+            navigate(`/department/production/plans/${newPlanId}`);
+          }
+        }, 2000);
+      }
+      
+      return newPlanId;
       
     } catch (err) {
       console.error('='.repeat(80));
@@ -1552,22 +1740,35 @@ const ProductionPlanFormPage = () => {
       const errorMsg = err.response?.data?.message || err.message || 'Unknown error occurred';
       setError('Failed to create production plan: ' + errorMsg);
       setLoading(false);
+      return null;
     } finally {
       setLoading(false);
     }
   };
 
-  const handleGenerateWorkOrders = async () => {
-    if (!planId) {
-      setError('Please save the production plan first');
-      return;
+  const handleCreateWorkOrderAction = async () => {
+    let currentPlanId = planId;
+    
+    if (!currentPlanId) {
+      console.log('[handleCreateWorkOrderAction] No planId, saving plan first...');
+      currentPlanId = await handleSubmit(null, false);
+      if (!currentPlanId) {
+        console.error('[handleCreateWorkOrderAction] Failed to save plan, aborting work order generation');
+        return;
+      }
     }
 
     setGeneratingWorkOrders(true);
     try {
-      const response = await axios.post(`/production/plans/${planId}/generate-work-orders`);
+      console.log('[handleCreateWorkOrderAction] Generating work orders for plan:', currentPlanId);
+      const response = await axios.post(`/production/plans/${currentPlanId}/generate-work-orders`);
       setSuccess(`✓ ${response.data.message}`);
-      setTimeout(() => setSuccess(''), 5000);
+      
+      // Navigate to work orders list after a short delay so user can see the success message
+      setTimeout(() => {
+        setSuccess('');
+        navigate('/department/production/work-orders');
+      }, 1500);
     } catch (err) {
       console.error('Error generating work orders:', err);
       setError('Failed to generate work orders: ' + (err.response?.data?.message || err.message));
@@ -1606,39 +1807,52 @@ const ProductionPlanFormPage = () => {
                   </span>
                   <span className="text-slate-300 dark:text-slate-700">/</span>
                   <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
-                    New Production Plan
+                    {id ? (isViewMode ? 'View Production Plan' : 'Edit Production Plan') : 'New Production Plan'}
                   </span>
                 </div>
                 <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider rounded border border-slate-200 dark:border-slate-700">
-                  draft
+                  {formData.procurementStatus?.toLowerCase() || 'draft'}
                 </span>
               </div>
               <h1 className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">
-                New Production Plan
+                {id ? (isViewMode ? `Production Plan: ${formData.planName}` : `Edit Plan: ${formData.planName}`) : 'New Production Plan'}
               </h1>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => navigate(-1)}
-              className="text-slate-600 dark:text-slate-400 font-medium hover:text-slate-900 dark:hover:text-white transition-all text-sm px-2"
-            >
-              Discard Changes
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={loading}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded bg-slate-900 dark:bg-slate-700 text-white font-bold hover:bg-slate-800 dark:hover:bg-slate-600 disabled:bg-slate-400 transition-all text-xs border border-slate-800 dark:border-slate-600 shadow-sm"
-            >
-              {loading ? (
-                <Loader2 size={14} className="animate-spin" />
-              ) : (
-                <Save size={14} />
-              )}
-              Save Strategic Plan
-            </button>
+            {isViewMode ? (
+              <button
+                type="button"
+                onClick={() => setIsViewMode(false)}
+                className="inline-flex items-center justify-center gap-2 px-6 py-2 rounded-xl bg-purple-600 text-white font-bold hover:bg-purple-700 shadow-lg shadow-purple-600/20 transition-all text-sm"
+              >
+                <Edit2 size={18} />
+                Edit Plan
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => id ? setIsViewMode(true) : navigate(-1)}
+                  className="text-slate-600 dark:text-slate-400 font-medium hover:text-slate-900 dark:hover:text-white transition-all text-sm px-2"
+                >
+                  {id ? 'Cancel Editing' : 'Discard Changes'}
+                </button>
+                <button
+                  onClick={handleSubmit}
+                  disabled={loading}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded bg-slate-900 dark:bg-slate-700 text-white font-bold hover:bg-black dark:hover:bg-slate-800 disabled:bg-slate-400 transition-all text-xs border border-slate-800 dark:border-slate-600 shadow-sm"
+                >
+                  {loading ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <Save size={14} />
+                  )}
+                  {id ? 'Update Strategic Plan' : 'Save Strategic Plan'}
+                </button>
+              </>
+            )}
           </div>
         </div>
 
@@ -1691,7 +1905,6 @@ const ProductionPlanFormPage = () => {
           <div id="section-finishedGoods">{renderFinishedGoodsSection()}</div>
           <div id="section-materials">{renderMaterialsSection()}</div>
           <div id="section-subAssemblies">{renderSubAssembliesSection()}</div>
-          {renderManufacturingFlowSection()}
         </div>
 
         <MaterialRequestModal 
@@ -1699,6 +1912,8 @@ const ProductionPlanFormPage = () => {
           onClose={() => setShowMaterialRequestModal(false)}
           data={formData}
           materials={materials}
+          planId={planId}
+          onSavePlan={() => handleSubmit(null, false)}
         />
 
         {/* Footer Bar */}
@@ -1725,37 +1940,33 @@ const ProductionPlanFormPage = () => {
 
             <div className="flex flex-wrap items-center justify-center md:justify-end gap-3 w-full md:w-auto">
               <button 
-                onClick={() => navigate('/department/production/work-orders')}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-50 transition-all shadow-sm"
+                onClick={handleCreateWorkOrderAction}
+                disabled={loading || generatingWorkOrders || (!formData.salesOrderId && !formData.rootCardId)}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 dark:bg-slate-700 text-white rounded text-xs font-bold hover:bg-black transition-all shadow-md disabled:bg-slate-400"
               >
-                <Plus size={14} className="text-green-500" />
+                {generatingWorkOrders ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <Zap size={14} className="text-yellow-400" />
+                )}
                 Work Orders
               </button>
-              {planId && (
-                <button 
-                  onClick={handleGenerateWorkOrders}
-                  disabled={generatingWorkOrders}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded text-xs font-bold hover:bg-green-700 transition-all shadow-md"
-                >
-                  {generatingWorkOrders ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />}
-                  Generate Work Orders
-                </button>
-              )}
               <button 
                 onClick={() => setShowMaterialRequestModal(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-50 transition-all shadow-sm"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-slate-700 dark:text-slate-300 text-xs font-bold  transition-all shadow-sm"
               >
                 <Package size={14} className="text-blue-500" />
                 Material Request
               </button>
-              <button className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-50 transition-all shadow-sm">
+              <button className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-slate-700 dark:text-slate-300 text-xs font-bold  transition-all shadow-sm">
                 <FileText size={14} className="text-orange-500" />
                 Purchase Order
               </button>
               <button 
                 onClick={handleSubmit}
                 disabled={loading}
-                className="inline-flex items-center gap-2 px-6 py-2 bg-slate-900 dark:bg-slate-700 text-white rounded font-bold hover:bg-slate-800 dark:hover:bg-slate-600 transition-all text-xs border border-slate-800 dark:border-slate-600 shadow-md"
+                className="inline-flex items-center gap-2 px-6 py-2 bg-slate-900 dark:bg-slate-700 text-white rounded font-bold  transition-all text-xs border border-slate-800 hover:bg-black dark:border-slate-600 shadow-md"
+                
               >
                 {loading ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
                 Save Strategic Plan

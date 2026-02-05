@@ -245,6 +245,19 @@ const DepartmentLayout = () => {
                 <ul className="space-y-1">
                   <li>
                     <Link
+                      to="/department/production"
+                      className={`flex items-center text-xs px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                        isActive("/department/production")
+                          ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"
+                          : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+                      }`}
+                    >
+                      <Home size={18} className="flex-shrink-0" />
+                      {!sidebarCollapsed && <span className="ml-3">Dashboard</span>}
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
                       to="/department/production/root-cards"
                       className={`flex items-center text-xs px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
                         isActive("/department/production/root-cards")
@@ -280,6 +293,19 @@ const DepartmentLayout = () => {
                     >
                       <FileText size={18} className="flex-shrink-0" />
                       {!sidebarCollapsed && <span className="ml-3">Work Orders</span>}
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      to="/department/production/job-cards"
+                      className={`flex items-center text-xs px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                        isActive("/department/production/job-cards")
+                          ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"
+                          : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+                      }`}
+                    >
+                      <ClipboardList size={18} className="flex-shrink-0" />
+                      {!sidebarCollapsed && <span className="ml-3">Job Cards</span>}
                     </Link>
                   </li>
                   <li>

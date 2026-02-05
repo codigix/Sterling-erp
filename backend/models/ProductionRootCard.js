@@ -30,7 +30,8 @@ class ProductionRootCard {
       sales_order_items: row.sales_order_items ? parseJson(row.sales_order_items, []) : [],
       root_card_items: row.sales_order_items ? parseJson(row.sales_order_items, []) : [],
       product_name: row.product_details ? parseJson(row.product_details).itemName : null,
-      root_card_id: row.sales_order_id,
+      root_card_id: row.id,
+      sales_order_id: row.sales_order_id,
       project: row.project_id
         ? {
             id: row.project_id,
@@ -152,7 +153,7 @@ class ProductionRootCard {
     return ProductionRootCard.formatRow(rows[0]);
   }
 
-  static async findByRootCardId(rootCardId) {
+  static async findBySalesOrderId(salesOrderId) {
     const [rows] = await pool.execute(
       `
         SELECT rc.*, 
@@ -182,9 +183,13 @@ class ProductionRootCard {
         LEFT JOIN users u ON u.id = rc.assigned_supervisor
         WHERE so.id = ?
       `,
-      [rootCardId]
+      [salesOrderId]
     );
     return ProductionRootCard.formatRow(rows[0]);
+  }
+
+  static async findByRootCardId(rootCardId) {
+    return this.findById(rootCardId);
   }
 
   static async create(data, externalConnection = null) {

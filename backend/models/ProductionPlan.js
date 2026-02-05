@@ -59,14 +59,16 @@ class ProductionPlan {
       const [result] = await connection.execute(
         `
           INSERT INTO production_plans
-          (sales_order_id, root_card_id, bom_id, plan_name, status, planned_start_date, planned_end_date, 
+          (id, sales_order_id, root_card_id, bom_id, target_quantity, plan_name, status, planned_start_date, planned_end_date, 
            estimated_completion_date, supervisor_id, notes)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
+          data.id || data.planName,
           data.salesOrderId || null,
           data.rootCardId || null,
           data.bomId || null,
+          data.targetQuantity || 1,
           data.planName,
           data.status || 'draft',
           data.plannedStartDate || null,
@@ -81,7 +83,7 @@ class ProductionPlan {
         connection.release();
       }
 
-      return result.insertId;
+      return data.id || data.planName;
     } catch (error) {
       if (!externalConnection) {
         connection.release();
@@ -94,18 +96,30 @@ class ProductionPlan {
     const [rows] = await pool.execute(
       `
         SELECT pp.*, 
+               COALESCE(rc.project_id, p.id) as project_id,
                so.customer AS customer_name,
-               bom.sales_order_id,
                u.username AS supervisor_name,
                ppd.selected_phases,
+               ppd.finished_goods,
+               ppd.sub_assemblies,
+               ppd.materials,
                sod.product_details
         FROM production_plans pp
+        LEFT JOIN root_cards rc ON rc.id = pp.root_card_id
         LEFT JOIN sales_orders so ON so.id = pp.sales_order_id
+        LEFT JOIN projects p ON p.sales_order_id = pp.sales_order_id
         LEFT JOIN bill_of_materials bom ON bom.id = pp.bom_id
         LEFT JOIN users u ON u.id = pp.supervisor_id
-        LEFT JOIN production_plan_details ppd ON ppd.sales_order_id = pp.sales_order_id
+        LEFT JOIN production_plan_details ppd ON 
+          (ppd.production_plan_id = pp.id) OR
+          (ppd.production_plan_id IS NULL AND (
+            (pp.sales_order_id IS NOT NULL AND ppd.sales_order_id = pp.sales_order_id) OR
+            (pp.root_card_id IS NOT NULL AND ppd.root_card_id = pp.root_card_id)
+          ))
         LEFT JOIN sales_order_details sod ON sod.sales_order_id = pp.sales_order_id
         WHERE pp.id = ?
+        ORDER BY (ppd.production_plan_id = pp.id) DESC
+        LIMIT 1
       `,
       [id]
     );
@@ -116,9 +130,9 @@ class ProductionPlan {
           const productDetails = typeof rows[0].product_details === 'string'
             ? JSON.parse(rows[0].product_details)
             : rows[0].product_details;
-          rows[0].product_name = productDetails.itemName || null;
+          rows[0].product_name = productDetails.itemName || productDetails.name || rows[0].project_name || null;
         } else {
-          rows[0].product_name = null;
+          rows[0].product_name = rows[0].project_name || null;
         }
         delete rows[0].product_details;
 
@@ -133,11 +147,15 @@ class ProductionPlan {
         } else {
           rows[0].phases = [];
         }
+        delete rows[0].selected_phases;
+
+        // Parse finished_goods, sub_assemblies, and materials
+        rows[0].finished_goods = parseJson(rows[0].finished_goods, []);
+        rows[0].sub_assemblies = parseJson(rows[0].sub_assemblies, []);
+        rows[0].materials = parseJson(rows[0].materials, []);
       } catch (parseError) {
-        console.warn(`Could not parse selected_phases for plan ${id}:`, parseError.message);
-        rows[0].phases = [];
+        console.warn(`Could not parse data for plan ${id}:`, parseError.message);
       }
-      delete rows[0].selected_phases;
     }
     
     return rows[0];
@@ -147,14 +165,24 @@ class ProductionPlan {
     const [rows] = await pool.execute(
       `
         SELECT pp.*, 
+               p.id as project_id,
                so.customer AS customer_name,
                u.username AS supervisor_name,
                ppd.selected_phases,
+               ppd.finished_goods,
+               ppd.sub_assemblies,
+               ppd.materials,
                sod.product_details
         FROM production_plans pp
         LEFT JOIN sales_orders so ON so.id = pp.sales_order_id
+        LEFT JOIN projects p ON p.sales_order_id = pp.sales_order_id
         LEFT JOIN users u ON u.id = pp.supervisor_id
-        LEFT JOIN production_plan_details ppd ON ppd.sales_order_id = pp.sales_order_id
+        LEFT JOIN production_plan_details ppd ON 
+          (ppd.production_plan_id = pp.id) OR
+          (ppd.production_plan_id IS NULL AND (
+            (pp.sales_order_id IS NOT NULL AND ppd.sales_order_id = pp.sales_order_id) OR
+            (pp.root_card_id IS NOT NULL AND ppd.root_card_id = pp.root_card_id)
+          ))
         LEFT JOIN sales_order_details sod ON sod.sales_order_id = pp.sales_order_id
         WHERE pp.sales_order_id = ?
       `,
@@ -167,9 +195,9 @@ class ProductionPlan {
           const productDetails = typeof rows[0].product_details === 'string'
             ? JSON.parse(rows[0].product_details)
             : rows[0].product_details;
-          rows[0].product_name = productDetails.itemName || null;
+          rows[0].product_name = productDetails.itemName || productDetails.name || rows[0].project_name || null;
         } else {
-          rows[0].product_name = null;
+          rows[0].product_name = rows[0].project_name || null;
         }
         delete rows[0].product_details;
 
@@ -184,18 +212,81 @@ class ProductionPlan {
         } else {
           rows[0].phases = [];
         }
+        delete rows[0].selected_phases;
+
+        rows[0].finished_goods = parseJson(rows[0].finished_goods, []);
+        rows[0].sub_assemblies = parseJson(rows[0].sub_assemblies, []);
+        rows[0].materials = parseJson(rows[0].materials, []);
       } catch (parseError) {
-        console.warn(`Could not parse selected_phases for sales order ${salesOrderId}:`, parseError.message);
-        rows[0].phases = [];
+        console.warn(`Could not parse data for sales order ${salesOrderId}:`, parseError.message);
       }
-      delete rows[0].selected_phases;
     }
     
     return rows[0];
   }
 
   static async findByRootCardId(rootCardId) {
-    return this.findBySalesOrderId(rootCardId);
+    const [rows] = await pool.execute(
+      `
+        SELECT pp.*, 
+               rc.project_id,
+               so.customer AS customer_name,
+               u.username AS supervisor_name,
+               ppd.selected_phases,
+               ppd.finished_goods,
+               ppd.sub_assemblies,
+               ppd.materials,
+               sod.product_details
+        FROM production_plans pp
+        LEFT JOIN root_cards rc ON rc.id = pp.root_card_id
+        LEFT JOIN sales_orders so ON so.id = pp.sales_order_id
+        LEFT JOIN users u ON u.id = pp.supervisor_id
+        LEFT JOIN production_plan_details ppd ON 
+          (ppd.production_plan_id = pp.id) OR
+          (ppd.production_plan_id IS NULL AND (
+            (pp.sales_order_id IS NOT NULL AND ppd.sales_order_id = pp.sales_order_id) OR
+            (pp.root_card_id IS NOT NULL AND ppd.root_card_id = pp.root_card_id)
+          ))
+        LEFT JOIN sales_order_details sod ON sod.sales_order_id = pp.sales_order_id
+        WHERE pp.root_card_id = ?
+      `,
+      [rootCardId]
+    );
+    
+    if (rows[0]) {
+      try {
+        if (rows[0].product_details) {
+          const productDetails = typeof rows[0].product_details === 'string'
+            ? JSON.parse(rows[0].product_details)
+            : rows[0].product_details;
+          rows[0].product_name = productDetails.itemName || productDetails.name || rows[0].project_name || null;
+        } else {
+          rows[0].product_name = rows[0].project_name || null;
+        }
+        delete rows[0].product_details;
+
+        if (rows[0].selected_phases) {
+          const selectedPhases = typeof rows[0].selected_phases === 'string' 
+            ? JSON.parse(rows[0].selected_phases) 
+            : rows[0].selected_phases;
+          rows[0].phases = Object.keys(selectedPhases || {}).map(phaseName => ({
+            stage_name: phaseName,
+            stage_type: 'production'
+          }));
+        } else {
+          rows[0].phases = [];
+        }
+        delete rows[0].selected_phases;
+
+        rows[0].finished_goods = parseJson(rows[0].finished_goods, []);
+        rows[0].sub_assemblies = parseJson(rows[0].sub_assemblies, []);
+        rows[0].materials = parseJson(rows[0].materials, []);
+      } catch (parseError) {
+        console.warn(`Could not parse data for plan ${rows[0].id}:`, parseError.message);
+      }
+    }
+    
+    return rows[0];
   }
 
   static async findAll(filters = {}) {
@@ -207,6 +298,11 @@ class ProductionPlan {
       params.push(filters.status);
     }
 
+    if (filters.projectId) {
+      conditions.push('(rc.project_id = ? OR p.id = ?)');
+      params.push(filters.projectId, filters.projectId);
+    }
+
     if (filters.search) {
       conditions.push('(pp.plan_name LIKE ? OR so.customer LIKE ?)');
       const like = `%${filters.search}%`;
@@ -215,14 +311,22 @@ class ProductionPlan {
 
     let query = `
       SELECT pp.*, 
+             COALESCE(rc.project_id, p.id) as project_id,
              so.customer AS customer_name,
              u.username AS supervisor_name,
              ppd.selected_phases,
+             ppd.finished_goods,
+             ppd.sub_assemblies,
+             ppd.materials,
              sod.product_details
       FROM production_plans pp
+      LEFT JOIN root_cards rc ON rc.id = pp.root_card_id
       LEFT JOIN sales_orders so ON so.id = pp.sales_order_id
+      LEFT JOIN projects p ON p.sales_order_id = pp.sales_order_id
       LEFT JOIN users u ON u.id = pp.supervisor_id
-      LEFT JOIN production_plan_details ppd ON ppd.sales_order_id = pp.sales_order_id
+      LEFT JOIN production_plan_details ppd ON 
+        (pp.sales_order_id IS NOT NULL AND ppd.sales_order_id = pp.sales_order_id) OR
+        (pp.root_card_id IS NOT NULL AND ppd.root_card_id = pp.root_card_id)
       LEFT JOIN sales_order_details sod ON sod.sales_order_id = pp.sales_order_id
     `;
 
@@ -258,9 +362,16 @@ class ProductionPlan {
         } else {
           plan.phases = [];
         }
+
+        plan.finished_goods = parseJson(plan.finished_goods, []);
+        plan.sub_assemblies = parseJson(plan.sub_assemblies, []);
+        plan.materials = parseJson(plan.materials, []);
       } catch (parseError) {
-        console.warn(`Could not parse selected_phases for plan ${plan.id}:`, parseError.message);
+        console.warn(`Could not parse data for plan ${plan.id}:`, parseError.message);
         plan.phases = [];
+        plan.finished_goods = [];
+        plan.sub_assemblies = [];
+        plan.materials = [];
       }
       
       delete plan.selected_phases;
@@ -281,7 +392,8 @@ class ProductionPlan {
     await pool.execute(
       `
         UPDATE production_plans
-        SET plan_name = ?, status = ?, root_card_id = ?, planned_start_date = ?, planned_end_date = ?, 
+        SET plan_name = ?, status = ?, root_card_id = ?, sales_order_id = ?, target_quantity = ?, 
+            planned_start_date = ?, planned_end_date = ?, 
             estimated_completion_date = ?, supervisor_id = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `,
@@ -289,6 +401,8 @@ class ProductionPlan {
         data.planName,
         data.status,
         data.rootCardId || null,
+        data.salesOrderId || null,
+        data.targetQuantity || 1,
         data.plannedStartDate || null,
         data.plannedEndDate || null,
         data.estimatedCompletionDate || null,

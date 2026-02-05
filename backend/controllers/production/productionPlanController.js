@@ -12,6 +12,7 @@ const productionPlanController = {
         projectId,
         salesOrderId,
         rootCardId,
+        bomId,
         planName,
         startDate,
         endDate,
@@ -26,16 +27,18 @@ const productionPlanController = {
       }
 
       const planId = await ProductionPlan.create({
+        id: planName,
         projectId,
         salesOrderId,
         rootCardId,
+        bomId,
         planName,
         status: 'draft',
-        startDate,
-        endDate,
+        plannedStartDate: startDate,
+        plannedEndDate: endDate,
         estimatedCompletionDate,
         createdBy: req.user?.id,
-        assignedSupervisor,
+        supervisorId: assignedSupervisor,
         notes
       });
 
@@ -84,6 +87,17 @@ const productionPlanController = {
 
       if (!plan) {
         return res.status(404).json({ message: 'Production plan not found' });
+      }
+
+      // Ensure we have all the data from production_plan_details if findById missed it
+      if (!plan.materials || plan.materials.length === 0) {
+        const detail = await ProductionPlanDetail.findByProductionPlanId(id);
+        if (detail) {
+          plan.materials = detail.materials || [];
+          plan.sub_assemblies = detail.subAssemblies || [];
+          plan.finished_goods = detail.finishedGoods || [];
+          plan.production_notes = detail.productionNotes || plan.notes;
+        }
       }
 
       const connection = await pool.getConnection();
@@ -171,39 +185,79 @@ const productionPlanController = {
   async updatePlan(req, res) {
     try {
       const { id } = req.params;
+      const data = req.body;
       const {
         planName,
         status,
-        startDate,
-        endDate,
+        timeline,
         estimatedCompletionDate,
-        assignedSupervisor,
+        supervisorId,
+        productionNotes,
         notes,
-        finishedGoods
+        finishedGoods,
+        materials,
+        subAssemblies,
+        stages
       } = req.body;
+
+      console.log(`[ProductionPlanController] Updating plan ${id}:`, JSON.stringify(data, null, 2));
 
       const plan = await ProductionPlan.findById(id);
       if (!plan) {
         return res.status(404).json({ message: 'Production plan not found' });
       }
 
+      // 1. Update main production_plans table
       await ProductionPlan.update(id, {
         planName: planName || plan.plan_name,
         status: status || plan.status,
-        startDate: startDate || plan.start_date,
-        endDate: endDate || plan.end_date,
+        rootCardId: data.rootCardId || plan.root_card_id,
+        salesOrderId: data.salesOrderId || plan.sales_order_id,
+        targetQuantity: targetQuantity || data.targetQuantity || plan.target_quantity || 1,
+        plannedStartDate: (timeline?.startDate) || data.startDate || plan.planned_start_date,
+        plannedEndDate: (timeline?.endDate) || data.endDate || plan.planned_end_date,
         estimatedCompletionDate: estimatedCompletionDate || plan.estimated_completion_date,
-        assignedSupervisor: assignedSupervisor || plan.assigned_supervisor,
-        notes: notes || plan.notes
+        supervisorId: supervisorId || data.assignedSupervisor || plan.supervisor_id,
+        notes: notes || productionNotes || plan.notes
       });
 
+      // 2. Update production_plan_details (JSON data)
+      const detailData = {
+        ...data,
+        productionPlanId: id,
+        productionNotes: productionNotes || notes || plan.notes,
+        timeline: timeline || {
+          startDate: data.startDate || plan.planned_start_date,
+          endDate: data.endDate || plan.planned_end_date,
+          procurementStatus: status || plan.status
+        }
+      };
+
+      try {
+        // Try to update existing details
+        await ProductionPlanDetail.update(id, detailData, !!plan.root_card_id);
+      } catch (detailError) {
+        console.warn('[ProductionPlanController] Error updating details, trying to create instead:', detailError.message);
+        try {
+          await ProductionPlanDetail.create(detailData);
+        } catch (createError) {
+          console.error('[ProductionPlanController] Failed to create details:', createError.message);
+        }
+      }
+
+      // 3. Update finished goods if provided
       if (finishedGoods && Array.isArray(finishedGoods)) {
         await ProductionPlan.addFinishedGoods(id, finishedGoods);
       }
 
+      // 4. Update stages if provided
+      if (stages && Array.isArray(stages)) {
+        await ProductionPlan.addStages(id, stages);
+      }
+
       res.json({ message: 'Production plan updated successfully' });
     } catch (error) {
-      console.error(error);
+      console.error('[ProductionPlanController] Error updating plan:', error);
       res.status(500).json({ message: 'Error updating production plan', error: error.message });
     }
   },
@@ -480,109 +534,348 @@ const productionPlanController = {
 
       const plan = await ProductionPlan.findById(planId);
       if (!plan) {
+        console.error(`[ProductionPlanController.generateWorkOrders] Plan ${planId} not found in database`);
         return res.status(404).json({ message: 'Production plan not found' });
       }
 
-      let projectId = plan.project_id || plan.projectId;
-      if (!projectId && plan.sales_order_id) {
-        const [projects] = await connection.execute(
-          'SELECT id FROM projects WHERE sales_order_id = ? LIMIT 1',
-          [plan.sales_order_id]
-        );
-        if (projects.length > 0) {
-          projectId = projects[0].id;
-        }
-      }
-
-      const detail = await ProductionPlanDetail.findByRootCardId(plan.sales_order_id);
-      
-      if (!detail) {
-        return res.status(400).json({ message: 'Production plan details not found. Please save the plan first.' });
-      }
-
-      const finishedGoods = detail.finishedGoods || [];
-      const subAssemblies = detail.subAssemblies || [];
-      const generatedWorkOrders = [];
-
-      const processItem = async (item, type) => {
-        const itemCode = item.itemCode;
-        const itemName = item.productName || item.itemName || itemCode;
-        
-        const bomRef = await ComprehensiveBOM.findLatestByItemCode(itemCode);
-        if (!bomRef) {
-          console.warn(`[ProductionPlanController.generateWorkOrders] No BOM found for ${itemCode}`);
-          return null;
-        }
-        
-        const bomData = await ComprehensiveBOM.fetchBOMRecursive(bomRef.id, connection);
-        
-        const workOrderId = await WorkOrder.create({
-          workOrderNo: `WO-${itemCode}-${Date.now().toString().slice(-4)}`,
-          salesOrderId: plan.sales_order_id,
-          projectId: projectId,
-          itemCode: itemCode,
-          itemName: itemName,
-          bomId: bomRef.id,
-          quantity: item.plannedQty || item.requiredQty || 1,
-          unit: item.uom || 'Nos',
-          priority: 'medium',
-          status: 'planning',
-          plannedStartDate: item.startDate || item.scheduledDate || plan.planned_start_date,
-          plannedEndDate: plan.planned_end_date,
-          notes: `Generated from Production Plan: ${plan.plan_name}`,
-          createdBy: req.user?.id
-        }, connection);
-
-        if (bomData.operations && bomData.operations.length > 0) {
-          for (const op of bomData.operations) {
-            await WorkOrder.createOperation({
-              workOrderId,
-              operationName: op.operationName,
-              workstation: op.workstation,
-              sequence: op.sequence || 1,
-              status: 'pending'
-            }, connection);
-          }
-        }
-
-        if (bomData.materials && bomData.materials.length > 0) {
-          for (const mat of bomData.materials) {
-            await WorkOrder.createInventory({
-              workOrderId,
-              itemCode: mat.itemCode,
-              itemName: mat.itemName,
-              requiredQty: (mat.quantity || 0) * (item.plannedQty || item.requiredQty || 1),
-              unit: mat.uom,
-              sourceWarehouse: mat.warehouse
-            }, connection);
-          }
-        }
-
-        return { id: workOrderId, type, item: itemName };
-      };
-
-      for (const fg of finishedGoods) {
-        const result = await processItem(fg, 'Finished Good');
-        if (result) generatedWorkOrders.push(result);
-      }
-
-      for (const sa of subAssemblies) {
-        const result = await processItem(sa, 'Sub-assembly');
-        if (result) generatedWorkOrders.push(result);
-      }
-
-      await connection.commit();
-      res.json({
-        success: true,
-        message: `Successfully generated ${generatedWorkOrders.length} work orders.`,
-        data: generatedWorkOrders
+      console.log(`[ProductionPlanController.generateWorkOrders] Plan found:`, {
+        id: plan.id,
+        salesOrderId: plan.sales_order_id,
+        rootCardId: plan.root_card_id,
+        fgCount: plan.finished_goods?.length,
+        saCount: plan.sub_assemblies?.length
       });
+
+      // Log raw data from database to debug
+      const [rawDetails] = await connection.execute(
+        'SELECT id, production_plan_id, sales_order_id, root_card_id FROM production_plan_details WHERE production_plan_id = ?',
+        [planId]
+      );
+      console.log(`[ProductionPlanController.generateWorkOrders] Raw details check for plan ${planId}:`, rawDetails);
+
+      let projectId = plan.project_id || plan.projectId;
+      if (!projectId) {
+        if (plan.sales_order_id) {
+          const [projects] = await connection.execute(
+            'SELECT id FROM projects WHERE sales_order_id = ? LIMIT 1',
+            [plan.sales_order_id]
+          );
+          if (projects.length > 0) {
+            projectId = projects[0].id;
+            console.log(`[ProductionPlanController.generateWorkOrders] Found project ID ${projectId} from sales order`);
+          }
+        } else if (plan.root_card_id) {
+           const [rcProjects] = await connection.execute(
+            'SELECT project_id FROM root_cards WHERE id = ? LIMIT 1',
+            [plan.root_card_id]
+          );
+          if (rcProjects.length > 0) {
+            projectId = rcProjects[0].project_id;
+            console.log(`[ProductionPlanController.generateWorkOrders] Found project ID ${projectId} from root card`);
+          }
+        }
+      }
+
+      let detail = null;
+      
+      // Attempt 1: Check if plan object already has items (from join in findById)
+      if (plan.finished_goods?.length > 0 || plan.sub_assemblies?.length > 0) {
+        console.log(`[ProductionPlanController.generateWorkOrders] Found items in plan object`);
+        detail = {
+          finishedGoods: plan.finished_goods,
+          subAssemblies: plan.sub_assemblies,
+          materials: plan.materials || []
+        };
+      }
+      
+      // Attempt 2: Lookup by productionPlanId directly (MOST ACCURATE)
+      if (!detail) {
+        console.log(`[ProductionPlanController.generateWorkOrders] Attempting lookup by productionPlanId: ${planId}`);
+        detail = await ProductionPlanDetail.findByProductionPlanId(planId);
+      }
+
+      // Attempt 3: Lookup by linked IDs fallback
+      if (!detail && plan.sales_order_id) {
+        console.log(`[ProductionPlanController.generateWorkOrders] Attempting lookup by Sales Order ID: ${plan.sales_order_id}`);
+        detail = await ProductionPlanDetail.findBySalesOrderId(plan.sales_order_id);
+      }
+      
+      if (!detail && plan.root_card_id) {
+        console.log(`[ProductionPlanController.generateWorkOrders] Attempting lookup by Root Card ID: ${plan.root_card_id}`);
+        detail = await ProductionPlanDetail.findByRootCardId(plan.root_card_id);
+      }
+      
+      // Attempt 4: Direct database query fallback
+      if (!detail) {
+        console.log(`[ProductionPlanController.generateWorkOrders] Still no items, trying direct database fallback`);
+        const [directDetails] = await connection.execute(
+          `SELECT * FROM production_plan_details 
+           WHERE (sales_order_id IS NOT NULL AND sales_order_id = ?) 
+              OR (root_card_id IS NOT NULL AND root_card_id = ?)`,
+          [plan.sales_order_id || -1, plan.root_card_id || -1]
+        );
+        
+        if (directDetails.length > 0) {
+          const row = directDetails[0];
+          detail = ProductionPlanDetail.formatRow(row);
+        }
+      }
+
+      if (detail) {
+        // Standardize keys (handling both camelCase and snake_case)
+        const fGoods = detail.finishedGoods || detail.finished_goods || [];
+        const sAssemblies = detail.subAssemblies || detail.sub_assemblies || [];
+        const mats = detail.materials || detail.materials || [];
+
+        console.log(`[ProductionPlanController.generateWorkOrders] Final processed item counts:`, {
+          fgCount: fGoods.length,
+          saCount: sAssemblies.length,
+          matCount: mats.length
+        });
+
+        const finishedGoods = fGoods;
+        const subAssemblies = sAssemblies;
+
+        if (finishedGoods.length === 0 && subAssemblies.length === 0) {
+          console.error(`[ProductionPlanController.generateWorkOrders] CRITICAL: Item lists are empty for plan ${planId}`);
+          return res.status(400).json({ 
+            message: 'Production plan items (Finished Goods/Sub-assemblies) not found. Please ensure items are correctly saved to the plan before generating work orders.',
+            debugInfo: { 
+              planId, 
+              salesOrderId: plan.sales_order_id, 
+              rootCardId: plan.root_card_id,
+              hasDetailRow: !!detail
+            }
+          });
+        }
+
+        const generatedWorkOrders = [];
+        
+        // Fetch existing work orders to avoid duplicates
+        const [existingWOs] = await connection.execute(
+          'SELECT item_code FROM work_orders WHERE (sales_order_id IS NOT NULL AND sales_order_id = ?) OR (root_card_id IS NOT NULL AND root_card_id = ?)',
+          [plan.sales_order_id || null, plan.root_card_id || null]
+        );
+        const existingItemCodes = new Set(existingWOs.map(wo => wo.item_code));
+
+        const processItem = async (item, type, index) => {
+          const itemCode = item.itemCode || item.item_code;
+          if (!itemCode) {
+            console.warn(`[ProductionPlanController.generateWorkOrders] Skipping item - No item code found:`, item);
+            return null;
+          }
+          
+          console.log(`[ProductionPlanController.generateWorkOrders] Processing ${type} [${index}]: ${itemCode}`);
+
+          if (existingItemCodes.has(itemCode)) {
+            console.log(`[ProductionPlanController.generateWorkOrders] Skipping ${itemCode} - Work order already exists`);
+            return null;
+          }
+
+          const itemName = item.productName || item.itemName || item.item_name || itemCode;
+          const bomNo = item.bomNo || item.bom_no;
+          
+          let bomRef = null;
+          if (bomNo && bomNo !== 'N/A') {
+            const [bomRows] = await connection.execute('SELECT id FROM bill_of_materials WHERE bom_number = ?', [bomNo]);
+            if (bomRows.length > 0) bomRef = bomRows[0];
+          }
+          
+          if (!bomRef) {
+            bomRef = await ComprehensiveBOM.findLatestByItemCode(itemCode);
+          }
+          
+          if (!bomRef) {
+            console.warn(`[ProductionPlanController.generateWorkOrders] No BOM found for ${itemCode}`);
+            return null;
+          }
+          
+          console.log(`[ProductionPlanController.generateWorkOrders] Found BOM ${bomRef.id} for ${itemCode}`);
+          
+          const bomData = await ComprehensiveBOM.fetchBOMRecursive(bomRef.id, connection);
+          if (!bomData) {
+            console.warn(`[ProductionPlanController.generateWorkOrders] BOM data fetch returned null for ${itemCode}`);
+            return null;
+          }
+
+          console.log(`[ProductionPlanController.generateWorkOrders] BOM data fetched for ${itemCode}:`, {
+            opCount: bomData?.operations?.length,
+            matCount: bomData?.materials?.length,
+            compCount: bomData?.components?.length
+          });
+
+          const typePrefix = type === 'Finished Good' ? 'FG' : 'SA';
+          // Ensure workOrderNo stays within 50 chars limit (timestamp slice + short item code + index)
+          const shortItemCode = itemCode.substring(0, 20);
+          const timestamp = Date.now().toString().slice(-6);
+          const workOrderNo = `WO-${typePrefix}-${timestamp}${index}-${shortItemCode}`;
+          
+          console.log(`[ProductionPlanController.generateWorkOrders] Creating Work Order: ${workOrderNo}`);
+          
+          let workOrderId;
+          try {
+            // Sanitize IDs to ensure they are numeric or null
+            const sId = (plan.sales_order_id && !isNaN(parseInt(plan.sales_order_id))) ? parseInt(plan.sales_order_id) : null;
+            const rcId = (plan.root_card_id && !isNaN(parseInt(plan.root_card_id))) ? parseInt(plan.root_card_id) : null;
+            const pId = (projectId && !isNaN(parseInt(projectId))) ? parseInt(projectId) : null;
+            
+            const woData = {
+              workOrderNo: workOrderNo,
+              salesOrderId: sId,
+              rootCardId: rcId,
+              projectId: pId,
+              itemCode: itemCode,
+              itemName: itemName,
+              bomId: bomRef.id,
+              quantity: parseFloat(item.plannedQty || item.requiredQty || item.quantity || 1),
+              unit: item.uom || 'Nos',
+              priority: 'medium',
+              status: 'planning',
+              plannedStartDate: item.startDate || item.scheduledDate || plan.planned_start_date,
+              plannedEndDate: plan.planned_end_date,
+              notes: `Auto-generated from Production Plan: ${plan.plan_name}`,
+              createdBy: req.user?.id
+            };
+            
+            console.log(`[ProductionPlanController.generateWorkOrders] WO Payload for ${itemCode}:`, JSON.stringify(woData, null, 2));
+            
+            workOrderId = await WorkOrder.create(woData, connection);
+            console.log(`[ProductionPlanController.generateWorkOrders] SUCCESS: Work order created with ID: ${workOrderId}`);
+          } catch (createErr) {
+            console.error(`[ProductionPlanController.generateWorkOrders] DATABASE INSERT FAILED for Work Order (${itemCode}):`, createErr);
+            throw new Error(`Work Order INSERT failed for ${itemCode}: ${createErr.sqlMessage || createErr.message}`);
+          }
+
+          const multiplier = parseFloat(item.plannedQty || item.requiredQty || item.quantity || 1);
+
+          // Add operations from BOM
+          if (bomData.operations && bomData.operations.length > 0) {
+            console.log(`[ProductionPlanController.generateWorkOrders] Creating ${bomData.operations.length} operations for WO ${workOrderId}...`);
+            for (let i = 0; i < bomData.operations.length; i++) {
+              const op = bomData.operations[i];
+              const opName = op.operationName || op.operation_name || op.name;
+              
+              if (!opName) {
+                console.warn(`[ProductionPlanController.generateWorkOrders] Skipping operation with no name at index ${i} for ${itemCode}`);
+                continue;
+              }
+
+              try {
+                await WorkOrder.createOperation({
+                  workOrderId,
+                  operationName: opName,
+                  workstation: op.workstation,
+                  sequence: op.sequence || (i + 1),
+                  status: 'pending',
+                  notes: op.description || op.notes
+                }, connection);
+              } catch (opErr) {
+                console.error(`[ProductionPlanController.generateWorkOrders] Failed to create operation "${opName}" for WO ${workOrderId}:`, opErr.message);
+                // We don't throw here to allow the process to continue, but we log it for debugging
+              }
+            }
+          }
+
+          // Add materials from BOM
+          if (bomData.materials && bomData.materials.length > 0) {
+            console.log(`[ProductionPlanController.generateWorkOrders] Creating ${bomData.materials.length} inventory items (mats) for WO ${workOrderId}...`);
+            for (const mat of bomData.materials) {
+              const matCode = mat.itemCode || mat.item_code || mat.specification;
+              
+              if (!matCode) {
+                console.warn(`[ProductionPlanController.generateWorkOrders] Skipping material with no code for ${itemCode}`);
+                continue;
+              }
+
+              try {
+                await WorkOrder.createInventory({
+                  workOrderId,
+                  itemCode: matCode,
+                  itemName: mat.itemName || mat.item_name || mat.specification || matCode,
+                  requiredQty: (parseFloat(mat.quantity || mat.required_qty) || 0) * multiplier,
+                  unit: mat.uom || 'Nos',
+                  sourceWarehouse: mat.warehouse || mat.source_warehouse
+                }, connection);
+              } catch (matErr) {
+                console.error(`[ProductionPlanController.generateWorkOrders] Failed to create inventory item "${matCode}" for WO ${workOrderId}:`, matErr.message);
+                // Log and continue
+              }
+            }
+          }
+
+          // Also check for 'components' as they might be used instead of 'materials' in some BOM structures
+          if (bomData.components && bomData.components.length > 0) {
+            console.log(`[ProductionPlanController.generateWorkOrders] Creating ${bomData.components.length} inventory items (components) for WO ${workOrderId}...`);
+            for (const comp of bomData.components) {
+              const compCode = comp.itemCode || comp.item_code;
+              
+              if (!compCode) continue;
+
+              try {
+                await WorkOrder.createInventory({
+                  workOrderId,
+                  itemCode: compCode,
+                  itemName: comp.itemName || comp.item_name || compCode,
+                  requiredQty: (parseFloat(comp.quantity || comp.required_qty) || 0) * multiplier,
+                  unit: comp.uom || 'Nos',
+                  sourceWarehouse: comp.warehouse || comp.source_warehouse
+                }, connection);
+              } catch (compErr) {
+                console.error(`[ProductionPlanController.generateWorkOrders] Failed to create inventory component "${compCode}" for WO ${workOrderId}:`, compErr.message);
+              }
+            }
+          }
+
+          return { id: workOrderId, type, item: itemName, workOrderNo };
+        };
+
+        for (let i = 0; i < finishedGoods.length; i++) {
+          const result = await processItem(finishedGoods[i], 'Finished Good', i);
+          if (result) generatedWorkOrders.push(result);
+        }
+
+        for (let i = 0; i < subAssemblies.length; i++) {
+          const result = await processItem(subAssemblies[i], 'Sub-assembly', i);
+          if (result) generatedWorkOrders.push(result);
+        }
+
+        await connection.commit();
+        
+        const message = generatedWorkOrders.length > 0 
+          ? `Successfully generated ${generatedWorkOrders.length} work orders.`
+          : `No new work orders were generated (they may already exist).`;
+
+        res.json({
+          success: true,
+          message: message,
+          data: generatedWorkOrders
+        });
+      } else {
+        // This case should be handled by Attempt 3, but just in case
+        throw new Error('Could not find production plan items in database.');
+      }
     } catch (error) {
-      await connection.rollback();
-      console.error('[ProductionPlanController.generateWorkOrders] Error:', error.message);
-      res.status(500).json({ message: 'Error generating work orders', error: error.message });
+      if (connection) {
+        await connection.rollback();
+      }
+      console.error('[ProductionPlanController.generateWorkOrders] CRITICAL ERROR:', error);
+      
+      // Log to a temporary file for debugging
+      try {
+        const fs = require('fs');
+        const logMsg = `\n[${new Date().toISOString()}] ERROR in generateWorkOrders:\nMessage: ${error.message}\nStack: ${error.stack}\n`;
+        fs.appendFileSync('d:/passion/Sterling-erp/backend/error_log.txt', logMsg);
+      } catch (e) {}
+
+      res.status(500).json({ 
+        message: 'Error generating work orders', 
+        error: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      });
     } finally {
-      connection.release();
+      if (connection) {
+        connection.release();
+      }
     }
   }
 };

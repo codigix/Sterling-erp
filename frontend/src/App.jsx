@@ -51,6 +51,7 @@ import InventoryTasksPage from "./pages/inventory/InventoryTasksPage";
 
 // Production Pages
 import ProductionTasksPage from "./pages/production/ProductionTasksPage";
+import ProductionDashboard from "./pages/production/ProductionDashboard";
 import RootCardBuilderPage from "./pages/production/RootCardBuilderPage";
 import ProductionRootCardDetailPage from "./pages/production/RootCardDetailPage";
 import ProductionPlansPage from "./pages/production/ProductionPlansPage";
@@ -73,6 +74,8 @@ import ProductionPlanFormPage from "./pages/production/ProductionPlanFormPage";
 import OutsourceTasksPage from "./pages/production/OutsourceTasksPage";
 import WorkOrdersPage from "./pages/production/WorkOrdersPage";
 import WorkOrderFormPage from "./pages/production/WorkOrderFormPage";
+import WorkOrderDetailPage from "./pages/production/WorkOrderDetailPage";
+import JobCardsPage from "./pages/production/JobCardsPage";
 
 // Employee Portal
 import EmployeePortalPage from "./pages/employee/EmployeePortalPage";
@@ -161,17 +164,19 @@ function App() {
               <Route path="procurement" element={<ProcurementTasksPage />} />
               <Route path="qc" element={<QCTasksPage />} />
               <Route path="inventory" element={<InventoryTasksPage />} />
-              <Route path="production" element={<ProductionTasksPage />} />
+              <Route path="production" element={<ProductionDashboard />} />
               
               {/* Production Flow Routes */}
               <Route path="production/root-cards" element={<RootCardBuilderPage />} />
               <Route path="production/root-cards/:id" element={<ProductionRootCardDetailPage />} />
               <Route path="production/plans" element={<ProductionPlansPage />} />
               <Route path="production/plans/new" element={<ProductionPlanFormPage />} />
-              <Route path="production/plans/:id" element={<ProductionPlanDetailPage />} />
+              <Route path="production/plans/:id" element={<ProductionPlanFormPage />} />
               <Route path="production/work-orders" element={<WorkOrdersPage />} />
               <Route path="production/work-orders/new" element={<WorkOrderFormPage />} />
+              <Route path="production/work-orders/:id" element={<WorkOrderDetailPage />} />
               <Route path="production/work-orders/edit/:id" element={<WorkOrderFormPage />} />
+              <Route path="production/job-cards" element={<JobCardsPage />} />
               <Route path="production/scheduling" element={<SchedulingPage />} />
               <Route path="production/resources" element={<ResourceAllocationPage />} />
               <Route path="production/assign-tasks" element={<AssignTasksPage />} />

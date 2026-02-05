@@ -233,7 +233,10 @@ class ComprehensiveBOM {
 
     const bom = this.transformBOMRow(rows[0]);
     const [components] = await conn.execute(
-      'SELECT * FROM bom_components WHERE bom_id = ?',
+      `SELECT bc.*, i.item_name 
+       FROM bom_components bc 
+       LEFT JOIN inventory i ON bc.component_code = i.item_code 
+       WHERE bc.bom_id = ?`,
       [id]
     );
     const [materials] = await conn.execute(
@@ -256,6 +259,7 @@ class ComprehensiveBOM {
           id: c.id,
           bomId: c.bom_id,
           componentCode: c.component_code,
+          itemName: c.item_name,
           quantity: c.quantity,
           uom: c.uom,
           rate: c.rate,

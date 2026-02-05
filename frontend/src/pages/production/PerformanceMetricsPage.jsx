@@ -160,7 +160,7 @@ const PerformanceMetricsPage = () => {
                 <option value="quarter">Q01 - This Quarter</option>
                 <option value="year">Y01 - This Year</option>
               </select>
-              <button className="flex items-center gap-2 px-6 py-2.5 bg-slate-900 dark:bg-slate-700 text-white rounded-xl shadow-md hover:bg-slate-800 transition-all font-bold text-[10px] uppercase tracking-widest">
+              <button className="flex items-center gap-2 px-6 py-2.5 bg-slate-900 dark:bg-slate-700 text-white rounded-xl shadow-md hover:bg-black transition-all font-bold text-[10px] uppercase tracking-widest">
                 <Download size={16} />
                 Export
               </button>

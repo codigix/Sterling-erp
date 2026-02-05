@@ -145,7 +145,7 @@ const WorkOrdersPage = () => {
           <div className="flex items-center gap-3">
             <button 
               onClick={() => navigate('/department/production/work-orders/new')}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-900 text-white font-semibold hover:bg-slate-800 transition-all text-sm shadow-sm"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-900 text-white font-semibold hover:bg-black transition-all text-sm shadow-sm"
             >
               <Plus size={18} />
               Create Order

@@ -1,0 +1,6 @@
+
+[2026-02-04T10:12:39.406Z] ERROR in generateWorkOrders:
+Message: Could not find production plan items in database.
+Stack: Error: Could not find production plan items in database.
+    at generateWorkOrders (D:\passion\Sterling-erp\backend\controllers\production\productionPlanController.js:798:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)

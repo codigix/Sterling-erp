@@ -6,11 +6,12 @@ class WorkOrder {
     try {
       const [result] = await connection.execute(
         `INSERT INTO work_orders 
-        (work_order_no, sales_order_id, project_id, item_code, item_name, bom_id, quantity, unit, priority, status, planned_start_date, planned_end_date, notes, created_by)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        (work_order_no, sales_order_id, root_card_id, project_id, item_code, item_name, bom_id, quantity, unit, priority, status, planned_start_date, planned_end_date, notes, created_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           data.workOrderNo,
           data.salesOrderId || null,
+          data.rootCardId || null,
           data.projectId || null,
           data.itemCode,
           data.itemName || null,
@@ -55,6 +56,36 @@ class WorkOrder {
     }
   }
 
+  static async updateOperation(id, data, externalConnection = null) {
+    const connection = externalConnection || (await pool.getConnection());
+    try {
+      const [result] = await connection.execute(
+        `UPDATE work_order_operations SET 
+          operation_name = ?, workstation = ?, status = ?, 
+          planned_start_date = ?, planned_end_date = ?, 
+          notes = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [
+          data.operationName,
+          data.workstation || null,
+          data.status,
+          data.plannedStartDate || null,
+          data.plannedEndDate || null,
+          data.notes || null,
+          id
+        ]
+      );
+      return result.affectedRows > 0;
+    } finally {
+      if (!externalConnection) connection.release();
+    }
+  }
+
+  static async deleteOperation(id) {
+    const [result] = await pool.execute("DELETE FROM work_order_operations WHERE id = ?", [id]);
+    return result.affectedRows > 0;
+  }
+
   static async createInventory(data, externalConnection = null) {
     const connection = externalConnection || (await pool.getConnection());
     try {
@@ -79,9 +110,12 @@ class WorkOrder {
 
   static async findAll(filters = {}) {
     let query = `
-      SELECT wo.*, so.po_number as sales_order_no, p.name as project_name 
+      SELECT wo.*, 
+             COALESCE(so.po_number, rc.code, rc.title) as sales_order_no, 
+             p.name as project_name 
       FROM work_orders wo
       LEFT JOIN sales_orders so ON wo.sales_order_id = so.id
+      LEFT JOIN root_cards rc ON wo.root_card_id = rc.id
       LEFT JOIN projects p ON wo.project_id = p.id
     `;
     const params = [];
@@ -106,11 +140,38 @@ class WorkOrder {
     return rows;
   }
 
+  static async findAllWithOperations(filters = {}) {
+    const workOrders = await this.findAll(filters);
+    
+    if (workOrders.length === 0) return [];
+
+    const workOrderIds = workOrders.map(wo => wo.id);
+    const [operations] = await pool.query(
+      "SELECT * FROM work_order_operations WHERE work_order_id IN (?) ORDER BY sequence ASC",
+      [workOrderIds]
+    );
+
+    // Map operations to their respective work orders
+    const opsByWoId = operations.reduce((acc, op) => {
+      if (!acc[op.work_order_id]) acc[op.work_order_id] = [];
+      acc[op.work_order_id].push(op);
+      return acc;
+    }, {});
+
+    return workOrders.map(wo => ({
+      ...wo,
+      operations: opsByWoId[wo.id] || []
+    }));
+  }
+
   static async findById(id) {
     const [rows] = await pool.execute(
-      `SELECT wo.*, so.po_number as sales_order_no, p.name as project_name 
+      `SELECT wo.*, 
+              COALESCE(so.po_number, rc.code, rc.title) as sales_order_no, 
+              p.name as project_name 
        FROM work_orders wo
        LEFT JOIN sales_orders so ON wo.sales_order_id = so.id
+       LEFT JOIN root_cards rc ON wo.root_card_id = rc.id
        LEFT JOIN projects p ON wo.project_id = p.id
        WHERE wo.id = ?`,
       [id]
@@ -136,12 +197,30 @@ class WorkOrder {
 
   static async findBySalesOrderId(salesOrderId) {
     const [rows] = await pool.execute(
-      `SELECT wo.*, so.po_number as sales_order_no, p.name as project_name 
+      `SELECT wo.*, 
+              COALESCE(so.po_number, rc.code, rc.title) as sales_order_no, 
+              p.name as project_name 
        FROM work_orders wo
        LEFT JOIN sales_orders so ON wo.sales_order_id = so.id
+       LEFT JOIN root_cards rc ON wo.root_card_id = rc.id
        LEFT JOIN projects p ON wo.project_id = p.id
        WHERE wo.sales_order_id = ?`,
       [salesOrderId]
+    );
+    return rows;
+  }
+
+  static async findByRootCardId(rootCardId) {
+    const [rows] = await pool.execute(
+      `SELECT wo.*, 
+              COALESCE(so.po_number, rc.code, rc.title) as sales_order_no, 
+              p.name as project_name 
+       FROM work_orders wo
+       LEFT JOIN sales_orders so ON wo.sales_order_id = so.id
+       LEFT JOIN root_cards rc ON wo.root_card_id = rc.id
+       LEFT JOIN projects p ON wo.project_id = p.id
+       WHERE wo.root_card_id = ?`,
+      [rootCardId]
     );
     return rows;
   }

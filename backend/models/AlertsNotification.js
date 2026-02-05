@@ -1,7 +1,8 @@
 const pool = require('../config/database');
 
 class AlertsNotification {
-  static async create(data) {
+  static async create(data, externalConnection = null) {
+    const connection = externalConnection || pool;
     const checkQuery = `
       SELECT id FROM alerts_notifications 
       WHERE user_id = ? AND alert_type = ? AND related_id = ? AND is_read = FALSE
@@ -13,14 +14,14 @@ class AlertsNotification {
       data.relatedId || null
     ];
     
-    const [existing] = await pool.execute(checkQuery, checkParams);
+    const [existing] = await connection.execute(checkQuery, checkParams);
     
     if (existing.length > 0) {
       console.log(`[AlertsNotification] ℹ️ Notification already exists, skipping creation`);
       return existing[0].id;
     }
     
-    const [result] = await pool.execute(
+    const [result] = await connection.execute(
       `
         INSERT INTO alerts_notifications
         (user_id, from_user_id, alert_type, message, related_table, related_id, priority)
