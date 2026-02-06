@@ -21,6 +21,8 @@ import TrackChallanPage from "../production/TrackChallanPage";
 import PerformanceMetricsPage from "../production/PerformanceMetricsPage";
 import ProductionTasksPage from "../department/ProductionTasksPage";
 import OutsourceTasksPage from "../production/OutsourceTasksPage";
+import WorkstationsPage from "../production/WorkstationsPage";
+import WorkstationFormPage from "../production/WorkstationFormPage";
 import {
   Factory,
   Clock,
@@ -31,7 +33,8 @@ import {
   FileText,
   ShoppingCart,
   ChevronRight,
-  Target
+  Target,
+  Monitor
 } from "lucide-react";
 
 const ProductionManagerDashboard = () => {
@@ -95,6 +98,11 @@ const ProductionManagerDashboard = () => {
           icon: Clock,
         },
       ],
+    },
+    {
+      title: "Workstations",
+      path: "/production-manager/workstations",
+      icon: Monitor,
     },
     {
       title: "Worker Management",
@@ -637,6 +645,9 @@ const ProductionManagerDashboard = () => {
         <Route path="/challan/list" element={<ChallanListPage />} />
         <Route path="/challan/track" element={<TrackChallanPage />} />
         <Route path="/metrics" element={<PerformanceMetricsPage />} />
+        <Route path="/workstations" element={<WorkstationsPage />} />
+        <Route path="/workstations/new" element={<WorkstationFormPage />} />
+        <Route path="/workstations/edit/:id" element={<WorkstationFormPage />} />
         <Route path="/department-tasks" element={<ProductionTasksPage />} />
         <Route path="/outsource-tasks" element={<OutsourceTasksPage />} />
         <Route

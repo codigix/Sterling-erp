@@ -4,6 +4,7 @@ const workOrderController = require("../../controllers/production/workOrderContr
 const authMiddleware = require("../../middleware/authMiddleware");
 
 router.get("/", authMiddleware, workOrderController.getAllWorkOrders);
+router.post("/", authMiddleware, workOrderController.createWorkOrder);
 router.get("/job-cards", authMiddleware, workOrderController.getAllJobCards);
 router.post("/operations", authMiddleware, workOrderController.createOperation);
 router.put("/operations/:id", authMiddleware, workOrderController.updateOperation);

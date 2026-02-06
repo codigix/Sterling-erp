@@ -76,6 +76,8 @@ import WorkOrdersPage from "./pages/production/WorkOrdersPage";
 import WorkOrderFormPage from "./pages/production/WorkOrderFormPage";
 import WorkOrderDetailPage from "./pages/production/WorkOrderDetailPage";
 import JobCardsPage from "./pages/production/JobCardsPage";
+import WorkstationsPage from "./pages/production/WorkstationsPage";
+import WorkstationFormPage from "./pages/production/WorkstationFormPage";
 
 // Employee Portal
 import EmployeePortalPage from "./pages/employee/EmployeePortalPage";
@@ -177,6 +179,9 @@ function App() {
               <Route path="production/work-orders/:id" element={<WorkOrderDetailPage />} />
               <Route path="production/work-orders/edit/:id" element={<WorkOrderFormPage />} />
               <Route path="production/job-cards" element={<JobCardsPage />} />
+              <Route path="production/workstations" element={<WorkstationsPage />} />
+              <Route path="production/workstations/new" element={<WorkstationFormPage />} />
+              <Route path="production/workstations/edit/:id" element={<WorkstationFormPage />} />
               <Route path="production/scheduling" element={<SchedulingPage />} />
               <Route path="production/resources" element={<ResourceAllocationPage />} />
               <Route path="production/assign-tasks" element={<AssignTasksPage />} />

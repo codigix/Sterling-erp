@@ -197,7 +197,8 @@ const productionPlanController = {
         finishedGoods,
         materials,
         subAssemblies,
-        stages
+        stages,
+        targetQuantity
       } = req.body;
 
       console.log(`[ProductionPlanController] Updating plan ${id}:`, JSON.stringify(data, null, 2));
@@ -650,6 +651,8 @@ const productionPlanController = {
         }
 
         const generatedWorkOrders = [];
+        let globalIndex = 0;
+        const sharedTimestamp = new Date(); // Use identical timestamp for all WOs in this batch
         
         // Fetch existing work orders to avoid duplicates
         const [existingWOs] = await connection.execute(
@@ -658,14 +661,14 @@ const productionPlanController = {
         );
         const existingItemCodes = new Set(existingWOs.map(wo => wo.item_code));
 
-        const processItem = async (item, type, index) => {
+        const processItem = async (item, type) => {
           const itemCode = item.itemCode || item.item_code;
           if (!itemCode) {
             console.warn(`[ProductionPlanController.generateWorkOrders] Skipping item - No item code found:`, item);
             return null;
           }
           
-          console.log(`[ProductionPlanController.generateWorkOrders] Processing ${type} [${index}]: ${itemCode}`);
+          console.log(`[ProductionPlanController.generateWorkOrders] Processing ${type}: ${itemCode}`);
 
           if (existingItemCodes.has(itemCode)) {
             console.log(`[ProductionPlanController.generateWorkOrders] Skipping ${itemCode} - Work order already exists`);
@@ -704,11 +707,10 @@ const productionPlanController = {
             compCount: bomData?.components?.length
           });
 
-          const typePrefix = type === 'Finished Good' ? 'FG' : 'SA';
-          // Ensure workOrderNo stays within 50 chars limit (timestamp slice + short item code + index)
-          const shortItemCode = itemCode.substring(0, 20);
-          const timestamp = Date.now().toString().slice(-6);
-          const workOrderNo = `WO-${typePrefix}-${timestamp}${index}-${shortItemCode}`;
+          // Simplified work order number generation
+          const timestamp = Date.now();
+          const randomSuffix = Math.floor(Math.random() * 900) + 100;
+          const workOrderNo = `WO-${timestamp}-${randomSuffix}`;
           
           console.log(`[ProductionPlanController.generateWorkOrders] Creating Work Order: ${workOrderNo}`);
           
@@ -734,13 +736,16 @@ const productionPlanController = {
               plannedStartDate: item.startDate || item.scheduledDate || plan.planned_start_date,
               plannedEndDate: plan.planned_end_date,
               notes: `Auto-generated from Production Plan: ${plan.plan_name}`,
-              createdBy: req.user?.id
+              createdBy: req.user?.id,
+              createdAt: sharedTimestamp
             };
             
             console.log(`[ProductionPlanController.generateWorkOrders] WO Payload for ${itemCode}:`, JSON.stringify(woData, null, 2));
             
             workOrderId = await WorkOrder.create(woData, connection);
             console.log(`[ProductionPlanController.generateWorkOrders] SUCCESS: Work order created with ID: ${workOrderId}`);
+            
+            // REMOVED delay to ensure items in same plan have same created_at for better sorting
           } catch (createErr) {
             console.error(`[ProductionPlanController.generateWorkOrders] DATABASE INSERT FAILED for Work Order (${itemCode}):`, createErr);
             throw new Error(`Work Order INSERT failed for ${itemCode}: ${createErr.sqlMessage || createErr.message}`);
@@ -829,13 +834,13 @@ const productionPlanController = {
           return { id: workOrderId, type, item: itemName, workOrderNo };
         };
 
-        for (let i = 0; i < finishedGoods.length; i++) {
-          const result = await processItem(finishedGoods[i], 'Finished Good', i);
+        for (let i = 0; i < subAssemblies.length; i++) {
+          const result = await processItem(subAssemblies[i], 'Sub-assembly');
           if (result) generatedWorkOrders.push(result);
         }
 
-        for (let i = 0; i < subAssemblies.length; i++) {
-          const result = await processItem(subAssemblies[i], 'Sub-assembly', i);
+        for (let i = 0; i < finishedGoods.length; i++) {
+          const result = await processItem(finishedGoods[i], 'Finished Good');
           if (result) generatedWorkOrders.push(result);
         }
 

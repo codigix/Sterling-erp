@@ -181,7 +181,9 @@ const CreateJobCardModal = ({ isOpen, onClose, onRefresh }) => {
                   >
                     <option value="">Select Operator</option>
                     {operators.map(op => (
-                      <option key={op.id} value={op.id}>{op.name} ({op.employee_id})</option>
+                      <option key={op.id} value={op.id}>
+                        {op.name} {op.employee_id ? `(${op.employee_id})` : ''} {op.department ? `- ${op.department}` : ''}
+                      </option>
                     ))}
                   </select>
                 </div>

@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { 
-  ArrowLeft, Edit, Trash2, Calendar, AlertCircle, CheckCircle, Clock, User, 
+  ArrowLeft, Edit2, Trash2, Calendar, AlertCircle, CheckCircle, Clock, User, 
   Save, X, Activity, Box, FileText, Layout, ListChecks, Zap, Loader2,
-  Package, Cpu, ChevronRight, Settings, Info, Truck
+  Package, Cpu, ChevronRight, Settings, Info, Truck, TrendingUp
 } from 'lucide-react';
 import axios from '../../utils/api';
 import Swal from 'sweetalert2';
@@ -173,12 +173,15 @@ const WorkOrderDetailPage = () => {
           <div className="lg:col-span-2 space-y-8">
             {/* Core Details Card */}
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-50 text-blue-600 rounded-lg border border-blue-100">
-                    <Info size={18} />
+              <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 border border-blue-100/50">
+                    <Info size={20} />
                   </div>
-                  <h3 className="text-sm font-bold text-slate-900">Work Order Information</h3>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">Work Order Information</h3>
+                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Basic Details</p>
+                  </div>
                 </div>
                 <div className="relative">
                   {isEditingStatus ? (
@@ -284,14 +287,16 @@ const WorkOrderDetailPage = () => {
 
             {/* Operations Sequence */}
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-purple-50 text-purple-600 rounded-lg border border-purple-100">
-                    <Cpu size={18} />
+              <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center text-purple-600 border border-purple-100/50">
+                    <Cpu size={20} />
                   </div>
-                  <h3 className="text-sm font-bold text-slate-900">Manufacturing Operations</h3>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">Manufacturing Operations</h3>
+                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">{order.operations?.length || 0} Total Stages</p>
+                  </div>
                 </div>
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{order.operations?.length || 0} Total Stages</span>
               </div>
 
               <div className="p-0">
@@ -475,7 +480,7 @@ const WorkOrderDetailPage = () => {
               <button 
                 className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-2"
               >
-                <CheckCircle2 size={16} />
+                <CheckCircle size={16} />
                 Quality Inspection
               </button>
               

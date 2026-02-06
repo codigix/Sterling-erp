@@ -1,5 +1,16 @@
 const Role = require('../../models/Role');
 const DepartmentTask = require('../../models/DepartmentTask');
+const Department = require('../../models/Department');
+
+exports.getDepartments = async (req, res) => {
+  try {
+    const departments = await Department.findAll();
+    res.json(departments);
+  } catch (error) {
+    console.error('Get departments error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
 
 exports.getRoleByName = async (req, res) => {
   try {

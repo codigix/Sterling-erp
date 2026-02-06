@@ -14,6 +14,32 @@ const getAllWorkOrders = async (req, res) => {
   }
 };
 
+const createWorkOrder = async (req, res) => {
+  try {
+    const payload = {
+      ...req.body,
+      createdBy: req.user?.id
+    };
+    
+    // Auto-generate WO number if not provided
+    if (!payload.workOrderNo || payload.workOrderNo === 'WO-AUTO') {
+      const timestamp = Date.now();
+      const randomSuffix = Math.floor(Math.random() * 900) + 100;
+      payload.workOrderNo = `WO-${timestamp}-${randomSuffix}`;
+    }
+    
+    const workOrderId = await WorkOrder.create(payload);
+    res.status(201).json({ 
+      message: "Work order created successfully", 
+      id: workOrderId,
+      workOrderNo: payload.workOrderNo
+    });
+  } catch (error) {
+    console.error("Error in createWorkOrder:", error);
+    res.status(500).json({ message: "Error creating work order", error: error.message });
+  }
+};
+
 const getAllJobCards = async (req, res) => {
   try {
     const filters = {
@@ -113,6 +139,7 @@ const deleteOperation = async (req, res) => {
 
 module.exports = {
   getAllWorkOrders,
+  createWorkOrder,
   getAllJobCards,
   getWorkOrderById,
   updateWorkOrder,

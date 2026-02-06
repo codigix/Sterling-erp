@@ -6,8 +6,8 @@ class WorkOrder {
     try {
       const [result] = await connection.execute(
         `INSERT INTO work_orders 
-        (work_order_no, sales_order_id, root_card_id, project_id, item_code, item_name, bom_id, quantity, unit, priority, status, planned_start_date, planned_end_date, notes, created_by)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        (work_order_no, sales_order_id, root_card_id, project_id, item_code, item_name, bom_id, quantity, unit, priority, status, planned_start_date, planned_end_date, notes, created_by, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           data.workOrderNo,
           data.salesOrderId || null,
@@ -23,7 +23,8 @@ class WorkOrder {
           data.plannedStartDate || null,
           data.plannedEndDate || null,
           data.notes || null,
-          data.createdBy || null
+          data.createdBy || null,
+          data.createdAt || new Date()
         ]
       );
       return result.insertId;
@@ -112,11 +113,13 @@ class WorkOrder {
     let query = `
       SELECT wo.*, 
              COALESCE(so.po_number, rc.code, rc.title) as sales_order_no, 
-             p.name as project_name 
+             p.name as project_name,
+             bom.bom_number as bom_no
       FROM work_orders wo
       LEFT JOIN sales_orders so ON wo.sales_order_id = so.id
       LEFT JOIN root_cards rc ON wo.root_card_id = rc.id
       LEFT JOIN projects p ON wo.project_id = p.id
+      LEFT JOIN bill_of_materials bom ON wo.bom_id = bom.id
     `;
     const params = [];
     const conditions = [];
@@ -134,7 +137,7 @@ class WorkOrder {
     if (conditions.length > 0) {
       query += " WHERE " + conditions.join(" AND ");
     }
-    query += " ORDER BY wo.created_at DESC";
+    query += " ORDER BY wo.created_at DESC, (CASE WHEN wo.work_order_no LIKE '%-SA-%' THEN 0 ELSE 1 END) ASC, wo.id ASC";
 
     const [rows] = await pool.execute(query, params);
     return rows;
@@ -168,11 +171,13 @@ class WorkOrder {
     const [rows] = await pool.execute(
       `SELECT wo.*, 
               COALESCE(so.po_number, rc.code, rc.title) as sales_order_no, 
-              p.name as project_name 
+              p.name as project_name,
+              bom.bom_number as bom_no
        FROM work_orders wo
        LEFT JOIN sales_orders so ON wo.sales_order_id = so.id
        LEFT JOIN root_cards rc ON wo.root_card_id = rc.id
        LEFT JOIN projects p ON wo.project_id = p.id
+       LEFT JOIN bill_of_materials bom ON wo.bom_id = bom.id
        WHERE wo.id = ?`,
       [id]
     );
@@ -199,11 +204,13 @@ class WorkOrder {
     const [rows] = await pool.execute(
       `SELECT wo.*, 
               COALESCE(so.po_number, rc.code, rc.title) as sales_order_no, 
-              p.name as project_name 
+              p.name as project_name,
+              bom.bom_number as bom_no
        FROM work_orders wo
        LEFT JOIN sales_orders so ON wo.sales_order_id = so.id
        LEFT JOIN root_cards rc ON wo.root_card_id = rc.id
        LEFT JOIN projects p ON wo.project_id = p.id
+       LEFT JOIN bill_of_materials bom ON wo.bom_id = bom.id
        WHERE wo.sales_order_id = ?`,
       [salesOrderId]
     );
@@ -214,11 +221,13 @@ class WorkOrder {
     const [rows] = await pool.execute(
       `SELECT wo.*, 
               COALESCE(so.po_number, rc.code, rc.title) as sales_order_no, 
-              p.name as project_name 
+              p.name as project_name,
+              bom.bom_number as bom_no
        FROM work_orders wo
        LEFT JOIN sales_orders so ON wo.sales_order_id = so.id
        LEFT JOIN root_cards rc ON wo.root_card_id = rc.id
        LEFT JOIN projects p ON wo.project_id = p.id
+       LEFT JOIN bill_of_materials bom ON wo.bom_id = bom.id
        WHERE wo.root_card_id = ?`,
       [rootCardId]
     );

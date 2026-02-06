@@ -11,7 +11,7 @@ import {
   Info,
   Clock,
   Zap,
-  CheckCircle2,
+  CheckCircle,
   Box,
   Truck,
   TrendingUp,
@@ -48,6 +48,8 @@ const WorkOrderFormPage = () => {
     operations: [],
     inventory: []
   });
+
+  const [activeTab, setActiveTab] = useState('foundation');
 
   const fetchInitialData = useCallback(async () => {
     try {
@@ -148,15 +150,18 @@ const WorkOrderFormPage = () => {
 
   const FormSection = ({ id, title, icon: Icon, step, children }) => (
     <section id={id} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden scroll-mt-24 transition-all hover:shadow-md">
-       <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600 border border-blue-100">
-              <Icon size={18} />
+       <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 border border-blue-100/50">
+              <Icon size={20} />
             </div>
-            <h3 className="text-sm font-bold text-slate-900">{step} {title}</h3>
+            <div>
+              <h3 className="text-sm font-bold text-slate-900">{title}</h3>
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Section {step}</p>
+            </div>
           </div>
        </div>
-       <div className="p-6">
+       <div className="p-8">
           {children}
        </div>
     </section>
@@ -206,92 +211,101 @@ const WorkOrderFormPage = () => {
       <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           
-          {/* Left Navigation Sidebar */}
-          <div className="hidden lg:block lg:col-span-2">
-            <div className="sticky top-24 space-y-2">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4 px-3">Form Navigator</p>
-              {sections.map((section) => {
-                const Icon = section.icon;
-                return (
-                  <a
-                    key={section.id}
-                    href={`#${section.id}`}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all text-slate-500 hover:text-blue-600 hover:bg-blue-50/50 group"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center group-hover:bg-blue-100/50 transition-colors">
-                      <Icon size={16} />
-                    </div>
-                    {section.label}
-                  </a>
-                );
-              })}
+          <div className="lg:col-span-9 space-y-8">
+            {/* Horizontal Sticky Tabbed Navigator */}
+            <div className="sticky top-[72px] bg-white/95 backdrop-blur-md z-30 border border-slate-200 rounded-2xl px-4 mb-8 shadow-sm shadow-slate-200/50">
+              <div className="flex items-center gap-2 overflow-x-auto py-2 no-scrollbar">
+                {sections.map((section) => {
+                  const Icon = section.icon;
+                  const isActive = activeTab === section.id;
+                  return (
+                    <button
+                      key={section.id}
+                      type="button"
+                      onClick={() => setActiveTab(section.id)}
+                      className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap border ${
+                        isActive 
+                          ? "bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-100" 
+                          : "text-slate-500 hover:text-blue-600 hover:bg-blue-50/50 border-transparent hover:border-blue-100 group"
+                      }`}
+                    >
+                      <div className={`p-1.5 rounded-lg transition-colors ${
+                        isActive ? "bg-white/20 text-white" : "bg-slate-50 text-slate-400 group-hover:text-blue-600"
+                      }`}>
+                        <Icon size={16} />
+                      </div>
+                      <span className="uppercase tracking-wider text-[11px]">{section.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
 
-          {/* Main Content Area - Form Sections */}
-          <div className="lg:col-span-7 space-y-8">
-            
-            {/* 01 Foundation Parameters */}
-            <FormSection id="foundation" title="Foundation Parameters" icon={Settings} step="01">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                        Item Name <span className="text-red-500">*</span>
-                    </label>
-                    <input 
-                      type="text"
-                      name="itemName"
-                      value={formData.itemName}
-                      onChange={handleInputChange}
-                      placeholder="Item Name"
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
-                    />
-                </div>
-                <div className="space-y-2">
-                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                        Work Order Number
-                    </label>
-                    <input 
-                      type="text"
-                      name="workOrderNo"
-                      value={formData.workOrderNo}
-                      onChange={handleInputChange}
-                      placeholder="WO-AUTO"
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
-                    />
-                </div>
-                <div className="space-y-2">
-                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                        Target Item <span className="text-red-500">*</span>
-                    </label>
-                    <select 
-                      name="itemCode"
-                      value={formData.itemCode}
-                      onChange={handleItemChange}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
-                    >
-                        <option value="">Select Item...</option>
-                        {items.map(item => (
-                          <option key={item.id} value={item.itemCode}>{item.itemName} ({item.itemCode})</option>
-                        ))}
-                    </select>
-                </div>
-                <div className="space-y-2">
-                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                        Bill of Materials (BOM) <span className="text-red-500">*</span>
-                    </label>
-                    <select 
-                      name="bomId"
-                      value={formData.bomId}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
-                    >
-                        <option value="">Select BOM...</option>
-                        {boms.map(bom => (
-                          <option key={bom.id} value={bom.id}>{bom.bom_name} ({bom.bom_no})</option>
-                        ))}
-                    </select>
-                </div>
+            <div className="space-y-8">
+              {/* 01 Foundation Parameters */}
+              {activeTab === 'foundation' && (
+              <FormSection id="foundation" title="Foundation Parameters" icon={Settings} step="01">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                      <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                          Item Name <span className="text-red-500">*</span>
+                      </label>
+                      <input 
+                        type="text"
+                        name="itemName"
+                        value={formData.itemName}
+                        onChange={handleInputChange}
+                        placeholder="Item Name"
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
+                      />
+                  </div>
+                  <div className="space-y-2">
+                      <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                          Work Order Number
+                      </label>
+                      <input 
+                        type="text"
+                        name="workOrderNo"
+                        value={formData.workOrderNo}
+                        onChange={handleInputChange}
+                        placeholder="WO-AUTO"
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
+                      />
+                  </div>
+                  <div className="space-y-2">
+                      <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                          Target Item <span className="text-red-500">*</span>
+                      </label>
+                      <select 
+                        name="itemCode"
+                        value={formData.itemCode}
+                        onChange={handleItemChange}
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
+                      >
+                          <option value="">Select Item...</option>
+                          {items.map(item => (
+                            <option key={item.id} value={item.itemCode}>{item.itemName} ({item.itemCode})</option>
+                          ))}
+                      </select>
+                  </div>
+                  <div className="space-y-2">
+                      <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                          Bill of Materials (BOM) <span className="text-red-500">*</span>
+                      </label>
+                      <select 
+                        name="bomId"
+                        value={formData.bomId}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
+                      >
+                          <option value="">Select BOM...</option>
+                          {boms.map(bom => (
+                            <option key={bom.id} value={bom.id}>
+                              {bom.productName || bom.item_name || bom.itemName || bom.product_name || 'BOM'} ({bom.bomNumber || bom.bom_number || bom.id})
+                            </option>
+                          ))}
+                      </select>
+                  </div>
                 <div className="space-y-2">
                     <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                         Quantity to Produce <span className="text-red-500">*</span>
@@ -324,8 +338,10 @@ const WorkOrderFormPage = () => {
                 </div>
               </div>
             </FormSection>
+            )}
 
             {/* 02 Production Timeline */}
+            {activeTab === 'timeline' && (
             <FormSection id="timeline" title="Production Timeline" icon={Calendar} step="02">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
@@ -356,8 +372,10 @@ const WorkOrderFormPage = () => {
                 </div>
               </div>
             </FormSection>
+            )}
 
             {/* 03 Operation Sequence */}
+            {activeTab === 'operations' && (
             <FormSection id="operations" title="Operation Sequence" icon={Cpu} step="03">
               <div className="overflow-x-auto -mx-6">
                 <table className="w-full text-left">
@@ -397,8 +415,10 @@ const WorkOrderFormPage = () => {
                 </table>
               </div>
             </FormSection>
+            )}
 
             {/* 04 Required Inventory */}
+            {activeTab === 'inventory' && (
             <FormSection id="inventory" title="Required Inventory" icon={Package} step="04">
               <div className="overflow-x-auto -mx-6">
                 <table className="w-full text-left">
@@ -429,10 +449,11 @@ const WorkOrderFormPage = () => {
                 </table>
               </div>
             </FormSection>
-
+            )}
           </div>
+        </div>
 
-          {/* Right Sidebar - Info Panels */}
+        {/* Right Sidebar - Info Panels */}
           <div className="lg:col-span-3 space-y-6">
             
             {/* Efficiency Panel */}

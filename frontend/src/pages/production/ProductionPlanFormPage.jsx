@@ -185,42 +185,40 @@ const MaterialRequestModal = ({ isOpen, onClose, data, materials, planId, onSave
 const SectionHeader = ({ title, subtitle, section, isExpanded, onToggle, icon: Icon, number, colorClass, badge }) => (
   <div 
     onClick={() => onToggle(section)}
-    className={`flex items-center justify-between p-3 cursor-pointer transition-all ${
+    className={`flex items-center justify-between p-5 cursor-pointer transition-all ${
       isExpanded 
-        ? 'bg-white dark:bg-slate-800/50' 
-        : 'hover:bg-slate-50 dark:hover:bg-slate-800/30'
+        ? 'bg-white dark:bg-slate-800' 
+        : 'bg-slate-50/50 hover:bg-slate-100 dark:bg-slate-900/20 dark:hover:bg-slate-800/50'
     }`}
   >
-    <div className="flex items-center gap-4">
-      <div className={`w-10 h-10 rounded flex items-center justify-center text-white ${colorClass || 'bg-indigo-600'}`}>
+    <div className="flex items-center gap-6">
+      <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-white shadow-2xl transform transition-all group-hover:scale-110 ${colorClass || 'bg-indigo-600 shadow-indigo-500/30'}`}>
         <div className="flex flex-col items-center">
-          <span className="text-[10px] font-bold leading-none">{number}</span>
-          {Icon && <Icon size={16} className="mt-0.5" />}
+          <span className="text-[22px] font-black leading-none mb-1 drop-shadow-md tracking-tighter">{number}</span>
+          {Icon && <Icon size={24} className="drop-shadow-md" />}
         </div>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-5">
         <div>
-          <h3 className="font-bold text-sm text-slate-800 dark:text-slate-200 uppercase tracking-tight">
+          <h3 className="font-black text-[18px] text-slate-900 dark:text-white uppercase tracking-tight">
             {title}
           </h3>
           {subtitle && (
-            <p className="text-[11px] text-slate-500 font-medium">
+            <p className="text-[13px] text-slate-600 dark:text-slate-400 font-bold mt-1">
               {subtitle}
             </p>
           )}
         </div>
         {badge && (
-          <span className="px-2 py-0.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[10px] font-bold uppercase rounded border border-blue-100 dark:border-blue-800">
+          <span className="px-4 py-1.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-[12px] font-black uppercase rounded-xl border-2 border-blue-200 dark:border-blue-700 shadow-sm">
             {badge}
           </span>
         )}
       </div>
     </div>
-    {isExpanded ? (
-      <ChevronUp size={20} className="text-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded-full p-1" />
-    ) : (
-      <ChevronDown size={20} className="text-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded-full p-1" />
-    )}
+    <div className={`p-2.5 rounded-full shadow-md transition-all ${isExpanded ? 'bg-blue-600 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-400'}`}>
+      {isExpanded ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+    </div>
   </div>
 );
 
@@ -237,6 +235,14 @@ const ProductionPlanFormPage = () => {
     subAssemblies: true,
     phases: true
   });
+  const [expandedRows, setExpandedRows] = useState({});
+
+  const toggleRow = (id) => {
+    setExpandedRows(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  };
   const [showMaterialRequestModal, setShowMaterialRequestModal] = useState(false);
   const [generatingWorkOrders, setGeneratingWorkOrders] = useState(false);
   const [planId, setPlanId] = useState(null);
@@ -401,7 +407,7 @@ const ProductionPlanFormPage = () => {
                 <option value="">Select Supervisor (Optional)</option>
                 {employees.map(emp => (
                   <option key={emp.id} value={emp.id}>
-                    {emp.username}
+                    {emp.name || emp.username} {emp.employee_id ? `(${emp.employee_id})` : ''} {emp.department ? `- ${emp.department}` : ''}
                   </option>
                 ))}
               </select>
@@ -430,13 +436,13 @@ const ProductionPlanFormPage = () => {
   const renderFinishedGoodsSection = () => (
     <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden mb-6 transition-all duration-300">
       <SectionHeader 
-        title="Finished Goods" 
+        title="FINISHED GOODS" 
         subtitle="Finished goods and target fulfillment"
         section="finishedGoods" 
         isExpanded={expandedSections.finishedGoods} 
         onToggle={toggleSection} 
         icon={Package} 
-        number="02" 
+        number="03" 
         colorClass="bg-blue-600"
         badge={`${finishedGoods.length} ITEMS`}
       />
@@ -457,54 +463,120 @@ const ProductionPlanFormPage = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
-                {finishedGoods.map((fg, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors group">
-                    <td className="px-6 py-4 text-slate-400 font-medium">{idx + 1}</td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
-                          <Package size={14} className="text-blue-500" />
-                        </div>
-                        <div>
-                          <div className="font-bold text-slate-900 dark:text-white group-hover:text-purple-600 transition-colors uppercase">
-                            {fg.itemCode}
+                {finishedGoods.map((fg, idx) => {
+                  const isRowExpanded = expandedRows[`fg-${idx}`];
+                  return (
+                    <React.Fragment key={`fg-${idx}`}>
+                      <tr 
+                        onClick={() => toggleRow(`fg-${idx}`)}
+                        className={`hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors group cursor-pointer ${isRowExpanded ? 'bg-slate-50/50 dark:bg-slate-800/30' : ''}`}
+                      >
+                        <td className="px-6 py-4 text-slate-400 font-medium">{idx + 1}</td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+                              <Package size={14} className="text-blue-500" />
+                            </div>
+                            <div>
+                              <div className="font-bold text-slate-900 dark:text-white group-hover:text-purple-600 transition-colors uppercase">
+                                {fg.itemCode}
+                              </div>
+                              <div className="text-[10px] text-slate-500 uppercase font-medium">
+                                {fg.productName}
+                              </div>
+                            </div>
+                            {fg.rawMaterials?.length > 0 && (
+                              isRowExpanded ? <ChevronUp size={12} className="text-slate-400" /> : <ChevronDown size={12} className="text-slate-400" />
+                            )}
                           </div>
-                          <div className="text-[10px] text-slate-500 uppercase font-medium">
-                            {fg.productName}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
+                            <div className="px-1.5 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded flex items-center gap-1 border border-blue-100 dark:border-blue-800">
+                              <Settings size={10} />
+                              {fg.bomNo}
+                            </div>
                           </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
-                        <div className="px-1.5 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded flex items-center gap-1 border border-blue-100 dark:border-blue-800">
-                          <Settings size={10} />
-                          {fg.bomNo}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className="text-sm font-black text-blue-600 dark:text-blue-400">
-                        {fg.plannedQty}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-center text-[10px] font-bold text-slate-400 uppercase">
-                      {fg.uom || 'Nos'}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400 text-xs font-medium">
-                        <Package size={14} className="text-slate-400" />
-                        {fg.warehouse}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400 text-xs font-medium">
-                        <Calendar size={14} className="text-slate-400" />
-                        {fg.startDate}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <span className="text-sm font-black text-blue-600 dark:text-blue-400">
+                            {fg.plannedQty}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-center text-[10px] font-bold text-slate-400 uppercase">
+                          {fg.uom || 'Nos'}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400 text-xs font-medium">
+                            <Package size={14} className="text-slate-400" />
+                            {fg.warehouse}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400 text-xs font-medium">
+                            <Calendar size={14} className="text-slate-400" />
+                            {fg.startDate}
+                          </div>
+                        </td>
+                      </tr>
+                      {isRowExpanded && fg.rawMaterials?.length > 0 && (
+                        <tr className="bg-slate-50/30 dark:bg-slate-900/10">
+                          <td colSpan="7" className="px-6 py-4">
+                            <div className="p-4 bg-white dark:bg-slate-800 rounded-lg border border-slate-100 dark:border-slate-700 shadow-sm animate-in zoom-in-95 duration-200">
+                              <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-50 dark:border-slate-700">
+                                <div className="p-1.5 bg-blue-50 dark:bg-blue-900/20 rounded">
+                                  <Layers size={14} className="text-blue-500" />
+                                </div>
+                                <h5 className="text-[11px] font-black text-slate-900 dark:text-slate-100 uppercase tracking-widest">Raw Materials from BOM</h5>
+                              </div>
+                              <table className="w-full text-[11px]">
+                                <thead>
+                                  <tr className="text-slate-400 uppercase tracking-wider font-bold">
+                                    <th className="px-3 py-2 text-left w-12">No.</th>
+                                    <th className="px-3 py-2 text-left">Item</th>
+                                    <th className="px-3 py-2 text-center">Qty Per Unit</th>
+                                    <th className="px-3 py-2 text-right">Total Required Qty</th>
+                                    <th className="px-3 py-2 text-left pl-6">Uom</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50 dark:divide-slate-700/50">
+                                  {fg.rawMaterials.map((rm, rmIdx) => (
+                                    <tr key={rmIdx} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                      <td className="px-3 py-3 text-slate-400 font-bold">{rmIdx + 1}</td>
+                                      <td className="px-3 py-3">
+                                        <div className="font-black text-black dark:text-white uppercase text-[12px] tracking-tight">
+                                          {rm.specification || rm.itemName || 'Unnamed Material'}
+                                        </div>
+                                        {(rm.itemName && rm.itemName !== rm.specification) && (
+                                          <div className="text-[11px] text-slate-600 dark:text-slate-400 font-bold mt-0.5">{rm.itemName}</div>
+                                        )}
+                                      </td>
+                                      <td className="px-3 py-3 text-center">
+                                        <span className="font-black text-slate-700 dark:text-slate-300">
+                                          {rm.qtyPerUnit || rm.quantity || '--'}
+                                        </span>
+                                      </td>
+                                      <td className="px-3 py-3 text-right">
+                                        <span className="font-black text-blue-600 dark:text-blue-400 text-sm">
+                                          {rm.requiredQty}
+                                        </span>
+                                      </td>
+                                      <td className="px-3 py-3 text-left pl-6">
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                          {rm.uom || 'KG'}
+                                        </span>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
                 {finishedGoods.length === 0 && (
                   <tr>
                     <td colSpan="5" className="px-6 py-12 text-center">
@@ -523,97 +595,159 @@ const ProductionPlanFormPage = () => {
     </div>
   );
 
-  const renderMaterialsSection = () => (
-    <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden mb-6 transition-all duration-300">
-      <SectionHeader 
-        title="Materials" 
-        subtitle="Consolidated material explosion across all levels"
-        section="materials" 
-        isExpanded={expandedSections.materials} 
-        onToggle={toggleSection} 
-        icon={Layers} 
-        number="03" 
-        colorClass="bg-orange-500"
-        badge={`${materials.length} ITEMS`}
-      />
-      
-      {expandedSections.materials && (
-        <div className="border-t border-slate-100 dark:border-slate-700/50 animate-in slide-in-from-top-4 duration-300">
-          <div className="px-6 py-4 bg-slate-50/30 dark:bg-slate-900/10 flex items-center gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
-            <h4 className="text-[10px] font-bold text-red-600 uppercase tracking-widest">Exploded Components</h4>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead>
-                <tr className="bg-slate-50/50 dark:bg-slate-900/30 text-slate-500 dark:text-slate-400 uppercase text-[10px] tracking-wider font-bold">
-                  <th className="px-6 py-4">No.</th>
-                  <th className="px-6 py-4">Component Specification</th>
-                  <th className="px-6 py-4 text-center">Required Qty</th>
-                  <th className="px-6 py-4 text-center">Uom</th>
-                  <th className="px-6 py-4">Source Assembly</th>
-                  <th className="px-6 py-4">Bom Ref</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
-                {materials.map((m, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors group">
-                    <td className="px-6 py-4 text-slate-400 font-medium">{idx + 1}</td>
-                    <td className="px-6 py-4">
-                      <div className="font-medium text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors uppercase text-xs">
-                        {m.specification}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className="text-sm font-bold text-red-600 dark:text-red-400">
-                        {m.requiredQty}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-center text-[10px] font-bold text-slate-400 uppercase">
-                      {m.uom || 'KG'}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded text-[10px] font-bold text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 w-fit">
-                        <Activity size={10} className="text-red-400" />
-                        {m.sourceAssembly}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-1.5 px-2 py-1 bg-blue-50/50 dark:bg-blue-900/10 rounded text-[10px] font-bold text-blue-600 dark:text-blue-400 border border-blue-100/50 dark:border-blue-800/50 w-fit">
-                        <FileText size={10} className="text-blue-400" />
-                        {m.bomRef}
-                      </div>
-                    </td>
+  const renderMaterialsSection = () => {
+    const coreMaterials = materials.filter(m => m.isCore || m.is_core || m.isCore == 1 || m.is_core == 1);
+    const explodedComponents = materials.filter(m => !(m.isCore || m.is_core || m.isCore == 1 || m.is_core == 1));
+
+    return (
+      <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden mb-6 transition-all duration-300">
+        <SectionHeader 
+          title="MATERIALS" 
+          subtitle="Consolidated material explosion across all levels"
+          section="materials" 
+          isExpanded={expandedSections.materials} 
+          onToggle={toggleSection} 
+          icon={Layers} 
+          number="04" 
+          colorClass="bg-orange-500 shadow-orange-500/30"
+          badge={`${materials.length} ITEMS`}
+        />
+        
+        {expandedSections.materials && (
+          <div className="border-t border-slate-100 dark:border-slate-700/50 animate-in slide-in-from-top-4 duration-300">
+            {/* Core Materials Section - Only visible when materials exist */}
+            {coreMaterials.length > 0 && (
+              <>
+                <div className="px-6 py-4 bg-orange-50/50 dark:bg-orange-900/10 flex items-center gap-3 border-b border-orange-100 dark:border-orange-900/20">
+                  <div className="w-2 h-2 rounded-full bg-orange-500 shadow-sm shadow-orange-500/50" />
+                  <h4 className="text-[11px] font-black text-orange-700 dark:text-orange-400 uppercase tracking-widest">Core Materials</h4>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-left">
+                    <thead>
+                      <tr className="bg-slate-50 dark:bg-slate-900/50 text-slate-500 dark:text-slate-400 uppercase text-[10px] tracking-wider font-bold">
+                        <th className="px-6 py-4">Item</th>
+                        <th className="px-6 py-4 text-center">Required Qty</th>
+                        <th className="px-6 py-4">Warehouse</th>
+                        <th className="px-6 py-4">BOM Ref</th>
+                        <th className="px-6 py-4 text-center">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
+                      {coreMaterials.map((m, idx) => (
+                        <tr key={`core-${idx}`} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors group">
+                          <td className="px-6 py-4">
+                            <div className="font-black text-black dark:text-white uppercase text-[13px] tracking-tight">{m.specification || m.itemName || 'Unnamed Material'}</div>
+                            {(m.itemName && m.itemName !== m.specification) && (
+                              <div className="text-[11px] text-slate-600 dark:text-slate-400 font-bold mt-0.5 italic">{m.itemName}</div>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <div className="flex flex-col items-center">
+                              <span className="text-sm font-black text-orange-600 dark:text-orange-400">{m.requiredQty}</span>
+                              <span className="text-[10px] text-slate-400 font-black uppercase">{m.uom || 'KG'}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-400 text-xs font-bold">
+                              <Package size={14} className="text-slate-400" />
+                              <span>{m.warehouse || m.location || '-'}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-orange-50 dark:bg-orange-900/20 rounded-lg text-[10px] font-black text-orange-600 dark:text-orange-400 border border-orange-100 dark:border-orange-800 w-fit">
+                              <Layers size={10} className="text-orange-500" />
+                              {m.bomRef || 'N/A'}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <span className="text-slate-300 font-bold">--</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+
+            {/* Exploded Components Section */}
+            <div className="px-6 py-4 bg-red-50/50 dark:bg-red-900/10 flex items-center gap-3 border-y border-red-100 dark:border-red-900/20">
+              <div className="w-2 h-2 rounded-full bg-red-500 shadow-sm shadow-red-500/50" />
+              <h4 className="text-[11px] font-black text-red-700 dark:text-red-400 uppercase tracking-widest">Exploded Components</h4>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead>
+                  <tr className="bg-slate-50 dark:bg-slate-900/50 text-slate-500 dark:text-slate-400 uppercase text-[10px] tracking-wider font-bold">
+                    <th className="px-6 py-4">Component Specification</th>
+                    <th className="px-6 py-4 text-center">Required Qty</th>
+                    <th className="px-6 py-4">Source Assembly</th>
+                    <th className="px-6 py-4">BOM Ref</th>
                   </tr>
-                ))}
-                {materials.length === 0 && (
-                  <tr>
-                    <td colSpan="4" className="px-6 py-12 text-center">
-                      <div className="flex flex-col items-center gap-2 opacity-40">
-                        <Layers size={32} />
-                        <p className="text-sm italic">No material explosion data available.</p>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
+                  {explodedComponents.map((m, idx) => (
+                    <tr key={`exp-${idx}`} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors group">
+                      <td className="px-6 py-4">
+                        <div className="font-black text-black dark:text-white uppercase text-[13px] tracking-tight">
+                          {m.specification || m.itemName || 'Unnamed Component'}
+                        </div>
+                        {(m.itemName && m.itemName !== m.specification) && (
+                          <div className="text-[11px] text-slate-600 dark:text-slate-400 font-bold mt-0.5 italic">{m.itemName}</div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex flex-col items-center">
+                          <span className="text-sm font-black text-red-600 dark:text-red-400">
+                            {m.requiredQty}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-black uppercase">{m.uom || 'KG'}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-[10px] font-black text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 w-fit">
+                          <Activity size={10} className="text-red-500" />
+                          {m.sourceAssemblyCode || 'ROOT'}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-[10px] font-black text-blue-600 dark:text-blue-300 border border-blue-100 dark:border-blue-800 w-fit">
+                          <FileText size={10} className="text-blue-500" />
+                          {m.bomRef || 'N/A'}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {explodedComponents.length === 0 && (
+                    <tr>
+                      <td colSpan="4" className="px-6 py-12 text-center text-slate-400 italic text-sm">
+                        <div className="flex flex-col items-center gap-2 opacity-60">
+                          <Activity size={24} />
+                          <span>No exploded components available.</span>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
-      )}
-    </div>
-  );
+        )}
+      </div>
+    );
+  };
 
   const renderSubAssembliesSection = () => (
     <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden mb-6 transition-all duration-300">
       <SectionHeader 
-        title="Sub Assemblies" 
+        title="SUB ASSEMBLIES" 
         subtitle="Manufacturing breakdown of intermediate components"
         section="subAssemblies" 
         isExpanded={expandedSections.subAssemblies} 
         onToggle={toggleSection} 
         icon={Activity} 
-        number="04" 
+        number="02" 
         colorClass="bg-pink-600"
         badge={`${subAssemblies.length} ITEMS`}
       />
@@ -634,59 +768,125 @@ const ProductionPlanFormPage = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
-                {subAssemblies.map((sa, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors group">
-                    <td className="px-6 py-4 text-slate-400 font-medium">{idx + 1}</td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
-                          <Package size={14} className="text-red-500" />
-                        </div>
-                        <div>
-                          <div className="font-bold text-slate-900 dark:text-white group-hover:text-purple-600 transition-colors">
-                            {sa.itemCode}
+                {subAssemblies.map((sa, idx) => {
+                  const isRowExpanded = expandedRows[`sa-${idx}`];
+                  return (
+                    <React.Fragment key={`sa-${idx}`}>
+                      <tr 
+                        onClick={() => toggleRow(`sa-${idx}`)}
+                        className={`hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors group cursor-pointer ${isRowExpanded ? 'bg-slate-50/50 dark:bg-slate-800/30' : ''}`}
+                      >
+                        <td className="px-6 py-4 text-slate-400 font-medium">{idx + 1}</td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
+                              <Package size={14} className="text-red-500" />
+                            </div>
+                            <div>
+                              <div className="font-bold text-slate-900 dark:text-white group-hover:text-purple-600 transition-colors uppercase">
+                                {sa.itemCode}
+                              </div>
+                              <div className="text-[10px] text-slate-500 uppercase font-medium">
+                                {sa.itemName || 'Sub Assembly'}
+                              </div>
+                            </div>
+                            {sa.rawMaterials?.length > 0 && (
+                              isRowExpanded ? <ChevronUp size={12} className="text-slate-400" /> : <ChevronDown size={12} className="text-slate-400" />
+                            )}
                           </div>
-                          <div className="text-[10px] text-slate-500 uppercase font-medium">
-                            {sa.itemName || 'Sub Assembly'}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
+                            <Package size={14} className="text-slate-400" />
+                            <span className="font-medium">{sa.targetWarehouse}</span>
                           </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
-                        <Package size={14} className="text-slate-400" />
-                        <span className="font-medium">{sa.targetWarehouse}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400 text-xs">
-                        <Calendar size={14} className="text-slate-400" />
-                        <span className="font-medium">{sa.scheduledDate}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <div className="flex flex-col items-center">
-                        <span className="text-md font-bold text-slate-900 dark:text-white">
-                          {sa.requiredQty}
-                        </span>
-                        <span className="text-[10px] text-slate-400 uppercase font-bold">
-                          {sa.uom}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-xs font-medium text-slate-500">
-                      <div className="flex items-center gap-2">
-                        <FileText size={14} className="text-red-400" />
-                        {sa.bomNo}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className="px-2 py-1 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded text-[10px] font-bold uppercase tracking-wider border border-red-100 dark:border-red-800">
-                        {sa.manufacturingType || 'In House'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400 text-xs">
+                            <Calendar size={14} className="text-slate-400" />
+                            <span className="font-medium">{sa.scheduledDate}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <div className="flex flex-col items-center">
+                            <span className="text-md font-bold text-slate-900 dark:text-white">
+                              {sa.requiredQty}
+                            </span>
+                            <span className="text-[10px] text-slate-400 uppercase font-bold">
+                              {sa.uom}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-xs font-medium text-slate-500">
+                          <div className="flex items-center gap-2">
+                            <FileText size={14} className="text-red-400" />
+                            {sa.bomNo}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <span className="px-2 py-1 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded text-[10px] font-bold uppercase tracking-wider border border-red-100 dark:border-red-800">
+                            {sa.manufacturingType || 'In House'}
+                          </span>
+                        </td>
+                      </tr>
+                      {isRowExpanded && sa.rawMaterials?.length > 0 && (
+                        <tr className="bg-slate-50/30 dark:bg-slate-900/10">
+                          <td colSpan="7" className="px-6 py-4">
+                            <div className="p-4 bg-white dark:bg-slate-800 rounded-lg border border-slate-100 dark:border-slate-700 shadow-sm animate-in zoom-in-95 duration-200">
+                              <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-50 dark:border-slate-700">
+                                <div className="p-1.5 bg-red-50 dark:bg-red-900/20 rounded">
+                                  <Layers size={14} className="text-red-500" />
+                                </div>
+                                <h5 className="text-[11px] font-black text-slate-900 dark:text-slate-100 uppercase tracking-widest">Raw Materials from BOM</h5>
+                              </div>
+                              <table className="w-full text-[11px]">
+                                <thead>
+                                  <tr className="text-slate-400 uppercase tracking-wider font-bold">
+                                    <th className="px-3 py-2 text-left w-12">No.</th>
+                                    <th className="px-3 py-2 text-left">Item</th>
+                                    <th className="px-3 py-2 text-center">Qty Per Unit</th>
+                                    <th className="px-3 py-2 text-right">Total Required Qty</th>
+                                    <th className="px-3 py-2 text-left pl-6">Uom</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50 dark:divide-slate-700/50">
+                                  {sa.rawMaterials.map((rm, rmIdx) => (
+                                    <tr key={rmIdx} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                      <td className="px-3 py-3 text-slate-400 font-bold">{rmIdx + 1}</td>
+                                      <td className="px-3 py-3">
+                                        <div className="font-black text-black dark:text-white uppercase text-[12px] tracking-tight">
+                                          {rm.specification || rm.itemName || 'Unnamed Material'}
+                                        </div>
+                                        {(rm.itemName && rm.itemName !== rm.specification) && (
+                                          <div className="text-[11px] text-slate-600 dark:text-slate-400 font-bold mt-0.5">{rm.itemName}</div>
+                                        )}
+                                      </td>
+                                      <td className="px-3 py-3 text-center">
+                                        <span className="font-black text-slate-700 dark:text-slate-300">
+                                          {rm.qtyPerUnit || rm.quantity || '--'}
+                                        </span>
+                                      </td>
+                                      <td className="px-3 py-3 text-right">
+                                        <span className="font-black text-red-600 dark:text-red-400 text-sm">
+                                          {rm.requiredQty}
+                                        </span>
+                                      </td>
+                                      <td className="px-3 py-3 text-left pl-6">
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                          {rm.uom || 'KG'}
+                                        </span>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
                 {subAssemblies.length === 0 && (
                   <tr>
                     <td colSpan="5" className="px-6 py-12 text-center">
@@ -708,7 +908,7 @@ const ProductionPlanFormPage = () => {
   const renderManufacturingFlowSection = () => (
     <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden mb-6 transition-all duration-300">
       <SectionHeader 
-        title="Manufacturing Flow & Production Phases" 
+        title="MANUFACTURING FLOW" 
         section="phases" 
         isExpanded={expandedSections.phases} 
         onToggle={toggleSection} 
@@ -776,7 +976,9 @@ const ProductionPlanFormPage = () => {
                     >
                       <option value="">Select Employee</option>
                       {employees.map(emp => (
-                        <option key={emp.id} value={emp.id}>{emp.username}</option>
+                        <option key={emp.id} value={emp.id}>
+                          {emp.name || emp.username} {emp.employee_id ? `(${emp.employee_id})` : ''} {emp.department ? `- ${emp.department}` : ''}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -1099,9 +1301,24 @@ const ProductionPlanFormPage = () => {
         
         setPlanId(plan.id);
         
-        setFinishedGoods(plan.finished_goods || plan.finishedGoods || []);
-        setMaterials(plan.materials || []);
-        setSubAssemblies(plan.sub_assemblies || plan.subAssemblies || []);
+        const loadedMaterials = plan.materials || [];
+        const loadedSubAssys = plan.sub_assemblies || plan.subAssemblies || [];
+        const loadedFGs = plan.finished_goods || plan.finishedGoods || [];
+
+        // Reconstruct hierarchical links for rawMaterials if they're missing or just for consistency
+        const processedFGs = loadedFGs.map(fg => ({
+          ...fg,
+          rawMaterials: fg.rawMaterials || loadedMaterials.filter(m => m.isCore || m.sourceAssemblyCode === fg.itemCode)
+        }));
+
+        const processedSubAssys = loadedSubAssys.map(sa => ({
+          ...sa,
+          rawMaterials: sa.rawMaterials || loadedMaterials.filter(m => m.sourceAssemblyCode === sa.itemCode)
+        }));
+
+        setFinishedGoods(processedFGs);
+        setMaterials(loadedMaterials);
+        setSubAssemblies(processedSubAssys);
       }
     } catch (err) {
       console.error('Failed to fetch plan details:', err);
@@ -1226,20 +1443,25 @@ const ProductionPlanFormPage = () => {
       setFinishedGoods([fgItem]);
 
       // 2. Process Materials and Sub-assemblies recursively
-      const explodeBOM = (bom, multiplier, sourceName, bomRef, sourceCode) => {
+      const explodeBOM = (bom, multiplier, sourceName, bomRef, sourceCode, isTopLevel = false) => {
         let mats = [];
         let subAssys = [];
 
         // Direct materials
         if (bom.materials) {
           bom.materials.forEach(m => {
+            const mCode = m.itemCode || m.item_code || m.specification;
+            const mName = m.itemName || m.item_name || mCode || 'Unnamed Material';
             mats.push({
-              specification: m.itemName,
+              specification: mCode,
+              itemName: mName,
               requiredQty: m.quantity * multiplier,
-              uom: m.uom,
+              qtyPerUnit: m.quantity,
+              uom: m.uom || m.unit || 'Nos',
               sourceAssembly: sourceName,
               sourceAssemblyCode: sourceCode,
-              bomRef: bomRef
+              bomRef: bomRef,
+              isCore: isTopLevel
             });
           });
         }
@@ -1247,13 +1469,18 @@ const ProductionPlanFormPage = () => {
         // Scrap/Loss materials
         if (bom.scrapLoss) {
           bom.scrapLoss.forEach(s => {
+            const sCode = s.itemCode || s.item_code || s.name || s.itemName || s.item_name;
+            const sName = s.name || s.itemName || s.item_name || sCode || 'Scrap Material';
             mats.push({
-              specification: s.name,
+              specification: sCode,
+              itemName: sName,
               requiredQty: (s.inputQty || 0) * multiplier,
+              qtyPerUnit: s.inputQty || 0,
               uom: bom.uom || 'Nos',
               sourceAssembly: sourceName,
               sourceAssemblyCode: sourceCode,
-              bomRef: bomRef
+              bomRef: bomRef,
+              isCore: isTopLevel
             });
           });
         }
@@ -1263,31 +1490,37 @@ const ProductionPlanFormPage = () => {
           bom.components.forEach(comp => {
             const compMultiplier = comp.quantity * multiplier;
             const compBomRef = comp.subAssemblyDetails?.bomNumber || `BOM-${comp.subAssemblyDetails?.id || 'N/A'}`;
+            const compName = comp.itemName || comp.item_name || comp.componentName || comp.component_name || comp.subAssemblyDetails?.productName || comp.subAssemblyDetails?.item_name || comp.subAssemblyDetails?.itemName || comp.subAssemblyDetails?.product_name || 'Sub Assembly';
             
+            let childMaterials = [];
+            if (comp.subAssemblyDetails) {
+              const { mats: childMats, subAssys: childSubAssys } = explodeBOM(
+                comp.subAssemblyDetails,
+                compMultiplier,
+                compName, // Pass discovered component name as source name
+                compBomRef,
+                comp.itemCode || comp.item_code || comp.componentCode,
+                false
+              );
+              childMaterials = childMats;
+              mats = [...mats, ...childMats];
+              subAssys = [...subAssys, ...childSubAssys];
+            }
+
             subAssys.push({
-              itemCode: comp.componentCode,
-              itemName: comp.componentName,
+              itemCode: comp.itemCode || comp.item_code || comp.componentCode,
+              itemName: compName,
               parentItemCode: sourceCode,
               parentItemName: sourceName,
               targetWarehouse: 'Work In Progress - NC',
               scheduledDate: step4?.timeline?.startDate || new Date().toISOString().split('T')[0],
               requiredQty: compMultiplier,
+              qtyPerUnit: comp.quantity,
               uom: comp.uom || 'Nos',
               bomNo: compBomRef,
-              manufacturingType: 'In House'
+              manufacturingType: 'In House',
+              rawMaterials: childMaterials.filter(m => m.sourceAssemblyCode === comp.componentCode)
             });
-
-            if (comp.subAssemblyDetails) {
-              const { mats: childMats, subAssys: childSubAssys } = explodeBOM(
-                comp.subAssemblyDetails,
-                compMultiplier,
-                comp.componentCode,
-                compBomRef,
-                comp.componentCode
-              );
-              mats = [...mats, ...childMats];
-              subAssys = [...subAssys, ...childSubAssys];
-            }
           });
         }
 
@@ -1300,8 +1533,18 @@ const ProductionPlanFormPage = () => {
           selectedSO.quantity,
           selectedSO.product_name,
           activeBOM.bomNumber,
-          selectedSO.item_code
+          selectedSO.item_code,
+          true
         );
+        
+        // Add rawMaterials to the FG
+        const fgWithMaterials = [
+          {
+            ...fgItem,
+            rawMaterials: mats.filter(m => m.isCore)
+          }
+        ];
+        setFinishedGoods(fgWithMaterials);
         setMaterials(mats);
         setSubAssemblies(subAssys);
       } else {
@@ -1395,18 +1638,21 @@ const ProductionPlanFormPage = () => {
       
       // Populate items from BOM if available
       if (activeBOM) {
-        const explodeBOM = (bom, multiplier, sourceName, bomRef, sourceCode) => {
+        const explodeBOM = (bom, multiplier, sourceName, bomRef, sourceCode, isTopLevel = false) => {
           let mats = [];
           let subAssys = [];
           if (bom.materials) {
             bom.materials.forEach(m => {
               mats.push({
                 specification: m.itemName,
+                itemName: m.itemName,
                 requiredQty: m.quantity * multiplier,
+                qtyPerUnit: m.quantity,
                 uom: m.uom,
                 sourceAssembly: sourceName,
                 sourceAssemblyCode: sourceCode,
-                bomRef: bomRef
+                bomRef: bomRef,
+                isCore: isTopLevel
               });
             });
           }
@@ -1414,23 +1660,37 @@ const ProductionPlanFormPage = () => {
             bom.components.forEach(comp => {
               const compMultiplier = comp.quantity * multiplier;
               const compBomRef = comp.subAssemblyDetails?.bomNumber || `BOM-${comp.subAssemblyDetails?.id || 'N/A'}`;
+              const compName = comp.productName || comp.itemName || comp.componentName || comp.component_name || comp.subAssemblyDetails?.productName || comp.subAssemblyDetails?.itemName || comp.subAssemblyDetails?.product_name || 'Sub Assembly';
+              
+              let childMaterials = [];
+              if (comp.subAssemblyDetails) {
+                const { mats: childMats, subAssys: childSubAssys } = explodeBOM(
+                  comp.subAssemblyDetails,
+                  compMultiplier,
+                  compName,
+                  compBomRef,
+                  comp.componentCode,
+                  false
+                );
+                childMaterials = childMats;
+                mats = [...mats, ...childMats];
+                subAssys = [...subAssys, ...childSubAssys];
+              }
+
               subAssys.push({
                 itemCode: comp.componentCode,
-                itemName: comp.componentName,
+                itemName: compName,
                 parentItemCode: sourceCode,
                 parentItemName: sourceName,
                 targetWarehouse: 'Work In Progress - NC',
                 scheduledDate: step4?.timeline?.startDate || new Date().toISOString().split('T')[0],
                 requiredQty: compMultiplier,
+                qtyPerUnit: comp.quantity,
                 uom: comp.uom || 'Nos',
                 bomNo: compBomRef,
-                manufacturingType: 'In House'
+                manufacturingType: 'In House',
+                rawMaterials: childMaterials.filter(m => m.sourceAssemblyCode === comp.componentCode)
               });
-              if (comp.subAssemblyDetails) {
-                const { mats: childMats, subAssys: childSubAssys } = explodeBOM(comp.subAssemblyDetails, compMultiplier, comp.componentCode, compBomRef, comp.componentCode);
-                mats = [...mats, ...childMats];
-                subAssys = [...subAssys, ...childSubAssys];
-              }
             });
           }
           return { mats, subAssys };
@@ -1445,8 +1705,10 @@ const ProductionPlanFormPage = () => {
           targetQty,
           prodName,
           activeBOM.bomNumber || 'N/A',
-          itemCode
+          itemCode,
+          true
         );
+        
         setMaterials(mats);
         setSubAssemblies(subAssys);
         
@@ -1457,7 +1719,8 @@ const ProductionPlanFormPage = () => {
           plannedQty: targetQty,
           uom: 'Nos',
           warehouse: 'Finished Goods - NC',
-          startDate: step4?.timeline?.startDate || new Date().toISOString().split('T')[0]
+          startDate: step4?.timeline?.startDate || new Date().toISOString().split('T')[0],
+          rawMaterials: mats.filter(m => m.isCore)
         }]);
       }
 
@@ -1874,10 +2137,10 @@ const ProductionPlanFormPage = () => {
         <div className="flex items-center justify-between mb-8 border-b border-slate-200 dark:border-slate-700 pb-1">
           <div className="flex items-center gap-1">
             {[
-              { id: 'strategic', label: 'Basic Info', icon: Settings },
-              { id: 'finishedGoods', label: 'Finished Goods', icon: Package },
-              { id: 'materials', label: 'Materials', icon: Layers },
-              { id: 'subAssemblies', label: 'Sub Assemblies', icon: Activity },
+              { id: 'strategic', label: 'Basic Info', icon: Settings, num: '01' },
+              { id: 'subAssemblies', label: 'Sub Assemblies', icon: Activity, num: '02' },
+              { id: 'finishedGoods', label: 'Finished Goods', icon: Package, num: '03' },
+              { id: 'materials', label: 'Materials', icon: Layers, num: '04' },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -1885,8 +2148,9 @@ const ProductionPlanFormPage = () => {
                   const el = document.getElementById(`section-${tab.id}`);
                   if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }}
-                className="flex items-center gap-2 px-4 py-2 text-xs font-bold transition-all border-b-2 border-transparent hover:text-purple-600 text-slate-500"
+                className="flex items-center gap-2 px-4 py-2 text-[10px] font-black transition-all border-b-2 border-transparent hover:text-purple-600 text-slate-500 uppercase tracking-widest"
               >
+                <span className="opacity-40">{tab.num}</span>
                 <tab.icon size={14} />
                 {tab.label}
               </button>
@@ -1902,9 +2166,9 @@ const ProductionPlanFormPage = () => {
         {/* Form */}
         <div className="space-y-8">
           <div id="section-strategic">{renderStrategicSection()}</div>
+          <div id="section-subAssemblies">{renderSubAssembliesSection()}</div>
           <div id="section-finishedGoods">{renderFinishedGoodsSection()}</div>
           <div id="section-materials">{renderMaterialsSection()}</div>
-          <div id="section-subAssemblies">{renderSubAssembliesSection()}</div>
         </div>
 
         <MaterialRequestModal 

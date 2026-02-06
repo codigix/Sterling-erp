@@ -6,6 +6,7 @@ const roleMiddleware = require('../../middleware/roleMiddleware');
 const router = express.Router();
 
 router.get('/role/:roleName', authMiddleware, departmentPortalController.getRoleByName);
+router.get('/departments', authMiddleware, departmentPortalController.getDepartments);
 router.get('/tasks/:roleId', authMiddleware, departmentPortalController.getTasksByRole);
 router.get('/tasks/:taskId/detail', authMiddleware, departmentPortalController.getTaskById);
 router.get('/role/:roleId/stats', authMiddleware, departmentPortalController.getRoleStats);

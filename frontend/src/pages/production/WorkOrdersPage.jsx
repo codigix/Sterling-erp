@@ -11,17 +11,15 @@ import {
   FileText,
   ClipboardList,
   Trash2,
-  CheckCircle2,
+  CheckCircle,
   Edit2,
   Layers,
   Zap,
   Settings,
-  Eye,
   Activity,
   ArrowLeft,
   LayoutDashboard,
   Timer,
-  CheckCircle,
   AlertTriangle,
   MoreVertical,
   Play,
@@ -204,37 +202,37 @@ const WorkOrdersPage = () => {
         </div>
 
         {/* Scheduling Analyzer */}
-        <div className="bg-slate-900 rounded-xl overflow-hidden mb-8">
-          <div className="px-6 py-4 border-b border-slate-800 flex items-center gap-3">
-            <Activity size={18} className="text-indigo-400" />
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider">Scheduling Analyzer</h3>
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-8">
+          <div className="px-6 py-4 border-b border-slate-100 bg-white flex items-center gap-3">
+            <TrendingUp size={18} className="text-indigo-600" />
+            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Scheduling Analyzer</h3>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-slate-800">
-            <div className="p-6">
-              <p className="text-xs text-slate-400 mb-2">High Priority Pending</p>
-              <h4 className="text-xl font-bold text-white mb-4">1 <span className="text-xs font-medium text-red-500 ml-2 uppercase tracking-widest">Critical</span></h4>
-              <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-                <div className="h-full bg-red-500 w-[20%]" />
+          <div className="grid grid-cols-1 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-slate-100 bg-white">
+            <div className="p-6 hover:bg-slate-50 transition-colors">
+              <p className="text-xs text-slate-500 mb-2">High Priority Pending</p>
+              <h4 className="text-xl font-bold text-slate-900 mb-4">1 <span className="text-xs font-medium text-red-500 ml-2 uppercase tracking-widest font-black">Critical</span></h4>
+              <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-full bg-red-500 w-[20%] shadow-[0_0_8px_rgba(239,68,68,0.2)]" />
               </div>
             </div>
-            <div className="p-6">
-              <p className="text-xs text-slate-400 mb-2">Due This Week</p>
-              <h4 className="text-xl font-bold text-white mb-4">0</h4>
-              <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+            <div className="p-6 hover:bg-slate-50 transition-colors">
+              <p className="text-xs text-slate-500 mb-2">Due This Week</p>
+              <h4 className="text-xl font-bold text-slate-900 mb-4">0</h4>
+              <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
                 <div className="h-full bg-amber-500 w-0" />
               </div>
             </div>
-            <div className="p-6">
-              <p className="text-xs text-slate-400 mb-2">Efficiency Rate</p>
-              <h4 className="text-xl font-bold text-white mb-4">88 %</h4>
-              <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-                <div className="h-full bg-indigo-500 w-[88%]" />
+            <div className="p-6 hover:bg-slate-50 transition-colors">
+              <p className="text-xs text-slate-500 mb-2">Efficiency Rate</p>
+              <h4 className="text-xl font-bold text-slate-900 mb-4">88 %</h4>
+              <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-full bg-indigo-600 w-[88%] shadow-[0_0_8px_rgba(79,70,229,0.2)]" />
               </div>
             </div>
-            <div className="p-6">
-              <p className="text-xs text-slate-400 mb-2">Ready for QC</p>
-              <h4 className="text-xl font-bold text-white mb-4">0</h4>
-              <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+            <div className="p-6 hover:bg-slate-50 transition-colors">
+              <p className="text-xs text-slate-500 mb-2">Ready for QC</p>
+              <h4 className="text-xl font-bold text-slate-900 mb-4">0</h4>
+              <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
                 <div className="h-full bg-emerald-500 w-0" />
               </div>
             </div>
@@ -298,10 +296,10 @@ const WorkOrdersPage = () => {
               <thead>
                 <tr className="bg-white border-b border-slate-100">
                   <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Order Identity</th>
-                  <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Item / Project</th>
-                  <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Status & Priority</th>
-                  <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Timeline</th>
-                  <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Actions</th>
+                  <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Item</th>
+                  <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-center">Status & Priority</th>
+                  <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-center">Progress</th>
+                  <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -315,67 +313,76 @@ const WorkOrdersPage = () => {
                   </tr>
                 ) : (
                   workOrders.map((order) => (
-                    <tr key={order.id} className="hover:bg-slate-50/50 transition-colors group">
+                    <tr key={order.id} className="hover:bg-slate-50/80 transition-all group border-b border-slate-50">
                       <td className="px-6 py-5">
                         <div className="flex items-center gap-3">
-                          <div className="p-2 bg-blue-50 text-blue-600 rounded-lg group-hover:scale-110 transition-transform">
+                          <div className="p-2.5 bg-blue-50 text-indigo-600 rounded-xl group-hover:scale-110 transition-transform shadow-sm border border-blue-100">
                             <FileText size={18} />
                           </div>
                           <div>
-                            <p className="text-sm font-bold text-slate-900 leading-tight">{order.work_order_no}</p>
-                            <p className="text-[10px] text-slate-500 mt-1 font-medium">{order.notes || 'No notes'}</p>
+                            <p className="text-[13px] font-black text-indigo-700 leading-none mb-1 uppercase tracking-tight">{order.work_order_no}</p>
+                            <p className="text-[10px] text-slate-500 font-bold flex items-center gap-1 uppercase tracking-wider">
+                              <Calendar size={10} className="text-slate-400" />
+                              {order.created_at ? new Date(order.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : '05 Feb'}
+                            </p>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-5">
                         <div>
-                          <p className="text-sm font-bold text-slate-700 leading-tight">{order.item_name}</p>
-                          <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-tight">{order.project_name || order.sales_order_no || 'Stock Order'}</p>
+                          <p className="text-[15px] font-black text-slate-900 leading-none mb-1.5 uppercase tracking-tight">{order.item_name}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-[11px] text-indigo-700 font-bold uppercase tracking-widest italic">{order.bom_no || 'No BOM'}</p>
+                            {(order.sales_order_no || order.project_name) && (
+                              <span className="text-[9px] px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded font-bold uppercase tracking-tighter border border-slate-200 dark:border-slate-700">
+                                {order.sales_order_no || order.project_name}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </td>
                       <td className="px-6 py-5">
-                        <div className="space-y-2">
-                          <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border ${getStatusBadge(order.status)}`}>
+                        <div className="flex flex-col items-center gap-2">
+                          <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black border uppercase tracking-wider ${getStatusBadge(order.status)} shadow-sm`}>
                              <Clock size={12} />
                              {(order.status || 'pending').replace('_', ' ')}
                           </div>
                           <div className="flex items-center gap-1.5">
-                             <div className={`w-1.5 h-1.5 rounded-full bg-current ${getPriorityColor(order.priority)}`} />
-                             <span className={`text-[10px] font-bold uppercase tracking-tight ${getPriorityColor(order.priority)}`}>
+                             <div className={`w-1.5 h-1.5 rounded-full shadow-[0_0_4px_currentColor] ${getPriorityColor(order.priority)}`} />
+                             <span className={`text-[10px] font-black uppercase tracking-widest ${getPriorityColor(order.priority)}`}>
                                {order.priority || 'medium'} priority
                              </span>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-5">
-                        <div className="space-y-1">
-                          <p className="text-[10px] text-slate-500 flex items-center gap-1">
-                            <Calendar size={12} />
-                            Start: {order.planned_start_date ? new Date(order.planned_start_date).toLocaleDateString() : 'TBD'}
-                          </p>
-                          <p className="text-[10px] text-slate-500 flex items-center gap-1">
-                            <Clock size={12} />
-                            End: {order.planned_end_date ? new Date(order.planned_end_date).toLocaleDateString() : 'TBD'}
-                          </p>
+                        <div className="max-w-[120px] mx-auto text-center">
+                          <div className="flex items-center justify-center mb-1.5">
+                            <span className="text-[10px] font-black text-slate-600 uppercase">0 / <span className="text-indigo-600">0%</span></span>
+                          </div>
+                          <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden p-[1px]">
+                            <div className="h-full bg-indigo-500 w-0 rounded-full shadow-[0_0_8px_rgba(99,102,241,0.3)]" />
+                          </div>
                         </div>
                       </td>
                       <td className="px-6 py-5">
-                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center justify-end gap-1.5">
                           <button 
-                            onClick={() => navigate(`/department/production/work-orders/${order.id}`)}
-                            className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="View Details"
+                            onClick={() => navigate(`/department/production/job-cards`, { state: { workOrderId: order.id, workOrderNo: order.work_order_no } })}
+                            className="p-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all shadow-sm flex items-center justify-center" 
+                            title="Track Production"
                           >
-                            <Eye size={18} />
+                            <Activity size={18} />
                           </button>
                           <button 
                             onClick={() => navigate(`/department/production/work-orders/edit/${order.id}`)}
-                            className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-all" title="Edit"
+                            className="p-2 text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all" title="Edit"
                           >
                             <Edit2 size={18} />
                           </button>
                           <button 
                             onClick={() => handleDelete(order.id)}
-                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all" title="Delete"
+                            className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all" title="Delete"
                           >
                             <Trash2 size={18} />
                           </button>

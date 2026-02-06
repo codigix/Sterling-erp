@@ -11,6 +11,7 @@ async function migrate() {
         id INT PRIMARY KEY AUTO_INCREMENT,
         work_order_no VARCHAR(50) UNIQUE NOT NULL,
         sales_order_id INT,
+        root_card_id INT,
         project_id INT,
         item_code VARCHAR(100) NOT NULL,
         item_name VARCHAR(255),
@@ -28,6 +29,7 @@ async function migrate() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         FOREIGN KEY (sales_order_id) REFERENCES sales_orders(id) ON DELETE SET NULL,
+        FOREIGN KEY (root_card_id) REFERENCES root_cards(id) ON DELETE SET NULL,
         FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL,
         FOREIGN KEY (created_by) REFERENCES users(id)
       )

@@ -14,14 +14,14 @@ import {
   Play,
   Edit2,
   Trash2,
-  CheckCircle2,
+  CheckCircle,
   Box,
   Layers,
   LayoutDashboard,
   TrendingUp,
   Users
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import CreateJobCardModal from './components/CreateJobCardModal';
 import InlineOperationEdit from './components/InlineOperationEdit';
@@ -35,6 +35,22 @@ const JobCardsPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingOperationId, setEditingOperationId] = useState(null);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.state?.workOrderId) {
+      const orderId = parseInt(location.state.workOrderId);
+      setExpandedOrders(new Set([orderId]));
+      
+      // Scroll to the specific job card after a short delay to ensure list is rendered
+      setTimeout(() => {
+        const element = document.getElementById(`work-order-${orderId}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 500);
+    }
+  }, [location.state]);
 
   const fetchJobCards = useCallback(async () => {
     try {
@@ -195,11 +211,11 @@ const JobCardsPage = () => {
                 {workOrders.reduce((acc, wo) => acc + (wo.operations?.filter(op => op.status === 'completed').length || 0), 0)}
               </h3>
               <p className="text-[10px] text-emerald-500 mt-1 font-bold flex items-center gap-1">
-                <CheckCircle2 size={10} /> +5% Finalized Today
+                <CheckCircle size={10} /> +5% Finalized Today
               </p>
             </div>
             <div className="w-12 h-12 bg-green-50 text-green-500 rounded-xl flex items-center justify-center group-hover:bg-green-600 group-hover:text-white transition-all">
-              <CheckCircle2 size={22} />
+              <CheckCircle size={22} />
             </div>
           </div>
 
@@ -261,7 +277,7 @@ const JobCardsPage = () => {
             </div>
           ) : (
             workOrders.map((wo) => (
-              <div key={wo.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+              <div key={wo.id} id={`work-order-${wo.id}`} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
                 {/* Work Order Header */}
                 <div 
                   className={`p-4 flex items-center justify-between cursor-pointer transition-colors ${expandedOrders.has(wo.id) ? 'bg-blue-50/30' : 'hover:bg-slate-50'}`}

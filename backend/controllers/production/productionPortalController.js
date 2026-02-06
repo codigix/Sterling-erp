@@ -225,44 +225,39 @@ exports.getEmployees = async (req, res) => {
   try {
     const pool = require('../../config/database');
     
+    // Fetch only registered employees with an assigned department
     const [rows] = await pool.execute(`
-      SELECT e.id, CONCAT(e.first_name, ' ', e.last_name) as username, e.email, e.designation, d.name as department_name
-      FROM employees e 
-      LEFT JOIN departments d ON e.department_id = d.id 
-      WHERE e.status = 'active' AND d.name = 'Production'
-      ORDER BY e.first_name ASC
+      SELECT 
+        e.id as emp_id,
+        u.id as user_id,
+        e.login_id as employee_id_str,
+        COALESCE(CONCAT(e.first_name, ' ', e.last_name), u.username) as display_name,
+        COALESCE(e.email, u.email) as email, 
+        COALESCE(e.designation, r.name, 'Staff') as designation, 
+        d.name as department_name
+      FROM employees e
+      INNER JOIN departments d ON e.department_id = d.id
+      LEFT JOIN users u ON (e.email = u.email AND e.email IS NOT NULL)
+      LEFT JOIN roles r ON u.role_id = r.id
+      WHERE e.status = 'active'
+      ORDER BY display_name ASC
     `);
     
     const employees = rows.map(emp => ({
-      id: emp.id,
-      username: emp.username,
+      id: emp.emp_id || emp.user_id,
+      employee_id: emp.employee_id_str,
+      name: emp.display_name,
+      username: emp.display_name,
       email: emp.email,
       designation: emp.designation,
       department: emp.department_name
     }));
 
-    console.log('[getEmployees] Returning Production employees:', employees);
+    console.log('[getEmployees] Returning all available personnel:', employees.length);
     res.json(employees);
   } catch (error) {
     console.error('[getEmployees] Error:', error);
-    const pool = require('../../config/database');
-    const [rows] = await pool.execute(`
-      SELECT e.id, CONCAT(e.first_name, ' ', e.last_name) as username, e.email, e.designation, d.name as department_name
-      FROM employees e 
-      LEFT JOIN departments d ON e.department_id = d.id 
-      WHERE e.status = 'active'
-      ORDER BY e.first_name ASC
-    `);
-    
-    const employees = rows.map(emp => ({
-      id: emp.id,
-      username: emp.username,
-      email: emp.email,
-      designation: emp.designation,
-      department: emp.department_name
-    }));
-    
-    res.json(employees);
+    res.status(500).json({ message: 'Failed to fetch personnel' });
   }
 };
 
