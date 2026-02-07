@@ -14,7 +14,7 @@ const DEMO_USERS = {
   "john.doe": { password: "password", role: "Employee", type: "employee", name: "John Doe", designation: "Senior Engineer", department: "Engineering", departmentId: 1 },
   "jane.smith": { password: "password", role: "Supervisor", type: "employee", name: "Jane Smith", designation: "Project Supervisor", department: "Production", departmentId: 2 },
   "rajesh.kumar": { password: "password", role: "Employee", type: "employee", name: "Rajesh Kumar", designation: "Engineer", department: "Engineering", departmentId: 1 },
-  "sudarshan.kale": { password: "password", role: "Supervisor", type: "employee", name: "Sudarshan Kale", designation: "Supervisor", department: "Production", departmentId: 2, id: 18 },
+  "sudarshan.kale": { password: "password", role: "Supervisor", type: "employee", name: "Sudarshan Kale", designation: "Supervisor", department: "Production", departmentId: 2, id: 21 },
   "inventory.manager": { password: "password", role: "Inventory Manager", type: "user", name: "Inventory Manager", department: "Inventory", departmentId: 5 },
   "design.engineer": { password: "password", role: "Design Engineer", type: "user", name: "Design Engineer", designation: "Design Engineer", department: "Engineering", departmentId: 1 },
   "qc.manager": { password: "password", role: "QC Manager", type: "user", name: "QC Manager", department: "Quality Control", departmentId: 3 },

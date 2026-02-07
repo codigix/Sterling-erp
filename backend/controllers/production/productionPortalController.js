@@ -244,7 +244,7 @@ exports.getEmployees = async (req, res) => {
     `);
     
     const employees = rows.map(emp => ({
-      id: emp.emp_id || emp.user_id,
+      id: emp.user_id || emp.emp_id,
       employee_id: emp.employee_id_str,
       name: emp.display_name,
       username: emp.display_name,

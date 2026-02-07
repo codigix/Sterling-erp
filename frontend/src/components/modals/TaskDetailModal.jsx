@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Modal, ModalBody, ModalHeader } from '../ui/Modal';
 import SwipeButton from '../ui/SwipeButton';
 import Badge from '../ui/Badge';
-import { Clock, AlertCircle, X, CheckCircle2 } from 'lucide-react';
+import { Clock, AlertCircle, X, CheckCircle2, Play, Zap } from 'lucide-react';
 
-const TaskDetailModal = ({ task, isOpen, onClose, onTaskComplete, isUpdating }) => {
+const TaskDetailModal = ({ task, isOpen, onClose, onTaskComplete, isUpdating, onTaskStart }) => {
+  const navigate = useNavigate();
 
   if (!task) return null;
 
@@ -168,7 +170,31 @@ const TaskDetailModal = ({ task, isOpen, onClose, onTaskComplete, isUpdating }) 
           </div>
         </div>
 
-        <div className="pt-2">
+        <div className="pt-2 flex flex-col gap-3">
+          {task.task_type === 'job_card' && task.status === 'pending' && (
+            <button
+              onClick={() => onTaskStart && onTaskStart(task)}
+              disabled={isUpdating}
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-green-600 hover:bg-green-700 text-white rounded-xl font-semibold transition-all shadow-sm disabled:opacity-50"
+            >
+              <Play className="w-5 h-5 fill-current" />
+              Start Production
+            </button>
+          )}
+
+          {task.task_type === 'job_card' && task.status === 'in_progress' && (
+            <button
+              onClick={() => {
+                navigate(`/employee/operations/${task.reference_id}/entry`);
+                onClose();
+              }}
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold transition-all shadow-sm"
+            >
+              <Zap className="w-5 h-5 fill-current" />
+              Production Entry
+            </button>
+          )}
+
           <SwipeButton
             onSwipeComplete={handleSwipeComplete}
             isLoading={isUpdating}

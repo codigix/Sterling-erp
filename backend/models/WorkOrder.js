@@ -38,12 +38,13 @@ class WorkOrder {
     try {
       const [result] = await connection.execute(
         `INSERT INTO work_order_operations 
-        (work_order_id, operation_name, workstation, status, sequence, planned_start_date, planned_end_date, notes)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        (work_order_id, operation_name, workstation, operator_id, status, sequence, planned_start_date, planned_end_date, notes)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           data.workOrderId,
           data.operationName,
           data.workstation || null,
+          data.operatorId || null,
           data.status || 'pending',
           data.sequence,
           data.plannedStartDate || null,
@@ -62,13 +63,14 @@ class WorkOrder {
     try {
       const [result] = await connection.execute(
         `UPDATE work_order_operations SET 
-          operation_name = ?, workstation = ?, status = ?, 
+          operation_name = ?, workstation = ?, operator_id = ?, status = ?, 
           planned_start_date = ?, planned_end_date = ?, 
           notes = ?, updated_at = CURRENT_TIMESTAMP
          WHERE id = ?`,
         [
           data.operationName,
           data.workstation || null,
+          data.operatorId || null,
           data.status,
           data.plannedStartDate || null,
           data.plannedEndDate || null,
@@ -150,7 +152,12 @@ class WorkOrder {
 
     const workOrderIds = workOrders.map(wo => wo.id);
     const [operations] = await pool.query(
-      "SELECT * FROM work_order_operations WHERE work_order_id IN (?) ORDER BY sequence ASC",
+      `SELECT woo.*, COALESCE(CONCAT(e.first_name, ' ', e.last_name), u.username) as operator_name 
+       FROM work_order_operations woo 
+       LEFT JOIN users u ON woo.operator_id = u.id
+       LEFT JOIN employees e ON (u.email = e.email AND u.email IS NOT NULL)
+       WHERE woo.work_order_id IN (?) 
+       ORDER BY woo.sequence ASC`,
       [workOrderIds]
     );
 
@@ -186,7 +193,12 @@ class WorkOrder {
     const workOrder = rows[0];
     
     const [operations] = await pool.execute(
-      "SELECT * FROM work_order_operations WHERE work_order_id = ? ORDER BY sequence ASC",
+      `SELECT woo.*, COALESCE(CONCAT(e.first_name, ' ', e.last_name), u.username) as operator_name 
+       FROM work_order_operations woo 
+       LEFT JOIN users u ON woo.operator_id = u.id
+       LEFT JOIN employees e ON (u.email = e.email AND u.email IS NOT NULL)
+       WHERE woo.work_order_id = ? 
+       ORDER BY woo.sequence ASC`,
       [id]
     );
     workOrder.operations = operations;
@@ -254,8 +266,6 @@ class WorkOrder {
       );
 
       if (data.operations && Array.isArray(data.operations)) {
-        // Simple sync: delete and recreate for now, or update if id exists
-        // For simplicity in this iteration, we'll delete and recreate if no ID is provided for operations
         await connection.execute("DELETE FROM work_order_operations WHERE work_order_id = ?", [id]);
         for (const op of data.operations) {
           await this.createOperation({ ...op, workOrderId: id }, connection);
@@ -282,6 +292,142 @@ class WorkOrder {
   static async delete(id) {
     const [result] = await pool.execute("DELETE FROM work_orders WHERE id = ?", [id]);
     return result.affectedRows > 0;
+  }
+
+  // --- Production Entry Methods ---
+
+  static async startOperation(id, operatorId, workstationId) {
+    try {
+      // Use execute for prepared statements and COALESCE for cleaner SQL
+      const [result] = await pool.execute(
+        `UPDATE work_order_operations SET 
+          status = 'in_progress', 
+          actual_start_date = COALESCE(actual_start_date, NOW()),
+          operator_id = COALESCE(?, operator_id),
+          workstation_id = COALESCE(?, workstation_id)
+         WHERE id = ?`,
+        [operatorId || null, workstationId || null, id]
+      );
+
+      if (result.affectedRows > 0) {
+        // Also update parent work order status to in_progress if it's not already
+        const [rows] = await pool.execute(
+          "SELECT work_order_id FROM work_order_operations WHERE id = ?",
+          [id]
+        );
+        if (rows && rows.length > 0) {
+          await pool.execute(
+            "UPDATE work_orders SET status = 'in_progress', actual_start_date = COALESCE(actual_start_date, NOW()) WHERE id = ?",
+            [rows[0].work_order_id]
+          );
+        }
+      }
+      return result.affectedRows > 0;
+    } catch (error) {
+      console.error("Error in WorkOrder.startOperation:", error);
+      throw error;
+    }
+  }
+
+  static async getOperationById(id) {
+    const [rows] = await pool.execute(
+      `SELECT woo.*, wo.work_order_no, wo.item_name, wo.quantity as target_qty
+       FROM work_order_operations woo
+       JOIN work_orders wo ON woo.work_order_id = wo.id
+       WHERE woo.id = ?`,
+      [id]
+    );
+    return rows[0] || null;
+  }
+
+  static async addTimeLog(data) {
+    const [result] = await pool.execute(
+      `INSERT INTO work_order_time_logs 
+      (operation_id, operator_id, workstation_id, start_time, end_time, duration_minutes, produced_qty, shift, notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        data.operationId,
+        data.operatorId || null,
+        data.workstationId || null,
+        data.startTime,
+        data.endTime || null,
+        data.durationMinutes || null,
+        data.producedQty || 0,
+        data.shift || null,
+        data.notes || null
+      ]
+    );
+    return result.insertId;
+  }
+
+  static async addQualityEntry(data) {
+    const [result] = await pool.execute(
+      `INSERT INTO work_order_quality_entries 
+      (operation_id, operator_id, inspection_date, accepted_qty, rejected_qty, scrap_qty, rejection_reason, shift, notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        data.operationId,
+        data.operatorId || null,
+        data.inspectionDate || new Date(),
+        data.acceptedQty || 0,
+        data.rejectedQty || 0,
+        data.scrapQty || 0,
+        data.rejectionReason || null,
+        data.shift || null,
+        data.notes || null
+      ]
+    );
+    return result.insertId;
+  }
+
+  static async addDowntimeLog(data) {
+    const [result] = await pool.execute(
+      `INSERT INTO work_order_downtime_logs 
+      (operation_id, downtime_type, start_time, end_time, duration_minutes, shift, notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        data.operationId,
+        data.downtimeType,
+        data.startTime,
+        data.endTime || null,
+        data.durationMinutes || null,
+        data.shift || null,
+        data.notes || null
+      ]
+    );
+    return result.insertId;
+  }
+
+  static async getOperationLogs(operationId) {
+    const [timeLogs] = await pool.execute(
+      `SELECT tl.*, COALESCE(CONCAT(e.first_name, ' ', e.last_name), u.username) as operator_name, w.display_name as workstation_name
+       FROM work_order_time_logs tl
+       LEFT JOIN users u ON tl.operator_id = u.id
+       LEFT JOIN employees e ON (u.email = e.email AND u.email IS NOT NULL)
+       LEFT JOIN workstations w ON tl.workstation_id = w.id
+       WHERE tl.operation_id = ? ORDER BY tl.start_time DESC`,
+      [operationId]
+    );
+
+    const [qualityEntries] = await pool.execute(
+      `SELECT qe.*, COALESCE(CONCAT(e.first_name, ' ', e.last_name), u.username) as operator_name
+       FROM work_order_quality_entries qe
+       LEFT JOIN users u ON qe.operator_id = u.id
+       LEFT JOIN employees e ON (u.email = e.email AND u.email IS NOT NULL)
+       WHERE qe.operation_id = ? ORDER BY qe.inspection_date DESC`,
+      [operationId]
+    );
+
+    const [downtimeLogs] = await pool.execute(
+      "SELECT * FROM work_order_downtime_logs WHERE operation_id = ? ORDER BY start_time DESC",
+      [operationId]
+    );
+
+    return {
+      timeLogs,
+      qualityEntries,
+      downtimeLogs
+    };
   }
 }
 

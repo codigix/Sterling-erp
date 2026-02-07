@@ -4,6 +4,7 @@ const employeePortalController = require('../../controllers/employee/employeePor
 const authMiddleware = require('../../middleware/authMiddleware');
 
 router.get('/departments', authMiddleware, employeePortalController.getAllDepartments);
+router.get('/employees', authMiddleware, employeePortalController.getAllEmployees);
 router.get('/departments/:departmentId/employees', authMiddleware, employeePortalController.getEmployeesByDepartment);
 router.get('/stats/:employeeId', authMiddleware, employeePortalController.getEmployeeStats);
 router.get('/tasks/:employeeId', authMiddleware, employeePortalController.getEmployeeTasks);

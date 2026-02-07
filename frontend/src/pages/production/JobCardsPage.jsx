@@ -78,6 +78,41 @@ const JobCardsPage = () => {
     fetchJobCards();
   }, [fetchJobCards]);
 
+  const handleStartOperation = async (operation) => {
+    try {
+      const result = await Swal.fire({
+        title: 'Start Operation?',
+        text: 'This will move the operation to in-progress status.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Yes, Start!'
+      });
+
+      if (result.isConfirmed) {
+        await axios.post(`/production/work-orders/operations/${operation.id}/start`, {
+          operatorId: operation.operator_id,
+          workstationId: operation.workstation_id
+        });
+        Swal.fire({
+          title: 'Started!',
+          text: 'Operation is now in production.',
+          icon: 'success',
+          timer: 1500,
+          showConfirmButton: false
+        });
+        
+        // Redirect to Production Entry page
+        navigate(`/department/production/operations/${operation.id}/entry`);
+      }
+    } catch (error) {
+      console.error('Error starting operation:', error);
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Failed to start operation';
+      Swal.fire('Error', errorMessage, 'error');
+    }
+  };
+
   const handleDeleteOperation = async (id) => {
     try {
       const result = await Swal.fire({
@@ -371,7 +406,9 @@ const JobCardsPage = () => {
                                 </div>
                                 <div className="flex items-center gap-2 mt-1.5 text-slate-400">
                                   <Users size={14} />
-                                  <span className="text-[10px] font-medium italic">Unassigned</span>
+                                  <span className="text-[10px] font-medium italic">
+                                    {op.operator_name || 'Unassigned'}
+                                  </span>
                                 </div>
                               </div>
 
@@ -394,10 +431,23 @@ const JobCardsPage = () => {
                               </div>
 
                               <div className="col-span-2 flex items-center justify-end gap-2">
-                                <button className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg text-[11px] font-black hover:bg-emerald-600 hover:text-white transition-all">
-                                  <Play size={14} fill="currentColor" />
-                                  Start
-                                </button>
+                                {op.status === 'in_progress' ? (
+                                  <button 
+                                    onClick={() => navigate(`/department/production/operations/${op.id}/entry`)}
+                                    className="p-1.5 bg-indigo-600 text-white rounded-lg transition-all shadow-sm hover:shadow-indigo-200"
+                                    title="Production Entry"
+                                  >
+                                    <Zap size={18} fill="white" />
+                                  </button>
+                                ) : (
+                                  <button 
+                                    onClick={() => handleStartOperation(op)}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg text-[11px] font-black hover:bg-emerald-600 hover:text-white transition-all"
+                                  >
+                                    <Play size={14} fill="currentColor" />
+                                    Start
+                                  </button>
+                                )}
                                 <button 
                                   onClick={() => setEditingOperationId(op.id)}
                                   className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"

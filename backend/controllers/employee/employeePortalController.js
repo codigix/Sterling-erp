@@ -9,6 +9,50 @@ const RootCard = require('../../models/RootCard');
 const ProductionPlan = require('../../models/ProductionPlan');
 const bcrypt = require('bcryptjs');
 
+exports.getAllEmployees = async (req, res) => {
+  try {
+    const pool = require('../../config/database');
+    const [rows] = await pool.execute(`
+      SELECT 
+        e.id as emp_id,
+        u.id as user_id,
+        e.login_id,
+        e.first_name,
+        e.last_name,
+        e.email,
+        e.designation,
+        d.name as department_name,
+        e.department_id,
+        e.role_id,
+        r.name as role_name,
+        e.status
+      FROM employees e
+      LEFT JOIN users u ON (e.email = u.email AND e.email IS NOT NULL)
+      LEFT JOIN departments d ON e.department_id = d.id
+      LEFT JOIN roles r ON e.role_id = r.id
+      ORDER BY e.first_name ASC
+    `);
+    
+    const formatted = rows.map(emp => ({
+      id: emp.user_id || emp.emp_id,
+      name: `${emp.first_name} ${emp.last_name}`,
+      employee_id: emp.login_id,
+      email: emp.email,
+      designation: emp.designation,
+      department: emp.department_name,
+      departmentId: emp.department_id,
+      roleId: emp.role_id,
+      role: emp.role_name,
+      status: emp.status
+    }));
+
+    res.json(formatted);
+  } catch (error) {
+    console.error('Get all employees error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
 exports.getEmployeesByDepartment = async (req, res) => {
   try {
     const { departmentId } = req.params;
@@ -81,10 +125,12 @@ exports.getEmployeeTasks = async (req, res) => {
       title: t.task,
       description: `${t.stage_name || 'Unknown'} - Production Stage`,
       type: 'worker_task',
+      task_type: 'worker_task',
       status: t.status,
       priority: t.priority || 'medium',
       project_id: t.project_id,
       project_name: t.project_name,
+      product_name: t.product_name || t.project_name,
       project_code: t.project_code,
       root_card_id: t.root_card_id,
       root_card_title: t.root_card_title,
@@ -102,10 +148,13 @@ exports.getEmployeeTasks = async (req, res) => {
       title: t.title,
       description: t.description,
       type: t.type,
+      task_type: t.type, // 'job_card' or other types
+      reference_id: t.work_order_operation_id || t.production_plan_stage_id || t.sales_order_id,
       status: t.status,
       priority: t.priority || 'medium',
       project_id: t.project_id,
       project_name: t.project_name,
+      product_name: t.product_name,
       project_code: t.project_code,
       root_card_title: t.root_card_title,
       stage_name: t.stage_name,

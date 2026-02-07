@@ -14,30 +14,41 @@ const EmployeeDashboardHome = () => {
     projectsActive: 0,
     hoursLogged: 0
   });
+  const [recentTasks, setRecentTasks] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchStatsAndTasks = async () => {
       try {
         if (user?.id) {
-          const response = await axios.get(`/employee/portal/stats/${user.id}`);
+          const [statsRes, tasksRes] = await Promise.all([
+            axios.get(`/employee/portal/stats/${user.id}`),
+            axios.get(`/employee/portal/tasks/${user.id}`)
+          ]);
+          
           setStats({
-            tasksCompleted: response.data.tasksCompleted || 0,
-            tasksInProgress: response.data.tasksInProgress || 0,
-            attendanceRate: response.data.attendanceRate || 0,
-            upcomingTasks: response.data.tasksPending || 0,
+            tasksCompleted: statsRes.data.tasksCompleted || 0,
+            tasksInProgress: statsRes.data.tasksInProgress || 0,
+            attendanceRate: statsRes.data.attendanceRate || 0,
+            upcomingTasks: statsRes.data.tasksPending || 0,
             projectsActive: 2,
-            hoursLogged: response.data.hoursLogged || 0
+            hoursLogged: statsRes.data.hoursLogged || 0
           });
+
+          // Sort by creation date and take top 3
+          const sortedTasks = (tasksRes.data || [])
+            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+            .slice(0, 3);
+          setRecentTasks(sortedTasks);
         }
       } catch (error) {
-        console.error('Failed to fetch stats:', error);
+        console.error('Failed to fetch dashboard data:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchStats();
+    fetchStatsAndTasks();
   }, [user?.id]);
 
   return (
@@ -198,27 +209,27 @@ const EmployeeDashboardHome = () => {
             </h2>
           </div>
           <div className="space-y-3">
-            {[
-              { title: "Fix Login Bug", status: "In Progress", priority: "High" },
-              { title: "Database Migration", status: "Pending", priority: "Medium" },
-              { title: "API Documentation", status: "In Progress", priority: "Low" }
-            ].map((task, i) => (
-              <div key={i} className="flex items-start justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
-                <div className="flex-1">
-                  <p className="font-medium text-sm text-slate-900 dark:text-white">{task.title}</p>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">{task.status}</p>
+            {recentTasks.length === 0 ? (
+              <p className="text-sm text-slate-500 text-center py-4">No recent tasks</p>
+            ) : (
+              recentTasks.map((task, i) => (
+                <div key={i} className="flex items-start justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                  <div className="flex-1">
+                    <p className="font-medium text-sm text-slate-900 dark:text-white">{task.title}</p>
+                    <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 uppercase">{task.status.replace('_', ' ')}</p>
+                  </div>
+                  <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase whitespace-nowrap ml-2 ${
+                    task.priority === 'critical' || task.priority === 'high'
+                      ? 'bg-red-100 text-red-800' 
+                      : task.priority === 'medium'
+                      ? 'bg-amber-100 text-amber-800'
+                      : 'bg-blue-100 text-blue-800'
+                  }`}>
+                    {task.priority}
+                  </span>
                 </div>
-                <span className={`text-xs font-medium px-2 py-1 rounded-md whitespace-nowrap ml-2 ${
-                  task.priority === 'High' 
-                    ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' 
-                    : task.priority === 'Medium'
-                    ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
-                    : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                }`}>
-                  {task.priority}
-                </span>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 

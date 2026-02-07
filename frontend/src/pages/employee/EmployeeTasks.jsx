@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "../../utils/api";
 import { useAuth } from "../../context/AuthContext";
 import Badge from "../../components/ui/Badge";
 import TaskDetailModal from "../../components/modals/TaskDetailModal";
-import { CheckSquare, Clock, AlertCircle, Filter, RotateCw, CheckCircle2 } from "lucide-react";
+import { CheckSquare, Clock, AlertCircle, Filter, RotateCw, CheckCircle2, Play, Zap } from "lucide-react";
 
 const EmployeeTasks = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -90,6 +92,44 @@ const EmployeeTasks = () => {
     } catch (err) {
       console.error('Update task error:', err);
       setError('Failed to update task status');
+    } finally {
+      setUpdatingTaskId(null);
+    }
+  };
+
+  const handleStartTask = async (task) => {
+    try {
+      setUpdatingTaskId(task.id);
+      
+      // If it's a job card task, call the specialized start endpoint
+      if (task.task_type === 'job_card') {
+        await axios.post(`/production/work-orders/operations/${task.reference_id}/start`);
+      } else {
+        await axios.put(`/employee/portal/tasks/${task.id}/status`, {
+          status: 'in_progress'
+        });
+      }
+      
+      const updatedTasks = tasks.map(t => 
+        t.id === task.id ? { ...t, status: 'in_progress' } : t
+      );
+      setTasks(updatedTasks);
+
+      if (selectedTask && selectedTask.id === task.id) {
+        setSelectedTask({ ...selectedTask, status: 'in_progress' });
+      }
+
+      setSuccessMessage("Task started successfully");
+      setTimeout(() => setSuccessMessage(null), 3000);
+      
+      // If it's a job card, navigate to production entry
+      if (task.task_type === 'job_card') {
+        navigate(`/employee/operations/${task.reference_id}/entry`);
+        setIsModalOpen(false);
+      }
+    } catch (err) {
+      console.error('Start task error:', err);
+      setError(err.response?.data?.message || 'Failed to start task');
     } finally {
       setUpdatingTaskId(null);
     }
@@ -223,6 +263,34 @@ const EmployeeTasks = () => {
                     )}
                   </div>
                 </div>
+
+                <div className="flex flex-col gap-2 ml-4">
+                  {task.task_type === 'job_card' && task.status === 'pending' && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleStartTask(task);
+                      }}
+                      disabled={updatingTaskId === task.id}
+                      className="p-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
+                      title="Start Production"
+                    >
+                      <Play className="w-5 h-5 fill-current" />
+                    </button>
+                  )}
+                  {task.task_type === 'job_card' && task.status === 'in_progress' && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/employee/operations/${task.reference_id}/entry`);
+                      }}
+                      className="p-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors"
+                      title="Production Entry"
+                    >
+                      <Zap className="w-5 h-5 fill-current" />
+                    </button>
+                  )}
+                </div>
               </div>
             ))
           )}
@@ -234,6 +302,7 @@ const EmployeeTasks = () => {
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         onTaskComplete={handleUpdateTaskStatus}
+        onTaskStart={handleStartTask}
         isUpdating={updatingTaskId === selectedTask?.id}
       />
     </div>

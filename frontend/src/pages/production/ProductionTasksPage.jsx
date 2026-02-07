@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "../../utils/api";
 import {
   Plus,
@@ -14,6 +15,7 @@ import Badge from "../../components/ui/Badge";
 import ProductionPlanFormPage from "./ProductionPlanFormPage";
 
 const ProductionTasksPage = () => {
+  const navigate = useNavigate();
   const [rootCards, setRootCards] = useState([]);
   const [stages, setStages] = useState([]);
   const [loading, setLoading] = useState(true);

@@ -78,6 +78,7 @@ import WorkOrderDetailPage from "./pages/production/WorkOrderDetailPage";
 import JobCardsPage from "./pages/production/JobCardsPage";
 import WorkstationsPage from "./pages/production/WorkstationsPage";
 import WorkstationFormPage from "./pages/production/WorkstationFormPage";
+import ProductionEntryPage from "./pages/production/ProductionEntryPage";
 
 // Employee Portal
 import EmployeePortalPage from "./pages/employee/EmployeePortalPage";
@@ -197,6 +198,7 @@ function App() {
               <Route path="production/performance" element={<PerformancePage />} />
               <Route path="production/performance/metrics" element={<PerformanceMetricsPage />} />
               <Route path="production/outsource-tasks" element={<OutsourceTasksPage />} />
+              <Route path="production/operations/:id/entry" element={<ProductionEntryPage />} />
             </Route>
 
             {/* Employee Routes */}
@@ -209,6 +211,7 @@ function App() {
               <Route path="alerts" element={<EmployeeAlerts />} />
               <Route path="updates" element={<EmployeeUpdates />} />
               <Route path="settings" element={<EmployeeSettings />} />
+              <Route path="operations/:id/entry" element={<ProductionEntryPage />} />
             </Route>
 
             {/* Legacy Employee Portal */}

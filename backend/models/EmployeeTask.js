@@ -3,9 +3,10 @@ const RootCardStep = require('./RootCardStep');
 
 class EmployeeTask {
   static async findAll(filters = {}) {
-    let query = `SELECT wt.*, CONCAT(e.first_name, ' ', e.last_name) as username, ms.stage_name, rc.title as root_card_title
+    let query = `SELECT wt.*, COALESCE(CONCAT(e.first_name, ' ', e.last_name), u.username) as username, ms.stage_name, rc.title as root_card_title
                  FROM worker_tasks wt
-                 LEFT JOIN employees e ON wt.worker_id = e.id
+                 LEFT JOIN users u ON wt.worker_id = u.id
+                 LEFT JOIN employees e ON (u.email = e.email AND u.email IS NOT NULL)
                  LEFT JOIN manufacturing_stages ms ON wt.stage_id = ms.id
                  LEFT JOIN root_cards rc ON ms.root_card_id = rc.id
                  WHERE 1=1`;
@@ -39,9 +40,10 @@ class EmployeeTask {
 
   static async findById(id) {
     const [rows] = await pool.execute(
-      `SELECT wt.*, CONCAT(e.first_name, ' ', e.last_name) as username, ms.stage_name, rc.title as root_card_title
+      `SELECT wt.*, COALESCE(CONCAT(e.first_name, ' ', e.last_name), u.username) as username, ms.stage_name, rc.title as root_card_title
        FROM worker_tasks wt
-       LEFT JOIN employees e ON wt.worker_id = e.id
+       LEFT JOIN users u ON wt.worker_id = u.id
+       LEFT JOIN employees e ON (u.email = e.email AND u.email IS NOT NULL)
        LEFT JOIN manufacturing_stages ms ON wt.stage_id = ms.id
        LEFT JOIN root_cards rc ON ms.root_card_id = rc.id
        WHERE wt.id = ?`,
@@ -52,9 +54,10 @@ class EmployeeTask {
 
   static async findByWorkerId(workerId) {
     const [rows] = await pool.execute(
-      `SELECT wt.*, CONCAT(e.first_name, ' ', e.last_name) as username, ms.stage_name, rc.title as root_card_title
+      `SELECT wt.*, COALESCE(CONCAT(e.first_name, ' ', e.last_name), u.username) as username, ms.stage_name, rc.title as root_card_title
        FROM worker_tasks wt
-       LEFT JOIN employees e ON wt.worker_id = e.id
+       LEFT JOIN users u ON wt.worker_id = u.id
+       LEFT JOIN employees e ON (u.email = e.email AND u.email IS NOT NULL)
        LEFT JOIN manufacturing_stages ms ON wt.stage_id = ms.id
        LEFT JOIN root_cards rc ON ms.root_card_id = rc.id
        WHERE wt.worker_id = ?
@@ -118,7 +121,8 @@ class EmployeeTask {
                  LEFT JOIN root_cards rc ON ms.root_card_id = rc.id
                  LEFT JOIN projects p ON rc.project_id = p.id
                  LEFT JOIN sales_orders so ON p.sales_order_id = so.id
-                 LEFT JOIN employees e ON wt.worker_id = e.id
+                 LEFT JOIN users u ON wt.worker_id = u.id
+                 LEFT JOIN employees e ON (u.email = e.email AND u.email IS NOT NULL)
                  WHERE wt.worker_id = ?`;
     const params = [employeeId];
 
@@ -149,14 +153,15 @@ class EmployeeTask {
   static async createAssignedTask(employeeId, data, connection = null) {
     const db = connection || pool;
     const [result] = await db.execute(
-      `INSERT INTO employee_tasks (employee_id, title, description, type, production_plan_stage_id, sales_order_id, priority, status, due_date, notes, assigned_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO employee_tasks (employee_id, title, description, type, production_plan_stage_id, work_order_operation_id, sales_order_id, priority, status, due_date, notes, assigned_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         employeeId,
         data.title,
         data.description || null,
         data.type || 'general',
         data.productionPlanStageId || null,
+        data.workOrderOperationId || null,
         data.salesOrderId || null,
         data.priority || 'medium',
         'pending',
@@ -220,15 +225,15 @@ class EmployeeTask {
   static async getAssignedTasks(employeeId, filters = {}) {
     let query = `SELECT et.id, et.employee_id, et.title, et.description, et.type, et.priority, et.status, 
                         et.assigned_by, et.due_date, et.notes, et.started_at, et.completed_at, 
-                        et.created_at, et.updated_at, et.production_plan_stage_id, et.sales_order_id,
-                        pps.stage_name, 
-                        COALESCE(rc.title, so.project_name, so.po_number) as root_card_title,
-                        COALESCE(p.id, p2.id) as project_id, 
-                        COALESCE(p.name, p2.name) as project_name, 
-                        COALESCE(p.code, p2.code) as project_code,
+                        et.created_at, et.updated_at, et.production_plan_stage_id, et.work_order_operation_id, et.sales_order_id,
+                        pps.stage_name, woo.operation_name, wo.work_order_no, wo.item_name,
+                        COALESCE(rc.title, so.project_name, so.po_number, wo.item_name) as root_card_title,
+                        COALESCE(p.id, p2.id, p3.id) as project_id, 
+                        COALESCE(p.name, p2.name, p3.name) as project_name, 
+                        COALESCE(p.code, p2.code, p3.code) as project_code,
                         COALESCE(sod.product_details, so.items) as product_details,
-                        so.customer as customer_name,
-                        so.po_number as po_number
+                        COALESCE(so.customer, so2.customer) as customer_name,
+                        COALESCE(so.po_number, so2.po_number) as po_number
                  FROM employee_tasks et
                  LEFT JOIN production_plan_stages pps ON et.production_plan_stage_id = pps.id
                  LEFT JOIN production_plans pp ON pps.production_plan_id = pp.id
@@ -237,6 +242,10 @@ class EmployeeTask {
                  LEFT JOIN sales_orders so ON et.sales_order_id = so.id
                  LEFT JOIN projects p2 ON so.id = p2.sales_order_id
                  LEFT JOIN sales_order_details sod ON sod.sales_order_id = pp.sales_order_id
+                 LEFT JOIN work_order_operations woo ON et.work_order_operation_id = woo.id
+                 LEFT JOIN work_orders wo ON woo.work_order_id = wo.id
+                 LEFT JOIN sales_orders so2 ON wo.sales_order_id = so2.id
+                 LEFT JOIN projects p3 ON wo.project_id = p3.id
                  WHERE et.employee_id = ? AND (pps.id IS NULL OR pps.is_blocked = FALSE)`;
     const params = [employeeId];
 
@@ -259,7 +268,7 @@ class EmployeeTask {
     const [rows] = await pool.execute(query, params);
     
     return (rows || []).map(row => {
-      let product_name = row.project_name || null;
+      let product_name = row.project_name || row.item_name || null;
       if (row.product_details) {
         try {
           const details = typeof row.product_details === 'string' ? JSON.parse(row.product_details) : row.product_details;
@@ -291,31 +300,56 @@ class EmployeeTask {
     const [rows] = await pool.execute(
       `SELECT et.id, et.employee_id, et.title, et.description, et.type, et.priority, et.status, 
               et.assigned_by, et.due_date, et.notes, et.started_at, et.completed_at, 
-              et.created_at, et.updated_at, et.production_plan_stage_id,
-              pps.stage_name, rc.title as root_card_title,
-              p.id as project_id, p.name as project_name, p.code as project_code,
-              sod.product_details
+              et.created_at, et.updated_at, et.production_plan_stage_id, et.work_order_operation_id, et.sales_order_id,
+              pps.stage_name, woo.operation_name, wo.work_order_no, wo.item_name,
+              COALESCE(rc.title, so.project_name, so.po_number, wo.item_name) as root_card_title,
+              COALESCE(p.id, p2.id, p3.id) as project_id, 
+              COALESCE(p.name, p2.name, p3.name) as project_name, 
+              COALESCE(p.code, p2.code, p3.code) as project_code,
+              COALESCE(sod.product_details, so.items) as product_details,
+              COALESCE(so.customer, so2.customer) as customer_name,
+              COALESCE(so.po_number, so2.po_number) as po_number
        FROM employee_tasks et
        LEFT JOIN production_plan_stages pps ON et.production_plan_stage_id = pps.id
        LEFT JOIN production_plans pp ON pps.production_plan_id = pp.id
        LEFT JOIN root_cards rc ON pp.root_card_id = rc.id
        LEFT JOIN projects p ON rc.project_id = p.id
+       LEFT JOIN sales_orders so ON et.sales_order_id = so.id
+       LEFT JOIN projects p2 ON so.id = p2.sales_order_id
        LEFT JOIN sales_order_details sod ON sod.sales_order_id = pp.sales_order_id
+       LEFT JOIN work_order_operations woo ON et.work_order_operation_id = woo.id
+       LEFT JOIN work_orders wo ON woo.work_order_id = wo.id
+       LEFT JOIN sales_orders so2 ON wo.sales_order_id = so2.id
+       LEFT JOIN projects p3 ON wo.project_id = p3.id
        WHERE et.id = ?`,
       [taskId]
     );
     
     if (rows[0]) {
-      let product_name = null;
+      let product_name = rows[0].project_name || rows[0].item_name || null;
       if (rows[0].product_details) {
         try {
           const details = typeof rows[0].product_details === 'string' ? JSON.parse(rows[0].product_details) : rows[0].product_details;
-          product_name = details.itemName || null;
+          if (Array.isArray(details) && details.length > 0) {
+            product_name = details[0].name || details[0].itemName || product_name;
+          } else {
+            product_name = details.itemName || details.name || product_name;
+          }
         } catch (e) {
           console.warn('Error parsing product_details for task:', taskId);
         }
       }
-      return { ...rows[0], product_name };
+      return { 
+        ...rows[0], 
+        product_name,
+        salesOrder: {
+          customer: rows[0].customer_name || 'N/A',
+          poNumber: rows[0].po_number || 'N/A'
+        },
+        rootCard: {
+          title: rows[0].root_card_title || 'N/A'
+        }
+      };
     }
     return null;
   }
@@ -400,6 +434,14 @@ class EmployeeTask {
           await RootCardStep.completeStep(task.sales_order_id, step.id);
         }
       }
+    }
+
+    if (task.work_order_operation_id) {
+      await pool.execute(
+        `UPDATE work_order_operations SET status = ? WHERE id = ?`,
+        [status, task.work_order_operation_id]
+      );
+      console.log(`[EmployeeTask] ✓ Task ${taskId} status changed to '${status}' - Work Order Operation ${task.work_order_operation_id} updated`);
     }
 
     if (task.production_plan_stage_id) {
