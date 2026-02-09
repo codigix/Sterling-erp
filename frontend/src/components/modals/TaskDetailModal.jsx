@@ -5,7 +5,7 @@ import SwipeButton from '../ui/SwipeButton';
 import Badge from '../ui/Badge';
 import { Clock, AlertCircle, X, CheckCircle2, Play, Zap } from 'lucide-react';
 
-const TaskDetailModal = ({ task, isOpen, onClose, onTaskComplete, isUpdating, onTaskStart }) => {
+const TaskDetailModal = ({ task, isOpen, onClose, onTaskComplete, isUpdating }) => {
   const navigate = useNavigate();
 
   if (!task) return null;
@@ -55,7 +55,7 @@ const TaskDetailModal = ({ task, isOpen, onClose, onTaskComplete, isUpdating, on
               )}
             </Badge>
             <Badge className={getPriorityColor(task.priority)} title={task.priority}>
-              {getPriorityIcon(task.priority)} {task.priority}
+              {getPriorityIcon(task.priority)} {task.priority?.toUpperCase()}
             </Badge>
           </div>
         </div>
@@ -76,45 +76,45 @@ const TaskDetailModal = ({ task, isOpen, onClose, onTaskComplete, isUpdating, on
 
         <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-lg border border-slate-200 dark:border-slate-700">
           <div className="grid grid-cols-2 gap-4">
-            {task.root_card_title && (
-              <div>
-                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-2">Root Card</p>
-                <p className="text-sm font-medium text-slate-900 dark:text-white">{task.root_card_title}</p>
+            {task.job_card_no && (
+              <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-900/30">
+                <p className="text-xs font-bold text-blue-500 dark:text-blue-400 uppercase mb-1">Job Card Number</p>
+                <p className="text-sm font-black text-blue-700 dark:text-blue-300 uppercase tracking-tight">{task.job_card_no}</p>
               </div>
             )}
 
-            {task.stage_name && (
-              <div>
-                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-2">Stage</p>
-                <p className="text-sm font-medium text-slate-900 dark:text-white">{task.stage_name}</p>
+            {task.root_card_code && (
+              <div className="bg-violet-50 dark:bg-violet-900/20 p-3 rounded-lg border border-violet-100 dark:border-violet-900/30">
+                <p className="text-xs font-bold text-violet-500 dark:text-violet-400 uppercase mb-1">Root Card #</p>
+                <p className="text-sm font-black text-violet-700 dark:text-violet-300 uppercase tracking-tight">{task.root_card_code}</p>
               </div>
             )}
 
-            {task.product_name && (
-              <div>
-                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-2">Product</p>
-                <p className="text-sm font-medium text-slate-900 dark:text-white">{task.product_name}</p>
+            {task.root_card_name && (
+              <div className="col-span-2 bg-violet-50/50 dark:bg-violet-900/10 p-3 rounded-lg border border-violet-100/50 dark:border-violet-900/20">
+                <p className="text-xs font-bold text-violet-500 dark:text-violet-400 uppercase mb-1">Root Card Name</p>
+                <p className="text-sm font-black text-violet-700 dark:text-violet-300 uppercase">{task.root_card_name}</p>
               </div>
             )}
 
-            {task.project_name && (
-              <div>
-                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-2">Project</p>
-                <p className="text-sm font-medium text-slate-900 dark:text-white">{task.project_name}</p>
+            {task.work_order_no && (
+              <div className="bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded-lg border border-indigo-100 dark:border-indigo-900/30">
+                <p className="text-xs font-bold text-indigo-500 dark:text-indigo-400 uppercase mb-1">Work Order #</p>
+                <p className="text-sm font-black text-indigo-700 dark:text-indigo-300 uppercase">{task.work_order_no}</p>
               </div>
             )}
 
-            {task.project_code && (
-              <div>
-                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-2">Project Code</p>
-                <p className="text-sm font-medium text-slate-900 dark:text-white">{task.project_code}</p>
+            {task.item_name && (
+              <div className="bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-lg border border-emerald-100 dark:border-emerald-900/30">
+                <p className="text-xs font-bold text-emerald-500 dark:text-emerald-400 uppercase mb-1">Item Name</p>
+                <p className="text-sm font-black text-emerald-700 dark:text-emerald-300 uppercase">{task.item_name}</p>
               </div>
             )}
 
             {task.po_number && (
-              <div>
-                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-2">PO Number</p>
-                <p className="text-sm font-medium text-slate-900 dark:text-white">{task.po_number}</p>
+              <div className="bg-slate-50 dark:bg-slate-900/20 p-3 rounded-lg border border-slate-100 dark:border-slate-900/30">
+                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">PO Number</p>
+                <p className="text-sm font-black text-slate-700 dark:text-slate-300 uppercase">{task.po_number}</p>
               </div>
             )}
 
@@ -154,13 +154,6 @@ const TaskDetailModal = ({ task, isOpen, onClose, onTaskComplete, isUpdating, on
               </div>
             )}
 
-            {task.customer && (
-              <div>
-                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-2">Customer</p>
-                <p className="text-sm font-medium text-slate-900 dark:text-white">{task.customer}</p>
-              </div>
-            )}
-
             {/* {task.notes && (
               <div className="col-span-2">
                 <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-2">Notes</p>
@@ -171,35 +164,18 @@ const TaskDetailModal = ({ task, isOpen, onClose, onTaskComplete, isUpdating, on
         </div>
 
         <div className="pt-2 flex flex-col gap-3">
-          {task.task_type === 'job_card' && task.status === 'pending' && (
-            <button
-              onClick={() => onTaskStart && onTaskStart(task)}
-              disabled={isUpdating}
-              className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-green-600 hover:bg-green-700 text-white rounded-xl font-semibold transition-all shadow-sm disabled:opacity-50"
-            >
-              <Play className="w-5 h-5 fill-current" />
-              Start Production
-            </button>
+          {task.status === 'pending' ? (
+            <div className="w-full flex items-center justify-center gap-2 py-4 px-4 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 rounded-xl font-bold border border-amber-100 dark:border-amber-900/30 shadow-sm uppercase">
+              <Clock className="w-5 h-5 animate-pulse" />
+              Waiting for Production to Start Task
+            </div>
+          ) : (
+            <SwipeButton
+              onSwipeComplete={handleSwipeComplete}
+              isLoading={isUpdating}
+              isCompleted={task.status === 'completed'}
+            />
           )}
-
-          {task.task_type === 'job_card' && task.status === 'in_progress' && (
-            <button
-              onClick={() => {
-                navigate(`/employee/operations/${task.reference_id}/entry`);
-                onClose();
-              }}
-              className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold transition-all shadow-sm"
-            >
-              <Zap className="w-5 h-5 fill-current" />
-              Production Entry
-            </button>
-          )}
-
-          <SwipeButton
-            onSwipeComplete={handleSwipeComplete}
-            isLoading={isUpdating}
-            isCompleted={task.status === 'completed'}
-          />
         </div>
       </div>
     </Modal>

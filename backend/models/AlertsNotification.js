@@ -24,8 +24,8 @@ class AlertsNotification {
     const [result] = await connection.execute(
       `
         INSERT INTO alerts_notifications
-        (user_id, from_user_id, alert_type, message, related_table, related_id, priority)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        (user_id, from_user_id, alert_type, message, related_table, related_id, priority, link)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `,
       [
         data.userId,
@@ -34,7 +34,8 @@ class AlertsNotification {
         data.message,
         data.relatedTable || null,
         data.relatedId || null,
-        data.priority || 'medium'
+        data.priority || 'medium',
+        data.link || null
       ]
     );
     return result.insertId;

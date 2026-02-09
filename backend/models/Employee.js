@@ -64,6 +64,17 @@ class Employee {
     return rows;
   }
 
+  static async findByUserId(userId) {
+    const [rows] = await pool.execute(`
+      SELECT e.*, r.name as role_name, d.name as department_name 
+      FROM employees e 
+      JOIN users u ON e.email = u.email
+      LEFT JOIN roles r ON e.role_id = r.id 
+      LEFT JOIN departments d ON e.department_id = d.id 
+      WHERE u.id = ?`, [userId]);
+    return rows[0];
+  }
+
   static async create(data) {
     const hashedPassword = await bcrypt.hash(data.password, 10);
     const [result] = await pool.execute(

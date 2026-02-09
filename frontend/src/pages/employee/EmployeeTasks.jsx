@@ -97,44 +97,6 @@ const EmployeeTasks = () => {
     }
   };
 
-  const handleStartTask = async (task) => {
-    try {
-      setUpdatingTaskId(task.id);
-      
-      // If it's a job card task, call the specialized start endpoint
-      if (task.task_type === 'job_card') {
-        await axios.post(`/production/work-orders/operations/${task.reference_id}/start`);
-      } else {
-        await axios.put(`/employee/portal/tasks/${task.id}/status`, {
-          status: 'in_progress'
-        });
-      }
-      
-      const updatedTasks = tasks.map(t => 
-        t.id === task.id ? { ...t, status: 'in_progress' } : t
-      );
-      setTasks(updatedTasks);
-
-      if (selectedTask && selectedTask.id === task.id) {
-        setSelectedTask({ ...selectedTask, status: 'in_progress' });
-      }
-
-      setSuccessMessage("Task started successfully");
-      setTimeout(() => setSuccessMessage(null), 3000);
-      
-      // If it's a job card, navigate to production entry
-      if (task.task_type === 'job_card') {
-        navigate(`/employee/operations/${task.reference_id}/entry`);
-        setIsModalOpen(false);
-      }
-    } catch (err) {
-      console.error('Start task error:', err);
-      setError(err.response?.data?.message || 'Failed to start task');
-    } finally {
-      setUpdatingTaskId(null);
-    }
-  };
-
   const handleOpenTaskDetail = (task) => {
     setSelectedTask(task);
     setIsModalOpen(true);
@@ -247,7 +209,7 @@ const EmployeeTasks = () => {
                       )}
                     </Badge>
                     <Badge className={getPriorityColor(task.priority)} title={task.priority}>
-                      {getPriorityIcon(task.priority)} {task.priority}
+                      {getPriorityIcon(task.priority)} {task.priority?.toUpperCase()}
                     </Badge>
                   </div>
                   
@@ -255,40 +217,35 @@ const EmployeeTasks = () => {
                   
                   <div className="flex flex-wrap gap-3 text-xs text-slate-500 dark:text-slate-400">
                     <span>📅 Created: {new Date(task.created_at).toLocaleDateString('en-IN')}</span>
-                    {task.product_name && (
-                      <span className="text-purple-600 dark:text-purple-400 font-medium">📦 {task.product_name}</span>
+                    {task.job_card_no && (
+                      <span className="text-blue-600 dark:text-blue-400 font-bold border border-blue-100 dark:border-blue-900/30 px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-900/20 uppercase tracking-tight">
+                        📋 JC: {task.job_card_no}
+                      </span>
                     )}
-                    {task.project_name && (
-                      <span className="text-blue-600 dark:text-blue-400 font-medium">🏢 {task.project_name}</span>
+                    {(task.root_card_code || task.root_card_name) && (
+                      <span className="text-violet-600 dark:text-violet-400 font-bold border border-violet-100 dark:border-violet-900/30 px-2 py-0.5 rounded-md bg-violet-50 dark:bg-violet-900/20 uppercase tracking-tight">
+                        📋 RC: {task.root_card_code}{task.root_card_name ? ` - ${task.root_card_name}` : ''}
+                      </span>
+                    )}
+                    {task.work_order_no && (
+                      <span className="text-indigo-600 dark:text-indigo-400 font-bold border border-indigo-100 dark:border-indigo-900/30 px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-900/20 uppercase">
+                        🔢 WO: {task.work_order_no}
+                      </span>
+                    )}
+                    {task.item_name && (
+                      <span className="text-emerald-600 dark:text-emerald-400 font-medium border border-emerald-100 dark:border-emerald-900/30 px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-900/20 uppercase">
+                        🛠️ Item: {task.item_name}
+                      </span>
                     )}
                   </div>
                 </div>
 
                 <div className="flex flex-col gap-2 ml-4">
-                  {task.task_type === 'job_card' && task.status === 'pending' && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleStartTask(task);
-                      }}
-                      disabled={updatingTaskId === task.id}
-                      className="p-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
-                      title="Start Production"
-                    >
-                      <Play className="w-5 h-5 fill-current" />
-                    </button>
-                  )}
-                  {task.task_type === 'job_card' && task.status === 'in_progress' && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/employee/operations/${task.reference_id}/entry`);
-                      }}
-                      className="p-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors"
-                      title="Production Entry"
-                    >
-                      <Zap className="w-5 h-5 fill-current" />
-                    </button>
+                  {task.status === 'pending' && (
+                    <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400 text-[10px] font-bold uppercase bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded border border-amber-100 dark:border-amber-900/30">
+                      <Clock className="w-3 h-3" />
+                      Awaiting Production Start
+                    </div>
                   )}
                 </div>
               </div>
@@ -302,7 +259,6 @@ const EmployeeTasks = () => {
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         onTaskComplete={handleUpdateTaskStatus}
-        onTaskStart={handleStartTask}
         isUpdating={updatingTaskId === selectedTask?.id}
       />
     </div>

@@ -10,7 +10,10 @@ const authMiddleware = (req, res, next) => {
   const token = authHeader.replace('Bearer ', '');
 
   if (token === 'demo-token') {
-    req.user = { id: 1, role: 'Admin', type: 'user' };
+    // For demo users, we try to use the ID that might be in the request headers or just default to 1
+    // A better way is to decode the user from a simulated token if we had one, 
+    // but for now we'll allow the controllers to handle the ID from the URL params.
+    req.user = { id: 1, role: 'Admin', type: 'user', isDemo: true };
     return next();
   }
 

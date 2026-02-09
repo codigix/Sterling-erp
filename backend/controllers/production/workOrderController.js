@@ -1,5 +1,7 @@
 const WorkOrder = require("../../models/WorkOrder");
 const EmployeeTask = require("../../models/EmployeeTask");
+const DepartmentTask = require("../../models/DepartmentTask");
+const AlertsNotification = require("../../models/AlertsNotification");
 const pool = require("../../config/database");
 
 const getAllWorkOrders = async (req, res) => {
@@ -108,7 +110,7 @@ const createOperation = async (req, res) => {
       try {
         const wo = await WorkOrder.findById(workOrderId);
         const taskTitle = `Job Card Operation: ${operationName}`;
-        const taskDescription = `Operation for Work Order: ${wo ? wo.work_order_no : 'N/A'}. Item: ${wo ? wo.item_name : 'N/A'}`;
+        const taskDescription = `Operation for Work Order: ${wo ? wo.work_order_no : 'N/A'}`;
 
         await EmployeeTask.createAssignedTask(operatorId, {
           title: taskTitle,
@@ -121,7 +123,7 @@ const createOperation = async (req, res) => {
           salesOrderId: wo ? wo.sales_order_id : null,
           assignedBy: req.user?.id
         });
-        
+
         console.log(`[WorkOrderController] Task assigned to operator ${operatorId} for new operation ${operationId}`);
       } catch (taskError) {
         console.warn("[WorkOrderController] Warning - could not create employee task:", taskError.message);
@@ -145,7 +147,7 @@ const updateOperation = async (req, res) => {
     
     // Get existing operation before update to check if operator changed
     const [existingOps] = await pool.execute(
-      "SELECT operator_id, work_order_id FROM work_order_operations WHERE id = ?",
+      "SELECT operator_id, work_order_id, operation_name FROM work_order_operations WHERE id = ?",
       [id]
     );
     const existingOp = existingOps[0];
@@ -158,6 +160,16 @@ const updateOperation = async (req, res) => {
     // Handle task assignment if operator is assigned or changed
     try {
       const opId = operatorId ? parseInt(operatorId) : null;
+
+      // Map current user ID to employee ID for the 'assigned_by' field
+      let employeeIdAssignedBy = null;
+      if (req.user?.id) {
+        const [empRows] = await pool.execute(
+          "SELECT e.id FROM employees e JOIN users u ON e.email = u.email WHERE u.id = ?",
+          [req.user.id]
+        );
+        if (empRows.length > 0) employeeIdAssignedBy = empRows[0].id;
+      }
 
       // Check if a task already exists for this operation
       const [existingTasks] = await pool.execute(
@@ -182,8 +194,9 @@ const updateOperation = async (req, res) => {
         // Get work order details for the task description
         const wo = await WorkOrder.findById(existingOp.work_order_id);
         
-        const taskTitle = `Job Card Operation: ${operationName || (existingOp ? existingOp.operation_name : 'Unnamed')}`;
-        const taskDescription = `Operation for Work Order: ${wo ? wo.work_order_no : 'N/A'}. Item: ${wo ? wo.item_name : 'N/A'}`;
+        const finalOpName = operationName || (existingOp ? existingOp.operation_name : 'Unnamed');
+        const taskTitle = `Job Card Operation: ${finalOpName}`;
+        const taskDescription = `Operation for Work Order: ${wo ? wo.work_order_no : 'N/A'}`;
 
         await EmployeeTask.createAssignedTask(opId, {
           title: taskTitle,
@@ -194,9 +207,9 @@ const updateOperation = async (req, res) => {
           notes: `Work Order ID: ${existingOp.work_order_id}`,
           workOrderOperationId: id,
           salesOrderId: wo ? wo.sales_order_id : null,
-          assignedBy: req.user?.id
+          assignedBy: employeeIdAssignedBy
         });
-        
+
         // If status was provided and different from default 'pending', update it
         if (status && status !== 'pending') {
           await pool.execute(
@@ -234,7 +247,7 @@ const updateOperation = async (req, res) => {
       console.warn("[WorkOrderController] Warning - could not handle employee task update:", taskError.message);
     }
 
-    res.json({ message: "Operation updated successfully (FIXED)" });
+    res.json({ message: "Operation updated successfully" });
   } catch (error) {
     console.error("Error in updateOperation:", error);
     res.status(500).json({ message: "ZENCODER_DEBUG_UPDATE_FAILED", error: error.message });
@@ -269,28 +282,116 @@ const startOperation = async (req, res) => {
     const { id } = req.params;
     const { operatorId, workstationId } = req.body || {};
     
+    // Get existing operation to get work order details
+    const [existingOps] = await pool.execute(
+      "SELECT * FROM work_order_operations WHERE id = ?",
+      [id]
+    );
+    const operation = existingOps[0];
+    if (!operation) {
+      return res.status(404).json({ message: "Operation not found" });
+    }
+
     const started = await WorkOrder.startOperation(id, operatorId, workstationId);
     if (!started) {
       return res.status(404).json({ message: "Operation not found" });
     }
 
-    // Sync with employee task status
+    // Handle task assignment/update during start
     try {
-      await pool.query(
-        "UPDATE employee_tasks SET status = 'in_progress' WHERE work_order_operation_id = ?",
-        [id]
-      );
+      let opId = operatorId ? parseInt(operatorId) : operation.operator_id;
+      if (isNaN(opId)) opId = operation.operator_id;
+      
+      if (opId && !isNaN(opId)) {
+        // Map current user ID to employee ID for the 'assigned_by' field
+        let employeeIdAssignedBy = null;
+        if (req.user?.id) {
+          const [empRows] = await pool.execute(
+            "SELECT e.id FROM employees e JOIN users u ON e.email = u.email WHERE u.id = ?",
+            [req.user.id]
+          );
+          if (empRows.length > 0) employeeIdAssignedBy = empRows[0].id;
+        }
+
+        // Check if task exists
+        const [existingTasks] = await pool.execute(
+          "SELECT id FROM employee_tasks WHERE work_order_operation_id = ?",
+          [id]
+        );
+
+        if (existingTasks.length === 0) {
+          // Create task if it doesn't exist
+          const wo = await WorkOrder.findById(operation.work_order_id);
+          const taskTitle = `Job Card Operation: ${operation.operation_name}`;
+          const taskDescription = `Operation for Work Order: ${wo ? wo.work_order_no : 'N/A'}`;
+
+          await EmployeeTask.createAssignedTask(opId, {
+            title: taskTitle,
+            description: taskDescription,
+            type: 'job_card',
+            priority: wo ? (wo.priority === 'critical' ? 'critical' : wo.priority === 'high' ? 'high' : 'medium') : 'medium',
+            dueDate: operation.planned_end_date,
+            notes: `Started via Job Card Control. Work Order ID: ${operation.work_order_id}`,
+            workOrderOperationId: id,
+            salesOrderId: wo ? wo.sales_order_id : null,
+            assignedBy: employeeIdAssignedBy
+          });
+          console.log(`[WorkOrderController] Created task during start for operation ${id}`);
+        } else {
+          // Sync task status to in_progress
+          await pool.execute(
+            "UPDATE employee_tasks SET status = 'in_progress', started_at = COALESCE(started_at, NOW()) WHERE work_order_operation_id = ?",
+            [id]
+          );
+
+          // Send notification for status update if task already exists
+          try {
+            const taskId = existingTasks[0].id;
+            const [users] = await pool.execute(
+              "SELECT u.id FROM users u JOIN employees e ON u.email = e.email WHERE e.id = ?", 
+              [opId]
+            );
+            
+            if (users.length > 0) {
+              const recipientUserId = users[0].id;
+              
+              // Find user_id for the assigner (from_user_id)
+              let fromUserId = null;
+              if (employeeIdAssignedBy) {
+                const [assignerUsers] = await pool.execute(
+                  "SELECT u.id FROM users u JOIN employees e ON u.email = e.email WHERE e.id = ?", 
+                  [employeeIdAssignedBy]
+                );
+                if (assignerUsers.length > 0) fromUserId = assignerUsers[0].id;
+              }
+
+              await AlertsNotification.create({
+                userId: recipientUserId,
+                fromUserId: fromUserId,
+                alertType: 'status_update',
+                message: `Task "${operation.operation_name}" has been started for you.`,
+                relatedTable: 'employee_tasks',
+                relatedId: taskId,
+                priority: 'medium',
+                link: '/employee/tasks'
+              });
+              console.log(`[WorkOrderController] Notification sent to user ${recipientUserId} for started operation ${id}`);
+            }
+          } catch (notifErr) {
+            console.warn("[WorkOrderController] Could not send notification for existing task:", notifErr.message);
+          }
+        }
+      }
     } catch (taskError) {
-      console.warn("[WorkOrderController] Could not update task status:", taskError.message);
+      console.warn("[WorkOrderController] Could not sync task during start:", taskError.message);
     }
 
-    res.json({ message: "Operation started successfully (FIXED)" });
+    res.json({ message: "Operation started successfully" });
   } catch (error) {
     console.error("Error in startOperation:", error);
     res.status(500).json({ 
-      message: "ZENCODER_DEBUG_START_FAILED", 
-      error: error.message,
-      detail: error.sqlMessage || error.code || "Unknown error"
+      message: "Failed to start operation", 
+      error: error.message 
     });
   }
 };
@@ -356,6 +457,35 @@ const addDowntimeLog = async (req, res) => {
   }
 };
 
+const completeProductionEntry = async (req, res) => {
+  try {
+    const { id } = req.params; // operation id
+    
+    // 1. Mark the operation as fully completed if not already
+    await pool.execute(
+      "UPDATE work_order_operations SET status = 'completed', actual_end_date = NOW() WHERE id = ?",
+      [id]
+    );
+
+    // 2. Mark the Department Task (Production Entry) as completed
+    await pool.execute(
+      "UPDATE department_tasks SET status = 'completed', updated_at = NOW() WHERE work_order_operation_id = ? AND task_title LIKE '%Production Entry%'",
+      [id]
+    );
+
+    // 3. Sync employee task status to completed if not already
+    await pool.execute(
+      "UPDATE employee_tasks SET status = 'completed', completed_at = COALESCE(completed_at, NOW()) WHERE work_order_operation_id = ?",
+      [id]
+    );
+
+    res.json({ message: "Production entry completed and task closed" });
+  } catch (error) {
+    console.error("Error in completeProductionEntry:", error);
+    res.status(500).json({ message: "Error completing production entry task" });
+  }
+};
+
 module.exports = {
   getAllWorkOrders,
   createWorkOrder,
@@ -370,5 +500,6 @@ module.exports = {
   getOperationDetails,
   addTimeLog,
   addQualityEntry,
-  addDowntimeLog
+  addDowntimeLog,
+  completeProductionEntry
 };

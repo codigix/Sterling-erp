@@ -1,4 +1,5 @@
 const AlertsNotification = require('../../models/AlertsNotification');
+const pool = require('../../config/database');
 
 const alertsNotificationController = {
   async createAlert(req, res) {
@@ -47,8 +48,23 @@ const alertsNotificationController = {
 
   async getUserAlerts(req, res) {
     try {
-      const { userId } = req.params;
+      const { userId: inputId } = req.params;
       const { isRead, alertType, priority, limit } = req.query;
+
+      // Resolve userId if it might be an employeeId
+      let userId = inputId;
+      try {
+        const [emps] = await pool.execute("SELECT id, email FROM employees WHERE id = ?", [inputId]);
+        if (emps.length > 0) {
+          const [users] = await pool.execute("SELECT id FROM users WHERE email = ?", [emps[0].email]);
+          if (users.length > 0) {
+            userId = users[0].id;
+            console.log(`[getUserAlerts] Resolved employeeId ${inputId} to userId ${userId}`);
+          }
+        }
+      } catch (err) {
+        console.warn('[getUserAlerts] ID resolution error:', err.message);
+      }
 
       const filters = {};
       if (isRead !== undefined) {
@@ -62,6 +78,11 @@ const alertsNotificationController = {
       }
       if (limit) {
         filters.limit = parseInt(limit);
+      }
+
+      // If userId is still non-numeric and doesn't exist in our DB, return empty results
+      if (isNaN(userId) && String(userId).startsWith('demo-')) {
+        return res.json([]);
       }
 
       const alerts = await AlertsNotification.findByUserId(userId, filters);
@@ -121,6 +142,11 @@ const alertsNotificationController = {
   async getUnreadCount(req, res) {
     try {
       const { userId } = req.params;
+      
+      if (isNaN(userId) && String(userId).startsWith('demo-')) {
+        return res.json({ unreadCount: 0 });
+      }
+
       const unreadCount = await AlertsNotification.getUnreadCount(userId);
       res.json({ unreadCount });
     } catch (error) {
@@ -132,6 +158,19 @@ const alertsNotificationController = {
   async getAlertStats(req, res) {
     try {
       const { userId } = req.params;
+
+      if (isNaN(userId) && String(userId).startsWith('demo-')) {
+        return res.json({
+          total_alerts: 0,
+          unread: 0,
+          task_blocked: 0,
+          status_update: 0,
+          delay_alert: 0,
+          material_shortage: 0,
+          quality_issue: 0
+        });
+      }
+
       const stats = await AlertsNotification.getStats(userId);
       res.json(stats);
     } catch (error) {

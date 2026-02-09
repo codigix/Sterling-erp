@@ -60,6 +60,7 @@ const NotificationBell = () => {
       setLoading(true);
       const response = await axios.get(`/alerts/user/${user.id}`);
       const notifs = response.data || [];
+      console.log(`[NotificationBell] Fetched ${notifs.length} notifications for user ${user.id}`);
       setNotifications(notifs);
       
       const unread = notifs.filter(n => !n.is_read).length;
@@ -161,55 +162,61 @@ const NotificationBell = () => {
             </div>
           )}
 
-          {notifications.slice(0, 5).map(notif => (
-            <div
-              key={notif.id}
-              className={`border-b border-slate-100 dark:border-slate-700 last:border-b-0 p-4 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer ${
-                !notif.is_read ? 'bg-slate-50 dark:bg-slate-700' : ''
-              } ${getNotificationColor(notif.alert_type)}`}
-              onClick={() => markAsRead(notif.id, notif.is_read)}
-            >
-              <div className="flex gap-3">
-                <div className="flex-shrink-0 text-lg">
-                  {getNotificationIcon(notif.alert_type)}
-                </div>
+          {(() => {
+            const unreadNotifs = notifications.filter(n => !n.is_read);
+            const readNotifs = notifications.filter(n => n.is_read);
+            const displayNotifs = [...unreadNotifs, ...readNotifs].slice(0, 10);
+            
+            return displayNotifs.map(notif => (
+              <div
+                key={notif.id}
+                className={`border-b border-slate-100 dark:border-slate-700 last:border-b-0 p-4 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer ${
+                  !notif.is_read ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''
+                } ${getNotificationColor(notif.alert_type)}`}
+                onClick={() => markAsRead(notif.id, notif.is_read)}
+              >
+                <div className="flex gap-3">
+                  <div className="flex-shrink-0 text-lg">
+                    {getNotificationIcon(notif.alert_type)}
+                  </div>
 
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-900 dark:text-white line-clamp-2">
-                    {notif.message}
-                  </p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                    {getRelativeTime(notif.created_at)}
-                  </p>
-                </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm ${!notif.is_read ? 'font-semibold' : 'font-medium'} text-slate-900 dark:text-white line-clamp-2`}>
+                      {notif.message}
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                      {getRelativeTime(notif.created_at)}
+                    </p>
+                  </div>
 
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  {!notif.is_read && (
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {!notif.is_read && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          markAsRead(notif.id, notif.is_read);
+                        }}
+                        className="p-1 hover:bg-slate-200 dark:hover:bg-slate-600 rounded transition-colors"
+                        title="Mark as read"
+                      >
+                        <Eye size={14} className="text-slate-600 dark:text-slate-400" />
+                      </button>
+                    )}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        markAsRead(notif.id, notif.is_read);
+                        deleteNotification(notif.id);
                       }}
-                      className="p-1 hover:bg-slate-200 dark:hover:bg-slate-600 rounded transition-colors"
-                      title="Mark as read"
+                      className="p-1 hover:bg-red-100 dark:hover:bg-red-900 dark:hover:bg-opacity-30 rounded transition-colors"
+                      title="Delete notification"
                     >
-                      <Eye size={14} className="text-slate-600 dark:text-slate-400" />
+                      <Trash2 size={14} className="text-red-600 dark:text-red-400" />
                     </button>
-                  )}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      deleteNotification(notif.id);
-                    }}
-                    className="p-1 hover:bg-red-100 dark:hover:bg-red-900 dark:hover:bg-opacity-30 rounded transition-colors"
-                    title="Delete notification"
-                  >
-                    <Trash2 size={14} className="text-red-600 dark:text-red-400" />
-                  </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ));
+          })()}
         </div>
       )}
     </div>

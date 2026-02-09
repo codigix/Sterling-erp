@@ -79,7 +79,12 @@ class EmailMonitorService {
     if (this.isRunnning) return;
     console.log('📧 Starting Email Monitor Service...');
     this.isRunnning = true;
-    this.checkEmails();
+    
+    // Run initial check without awaiting it so it doesn't block server startup
+    this.checkEmails().catch(err => {
+      console.error('❌ Initial Email Check failed:', err.message);
+    });
+    
     this.timer = setInterval(() => this.checkEmails(), this.checkInterval);
   }
 

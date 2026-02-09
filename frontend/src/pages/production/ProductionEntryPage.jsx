@@ -150,6 +150,37 @@ const ProductionEntryPage = () => {
     }
   };
 
+  const handleCompleteProductionEntry = async () => {
+    const result = await Swal.fire({
+      title: 'Complete Production Entry?',
+      text: "This will mark the production entry task as finished and close this operation.",
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#4f46e5',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Yes, complete it!'
+    });
+
+    if (result.isConfirmed) {
+      setSubmitting(true);
+      try {
+        await axios.post(`/production/work-orders/operations/${id}/complete-entry`);
+        await Swal.fire({
+          title: 'Task Completed!',
+          text: 'The production entry has been finalized.',
+          icon: 'success',
+          timer: 2000
+        });
+        navigate('/department/production/job-cards');
+      } catch (err) {
+        console.error('Error completing production entry:', err);
+        Swal.fire('Error', 'Failed to complete production entry task', 'error');
+      } finally {
+        setSubmitting(false);
+      }
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -203,6 +234,14 @@ const ProductionEntryPage = () => {
               </div>
             </div>
             <div className="flex items-center gap-3">
+              <button 
+                onClick={handleCompleteProductionEntry}
+                disabled={submitting || operation?.status === 'completed'}
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition-all shadow-sm disabled:opacity-50"
+              >
+                <CheckCircle size={18} />
+                Complete Production Entry
+              </button>
               <button className="flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
                 <Download size={18} />
                 Download CSV

@@ -200,6 +200,20 @@ class DepartmentTask {
         await pool.execute(syncQuery, syncParams);
         console.log(`[DepartmentTask] Synchronized ${updates.status ? 'status' : ''} ${updates.priority ? 'priority' : ''} with employee_tasks for task: ${task.task_title}`);
       }
+
+      // Special handling for production_entry completion
+      if (updates.status === 'completed' && task.task_title.startsWith('Production Entry:')) {
+        console.log(`[DepartmentTask] Production Entry completed. Updating Root Card ${task.root_card_id} status.`);
+        
+        // Update root_cards status to completed
+        if (task.root_card_id) {
+          await pool.execute(
+            "UPDATE root_cards SET status = 'completed' WHERE id = ?",
+            [task.root_card_id]
+          );
+          console.log(`[DepartmentTask] ✓ Root Card ${task.root_card_id} marked as completed`);
+        }
+      }
     }
 
     return result;
@@ -240,13 +254,22 @@ class DepartmentTask {
       status = 'draft',
       assigned_by,
       notes = null,
-      sales_order_id = null
+      sales_order_id = null,
+      work_order_operation_id = null,
+      link = null
     } = data;
 
     const [result] = await pool.execute(
-      `INSERT INTO department_tasks (root_card_id, role_id, task_title, task_description, status, priority, assigned_by, notes, sales_order_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [root_card_id, role_id, task_title, task_description, status, priority, assigned_by, notes ? JSON.stringify(notes) : null, sales_order_id]
+      `INSERT INTO department_tasks (
+        root_card_id, role_id, task_title, task_description, 
+        status, priority, assigned_by, notes, 
+        sales_order_id, work_order_operation_id, link
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        root_card_id, role_id, task_title, task_description, 
+        status, priority, assigned_by, notes ? JSON.stringify(notes) : null, 
+        sales_order_id, work_order_operation_id, link
+      ]
     );
     return result;
   }

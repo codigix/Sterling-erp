@@ -225,7 +225,7 @@ exports.getEmployees = async (req, res) => {
   try {
     const pool = require('../../config/database');
     
-    // Fetch only registered employees with an assigned department
+    // Fetch only registered employees from the Production department
     const [rows] = await pool.execute(`
       SELECT 
         e.id as emp_id,
@@ -239,12 +239,13 @@ exports.getEmployees = async (req, res) => {
       INNER JOIN departments d ON e.department_id = d.id
       LEFT JOIN users u ON (e.email = u.email AND e.email IS NOT NULL)
       LEFT JOIN roles r ON u.role_id = r.id
-      WHERE e.status = 'active'
+      WHERE e.status = 'active' AND (d.name = 'Production' OR d.name = 'PRODUCTION' OR d.name = 'Production Department')
       ORDER BY display_name ASC
     `);
     
     const employees = rows.map(emp => ({
-      id: emp.user_id || emp.emp_id,
+      id: emp.emp_id,
+      user_id: emp.user_id,
       employee_id: emp.employee_id_str,
       name: emp.display_name,
       username: emp.display_name,

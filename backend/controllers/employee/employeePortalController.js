@@ -7,6 +7,8 @@ const AlertsNotification = require('../../models/AlertsNotification');
 const ManufacturingStage = require('../../models/ManufacturingStage');
 const RootCard = require('../../models/RootCard');
 const ProductionPlan = require('../../models/ProductionPlan');
+const DepartmentTask = require('../../models/DepartmentTask');
+const WorkOrder = require('../../models/WorkOrder');
 const bcrypt = require('bcryptjs');
 
 exports.getAllEmployees = async (req, res) => {
@@ -92,6 +94,53 @@ exports.getAllDepartments = async (req, res) => {
   }
 };
 
+// Helper to resolve employee and user IDs regardless of which one is provided
+const resolveIds = async (input_id) => {
+  if (!input_id) return { empId: null, userId: null, employee: null };
+  
+  const id = String(input_id).trim();
+  let empId = id;
+  let userId = id;
+  let employee = null;
+
+  // Try finding by User ID first
+  const emp = await Employee.findByUserId(id);
+  if (emp) {
+    empId = emp.id;
+    userId = id;
+    employee = emp;
+    console.log(`[resolveIds] Found employee ${empId} for user ID ${id}`);
+  } else {
+    // Try finding by Employee ID (login_id or database id)
+    employee = await Employee.findById(id);
+    if (employee) {
+      empId = employee.id;
+      const pool = require('../../config/database');
+      const [users] = await pool.execute("SELECT id FROM users WHERE email = ?", [employee.email]);
+      if (users.length > 0) {
+        userId = users[0].id;
+      }
+      console.log(`[resolveIds] Found user ${userId} for employee ID ${id}`);
+    } else {
+      // Fallback: search by name/username if id is a string like "demo-sudarshan.kale"
+      const searchStr = String(id).replace('demo-', '').replace('.', ' ');
+      const pool = require('../../config/database');
+      const [emps] = await pool.execute(
+        "SELECT id, email FROM employees WHERE CONCAT(first_name, ' ', last_name) LIKE ? OR email LIKE ?", 
+        [`%${searchStr}%`, `%${searchStr}%`]
+      );
+      if (emps.length > 0) {
+        empId = emps[0].id;
+        const [users] = await pool.execute("SELECT id FROM users WHERE email = ?", [emps[0].email]);
+        if (users.length > 0) userId = users[0].id;
+        console.log(`[resolveIds] Resolved "${id}" via name search to empId: ${empId}, userId: ${userId}`);
+      }
+    }
+  }
+
+  return { empId, userId, employee };
+};
+
 exports.getEmployeeStats = async (req, res) => {
   try {
     const { employeeId } = req.params;
@@ -100,7 +149,46 @@ exports.getEmployeeStats = async (req, res) => {
       return res.status(400).json({ message: 'Employee ID is required' });
     }
 
-    const stats = await EmployeeTask.getStatsByEmployee(employeeId);
+    const { empId, userId } = await resolveIds(employeeId);
+
+    if (!empId && !userId) {
+      return res.status(404).json({ message: 'Employee not found' });
+    }
+
+    // Get stats from both tables
+    const pool = require('../../config/database');
+    
+    // worker_tasks (using userId)
+    const [workerStats] = await pool.execute(
+      `SELECT 
+        COUNT(*) as total,
+        SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
+        SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress,
+        SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed
+       FROM worker_tasks
+       WHERE worker_id = ?`,
+      [userId]
+    );
+
+    // employee_tasks (using empId)
+    const [assignedStats] = await pool.execute(
+      `SELECT 
+        COUNT(*) as total,
+        SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
+        SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress,
+        SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed
+       FROM employee_tasks
+       WHERE employee_id = ?`,
+      [empId]
+    );
+
+    const stats = {
+      total: (workerStats[0]?.total || 0) + (assignedStats[0]?.total || 0),
+      pending: (workerStats[0]?.pending || 0) + (assignedStats[0]?.pending || 0),
+      in_progress: (workerStats[0]?.in_progress || 0) + (assignedStats[0]?.in_progress || 0),
+      completed: (workerStats[0]?.completed || 0) + (assignedStats[0]?.completed || 0)
+    };
+
     res.json(stats);
   } catch (error) {
     console.error('Get stats error:', error);
@@ -117,8 +205,23 @@ exports.getEmployeeTasks = async (req, res) => {
       return res.status(400).json({ message: 'Employee ID is required' });
     }
 
-    const workerTasks = await EmployeeTask.getEmployeeTasks(employeeId);
-    const assignedTasks = await EmployeeTask.getAssignedTasks(employeeId, {});
+    const { empId, userId, employee } = await resolveIds(employeeId);
+
+    if (!empId && !userId) {
+      console.error(`[getEmployeeTasks] Could not resolve IDs for input: ${employeeId}`);
+      return res.status(404).json({ message: 'Employee not found' });
+    }
+
+    console.log(`[getEmployeeTasks] Resolved input "${employeeId}" to empId: ${empId}, userId: ${userId}`);
+    
+    // Debug: check direct table count
+    const pool = require('../../config/database');
+    const [debugCount] = await pool.execute("SELECT COUNT(*) as count FROM employee_tasks WHERE employee_id = ?", [empId]);
+    console.log(`[getEmployeeTasks] DB COUNT for empId ${empId}: ${debugCount[0].count}`);
+
+    const workerTasks = await EmployeeTask.getEmployeeTasks(userId);
+    const assignedTasks = await EmployeeTask.getAssignedTasks(empId, {});
+    console.log(`[getEmployeeTasks] Found workerTasks: ${workerTasks.length}, assignedTasks: ${assignedTasks.length}`);
 
     const normalizedWorkerTasks = workerTasks.map(t => ({
       id: t.id,
@@ -129,43 +232,61 @@ exports.getEmployeeTasks = async (req, res) => {
       status: t.status,
       priority: t.priority || 'medium',
       project_id: t.project_id,
-      project_name: t.project_name,
-      product_name: t.product_name || t.project_name,
       project_code: t.project_code,
       root_card_id: t.root_card_id,
       root_card_title: t.root_card_title,
+      root_card_code: t.root_card_code,
+      root_card_name: t.root_card_name,
+      job_card_no: t.job_card_no,
       stage_name: t.stage_name,
       sales_order_id: t.sales_order_id,
       po_number: t.po_number,
-      customer: t.customer,
       created_at: t.created_at,
       due_date: t.due_date,
-      taskType: 'worker'
+      taskType: 'worker',
+      customer: 'Confidential',
+      project_name: 'Production Project'
     }));
 
-    const normalizedAssignedTasks = assignedTasks.map(t => ({
-      id: t.id,
-      title: t.title,
-      description: t.description,
-      type: t.type,
-      task_type: t.type, // 'job_card' or other types
-      reference_id: t.work_order_operation_id || t.production_plan_stage_id || t.sales_order_id,
-      status: t.status,
-      priority: t.priority || 'medium',
-      project_id: t.project_id,
-      project_name: t.project_name,
-      product_name: t.product_name,
-      project_code: t.project_code,
-      root_card_title: t.root_card_title,
-      stage_name: t.stage_name,
-      assigned_by: t.assigned_by,
-      due_date: t.due_date,
-      notes: t.notes,
-      created_at: t.created_at,
-      started_at: t.started_at,
-      completed_at: t.completed_at,
-      taskType: 'assigned'
-    }));
+    const normalizedAssignedTasks = assignedTasks.map(t => {
+      // Calculate dynamic Job Card number for production operations
+      let job_card_no = t.job_card_no;
+      if (t.type === 'job_card' && t.work_order_operation_id) {
+        const timestamp = t.operation_created_at ? new Date(t.operation_created_at).getTime().toString(36) : 'new';
+        job_card_no = `JC-${t.work_order_operation_id}-${timestamp}`;
+      }
+
+      return {
+        id: t.id,
+        title: t.title,
+        description: t.description,
+        type: t.type,
+        task_type: t.type, // 'job_card' or other types
+        reference_id: t.work_order_operation_id || t.production_plan_stage_id || t.sales_order_id,
+        status: t.status,
+        priority: t.priority || 'medium',
+        project_id: t.project_id,
+        project_code: t.project_code,
+        root_card_title: t.root_card_title,
+        root_card_code: t.root_card_code,
+        root_card_name: t.root_card_name,
+        stage_name: t.stage_name,
+        work_order_no: t.work_order_no,
+        job_card_no: job_card_no,
+        item_name: t.item_name,
+        sales_order_id: t.sales_order_id,
+        po_number: t.po_number,
+        assigned_by: t.assigned_by,
+        due_date: t.due_date,
+        notes: t.notes,
+        created_at: t.created_at,
+        started_at: t.started_at,
+        completed_at: t.completed_at,
+        taskType: 'assigned',
+        customer: 'Confidential',
+        project_name: 'Production Project'
+      };
+    });
 
     const allTasks = [...normalizedWorkerTasks, ...normalizedAssignedTasks];
 
@@ -184,7 +305,14 @@ exports.getEmployeeAttendance = async (req, res) => {
       return res.status(400).json({ message: 'Employee ID is required' });
     }
 
-    const attendance = await Attendance.findByEmployeeId(employeeId);
+    // Resolve employee_id - Prioritize user_id mapping
+    let empId = employeeId;
+    const emp = await Employee.findByUserId(employeeId);
+    if (emp) {
+      empId = emp.id;
+    }
+
+    const attendance = await Attendance.findByEmployeeId(empId);
     res.json(attendance);
   } catch (error) {
     console.error('Get attendance error:', error);
@@ -200,7 +328,22 @@ exports.getEmployeeProjects = async (req, res) => {
       return res.status(400).json({ message: 'Employee ID is required' });
     }
 
-    const tasks = await EmployeeTask.getEmployeeTasks(employeeId);
+    // Resolve both IDs
+    let empId = employeeId;
+    let userId = employeeId;
+    const emp = await Employee.findByUserId(employeeId);
+    if (emp) {
+      empId = emp.id;
+    } else {
+      const e = await Employee.findById(employeeId);
+      if (e) {
+        const pool = require('../../config/database');
+        const [users] = await pool.execute("SELECT id FROM users WHERE email = ?", [e.email]);
+        if (users.length > 0) userId = users[0].id;
+      }
+    }
+
+    const tasks = await EmployeeTask.getEmployeeTasks(userId);
     const projects = [...new Map(tasks.map(t => [t.project_id, t])).values()];
 
     res.json(projects);
@@ -218,7 +361,15 @@ exports.getEmployeeAlerts = async (req, res) => {
       return res.status(400).json({ message: 'Employee ID is required' });
     }
 
-    const alerts = await AlertsNotification.findByEmployeeId(employeeId);
+    const { userId } = await resolveIds(employeeId);
+
+    if (!userId) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    console.log(`[getEmployeeAlerts] Final userId: ${userId}`);
+    const alerts = await AlertsNotification.findByUserId(userId);
+    console.log(`[getEmployeeAlerts] Found alerts: ${alerts.length}`);
     res.json(alerts);
   } catch (error) {
     console.error('Get alerts error:', error);
@@ -274,7 +425,14 @@ exports.getAssignedTasks = async (req, res) => {
       return res.status(400).json({ message: 'Employee ID is required' });
     }
 
-    const tasks = await EmployeeTask.getAssignedTasks(employeeId, { status, type, priority });
+    // Resolve employee_id - Prioritize user_id mapping
+    let empId = employeeId;
+    const emp = await Employee.findByUserId(employeeId);
+    if (emp) {
+      empId = emp.id;
+    }
+
+    const tasks = await EmployeeTask.getAssignedTasks(empId, { status, type, priority });
     res.json(tasks);
   } catch (error) {
     console.error('Get assigned tasks error:', error);
@@ -290,7 +448,14 @@ exports.getAssignedTasksStats = async (req, res) => {
       return res.status(400).json({ message: 'Employee ID is required' });
     }
 
-    const stats = await EmployeeTask.getAssignedTasksStats(employeeId);
+    // Resolve employee_id - Prioritize user_id mapping
+    let empId = employeeId;
+    const emp = await Employee.findByUserId(employeeId);
+    if (emp) {
+      empId = emp.id;
+    }
+
+    const stats = await EmployeeTask.getAssignedTasksStats(empId);
     res.json(stats);
   } catch (error) {
     console.error('Get assigned tasks stats error:', error);
@@ -319,6 +484,94 @@ exports.updateTaskStatus = async (req, res) => {
     if (task.employee_id) {
       await EmployeeTask.updateAssignedTaskStatus(taskId, status, notes);
       const updatedTask = await EmployeeTask.getAssignedTaskById(taskId);
+      
+      // Handle completion flow - Notify Production Department
+      if (status === 'completed') {
+        try {
+          const pool = require('../../config/database');
+          
+          // 1. Find Production Role ID
+          const [roles] = await pool.execute("SELECT id FROM roles WHERE name = 'Production' OR name = 'production_manager' ORDER BY (CASE WHEN name = 'Production' THEN 0 ELSE 1 END) LIMIT 1");
+          const productionRoleId = roles.length > 0 ? roles[0].id : null;
+          
+          if (productionRoleId) {
+            const operationId = updatedTask.work_order_operation_id;
+            const entryLink = '/department/production';
+            
+            // 2. Update Work Order Operation Status to completed if applicable
+            if (operationId && updatedTask.type === 'job_card') {
+              await WorkOrder.completeOperation(operationId);
+            }
+            
+            // 3. Create Department Task for Production Entry
+            await DepartmentTask.createDepartmentTask({
+              root_card_id: updatedTask.root_card_id || null,
+              role_id: productionRoleId,
+              task_title: `Production Entry Required: ${updatedTask.operation_name || updatedTask.title.replace('Job Card Operation: ', '')}`,
+              task_description: `Task "${updatedTask.title}" has been completed. Now do the production entry for Work Order: ${updatedTask.work_order_no || 'N/A'}.`,
+              priority: updatedTask.priority || 'medium',
+              status: 'pending',
+              assigned_by: task.employee_id,
+              sales_order_id: updatedTask.sales_order_id || null,
+              work_order_operation_id: operationId || null,
+              link: entryLink
+            });
+            
+            // 4. Create Assigned Task for Production Department
+            const [productionManagers] = await pool.execute(
+              "SELECT e.id FROM employees e JOIN roles r ON e.role_id = r.id WHERE r.name = 'production_manager' AND e.status = 'active' LIMIT 1"
+            );
+            
+            let productionAssigneeId = productionManagers.length > 0 ? productionManagers[0].id : null;
+            
+            // If no specific manager, find any production employee
+            if (!productionAssigneeId) {
+              const [prodEmployees] = await pool.execute(
+                "SELECT e.id FROM employees e JOIN roles r ON e.role_id = r.id WHERE r.name = 'Production' AND e.status = 'active' LIMIT 1"
+              );
+              if (prodEmployees.length > 0) productionAssigneeId = prodEmployees[0].id;
+            }
+
+            // If we found someone to assign to, and it's not already assigned to them via step 4 in original code
+            if (productionAssigneeId && productionAssigneeId !== updatedTask.assigned_by) {
+              await EmployeeTask.createAssignedTask(productionAssigneeId, {
+                title: `Do Production Entry: ${updatedTask.operation_name || updatedTask.title}`,
+                description: `Task completed. Please do the production entry for WO: ${updatedTask.work_order_no || 'N/A'}.`,
+                type: 'production_entry',
+                priority: updatedTask.priority || 'medium',
+                workOrderOperationId: operationId,
+                salesOrderId: updatedTask.sales_order_id,
+                assignedBy: task.employee_id
+              });
+            }
+
+            // 5. Notify Production Managers ONLY (not all employees)
+            const [managerUsers] = await pool.execute(`
+              SELECT DISTINCT u.id 
+              FROM users u 
+              JOIN employees e ON u.email = e.email 
+              JOIN roles r ON e.role_id = r.id
+              WHERE r.name = 'production_manager' AND e.status = 'active'
+            `);
+            
+            for (const mUser of managerUsers) {
+              await AlertsNotification.create({
+                userId: mUser.id,
+                fromUserId: req.user?.id || null,
+                alertType: 'status_update',
+                message: `Production Entry required for ${updatedTask.operation_name || updatedTask.title} (WO: ${updatedTask.work_order_no || 'N/A'})`,
+                relatedTable: 'employee_tasks',
+                relatedId: taskId,
+                priority: 'high',
+                link: entryLink
+              });
+            }
+          }
+        } catch (flowError) {
+          console.error('Error in task completion flow:', flowError);
+        }
+      }
+
       res.json({
         message: 'Task status updated successfully',
         data: updatedTask
@@ -326,6 +579,80 @@ exports.updateTaskStatus = async (req, res) => {
     } else {
       await EmployeeTask.updateStatus(taskId, status);
       const updatedTask = await EmployeeTask.findById(taskId);
+      
+      // Handle worker task completion flow
+      if (status === 'completed') {
+        try {
+          const pool = require('../../config/database');
+          const [roles] = await pool.execute("SELECT id FROM roles WHERE name = 'Production' OR name = 'production_manager' ORDER BY (CASE WHEN name = 'Production' THEN 0 ELSE 1 END) LIMIT 1");
+          const productionRoleId = roles.length > 0 ? roles[0].id : null;
+          
+          if (productionRoleId) {
+            const entryLink = '/department/production';
+            // Create Department Task for Production Entry
+            await DepartmentTask.createDepartmentTask({
+              root_card_id: updatedTask.root_card_id || null,
+              role_id: productionRoleId,
+              task_title: `Worker Task Completed: ${updatedTask.task}`,
+              task_description: `Worker ${req.user?.name || 'Employee'} has completed the task: ${updatedTask.task} for Root Card: ${updatedTask.root_card_title || 'N/A'}. Please do the production entry.`,
+              priority: updatedTask.priority || 'medium',
+              status: 'pending',
+              assigned_by: req.user?.id || null,
+              sales_order_id: updatedTask.sales_order_id || null,
+              link: entryLink
+            });
+
+            // Create Assigned Task for Production Department
+            const [productionManagers] = await pool.execute(
+              "SELECT e.id FROM employees e JOIN roles r ON e.role_id = r.id WHERE r.name = 'production_manager' AND e.status = 'active' LIMIT 1"
+            );
+            
+            let productionAssigneeId = productionManagers.length > 0 ? productionManagers[0].id : null;
+            
+            if (!productionAssigneeId) {
+              const [prodEmployees] = await pool.execute(
+                "SELECT e.id FROM employees e JOIN roles r ON e.role_id = r.id WHERE r.name = 'Production' AND e.status = 'active' LIMIT 1"
+              );
+              if (prodEmployees.length > 0) productionAssigneeId = prodEmployees[0].id;
+            }
+
+            if (productionAssigneeId) {
+              await EmployeeTask.createAssignedTask(productionAssigneeId, {
+                title: `Do Production Entry: ${updatedTask.task}`,
+                description: `Worker task completed for Root Card: ${updatedTask.root_card_title || 'N/A'}. Please do the production entry.`,
+                type: 'production_entry',
+                priority: updatedTask.priority || 'medium',
+                salesOrderId: updatedTask.sales_order_id,
+                assignedBy: req.user?.id || null
+              });
+            }
+
+            // Notify Production Managers ONLY
+            const [managerUsers] = await pool.execute(`
+              SELECT DISTINCT u.id 
+              FROM users u 
+              JOIN employees e ON u.email = e.email 
+              JOIN roles r ON e.role_id = r.id
+              WHERE r.name = 'production_manager' AND e.status = 'active'
+            `);
+            for (const mUser of managerUsers) {
+              await AlertsNotification.create({
+                userId: mUser.id,
+                fromUserId: req.user?.id || null,
+                alertType: 'status_update',
+                message: `Worker task completed: ${updatedTask.task} (Root Card: ${updatedTask.root_card_title || 'N/A'})`,
+                relatedTable: 'worker_tasks',
+                relatedId: taskId,
+                priority: 'medium',
+                link: entryLink
+              });
+            }
+          }
+        } catch (flowError) {
+          console.error('Error in worker task completion flow:', flowError);
+        }
+      }
+
       res.json({
         message: 'Task status updated successfully',
         data: updatedTask

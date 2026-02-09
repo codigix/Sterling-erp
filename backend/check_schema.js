@@ -1,21 +1,12 @@
-const mysql = require('mysql2/promise');
-const config = {
-  host: 'localhost',
-  user: 'root',
-  password: 'Kale@1234',
-  database: 'sterling_erp'
-};
-
-async function main() {
-  const connection = await mysql.createConnection(config);
+const pool = require('./config/database');
+async function checkSchema() {
   try {
-    const [rows] = await connection.execute('DESCRIBE manufacturing_stages');
-    console.table(rows);
-  } catch (error) {
-    console.error('Error:', error.message);
-  } finally {
-    await connection.end();
+    const [rows] = await pool.execute('SHOW CREATE TABLE employee_tasks');
+    console.log(rows[0]['Create Table']);
+    process.exit(0);
+  } catch (e) {
+    console.error(e);
+    process.exit(1);
   }
 }
-
-main();
+checkSchema();

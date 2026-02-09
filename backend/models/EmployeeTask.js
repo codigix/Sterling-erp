@@ -102,25 +102,27 @@ class EmployeeTask {
                     wt.*, 
                     ms.stage_name, 
                     ms.root_card_id,
-                    rc.title as root_card_title, 
+                    rc.code as root_card_code,
+                    rc.title as root_card_name,
+                    COALESCE(qcd.job_card_no, rc.code, so.po_number, 'N/A') as root_card_title, 
                     rc.priority,
                     rc.project_id,
-                    p.name as project_name,
                     p.code as project_code,
                     so.id as sales_order_id,
                     so.po_number,
-                    so.customer,
                     so.total,
                     so.order_date,
                     so.due_date,
                     e.first_name,
                     e.last_name,
-                    e.email
+                    e.email,
+                    qcd.job_card_no
                  FROM worker_tasks wt
                  LEFT JOIN manufacturing_stages ms ON wt.stage_id = ms.id
                  LEFT JOIN root_cards rc ON ms.root_card_id = rc.id
                  LEFT JOIN projects p ON rc.project_id = p.id
-                 LEFT JOIN sales_orders so ON p.sales_order_id = so.id
+                 LEFT JOIN sales_orders so ON (p.sales_order_id = so.id OR rc.sales_order_id = so.id)
+                 LEFT JOIN quality_check_details qcd ON (so.id = qcd.sales_order_id OR rc.sales_order_id = qcd.sales_order_id)
                  LEFT JOIN users u ON wt.worker_id = u.id
                  LEFT JOIN employees e ON (u.email = e.email AND u.email IS NOT NULL)
                  WHERE wt.worker_id = ?`;
@@ -152,6 +154,22 @@ class EmployeeTask {
 
   static async createAssignedTask(employeeId, data, connection = null) {
     const db = connection || pool;
+    
+    // Validate salesOrderId if provided to avoid FK constraint failures
+    let validatedSalesOrderId = data.salesOrderId || null;
+    if (validatedSalesOrderId) {
+      try {
+        const [soRows] = await db.execute('SELECT id FROM sales_orders WHERE id = ?', [validatedSalesOrderId]);
+        if (soRows.length === 0) {
+          console.warn(`[EmployeeTask] ⚠️ Sales Order ID ${validatedSalesOrderId} does not exist. Setting to null for task.`);
+          validatedSalesOrderId = null;
+        }
+      } catch (err) {
+        console.warn(`[EmployeeTask] ⚠️ Error validating Sales Order ID:`, err.message);
+        validatedSalesOrderId = null;
+      }
+    }
+
     const [result] = await db.execute(
       `INSERT INTO employee_tasks (employee_id, title, description, type, production_plan_stage_id, work_order_operation_id, sales_order_id, priority, status, due_date, notes, assigned_by)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -162,7 +180,7 @@ class EmployeeTask {
         data.type || 'general',
         data.productionPlanStageId || null,
         data.workOrderOperationId || null,
-        data.salesOrderId || null,
+        validatedSalesOrderId,
         data.priority || 'medium',
         'pending',
         data.dueDate || null,
@@ -173,50 +191,73 @@ class EmployeeTask {
 
     const taskId = result.insertId;
     
-    if (data.productionPlanStageId) {
-      try {
+    // Automatic notification logic
+    try {
+      let shouldNotify = true;
+      
+      // If linked to a production plan stage, check if it's blocked
+      if (data.productionPlanStageId) {
         const [stageRows] = await db.execute(
           'SELECT is_blocked FROM production_plan_stages WHERE id = ?',
           [data.productionPlanStageId]
         );
-        
-        const isStageBlocked = stageRows.length > 0 && stageRows[0].is_blocked;
-        
-        if (!isStageBlocked) {
-          try {
-            const [existingNotif] = await db.execute(
-              `SELECT id FROM alerts_notifications 
-               WHERE user_id = ? AND alert_type = 'task_assigned' AND related_id = ? AND is_read = FALSE
-               LIMIT 1`,
-              [employeeId, taskId]
-            );
-            
-            if (existingNotif.length > 0) {
-              console.log(`[EmployeeTask] ℹ️ Notification already exists for this task assignment (${taskId})`);
-            } else {
-              await db.execute(
-                `INSERT INTO alerts_notifications (user_id, alert_type, message, related_table, related_id, priority)
-                 VALUES (?, ?, ?, ?, ?, ?)`,
-                [
-                  employeeId,
-                  'task_assigned',
-                  `You have been assigned a new task: ${data.title}`,
-                  'employee_tasks',
-                  taskId,
-                  'high'
-                ]
-              );
-              console.log(`[EmployeeTask] ✓ Notification created for employee ${employeeId} (task assignment)`);
-            }
-          } catch (createError) {
-            console.error(`[EmployeeTask] Error creating task_assigned notification:`, createError.message);
-          }
-        } else {
+        if (stageRows.length > 0 && stageRows[0].is_blocked) {
+          shouldNotify = false;
           console.log(`[EmployeeTask] ℹ️ Task created for employee ${employeeId} but stage is blocked, no notification sent`);
         }
-      } catch (notifError) {
-        console.error(`[EmployeeTask] Error checking stage or sending notification:`, notifError.message);
       }
+      
+      if (shouldNotify) {
+        // Find user_id from employee_id for notification
+        let userId = employeeId;
+        const [users] = await db.execute(
+          "SELECT u.id FROM users u JOIN employees e ON u.email = e.email WHERE e.id = ?", 
+          [employeeId]
+        );
+        if (users.length > 0) {
+          userId = users[0].id;
+          
+          // Check for existing notification to avoid duplicates
+          const [existingNotif] = await db.execute(
+            `SELECT id FROM alerts_notifications 
+             WHERE user_id = ? AND alert_type = 'task_assigned' AND related_id = ? AND is_read = FALSE
+             LIMIT 1`,
+            [userId, taskId]
+          );
+          
+          if (existingNotif.length > 0) {
+            console.log(`[EmployeeTask] ℹ️ Notification already exists for this task assignment (${taskId})`);
+          } else {
+            // Find user_id for the assigner (from_user_id)
+            let fromUserId = null;
+            if (data.assignedBy) {
+              const [assignerUsers] = await db.execute(
+                "SELECT u.id FROM users u JOIN employees e ON u.email = e.email WHERE e.id = ?", 
+                [data.assignedBy]
+              );
+              if (assignerUsers.length > 0) fromUserId = assignerUsers[0].id;
+            }
+
+            await db.execute(
+              `INSERT INTO alerts_notifications (user_id, from_user_id, alert_type, message, related_table, related_id, priority, link)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+              [
+                userId,
+                fromUserId,
+                'task_assigned',
+                `You have been assigned a new task: ${data.title}`,
+                'employee_tasks',
+                taskId,
+                data.priority || 'medium',
+                data.link || '/employee/tasks'
+              ]
+            );
+            console.log(`[EmployeeTask] ✓ Notification created for user ${userId} (task assignment)`);
+          }
+        }
+      }
+    } catch (notifError) {
+      console.error(`[EmployeeTask] Error creating task notification:`, notifError.message);
     }
 
     return taskId;
@@ -226,26 +267,26 @@ class EmployeeTask {
     let query = `SELECT et.id, et.employee_id, et.title, et.description, et.type, et.priority, et.status, 
                         et.assigned_by, et.due_date, et.notes, et.started_at, et.completed_at, 
                         et.created_at, et.updated_at, et.production_plan_stage_id, et.work_order_operation_id, et.sales_order_id,
-                        pps.stage_name, woo.operation_name, wo.work_order_no, wo.item_name,
-                        COALESCE(rc.title, so.project_name, so.po_number, wo.item_name) as root_card_title,
+                        pps.stage_name, woo.operation_name, woo.created_at as operation_created_at, wo.work_order_no, wo.item_name,
+                        COALESCE(qcd.job_card_no, rc.code, so.po_number, wo.work_order_no, 'N/A') as root_card_title,
+                        rc.code as root_card_code,
+                        rc.title as root_card_name,
                         COALESCE(p.id, p2.id, p3.id) as project_id, 
-                        COALESCE(p.name, p2.name, p3.name) as project_name, 
                         COALESCE(p.code, p2.code, p3.code) as project_code,
-                        COALESCE(sod.product_details, so.items) as product_details,
-                        COALESCE(so.customer, so2.customer) as customer_name,
-                        COALESCE(so.po_number, so2.po_number) as po_number
+                        qcd.job_card_no
                  FROM employee_tasks et
                  LEFT JOIN production_plan_stages pps ON et.production_plan_stage_id = pps.id
                  LEFT JOIN production_plans pp ON pps.production_plan_id = pp.id
-                 LEFT JOIN root_cards rc ON pp.root_card_id = rc.id
+                 LEFT JOIN work_order_operations woo ON et.work_order_operation_id = woo.id
+                 LEFT JOIN work_orders wo ON woo.work_order_id = wo.id
+                 LEFT JOIN root_cards rc ON (pp.root_card_id = rc.id OR wo.root_card_id = rc.id OR et.root_card_id = rc.id)
                  LEFT JOIN projects p ON rc.project_id = p.id
                  LEFT JOIN sales_orders so ON et.sales_order_id = so.id
                  LEFT JOIN projects p2 ON so.id = p2.sales_order_id
                  LEFT JOIN sales_order_details sod ON sod.sales_order_id = pp.sales_order_id
-                 LEFT JOIN work_order_operations woo ON et.work_order_operation_id = woo.id
-                 LEFT JOIN work_orders wo ON woo.work_order_id = wo.id
                  LEFT JOIN sales_orders so2 ON wo.sales_order_id = so2.id
                  LEFT JOIN projects p3 ON wo.project_id = p3.id
+                 LEFT JOIN quality_check_details qcd ON (so.id = qcd.sales_order_id OR so2.id = qcd.sales_order_id OR rc.sales_order_id = qcd.sales_order_id)
                  WHERE et.employee_id = ? AND (pps.id IS NULL OR pps.is_blocked = FALSE)`;
     const params = [employeeId];
 
@@ -268,25 +309,11 @@ class EmployeeTask {
     const [rows] = await pool.execute(query, params);
     
     return (rows || []).map(row => {
-      let product_name = row.project_name || row.item_name || null;
-      if (row.product_details) {
-        try {
-          const details = typeof row.product_details === 'string' ? JSON.parse(row.product_details) : row.product_details;
-          if (Array.isArray(details) && details.length > 0) {
-            product_name = details[0].name || details[0].itemName || product_name;
-          } else {
-            product_name = details.itemName || details.name || product_name;
-          }
-        } catch (e) {
-          console.warn('Error parsing product_details for task:', row.id);
-        }
-      }
-
       return { 
         ...row, 
-        product_name,
+        product_name: row.item_name || null,
         salesOrder: {
-          customer: row.customer_name || 'N/A',
+          customer: 'Confidential',
           poNumber: row.po_number || 'N/A'
         },
         rootCard: {
@@ -301,24 +328,24 @@ class EmployeeTask {
       `SELECT et.id, et.employee_id, et.title, et.description, et.type, et.priority, et.status, 
               et.assigned_by, et.due_date, et.notes, et.started_at, et.completed_at, 
               et.created_at, et.updated_at, et.production_plan_stage_id, et.work_order_operation_id, et.sales_order_id,
-              pps.stage_name, woo.operation_name, wo.work_order_no, wo.item_name,
-              COALESCE(rc.title, so.project_name, so.po_number, wo.item_name) as root_card_title,
+              pps.stage_name, woo.operation_name, woo.created_at as operation_created_at, wo.work_order_no, wo.item_name,
+              COALESCE(qcd.job_card_no, rc.code, so.po_number, wo.work_order_no, 'N/A') as root_card_title,
+              rc.code as root_card_code,
+              rc.title as root_card_name,
               COALESCE(p.id, p2.id, p3.id) as project_id, 
-              COALESCE(p.name, p2.name, p3.name) as project_name, 
               COALESCE(p.code, p2.code, p3.code) as project_code,
-              COALESCE(sod.product_details, so.items) as product_details,
-              COALESCE(so.customer, so2.customer) as customer_name,
-              COALESCE(so.po_number, so2.po_number) as po_number
+              qcd.job_card_no
        FROM employee_tasks et
        LEFT JOIN production_plan_stages pps ON et.production_plan_stage_id = pps.id
        LEFT JOIN production_plans pp ON pps.production_plan_id = pp.id
-       LEFT JOIN root_cards rc ON pp.root_card_id = rc.id
+       LEFT JOIN work_order_operations woo ON et.work_order_operation_id = woo.id
+       LEFT JOIN work_orders wo ON woo.work_order_id = wo.id
+       LEFT JOIN root_cards rc ON (pp.root_card_id = rc.id OR wo.root_card_id = rc.id OR et.root_card_id = rc.id)
+       LEFT JOIN quality_check_details qcd ON (rc.id = qcd.sales_order_id OR rc.sales_order_id = qcd.sales_order_id)
        LEFT JOIN projects p ON rc.project_id = p.id
        LEFT JOIN sales_orders so ON et.sales_order_id = so.id
        LEFT JOIN projects p2 ON so.id = p2.sales_order_id
        LEFT JOIN sales_order_details sod ON sod.sales_order_id = pp.sales_order_id
-       LEFT JOIN work_order_operations woo ON et.work_order_operation_id = woo.id
-       LEFT JOIN work_orders wo ON woo.work_order_id = wo.id
        LEFT JOIN sales_orders so2 ON wo.sales_order_id = so2.id
        LEFT JOIN projects p3 ON wo.project_id = p3.id
        WHERE et.id = ?`,
@@ -326,24 +353,11 @@ class EmployeeTask {
     );
     
     if (rows[0]) {
-      let product_name = rows[0].project_name || rows[0].item_name || null;
-      if (rows[0].product_details) {
-        try {
-          const details = typeof rows[0].product_details === 'string' ? JSON.parse(rows[0].product_details) : rows[0].product_details;
-          if (Array.isArray(details) && details.length > 0) {
-            product_name = details[0].name || details[0].itemName || product_name;
-          } else {
-            product_name = details.itemName || details.name || product_name;
-          }
-        } catch (e) {
-          console.warn('Error parsing product_details for task:', taskId);
-        }
-      }
       return { 
         ...rows[0], 
-        product_name,
+        product_name: rows[0].item_name || null,
         salesOrder: {
-          customer: rows[0].customer_name || 'N/A',
+          customer: 'Confidential',
           poNumber: rows[0].po_number || 'N/A'
         },
         rootCard: {
@@ -499,7 +513,7 @@ class EmployeeTask {
               const [deptMembers] = await pool.execute(`
                 SELECT DISTINCT e.id 
                 FROM employees e
-                WHERE e.department = 'Production' OR e.department_name = 'Production'
+                WHERE e.department = 'Production'
                 LIMIT 20
               `);
               
@@ -550,6 +564,88 @@ class EmployeeTask {
         } else {
           console.log(`[EmployeeTask] No dependent stages found for stage ${task.production_plan_stage_id}`);
         }
+      }
+    }
+
+    // Custom Workflow: Notification to Production Department on completion
+    if (status === 'completed') {
+      try {
+        // Only trigger for relevant task types that lead to production
+        const triggerTypes = ['design_engineering', 'material_requirement', 'production_plan', 'job_card', 'production_stage'];
+        
+        if (triggerTypes.includes(task.type) || task.production_plan_stage_id || task.work_order_operation_id) {
+          console.log(`[EmployeeTask] Triggering production notification for task type: ${task.type || 'unknown'}`);
+          
+          // Resolve root_card_id if missing
+          let rootCardId = task.root_card_id;
+          if (!rootCardId && task.sales_order_id) {
+            const [rc] = await pool.execute('SELECT id FROM root_cards WHERE sales_order_id = ? LIMIT 1', [task.sales_order_id]);
+            if (rc[0]) rootCardId = rc[0].id;
+          }
+          if (!rootCardId && task.work_order_operation_id) {
+            const [rc] = await pool.execute(`
+              SELECT wo.root_card_id 
+              FROM work_order_operations woo 
+              JOIN work_orders wo ON woo.work_order_id = wo.id 
+              WHERE woo.id = ? LIMIT 1`, 
+              [task.work_order_operation_id]
+            );
+            if (rc[0]) rootCardId = rc[0].root_card_id;
+          }
+
+          // Get Production Department Head / Supervisor (role_id 10 is production_manager)
+          const [prodHeads] = await pool.execute(`
+            SELECT DISTINCT u.id as user_id, e.id as employee_id
+            FROM employees e
+            JOIN users u ON e.email = u.email
+            WHERE e.department = 'Production'
+            AND (e.role_id IN (5, 10, 13, 14) OR e.designation LIKE '%Manager%' OR e.designation LIKE '%Supervisor%')
+            ORDER BY (CASE WHEN e.designation LIKE '%Manager%' THEN 0 WHEN e.designation LIKE '%Supervisor%' THEN 1 ELSE 2 END) ASC
+            LIMIT 1
+          `);
+
+          const DepartmentTask = require('./DepartmentTask');
+          const AlertsNotification = require('./AlertsNotification');
+          
+          // Determine reference info (SO # or Root Card)
+          let refInfo = '';
+          if (task.sales_order_id) {
+            const [so] = await pool.execute('SELECT po_number FROM sales_orders WHERE id = ?', [task.sales_order_id]);
+            if (so[0]) refInfo = ` for SO #${so[0].po_number}`;
+          }
+
+          const notifMessage = `Task "${task.title}" has been completed${refInfo}. Ready for production entry.`;
+
+          // 1. Create ONE Department Task for the entire production department (role_id 5)
+          await DepartmentTask.createDepartmentTask({
+            root_card_id: rootCardId,
+            role_id: 5, // Production Role
+            task_title: `Production Entry: ${task.title}`,
+            task_description: `Complete production entry for task ${task.title}${refInfo}`,
+            status: 'pending',
+            priority: 'high',
+            sales_order_id: task.sales_order_id,
+            link: '/department/production/department-tasks'
+          });
+
+          // 2. Send notification to the Production Head/Supervisor if found
+          if (prodHeads.length > 0) {
+            await AlertsNotification.create({
+              userId: prodHeads[0].user_id,
+              alertType: 'production_ready',
+              message: notifMessage,
+              relatedTable: 'employee_tasks',
+              relatedId: taskId,
+              priority: 'high',
+              link: '/department/production/department-tasks'
+            });
+            console.log(`[EmployeeTask] ✓ Production notification sent to head: ${prodHeads[0].user_id}`);
+          }
+          
+          console.log(`[EmployeeTask] ✓ Departmental Production Task created for Root Card: ${rootCardId}`);
+        }
+      } catch (workflowError) {
+        console.error('[EmployeeTask] Production workflow trigger failed:', workflowError.message);
       }
     }
   }

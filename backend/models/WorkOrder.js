@@ -152,10 +152,10 @@ class WorkOrder {
 
     const workOrderIds = workOrders.map(wo => wo.id);
     const [operations] = await pool.query(
-      `SELECT woo.*, COALESCE(CONCAT(e.first_name, ' ', e.last_name), u.username) as operator_name 
+      `SELECT woo.*, COALESCE(NULLIF(CONCAT_WS(' ', e.first_name, e.last_name), ''), u.username) as operator_name 
        FROM work_order_operations woo 
-       LEFT JOIN users u ON woo.operator_id = u.id
-       LEFT JOIN employees e ON (u.email = e.email AND u.email IS NOT NULL)
+       LEFT JOIN employees e ON woo.operator_id = e.id
+       LEFT JOIN users u ON (e.email = u.email AND e.email IS NOT NULL)
        WHERE woo.work_order_id IN (?) 
        ORDER BY woo.sequence ASC`,
       [workOrderIds]
@@ -193,10 +193,10 @@ class WorkOrder {
     const workOrder = rows[0];
     
     const [operations] = await pool.execute(
-      `SELECT woo.*, COALESCE(CONCAT(e.first_name, ' ', e.last_name), u.username) as operator_name 
+      `SELECT woo.*, COALESCE(NULLIF(CONCAT_WS(' ', e.first_name, e.last_name), ''), u.username) as operator_name 
        FROM work_order_operations woo 
-       LEFT JOIN users u ON woo.operator_id = u.id
-       LEFT JOIN employees e ON (u.email = e.email AND u.email IS NOT NULL)
+       LEFT JOIN employees e ON woo.operator_id = e.id
+       LEFT JOIN users u ON (e.email = u.email AND e.email IS NOT NULL)
        WHERE woo.work_order_id = ? 
        ORDER BY woo.sequence ASC`,
       [id]
@@ -325,6 +325,22 @@ class WorkOrder {
       return result.affectedRows > 0;
     } catch (error) {
       console.error("Error in WorkOrder.startOperation:", error);
+      throw error;
+    }
+  }
+
+  static async completeOperation(id) {
+    try {
+      const [result] = await pool.execute(
+        `UPDATE work_order_operations SET 
+          status = 'completed', 
+          actual_end_date = COALESCE(actual_end_date, NOW())
+         WHERE id = ?`,
+        [id]
+      );
+      return result.affectedRows > 0;
+    } catch (error) {
+      console.error("Error in WorkOrder.completeOperation:", error);
       throw error;
     }
   }

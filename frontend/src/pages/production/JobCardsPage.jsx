@@ -79,10 +79,21 @@ const JobCardsPage = () => {
   }, [fetchJobCards]);
 
   const handleStartOperation = async (operation) => {
+    if (!operation.operator_id) {
+      Swal.fire({
+        title: 'Operator Required',
+        text: 'Please assign an operator before starting the operation.',
+        icon: 'warning',
+        confirmButtonColor: '#3085d6',
+      });
+      setEditingOperationId(operation.id);
+      return;
+    }
+
     try {
       const result = await Swal.fire({
         title: 'Start Operation?',
-        text: 'This will move the operation to in-progress status.',
+        text: 'This will move the operation to in-progress status and assign the task to the operator.',
         icon: 'question',
         showCancelButton: true,
         confirmButtonColor: '#3085d6',
@@ -95,16 +106,16 @@ const JobCardsPage = () => {
           operatorId: operation.operator_id,
           workstationId: operation.workstation_id
         });
+        
         Swal.fire({
           title: 'Started!',
-          text: 'Operation is now in production.',
+          text: 'Operation is now in-progress. Task assigned to operator.',
           icon: 'success',
           timer: 1500,
           showConfirmButton: false
         });
         
-        // Redirect to Production Entry page
-        navigate(`/department/production/operations/${operation.id}/entry`);
+        fetchJobCards();
       }
     } catch (error) {
       console.error('Error starting operation:', error);
@@ -431,11 +442,11 @@ const JobCardsPage = () => {
                               </div>
 
                               <div className="col-span-2 flex items-center justify-end gap-2">
-                                {op.status === 'in_progress' ? (
+                                {op.status === 'in_progress' || op.status === 'completed' ? (
                                   <button 
                                     onClick={() => navigate(`/department/production/operations/${op.id}/entry`)}
-                                    className="p-1.5 bg-indigo-600 text-white rounded-lg transition-all shadow-sm hover:shadow-indigo-200"
-                                    title="Production Entry"
+                                    className={`p-1.5 rounded-lg transition-all shadow-sm ${op.status === 'completed' ? 'bg-emerald-600 hover:shadow-emerald-200' : 'bg-indigo-600 hover:shadow-indigo-200'} text-white`}
+                                    title={op.status === 'completed' ? "Operator Finished - Finalize Production Entry" : "Production Entry"}
                                   >
                                     <Zap size={18} fill="white" />
                                   </button>

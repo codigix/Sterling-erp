@@ -1,4 +1,5 @@
-const API_URL = 'http://localhost:5001/api';
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+const API_URL = process.env.VITE_API_URL;
 
 async function testDesignAPIs() {
   try {

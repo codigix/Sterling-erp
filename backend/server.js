@@ -126,9 +126,16 @@ const PORT = process.env.PORT || 5000;
 
 async function startServer() {
   try {
-    console.log('Running database migrations...');
-    await runMigrations();
-    console.log('✅ Migrations completed successfully\n');
+    // Run migrations in background to prevent blocking server start
+    setTimeout(async () => {
+      try {
+        console.log('Running database migrations in background...');
+        await runMigrations();
+        console.log('✅ Migrations completed successfully');
+      } catch (migrationError) {
+        console.error('❌ Background Migration failed:', migrationError.message);
+      }
+    }, 1000);
 
     // Start Email Monitor
     emailMonitorService.start();

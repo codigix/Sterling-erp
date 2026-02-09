@@ -16,6 +16,7 @@ router.get("/operations/:id/details", authMiddleware, workOrderController.getOpe
 router.post("/operations/:id/time-logs", authMiddleware, workOrderController.addTimeLog);
 router.post("/operations/:id/quality-entries", authMiddleware, workOrderController.addQualityEntry);
 router.post("/operations/:id/downtime-logs", authMiddleware, workOrderController.addDowntimeLog);
+router.post("/operations/:id/complete-entry", authMiddleware, workOrderController.completeProductionEntry);
 
 router.get("/:id", authMiddleware, workOrderController.getWorkOrderById);
 router.put("/:id", authMiddleware, workOrderController.updateWorkOrder);

@@ -1,3 +1,5 @@
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+const API_URL = process.env.VITE_API_URL || 'http://localhost:5001';
 const axios = require('axios');
 const pool = require('./backend/config/database');
 
@@ -20,7 +22,7 @@ async function testWithAuth() {
     
     try {
       console.log('Testing without token...');
-      const response1 = await axios.get('http://localhost:5001/api/employee/portal/tasks/18');
+      const response1 = await axios.get(`${API_URL}/api/employee/portal/tasks/18`);
       console.log('Response status:', response1.status);
       console.log('Response data:', response1.data);
     } catch (e) {
@@ -29,7 +31,7 @@ async function testWithAuth() {
 
     // Let's check the actual error from the server
     console.log('\nLet\'s check what auth middleware expects...');
-    const response2 = await axios.get('http://localhost:5001/api/health');
+    const response2 = await axios.get(`${API_URL}/api/health`);
     console.log('Health check:', response2.data);
 
     process.exit(0);
