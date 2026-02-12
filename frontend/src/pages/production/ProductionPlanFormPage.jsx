@@ -31,19 +31,28 @@ const MaterialRequestModal = ({ isOpen, onClose, data, materials, planId, onSave
 
     setIsSubmitting(true);
     try {
-      const requests = materials.map(m => ({
-        rootCardId: data.salesOrderId,
+      console.log('--- Material Request Modal Submit Debug ---');
+      console.log('formData.salesOrderId:', data.salesOrderId);
+      console.log('formData.rootCardId:', data.rootCardId);
+      
+      const payload = {
+        rootCardId: data.salesOrderId || data.rootCardId,
         productionPlanId: currentPlanId,
-        materialName: m.specification,
-        quantity: m.requiredQty,
-        unit: m.uom || 'Nos',
-        specification: m.specification,
+        department: 'Production',
+        purpose: 'Material Issue',
         requiredDate: data.estimatedCompletionDate,
         priority: 'medium',
-        remarks: `Generated from Production Plan: ${data.planName}`
-      }));
+        remarks: `Generated from Production Plan: ${data.planName}`,
+        items: materials.map(m => ({
+          materialName: m.itemName || m.specification,
+          materialCode: m.itemCode || m.materialCode || m.specification,
+          quantity: m.requiredQty,
+          unit: m.uom || 'Nos',
+          specification: m.specification
+        }))
+      };
 
-      await axios.post('/procurement/material-requests/bulk', { requests });
+      await axios.post('/inventory/material-requests', payload);
       
       Swal.fire({
         icon: 'success',
@@ -1451,10 +1460,11 @@ const ProductionPlanFormPage = () => {
         if (bom.materials) {
           bom.materials.forEach(m => {
             const mCode = m.itemCode || m.item_code || m.specification;
-            const mName = m.itemName || m.item_name || mCode || 'Unnamed Material';
+            const mName = m.itemName || m.item_name || m.specification || 'Unnamed Material';
             mats.push({
               specification: mCode,
               itemName: mName,
+              itemCode: mCode,
               requiredQty: m.quantity * multiplier,
               qtyPerUnit: m.quantity,
               uom: m.uom || m.unit || 'Nos',
@@ -1474,6 +1484,7 @@ const ProductionPlanFormPage = () => {
             mats.push({
               specification: sCode,
               itemName: sName,
+              itemCode: sCode,
               requiredQty: (s.inputQty || 0) * multiplier,
               qtyPerUnit: s.inputQty || 0,
               uom: bom.uom || 'Nos',
@@ -1643,12 +1654,15 @@ const ProductionPlanFormPage = () => {
           let subAssys = [];
           if (bom.materials) {
             bom.materials.forEach(m => {
+              const mCode = m.itemCode || m.item_code || m.materialCode || m.specification;
+              const mName = m.itemName || m.item_name || m.name || m.specification || 'Unnamed Material';
               mats.push({
-                specification: m.itemName,
-                itemName: m.itemName,
+                specification: mCode,
+                itemName: mName,
+                itemCode: mCode,
                 requiredQty: m.quantity * multiplier,
                 qtyPerUnit: m.quantity,
-                uom: m.uom,
+                uom: m.uom || m.unit || 'Nos',
                 sourceAssembly: sourceName,
                 sourceAssemblyCode: sourceCode,
                 bomRef: bomRef,

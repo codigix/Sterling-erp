@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import { 
   ArrowLeft, Clock, CheckCircle, AlertCircle, Play, Pause, 
   Trash2, Plus, Calendar, User, Settings, Box, 
@@ -13,11 +13,24 @@ import { format } from 'date-fns';
 const ProductionEntryPage = () => {
   const { id } = useParams(); // Operation ID
   const navigate = useNavigate();
+  const location = useLocation();
   const [operation, setOperation] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState('time-logs');
   const [submitting, setSubmitting] = useState(false);
+
+  // Section Refs for scrolling
+  const timeLogsRef = useRef(null);
+  const qualityRef = useRef(null);
+  const downtimeRef = useRef(null);
+  const nextOpRef = useRef(null);
+  const reportRef = useRef(null);
+
+  const scrollToSection = (ref) => {
+    if (ref && ref.current) {
+      ref.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
 
   // Form states
   const [timeLogForm, setTimeLogForm] = useState({
@@ -66,15 +79,33 @@ const ProductionEntryPage = () => {
       setEmployees(empRes.data || []);
       setWorkstations(wsRes.data.workstations || []);
       
-      // Initialize forms with operation defaults
+      // Get query parameters for auto-filling
+      const queryParams = new URLSearchParams(location.search);
+      const qOperatorId = queryParams.get('operatorId');
+      const qStartTime = queryParams.get('startTime');
+      const qEndTime = queryParams.get('endTime');
+      const qNotes = queryParams.get('notes');
+      const qProducedQty = parseInt(queryParams.get('producedQty')) || 0;
+      const qRejectedQty = parseInt(queryParams.get('rejectedQty')) || 0;
+      const qScrapQty = parseInt(queryParams.get('scrapQty')) || 0;
+
+      // Initialize forms with operation defaults and query params
       setTimeLogForm(prev => ({
         ...prev,
-        operatorId: opRes.data.operator_id || '',
-        workstationId: opRes.data.workstation_id || ''
+        operatorId: qOperatorId || opRes.data.operator_id || '',
+        workstationId: opRes.data.workstation_id || '',
+        startTime: qStartTime ? format(new Date(qStartTime), "yyyy-MM-dd'T'HH:mm") : prev.startTime,
+        endTime: qEndTime ? format(new Date(qEndTime), "yyyy-MM-dd'T'HH:mm") : prev.endTime,
+        producedQty: qProducedQty || prev.producedQty,
+        notes: qNotes || prev.notes
       }));
       setQualityForm(prev => ({
         ...prev,
-        operatorId: opRes.data.operator_id || ''
+        operatorId: qOperatorId || opRes.data.operator_id || '',
+        inspectionDate: qEndTime ? format(new Date(qEndTime), "yyyy-MM-dd'T'HH:mm") : prev.inspectionDate,
+        acceptedQty: qProducedQty ? (qProducedQty - qRejectedQty - qScrapQty) : prev.acceptedQty,
+        rejectedQty: qRejectedQty || prev.rejectedQty,
+        scrapQty: qScrapQty || prev.scrapQty
       }));
       
       setError(null);
@@ -84,7 +115,7 @@ const ProductionEntryPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, location.search]);
 
   useEffect(() => {
     fetchData();
@@ -312,43 +343,39 @@ const ProductionEntryPage = () => {
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 w-fit">
+        {/* Navigation Buttons (Scroll to Section) */}
+        <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 w-fit sticky top-[84px] z-20 shadow-sm">
           <button 
-            onClick={() => setActiveTab('time-logs')}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${
-              activeTab === 'time-logs' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-50'
-            }`}
+            onClick={() => scrollToSection(timeLogsRef)}
+            className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-50 transition-all"
           >
             <Clock size={18} />
             Time Logs
           </button>
           <button 
-            onClick={() => setActiveTab('quality')}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${
-              activeTab === 'quality' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-50'
-            }`}
+            onClick={() => scrollToSection(qualityRef)}
+            className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-50 transition-all"
           >
             <ShieldCheck size={18} />
             Quality Check
           </button>
           <button 
-            onClick={() => setActiveTab('downtime')}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${
-              activeTab === 'downtime' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-50'
-            }`}
+            onClick={() => scrollToSection(downtimeRef)}
+            className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-50 transition-all"
           >
             <AlertCircle size={18} />
             Downtime Logs
           </button>
           <button 
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-50`}
+            onClick={() => scrollToSection(nextOpRef)}
+            className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-50 transition-all"
           >
             <ChevronRight size={18} />
             Next Operation
           </button>
           <button 
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-50`}
+            onClick={() => scrollToSection(reportRef)}
+            className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-50 transition-all"
           >
             <FileText size={18} />
             Daily Report
@@ -356,270 +383,103 @@ const ProductionEntryPage = () => {
         </div>
 
         {/* Form and Data Section */}
-        <div className="space-y-6">
-          {/* Active Tab Content */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+        <div className="space-y-12 pb-20">
+          {/* Time Logs Section */}
+          <div ref={timeLogsRef} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden scroll-mt-32">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
               <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-lg ${
-                  activeTab === 'time-logs' ? 'bg-indigo-50 text-indigo-600' : 
-                  activeTab === 'quality' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'
-                }`}>
-                  {activeTab === 'time-logs' ? <Clock size={20} /> : activeTab === 'quality' ? <ShieldCheck size={20} /> : <AlertCircle size={20} />}
+                <div className="p-2 rounded-lg bg-indigo-50 text-indigo-600">
+                  <Clock size={20} />
                 </div>
-                <h2 className="text-lg font-bold text-slate-900">
-                  {activeTab === 'time-logs' ? 'Add Time Log' : activeTab === 'quality' ? 'Quality & Rejection Entry' : 'Operational Downtime'}
-                </h2>
+                <h2 className="text-lg font-bold text-slate-900">Add Time Log</h2>
               </div>
             </div>
 
             <div className="p-6">
-              {activeTab === 'time-logs' && (
-                <form onSubmit={handleAddTimeLog} className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 items-end">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-500 uppercase">Day & Date <span className="text-red-500">*</span></label>
-                    <input 
-                      type="datetime-local" 
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-                      value={timeLogForm.startTime}
-                      onChange={(e) => setTimeLogForm({...timeLogForm, startTime: e.target.value})}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-500 uppercase">Operator <span className="text-red-500">*</span></label>
-                    <select 
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none"
-                      value={timeLogForm.operatorId}
-                      onChange={(e) => setTimeLogForm({...timeLogForm, operatorId: e.target.value})}
-                      required
-                    >
-                      <option value="">Select Operator</option>
-                      {employees.map(emp => <option key={emp.id} value={emp.id}>{emp.name}</option>)}
-                    </select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-500 uppercase">Workstation <span className="text-red-500">*</span></label>
-                    <select 
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none"
-                      value={timeLogForm.workstationId}
-                      onChange={(e) => setTimeLogForm({...timeLogForm, workstationId: e.target.value})}
-                      required
-                    >
-                      <option value="">Select Machine</option>
-                      {workstations.map(ws => <option key={ws.id} value={ws.id}>{ws.display_name}</option>)}
-                    </select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-500 uppercase">Shift <span className="text-red-500">*</span></label>
-                    <select 
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none"
-                      value={timeLogForm.shift}
-                      onChange={(e) => setTimeLogForm({...timeLogForm, shift: e.target.value})}
-                    >
-                      <option value="A">Shift A</option>
-                      <option value="B">Shift B</option>
-                      <option value="C">Shift C</option>
-                    </select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-500 uppercase">Produce Qty <span className="text-red-500">*</span></label>
-                    <div className="relative">
-                      <input 
-                        type="number" 
-                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none"
-                        value={timeLogForm.producedQty}
-                        onChange={(e) => setTimeLogForm({...timeLogForm, producedQty: e.target.value})}
-                        required
-                      />
-                      <span className="absolute right-3 top-2 text-[10px] font-bold text-slate-400">UNITS</span>
-                    </div>
-                  </div>
-                  <button 
-                    type="submit" 
-                    disabled={submitting}
-                    className="flex items-center justify-center gap-2 bg-indigo-600 text-white px-6 py-2.5 rounded-lg text-sm font-bold hover:bg-indigo-700 transition-all shadow-md disabled:opacity-50"
+              <form onSubmit={handleAddTimeLog} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Day & Date <span className="text-red-500">*</span></label>
+                  <input 
+                    type="datetime-local" 
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none"
+                    value={timeLogForm.startTime}
+                    onChange={(e) => setTimeLogForm({...timeLogForm, startTime: e.target.value})}
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Operator <span className="text-red-500">*</span></label>
+                  <select 
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none"
+                    value={timeLogForm.operatorId}
+                    onChange={(e) => setTimeLogForm({...timeLogForm, operatorId: e.target.value})}
+                    required
                   >
-                    <Play size={16} fill="white" />
-                    Record Time
-                  </button>
-                </form>
-              )}
-
-              {activeTab === 'quality' && (
-                <form onSubmit={handleAddQualityEntry} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 items-end">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-500 uppercase">Day & Date <span className="text-red-500">*</span></label>
-                    <input 
-                      type="datetime-local" 
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none"
-                      value={qualityForm.inspectionDate}
-                      onChange={(e) => setQualityForm({...qualityForm, inspectionDate: e.target.value})}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-500 uppercase">Shift <span className="text-red-500">*</span></label>
-                    <select className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none">
-                      <option value="A">A</option>
-                      <option value="B">B</option>
-                    </select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-500 uppercase">Produce Qty</label>
+                    <option value="">Select Operator</option>
+                    {employees.map(emp => <option key={emp.id} value={emp.id}>{emp.name}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Workstation <span className="text-red-500">*</span></label>
+                  <select 
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none"
+                    value={timeLogForm.workstationId}
+                    onChange={(e) => setTimeLogForm({...timeLogForm, workstationId: e.target.value})}
+                    required
+                  >
+                    <option value="">Select Machine</option>
+                    {workstations.map(ws => <option key={ws.id} value={ws.id}>{ws.display_name}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Shift <span className="text-red-500">*</span></label>
+                  <select 
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none"
+                    value={timeLogForm.shift}
+                    onChange={(e) => setTimeLogForm({...timeLogForm, shift: e.target.value})}
+                  >
+                    <option value="A">Shift A</option>
+                    <option value="B">Shift B</option>
+                    <option value="C">Shift C</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Produce Qty <span className="text-red-500">*</span></label>
+                  <div className="relative">
                     <input 
                       type="number" 
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none"
-                      value={qualityForm.acceptedQty + qualityForm.rejectedQty + qualityForm.scrapQty}
-                      readOnly
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-500 uppercase">Rejection Reason</label>
-                    <select 
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none"
-                      value={qualityForm.rejectionReason}
-                      onChange={(e) => setQualityForm({...qualityForm, rejectionReason: e.target.value})}
-                    >
-                      <option value="">Select Reason</option>
-                      <option value="Dimensional Error">Dimensional Error</option>
-                      <option value="Surface Defect">Surface Defect</option>
-                      <option value="Material Flaw">Material Flaw</option>
-                    </select>
-                  </div>
-                  <div className="lg:col-span-1 grid grid-cols-3 gap-2">
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-emerald-500 uppercase">Accepted</label>
-                      <input 
-                        type="number" 
-                        className="w-full px-2 py-2 bg-emerald-50 border border-emerald-100 rounded-lg text-sm font-bold text-emerald-600 outline-none"
-                        value={qualityForm.acceptedQty}
-                        onChange={(e) => setQualityForm({...qualityForm, acceptedQty: parseInt(e.target.value) || 0})}
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-red-500 uppercase">Rejected</label>
-                      <input 
-                        type="number" 
-                        className="w-full px-2 py-2 bg-red-50 border border-red-100 rounded-lg text-sm font-bold text-red-600 outline-none"
-                        value={qualityForm.rejectedQty}
-                        onChange={(e) => setQualityForm({...qualityForm, rejectedQty: parseInt(e.target.value) || 0})}
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase">Scrap</label>
-                      <input 
-                        type="number" 
-                        className="w-full px-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold text-slate-600 outline-none"
-                        value={qualityForm.scrapQty}
-                        onChange={(e) => setQualityForm({...qualityForm, scrapQty: parseInt(e.target.value) || 0})}
-                      />
-                    </div>
-                  </div>
-                  <button 
-                    type="submit" 
-                    disabled={submitting}
-                    className="flex items-center justify-center gap-2 bg-emerald-600 text-white px-6 py-2.5 rounded-lg text-sm font-bold hover:bg-emerald-700 transition-all shadow-md disabled:opacity-50"
-                  >
-                    <Save size={16} />
-                    Save Entry
-                  </button>
-                </form>
-              )}
-
-              {activeTab === 'downtime' && (
-                <form onSubmit={handleAddDowntimeLog} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-500 uppercase">Day & Date <span className="text-red-500">*</span></label>
-                    <input 
-                      type="datetime-local" 
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none"
-                      value={downtimeForm.startTime}
-                      onChange={(e) => setDowntimeForm({...downtimeForm, startTime: e.target.value})}
+                      value={timeLogForm.producedQty}
+                      onChange={(e) => setTimeLogForm({...timeLogForm, producedQty: e.target.value})}
                       required
                     />
+                    <span className="absolute right-3 top-2 text-[10px] font-bold text-slate-400">UNITS</span>
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-500 uppercase">Shift <span className="text-red-500">*</span></label>
-                    <select className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none">
-                      <option value="A">A</option>
-                      <option value="B">B</option>
-                    </select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-500 uppercase">Downtime Type <span className="text-red-500">*</span></label>
-                    <select 
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none"
-                      value={downtimeForm.downtimeType}
-                      onChange={(e) => setDowntimeForm({...downtimeForm, downtimeType: e.target.value})}
-                      required
-                    >
-                      <option value="">Select Reason</option>
-                      <option value="Machine Breakdown">Machine Breakdown</option>
-                      <option value="Material Shortage">Material Shortage</option>
-                      <option value="Power Failure">Power Failure</option>
-                      <option value="Planned Maintenance">Planned Maintenance</option>
-                      <option value="Setup/Changeover">Setup/Changeover</option>
-                    </select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-500 uppercase">Start Time</label>
-                    <input 
-                      type="datetime-local" 
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none"
-                      value={downtimeForm.startTime}
-                      onChange={(e) => setDowntimeForm({...downtimeForm, startTime: e.target.value})}
-                    />
-                  </div>
-                  <button 
-                    type="submit" 
-                    disabled={submitting}
-                    className="flex items-center justify-center gap-2 bg-amber-600 text-white px-6 py-2.5 rounded-lg text-sm font-bold hover:bg-amber-700 transition-all shadow-md disabled:opacity-50"
-                  >
-                    <Pause size={16} fill="white" />
-                    Record Downtime
-                  </button>
-                </form>
-              )}
+                </div>
+                <button 
+                  type="submit" 
+                  disabled={submitting}
+                  className="flex items-center justify-center gap-2 bg-indigo-600 text-white px-6 py-2.5 rounded-lg text-sm font-bold hover:bg-indigo-700 transition-all shadow-md disabled:opacity-50"
+                >
+                  <Play size={16} fill="white" />
+                  Record Time
+                </button>
+              </form>
             </div>
             
-            {/* Data Tables */}
             <div className="border-t border-slate-100">
               <table className="w-full text-left">
                 <thead className="bg-slate-50">
                   <tr>
-                    {activeTab === 'time-logs' && (
-                      <>
-                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Day & Date</th>
-                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Operator</th>
-                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Time Interval</th>
-                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Produced Qty</th>
-                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Action</th>
-                      </>
-                    )}
-                    {activeTab === 'quality' && (
-                      <>
-                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Day & Date</th>
-                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Status / Reason</th>
-                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Accepted</th>
-                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Rejected</th>
-                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Scrap</th>
-                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Action</th>
-                      </>
-                    )}
-                    {activeTab === 'downtime' && (
-                      <>
-                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Day & Date</th>
-                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Category / Reason</th>
-                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Interval</th>
-                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Duration</th>
-                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Action</th>
-                      </>
-                    )}
+                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Day & Date</th>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Operator</th>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Time Interval</th>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Produced Qty</th>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {activeTab === 'time-logs' && (operation.logs?.timeLogs?.length > 0 ? (
+                  {operation.logs?.timeLogs?.length > 0 ? (
                     operation.logs.timeLogs.map((log) => (
                       <tr key={log.id} className="hover:bg-slate-50 transition-colors">
                         <td className="px-6 py-4 text-sm text-slate-600">{format(new Date(log.start_time), 'dd-MM-yyyy')}</td>
@@ -639,9 +499,123 @@ const ProductionEntryPage = () => {
                     <tr>
                       <td colSpan="5" className="px-6 py-12 text-center text-slate-500 italic">No production time recorded for this job card yet</td>
                     </tr>
-                  ))}
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
 
-                  {activeTab === 'quality' && (operation.logs?.qualityEntries?.length > 0 ? (
+          {/* Quality Check Section */}
+          <div ref={qualityRef} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden scroll-mt-32">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-emerald-50 text-emerald-600">
+                  <ShieldCheck size={20} />
+                </div>
+                <h2 className="text-lg font-bold text-slate-900">Quality & Rejection Entry</h2>
+              </div>
+            </div>
+
+            <div className="p-6">
+              <form onSubmit={handleAddQualityEntry} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 items-end">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Day & Date <span className="text-red-500">*</span></label>
+                  <input 
+                    type="datetime-local" 
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none"
+                    value={qualityForm.inspectionDate}
+                    onChange={(e) => setQualityForm({...qualityForm, inspectionDate: e.target.value})}
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Shift <span className="text-red-500">*</span></label>
+                  <select 
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none"
+                    value={qualityForm.shift}
+                    onChange={(e) => setQualityForm({...qualityForm, shift: e.target.value})}
+                  >
+                    <option value="A">A</option>
+                    <option value="B">B</option>
+                    <option value="C">C</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Produce Qty</label>
+                  <input 
+                    type="number" 
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none"
+                    value={qualityForm.acceptedQty + qualityForm.rejectedQty + qualityForm.scrapQty}
+                    readOnly
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Rejection Reason</label>
+                  <select 
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none"
+                    value={qualityForm.rejectionReason}
+                    onChange={(e) => setQualityForm({...qualityForm, rejectionReason: e.target.value})}
+                  >
+                    <option value="">Select Reason</option>
+                    <option value="Dimensional Error">Dimensional Error</option>
+                    <option value="Surface Defect">Surface Defect</option>
+                    <option value="Material Flaw">Material Flaw</option>
+                  </select>
+                </div>
+                <div className="lg:col-span-1 grid grid-cols-3 gap-2">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-emerald-500 uppercase">Accepted</label>
+                    <input 
+                      type="number" 
+                      className="w-full px-2 py-2 bg-emerald-50 border border-emerald-100 rounded-lg text-sm font-bold text-emerald-600 outline-none"
+                      value={qualityForm.acceptedQty}
+                      onChange={(e) => setQualityForm({...qualityForm, acceptedQty: parseInt(e.target.value) || 0})}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-red-500 uppercase">Rejected</label>
+                    <input 
+                      type="number" 
+                      className="w-full px-2 py-2 bg-red-50 border border-red-100 rounded-lg text-sm font-bold text-red-600 outline-none"
+                      value={qualityForm.rejectedQty}
+                      onChange={(e) => setQualityForm({...qualityForm, rejectedQty: parseInt(e.target.value) || 0})}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase">Scrap</label>
+                    <input 
+                      type="number" 
+                      className="w-full px-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold text-slate-600 outline-none"
+                      value={qualityForm.scrapQty}
+                      onChange={(e) => setQualityForm({...qualityForm, scrapQty: parseInt(e.target.value) || 0})}
+                    />
+                  </div>
+                </div>
+                <button 
+                  type="submit" 
+                  disabled={submitting}
+                  className="flex items-center justify-center gap-2 bg-emerald-600 text-white px-6 py-2.5 rounded-lg text-sm font-bold hover:bg-emerald-700 transition-all shadow-md disabled:opacity-50"
+                >
+                  <Save size={16} />
+                  Save Entry
+                </button>
+              </form>
+            </div>
+
+            <div className="border-t border-slate-100">
+              <table className="w-full text-left">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Day & Date</th>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Status / Reason</th>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Accepted</th>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Rejected</th>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Scrap</th>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {operation.logs?.qualityEntries?.length > 0 ? (
                     operation.logs.qualityEntries.map((log) => (
                       <tr key={log.id} className="hover:bg-slate-50 transition-colors">
                         <td className="px-6 py-4 text-sm text-slate-600">{format(new Date(log.inspection_date), 'dd-MM-yyyy')}</td>
@@ -658,11 +632,98 @@ const ProductionEntryPage = () => {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="6" className="px-6 py-12 text-center text-slate-500 italic">No quality inspection records found</td>
+                      <td colSpan="6" className="px-6 py-12 text-center text-slate-500 italic">No quality data recorded yet</td>
                     </tr>
-                  ))}
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
 
-                  {activeTab === 'downtime' && (operation.logs?.downtimeLogs?.length > 0 ? (
+          {/* Downtime Section */}
+          <div ref={downtimeRef} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden scroll-mt-32">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-red-50 text-red-600">
+                  <AlertCircle size={20} />
+                </div>
+                <h2 className="text-lg font-bold text-slate-900">Operational Downtime</h2>
+              </div>
+            </div>
+
+            <div className="p-6">
+              <form onSubmit={handleAddDowntimeLog} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Day & Date <span className="text-red-500">*</span></label>
+                  <input 
+                    type="datetime-local" 
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none"
+                    value={downtimeForm.startTime}
+                    onChange={(e) => setDowntimeForm({...downtimeForm, startTime: e.target.value})}
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Shift <span className="text-red-500">*</span></label>
+                  <select 
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none"
+                    value={downtimeForm.shift}
+                    onChange={(e) => setDowntimeForm({...downtimeForm, shift: e.target.value})}
+                  >
+                    <option value="A">A</option>
+                    <option value="B">B</option>
+                    <option value="C">C</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Downtime Type <span className="text-red-500">*</span></label>
+                  <select 
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none"
+                    value={downtimeForm.downtimeType}
+                    onChange={(e) => setDowntimeForm({...downtimeForm, downtimeType: e.target.value})}
+                    required
+                  >
+                    <option value="">Select Reason</option>
+                    <option value="Machine Breakdown">Machine Breakdown</option>
+                    <option value="Material Shortage">Material Shortage</option>
+                    <option value="Power Failure">Power Failure</option>
+                    <option value="Planned Maintenance">Planned Maintenance</option>
+                    <option value="Setup/Changeover">Setup/Changeover</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500 uppercase">End Time</label>
+                  <input 
+                    type="datetime-local" 
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none"
+                    value={downtimeForm.endTime}
+                    onChange={(e) => setDowntimeForm({...downtimeForm, endTime: e.target.value})}
+                  />
+                </div>
+                <button 
+                  type="submit" 
+                  disabled={submitting}
+                  className="flex items-center justify-center gap-2 bg-amber-600 text-white px-6 py-2.5 rounded-lg text-sm font-bold hover:bg-amber-700 transition-all shadow-md disabled:opacity-50"
+                >
+                  <Pause size={16} fill="white" />
+                  Record Downtime
+                </button>
+              </form>
+            </div>
+
+            <div className="border-t border-slate-100">
+              <table className="w-full text-left">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Day & Date</th>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Category / Reason</th>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Interval</th>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Duration</th>
+                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {operation.logs?.downtimeLogs?.length > 0 ? (
                     operation.logs.downtimeLogs.map((log) => (
                       <tr key={log.id} className="hover:bg-slate-50 transition-colors">
                         <td className="px-6 py-4 text-sm text-slate-600">{format(new Date(log.start_time), 'dd-MM-yyyy')}</td>
@@ -670,7 +731,7 @@ const ProductionEntryPage = () => {
                         <td className="px-6 py-4 text-sm text-slate-600">
                           {format(new Date(log.start_time), 'hh:mm a')} → {log.end_time ? format(new Date(log.end_time), 'hh:mm a') : '--:--'}
                         </td>
-                        <td className="px-6 py-4 text-sm text-slate-600">{log.duration_minutes || 'Ongoing'} min</td>
+                        <td className="px-6 py-4 text-sm font-bold text-slate-900">{log.duration_minutes || 0} min</td>
                         <td className="px-6 py-4">
                           <button className="p-1.5 text-slate-400 hover:text-red-600 transition-colors">
                             <Trash2 size={16} />
@@ -680,28 +741,69 @@ const ProductionEntryPage = () => {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="5" className="px-6 py-12 text-center text-slate-500 italic">No operational downtime logs found</td>
+                      <td colSpan="5" className="px-6 py-12 text-center text-slate-500 italic">No downtime recorded yet</td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
             </div>
           </div>
-        </div>
-
-        {/* Daily Production Report Preview */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
-                <FileText size={20} />
+          {/* Next Operation Section */}
+          <div ref={nextOpRef} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden scroll-mt-32">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-blue-50 text-blue-600">
+                  <ChevronRight size={20} />
+                </div>
+                <h2 className="text-lg font-bold text-slate-900">Next Operation Details</h2>
               </div>
-              <h2 className="text-lg font-bold text-slate-900">Daily Production Report</h2>
+            </div>
+            <div className="p-6">
+              <div className="bg-slate-50 rounded-xl p-6 border border-slate-100">
+                <div className="flex items-start gap-6">
+                  <div className="w-16 h-16 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-blue-600 shadow-sm">
+                    <Settings size={32} />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-[10px] font-bold uppercase">Sequence #{operation.sequence_no + 1}</span>
+                      <h3 className="text-lg font-bold text-slate-900">{operation.next_operation_name || 'Final Inspection / Packing'}</h3>
+                    </div>
+                    <p className="text-sm text-slate-600 mb-4">{operation.next_operation_description || 'After completing this operation, the item will move to the next stage of production.'}</p>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="bg-white p-3 rounded-lg border border-slate-200">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Target Workstation</p>
+                        <p className="text-sm font-semibold text-slate-700">CNC Workshop B</p>
+                      </div>
+                      <div className="bg-white p-3 rounded-lg border border-slate-200">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Estimated Start</p>
+                        <p className="text-sm font-semibold text-slate-700">{format(new Date(), 'dd-MM-yyyy')}</p>
+                      </div>
+                      <div className="bg-white p-3 rounded-lg border border-slate-200">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Status</p>
+                        <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-bold uppercase">Pending</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-          <div className="p-6 text-center py-12">
-            <p className="text-slate-500 italic text-sm mb-4">No production data available to generate report</p>
-            <p className="text-[11px] text-slate-400 uppercase tracking-widest font-bold">Consolidated daily and shift-wise production metrics</p>
+          {/* Daily Report Section placeholder */}
+          <div ref={reportRef} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden scroll-mt-32">
+             <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-purple-50 text-purple-600">
+                  <FileText size={20} />
+                </div>
+                <h2 className="text-lg font-bold text-slate-900">Daily Production Report</h2>
+              </div>
+            </div>
+            <div className="p-12 text-center text-slate-500">
+              <Activity className="mx-auto mb-4 opacity-20" size={48} />
+              <p>Production summary and analytics will be generated here.</p>
+            </div>
           </div>
         </div>
       </div>

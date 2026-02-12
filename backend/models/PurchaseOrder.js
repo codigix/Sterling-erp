@@ -3,12 +3,14 @@ const pool = require('../config/database');
 class PurchaseOrder {
   static async findAll(filters = {}) {
     let query = `
-      SELECT po.*, q.vendor_id, v.name as vendor_name, v.email as vendor_email,
+      SELECT po.*, q.vendor_id as q_vendor_id, v.name as vendor_name, v.email as vendor_email,
+      mr.mr_number,
       (SELECT COUNT(*) FROM purchase_order_communications poc WHERE poc.po_id = po.id) as communication_count,
       (SELECT COUNT(*) FROM purchase_order_communications poc WHERE poc.po_id = po.id AND poc.is_read = FALSE) as unread_communication_count
       FROM purchase_orders po 
       LEFT JOIN quotations q ON po.quotation_id = q.id 
-      LEFT JOIN vendors v ON q.vendor_id = v.id 
+      LEFT JOIN material_requests mr ON po.material_request_id = mr.id
+      LEFT JOIN vendors v ON (q.vendor_id = v.id OR po.vendor_id = v.id) 
       WHERE 1=1
     `;
     const params = [];
@@ -31,10 +33,12 @@ class PurchaseOrder {
 
   static async findById(id) {
     const [rows] = await pool.execute(
-      `SELECT po.*, q.vendor_id, v.name as vendor_name, v.email as vendor_email
+      `SELECT po.*, q.vendor_id as q_vendor_id, v.name as vendor_name, v.email as vendor_email,
+       mr.mr_number
        FROM purchase_orders po
        LEFT JOIN quotations q ON po.quotation_id = q.id
-       LEFT JOIN vendors v ON q.vendor_id = v.id
+       LEFT JOIN material_requests mr ON po.material_request_id = mr.id
+       LEFT JOIN vendors v ON (q.vendor_id = v.id OR po.vendor_id = v.id)
        WHERE po.id = ?`,
       [id]
     );
@@ -54,24 +58,72 @@ class PurchaseOrder {
   }
 
   static async create(data) {
-    const poNumber = `PO-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const date = new Date();
+    const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');
+    
+    let poNumber = data.po_number;
+    if (!poNumber) {
+      if (data.material_request_id) {
+        poNumber = `PO-MR-${dateStr}-${Math.floor(Math.random() * 1000)}`;
+      } else {
+        poNumber = `PO-${dateStr}-${Math.floor(Math.random() * 1000)}`;
+      }
+    }
     
     const [result] = await pool.execute(
       `INSERT INTO purchase_orders (
-        po_number, quotation_id, vendor_id, items, total_amount, expected_delivery_date, notes, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        po_number, quotation_id, material_request_id, vendor_id, items, 
+        subtotal, tax_amount, total_amount, expected_delivery_date, 
+        order_date, currency, tax_template, notes, status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         poNumber,
-        data.quotation_id,
+        data.quotation_id || null,
+        data.material_request_id || null,
         data.vendor_id || null,
         JSON.stringify(data.items || []),
+        data.subtotal || 0,
+        data.tax_amount || 0,
         data.total_amount || 0,
         data.expected_delivery_date || null,
+        data.order_date || new Date(),
+        data.currency || 'INR',
+        data.tax_template || null,
         data.notes || null,
-        data.status || 'pending'
+        data.status || 'draft'
       ]
     );
     return result.insertId;
+  }
+
+  static async update(id, data) {
+    await pool.execute(
+      `UPDATE purchase_orders SET 
+        vendor_id = ?, 
+        items = ?, 
+        subtotal = ?, 
+        tax_amount = ?, 
+        total_amount = ?, 
+        expected_delivery_date = ?, 
+        order_date = ?, 
+        currency = ?, 
+        tax_template = ?, 
+        notes = ?
+      WHERE id = ?`,
+      [
+        data.vendor_id || null,
+        JSON.stringify(data.items || []),
+        data.subtotal || 0,
+        data.tax_amount || 0,
+        data.total_amount || 0,
+        data.expected_delivery_date || null,
+        data.order_date || new Date(),
+        data.currency || 'INR',
+        data.tax_template || null,
+        data.notes || null,
+        id
+      ]
+    );
   }
 
   static async updateStatus(id, status) {
@@ -102,9 +154,12 @@ class PurchaseOrder {
     const [rows] = await pool.execute(
       `SELECT 
         COUNT(*) as total,
-        SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
-        SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) as approved,
-        SUM(CASE WHEN status = 'delivered' THEN 1 ELSE 0 END) as delivered
+        SUM(total_amount) as total_amount,
+        SUM(CASE WHEN status = 'draft' THEN 1 ELSE 0 END) as draft,
+        SUM(CASE WHEN status = 'submitted' THEN 1 ELSE 0 END) as submitted,
+        SUM(CASE WHEN status IN ('approved', 'ordered', 'pending') THEN 1 ELSE 0 END) as to_receive,
+        SUM(CASE WHEN status = 'received' THEN 1 ELSE 0 END) as partial,
+        SUM(CASE WHEN status IN ('fulfilled', 'delivered') THEN 1 ELSE 0 END) as fulfilled
        FROM purchase_orders`
     );
     return rows[0];

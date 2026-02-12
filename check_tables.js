@@ -1,15 +1,22 @@
 const pool = require('./backend/config/database');
 async function check() {
   try {
-    const [qc] = await pool.execute('DESCRIBE quality_check_details');
-    console.log('QC Fields:', qc.map(c => c.Field).join(', '));
-    const [shipment] = await pool.execute('DESCRIBE shipment_details');
-    console.log('Shipment Fields:', shipment.map(c => c.Field).join(', '));
-    const [delivery] = await pool.execute('DESCRIBE delivery_details');
-    console.log('Delivery Fields:', delivery.map(c => c.Field).join(', '));
-  } catch (err) {
-    console.error(err);
+    const [mr] = await pool.query('DESCRIBE material_requests');
+    console.log('MR Schema:');
+    console.table(mr);
+    const [po] = await pool.query('DESCRIBE purchase_orders');
+    console.log('PO Schema:');
+    console.table(po);
+    const [roles] = await pool.query('SELECT * FROM roles');
+    console.log('Roles:');
+    console.table(roles);
+    const [users] = await pool.query('SELECT u.username, r.name as role FROM users u JOIN roles r ON u.role_id = r.id');
+    console.log('Users:');
+    console.table(users);
+  } catch(e) {
+    console.error(e);
+  } finally {
+    process.exit();
   }
-  process.exit(0);
 }
 check();

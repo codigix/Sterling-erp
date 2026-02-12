@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "../../utils/api";
 import { useAuth } from "../../context/AuthContext";
@@ -19,24 +19,30 @@ const EmployeeTasks = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
 
-  useEffect(() => {
-    const fetchTasks = async () => {
-      try {
-        setLoading(true);
-        if (user?.id) {
-          const tasksResponse = await axios.get(`/employee/portal/tasks/${user.id}`);
-          setTasks(tasksResponse.data || []);
-        }
-      } catch (err) {
-        setError('Failed to load tasks');
-        console.error('Fetch tasks error:', err);
-      } finally {
-        setLoading(false);
+  const fetchTasks = useCallback(async (showLoading = true) => {
+    try {
+      if (showLoading) setLoading(true);
+      if (user?.id) {
+        const tasksResponse = await axios.get(`/employee/portal/tasks/${user.id}`);
+        setTasks(tasksResponse.data || []);
       }
-    };
-
-    fetchTasks();
+    } catch (err) {
+      setError('Failed to load tasks');
+      console.error('Fetch tasks error:', err);
+    } finally {
+      if (showLoading) setLoading(false);
+    }
   }, [user?.id]);
+
+  useEffect(() => {
+    fetchTasks(true);
+
+    const interval = setInterval(() => {
+      fetchTasks(false);
+    }, 5000); // Auto-refresh every 5 seconds
+
+    return () => clearInterval(interval);
+  }, [fetchTasks]);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -71,15 +77,26 @@ const EmployeeTasks = () => {
     pending: tasks.filter(t => t.status === "pending").length
   };
 
-  const handleUpdateTaskStatus = async (taskId, newStatus) => {
+  const handleUpdateTaskStatus = async (taskId, newStatus, extraDetails = null) => {
     try {
       setUpdatingTaskId(taskId);
-      await axios.put(`/employee/portal/tasks/${taskId}/status`, {
+      
+      const payload = {
         status: newStatus
-      });
+      };
+
+      if (extraDetails) {
+        payload.notes = JSON.stringify(extraDetails);
+      }
+
+      await axios.put(`/employee/portal/tasks/${taskId}/status`, payload);
       
       const updatedTasks = tasks.map(t => 
-        t.id === taskId ? { ...t, status: newStatus } : t
+        t.id === taskId ? { 
+          ...t, 
+          status: newStatus,
+          notes: payload.notes || t.notes 
+        } : t
       );
       setTasks(updatedTasks);
 

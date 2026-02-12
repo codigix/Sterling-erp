@@ -1,0 +1,1 @@
+const pool = require('./backend/config/database'); pool.execute(\"SELECT u.id, u.username, r.name FROM users u JOIN roles r ON u.role_id = r.id WHERE r.name IN ('Production', 'production_manager')\").then(function(res) { console.log(JSON.stringify(res[0])); process.exit(0); });  

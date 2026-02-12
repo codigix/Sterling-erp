@@ -1,286 +1,315 @@
-import React, { useState } from 'react';
-import { Bell, Trash2, Eye, EyeOff, Filter, Check } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { 
+  Bell, Trash2, Eye, EyeOff, Filter, Check, 
+  Inbox, CheckCircle2, AlertTriangle, Info, 
+  ArrowRight, Clock, CheckCheck, ChevronRight, Loader2
+} from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import axios from '../../utils/api';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import '../../styles/TaskPage.css';
 
 const NotificationsPage = () => {
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      type: 'task-assigned',
-      title: 'New Task Assigned',
-      message: 'You have been assigned a new task: Quality Check in Assembly Stage 1',
-      timestamp: '2025-01-29 10:30',
-      read: false,
-      category: 'Task',
-      priority: 'high'
-    },
-    {
-      id: 2,
-      type: 'material-issued',
-      title: 'Material Issued',
-      message: 'Material SKU-001 (Steel Shaft, 10 units) has been issued to production line',
-      timestamp: '2025-01-29 09:15',
-      read: false,
-      category: 'Inventory',
-      priority: 'medium'
-    },
-    {
-      id: 3,
-      type: 'qc-required',
-      title: 'QC Required',
-      message: 'GRN-001 is pending quality check inspection',
-      timestamp: '2025-01-28 16:45',
-      read: false,
-      category: 'QC',
-      priority: 'high'
-    },
-    {
-      id: 4,
-      type: 'po-received',
-      title: 'Purchase Order Received',
-      message: 'PO-2025-002 has been received from Electrical Components Co',
-      timestamp: '2025-01-28 14:20',
-      read: true,
-      category: 'Procurement',
-      priority: 'medium'
-    },
-    {
-      id: 5,
-      type: 'challan-inward',
-      title: 'Challan Received',
-      message: 'Inward challan CH-IN-001 for Painting has been received and verified',
-      timestamp: '2025-01-28 11:00',
-      read: true,
-      category: 'Challan',
-      priority: 'low'
-    },
-    {
-      id: 6,
-      type: 'stage-completed',
-      title: 'Manufacturing Stage Completed',
-      message: 'Assembly Stage 1 for PROJ-001 has been marked as completed',
-      timestamp: '2025-01-27 17:30',
-      read: true,
-      category: 'Production',
-      priority: 'medium'
-    }
-  ]);
-
-  const [filterCategory, setFilterCategory] = useState('all');
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filterType, setFilterType] = useState('all');
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
 
-  const getNotificationColor = (priority) => {
-    switch (priority) {
-      case 'high': return 'border-l-4 border-red-500 bg-red-50 dark:bg-red-900 dark:bg-opacity-20';
-      case 'medium': return 'border-l-4 border-yellow-500 bg-yellow-50 dark:bg-yellow-900 dark:bg-opacity-20';
-      case 'low': return 'border-l-4 border-green-500 bg-green-50 dark:bg-green-900 dark:bg-opacity-20';
-      default: return 'border-l-4 border-slate-500';
+  const fetchNotifications = async () => {
+    if (!user?.id) return;
+    try {
+      setLoading(true);
+      const response = await axios.get(`/alerts/user/${user.id}`);
+      setNotifications(response.data || []);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const getPriorityBadgeColor = (priority) => {
-    switch (priority) {
-      case 'high': return 'bg-red-100 text-red-800';
-      case 'medium': return 'bg-yellow-100 text-yellow-800';
-      case 'low': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
+  useEffect(() => {
+    fetchNotifications();
+  }, [user?.id]);
+
+  const getNotificationStyles = (alertType) => {
+    switch (alertType) {
+      case 'stage_ready':
+      case 'success':
+        return {
+          bg: 'bg-emerald-50 dark:bg-emerald-900/10',
+          icon: <CheckCircle2 size={24} className="text-emerald-500" />,
+          border: 'border-l-4 border-emerald-500',
+          badge: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400'
+        };
+      case 'critical':
+      case 'error':
+        return {
+          bg: 'bg-red-50 dark:bg-red-900/10',
+          icon: <AlertTriangle size={24} className="text-red-500" />,
+          border: 'border-l-4 border-red-500',
+          badge: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+        };
+      case 'warning':
+      case 'on_hold':
+        return {
+          bg: 'bg-amber-50 dark:bg-amber-900/10',
+          icon: <AlertTriangle size={24} className="text-amber-500" />,
+          border: 'border-l-4 border-amber-500',
+          badge: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400'
+        };
+      default:
+        return {
+          bg: 'bg-blue-50 dark:bg-blue-900/10',
+          icon: <Info size={24} className="text-blue-500" />,
+          border: 'border-l-4 border-blue-500',
+          badge: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
+        };
     }
   };
 
-  const getCategoryBadgeColor = (category) => {
-    switch (category) {
-      case 'Task': return 'bg-blue-100 text-blue-800';
-      case 'Inventory': return 'bg-purple-100 text-purple-800';
-      case 'QC': return 'bg-green-100 text-green-800';
-      case 'Procurement': return 'bg-orange-100 text-orange-800';
-      case 'Challan': return 'bg-cyan-100 text-cyan-800';
-      case 'Production': return 'bg-pink-100 text-pink-800';
-      default: return 'bg-gray-100 text-gray-800';
+  const groupNotifications = (notifs) => {
+    const today = new Date().toDateString();
+    const yesterday = new Date(Date.now() - 86400000).toDateString();
+
+    return notifs.reduce((groups, notif) => {
+      const date = new Date(notif.created_at).toDateString();
+      let groupName = 'Earlier';
+      
+      if (date === today) groupName = 'Today';
+      else if (date === yesterday) groupName = 'Yesterday';
+      
+      if (!groups[groupName]) groups[groupName] = [];
+      groups[groupName].push(notif);
+      return groups;
+    }, {});
+  };
+
+  const handleNotificationClick = async (notif) => {
+    if (!notif.is_read) {
+      try {
+        await axios.patch(`/alerts/${notif.id}/read`);
+        setNotifications(notifications.map(n => 
+          n.id === notif.id ? { ...n, is_read: true } : n
+        ));
+      } catch (err) {
+        console.error('Error marking as read:', err);
+      }
+    }
+    
+    if (notif.link) {
+      navigate(notif.link);
     }
   };
 
-  const filteredNotifications = notifications.filter(notif => {
-    if (showUnreadOnly && notif.read) return false;
-    if (filterCategory !== 'all' && notif.category !== filterCategory) return false;
-    return true;
-  });
-
-  const unreadCount = notifications.filter(n => !n.read).length;
-  const categories = ['all', ...new Set(notifications.map(n => n.category))];
-
-  const handleMarkAsRead = (id) => {
-    setNotifications(notifications.map(n => n.id === id ? { ...n, read: true } : n));
+  const markAllAsRead = async () => {
+    try {
+      await axios.patch(`/alerts/user/${user.id}/read-all`);
+      setNotifications(notifications.map(n => ({ ...n, is_read: true })));
+    } catch (error) {
+      console.error('Error marking all as read:', error);
+    }
   };
 
-  const handleDelete = (id) => {
-    setNotifications(notifications.filter(n => n.id !== id));
+  const deleteNotification = async (e, id) => {
+    e.stopPropagation();
+    try {
+      await axios.delete(`/alerts/${id}`);
+      setNotifications(notifications.filter(n => n.id !== id));
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+    }
   };
 
-  const handleMarkAllAsRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, read: true })));
-  };
+  const filteredNotifications = useMemo(() => {
+    return notifications.filter(notif => {
+      if (showUnreadOnly && notif.is_read) return false;
+      if (filterType !== 'all' && notif.alert_type !== filterType) return false;
+      return true;
+    });
+  }, [notifications, showUnreadOnly, filterType]);
+
+  const groupedNotifs = useMemo(() => groupNotifications(filteredNotifications), [filteredNotifications]);
+  const unreadCount = notifications.filter(n => !n.is_read).length;
+  const types = ['all', ...new Set(notifications.map(n => n.alert_type))];
+
+  if (loading && notifications.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] text-slate-500">
+        <Loader2 className="animate-spin mb-4 text-blue-600" size={40} />
+        <p className="font-medium">Loading notifications...</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="task-page-container">
+    <div className="task-page-container max-w-5xl mx-auto px-4 py-8">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold  dark: flex items-center text-xs gap-2">
-          <Bell size={32} />
-          Notifications
-        </h1>
-        <p className="text-slate-600 dark:text-slate-400 text-xs ">
-          {unreadCount} unread notification{unreadCount !== 1 ? 's' : ''}
-        </p>
-      </div>
-
-      {/* Controls */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-        <div className="flex gap-2 overflow-x-auto pb-2">
-          {categories.map(cat => (
-            <button
-              key={cat}
-              onClick={() => setFilterCategory(cat)}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
-                filterCategory === cat
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-slate-200 dark:bg-slate-700  dark: hover:'
-              }`}
-            >
-              {cat.charAt(0).toUpperCase() + cat.slice(1)}
-            </button>
-          ))}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+        <div>
+          <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white flex items-center gap-3 mb-2">
+            <div className="p-2.5 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-200 dark:shadow-none">
+              <Bell size={28} />
+            </div>
+            Notification Center
+          </h1>
+          <p className="text-slate-500 dark:text-slate-400 font-medium">
+            Stay updated with your latest activities and task assignments.
+            {unreadCount > 0 && (
+              <span className="ml-2 px-2 py-0.5 bg-red-100 text-red-600 rounded-full text-xs font-bold">
+                {unreadCount} Unread
+              </span>
+            )}
+          </p>
         </div>
-        <div className="flex gap-2">
+        
+        <div className="flex items-center gap-3">
           <button
             onClick={() => setShowUnreadOnly(!showUnreadOnly)}
-            className={`flex items-center text-xs gap-2 px-4 py-2 rounded-lg transition-colors ${
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${
               showUnreadOnly
-                ? 'bg-blue-600 text-white'
-                : 'bg-slate-200 dark:bg-slate-700  dark: hover:'
+                ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
+                : 'bg-white text-slate-600 border border-slate-200 hover:border-blue-400 hover:text-blue-600'
             }`}
           >
             {showUnreadOnly ? <Eye size={18} /> : <EyeOff size={18} />}
-            Unread Only
+            {showUnreadOnly ? 'Showing Unread' : 'Show Unread Only'}
           </button>
+          
           {unreadCount > 0 && (
             <button
-              onClick={handleMarkAllAsRead}
-              className="flex items-center text-xs gap-2 px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors"
+              onClick={markAllAsRead}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 dark:shadow-none"
             >
-              <Check size={18} />
+              <CheckCheck size={18} />
               Mark All Read
             </button>
           )}
         </div>
       </div>
 
-      {/* Notifications List */}
-      <div className="space-y-4">
-        {filteredNotifications.length > 0 ? (
-          filteredNotifications.map(notif => (
-            <Card
-              key={notif.id}
-              className={`p-0 ${getNotificationColor(notif.priority)} ${!notif.read ? 'ring-2 ring-blue-400' : ''}`}
-            >
-              <div className="p-6 flex items-start gap-4">
-                {/* Icon */}
-                <div className="flex-shrink-0">
-                  <div className={`w-10 h-10 rounded-full flex items-center text-xs justify-center ${
-                    notif.priority === 'high'
-                      ? 'bg-red-100 dark:bg-red-900'
-                      : notif.priority === 'medium'
-                        ? 'bg-yellow-100 dark:bg-yellow-900'
-                        : 'bg-green-100 dark:bg-green-900'
-                  }`}>
-                    <Bell size={20} className={
-                      notif.priority === 'high'
-                        ? 'text-red-600 dark:text-red-300'
-                        : notif.priority === 'medium'
-                          ? 'text-yellow-600 dark:text-yellow-300'
-                          : 'text-green-600 dark:text-green-300'
-                    } />
-                  </div>
-                </div>
-
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-4 mb-2">
-                    <div>
-                      <h3 className={`text-base font-bold ${
-                        notif.read
-                          ? 'text-slate-700 dark:text-slate-300'
-                          : ' dark:'
-                      }`}>
-                        {notif.title}
-                      </h3>
-                      <p className={`text-sm mt-1 ${
-                        notif.read
-                          ? 'text-slate-600 dark:text-slate-400'
-                          : 'text-slate-700 dark:text-slate-300'
-                      }`}>
-                        {notif.message}
-                      </p>
-                    </div>
-                    <div className="flex gap-2 flex-shrink-0">
-                      <Badge className={getPriorityBadgeColor(notif.priority)}>
-                        {notif.priority.charAt(0).toUpperCase() + notif.priority.slice(1)}
-                      </Badge>
-                      <Badge className={getCategoryBadgeColor(notif.category)}>
-                        {notif.category}
-                      </Badge>
-                    </div>
-                  </div>
-
-                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-3">
-                    {notif.timestamp}
-                  </p>
-                </div>
-
-                {/* Actions */}
-                <div className="flex gap-2 flex-shrink-0">
-                  {!notif.read && (
-                    <button
-                      onClick={() => handleMarkAsRead(notif.id)}
-                      className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
-                      title="Mark as read"
-                    >
-                      <Check size={16} />
-                    </button>
-                  )}
-                  <button
-                    onClick={() => handleDelete(notif.id)}
-                    className="p-2 rounded-lg bg-slate-200 dark:bg-slate-700  dark: hover: dark:hover:bg-slate-600 transition-colors"
-                    title="Delete notification"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              </div>
-            </Card>
-          ))
-        ) : (
-          <Card className="p-12 text-center">
-            <Bell size={48} className="mx-auto text-slate-400 mb-4 opacity-50" />
-            <p className="text-slate-600 dark:text-slate-400 text-lg">
-              {showUnreadOnly ? 'No unread notifications' : 'No notifications'}
-            </p>
-            <p className="text-slate-500 dark:text-slate-500 text-sm mt-2">
-              {filterCategory !== 'all' ? `Try selecting a different category` : `You're all caught up!`}
-            </p>
-          </Card>
-        )}
+      {/* Filter Chips */}
+      <div className="flex gap-2 overflow-x-auto pb-4 mb-8 custom-scrollbar">
+        {types.map(type => (
+          <button
+            key={type}
+            onClick={() => setFilterType(type)}
+            className={`px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap border ${
+              filterType === type
+                ? 'bg-slate-900 text-white border-slate-900 shadow-md'
+                : 'bg-white text-slate-500 border-slate-200 hover:border-slate-400 hover:text-slate-700'
+            }`}
+          >
+            {type.replace('_', ' ')}
+          </button>
+        ))}
       </div>
 
-      {/* Summary */}
-      {filteredNotifications.length > 0 && (
-        <Card className="mt-8 p-4 bg-slate-50 dark:bg-slate-700">
-          <p className="text-sm text-slate-600 dark:text-slate-400">
-            Showing <span className="font-bold  dark:">{filteredNotifications.length}</span> of <span className="font-bold  dark:">{notifications.length}</span> notifications
-          </p>
-        </Card>
-      )}
+      {/* Notifications List */}
+      <div className="space-y-10">
+        {Object.keys(groupedNotifs).length > 0 ? (
+          Object.entries(groupedNotifs).map(([group, notifs]) => (
+            <div key={group} className="space-y-4">
+              <div className="flex items-center gap-4">
+                <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">{group}</h2>
+                <div className="h-px bg-slate-100 dark:bg-slate-800 flex-1"></div>
+              </div>
+              
+              <div className="grid gap-4">
+                {notifs.map(notif => {
+                  const styles = getNotificationStyles(notif.alert_type);
+                  return (
+                    <div
+                      key={notif.id}
+                      onClick={() => handleNotificationClick(notif)}
+                      className={`group relative bg-white dark:bg-slate-900 rounded-2xl border transition-all cursor-pointer overflow-hidden ${
+                        !notif.is_read 
+                          ? 'border-blue-100 dark:border-blue-900/30 shadow-md' 
+                          : 'border-slate-100 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 shadow-sm'
+                      }`}
+                    >
+                      {!notif.is_read && (
+                        <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-blue-600" />
+                      )}
+                      
+                      <div className="p-5 flex items-start gap-5">
+                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 ${styles.bg}`}>
+                          {styles.icon}
+                        </div>
+                        
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-col md:flex-row md:items-start justify-between gap-2 mb-2">
+                            <div>
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${styles.badge}`}>
+                                  {notif.alert_type?.replace('_', ' ')}
+                                </span>
+                                {notif.priority === 'high' && (
+                                  <span className="flex items-center gap-1 text-[10px] font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded uppercase">
+                                    <AlertTriangle size={10} />
+                                    Urgent
+                                  </span>
+                                )}
+                              </div>
+                              <h3 className={`text-base font-bold leading-tight ${
+                                !notif.is_read ? 'text-slate-900 dark:text-white' : 'text-slate-600 dark:text-slate-400'
+                              }`}>
+                                {notif.message}
+                              </h3>
+                            </div>
+                            <div className="text-[11px] font-bold text-slate-400 flex items-center gap-1.5">
+                              <Clock size={12} />
+                              {new Date(notif.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center justify-between mt-4">
+                            <div className="flex items-center gap-1 text-xs font-bold text-blue-600 dark:text-blue-400 opacity-0 group-hover:opacity-100 transition-all transform translate-x-[-10px] group-hover:translate-x-0">
+                              <span>VIEW ACTION ITEM</span>
+                              <ChevronRight size={14} />
+                            </div>
+                            
+                            <button
+                              onClick={(e) => deleteNotification(e, notif.id)}
+                              className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                              title="Delete notification"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="py-24 text-center bg-white dark:bg-slate-900 rounded-3xl border border-dashed border-slate-200 dark:border-slate-800">
+            <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Inbox size={40} className="text-slate-300 dark:text-slate-600" />
+            </div>
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">No notifications found</h3>
+            <p className="text-slate-500 max-w-xs mx-auto text-sm">
+              We couldn't find any notifications matching your current filters.
+            </p>
+            <button
+              onClick={() => {
+                setFilterType('all');
+                setShowUnreadOnly(false);
+              }}
+              className="mt-6 text-sm font-bold text-blue-600 hover:underline"
+            >
+              Clear all filters
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

@@ -16,6 +16,10 @@ import QCInspectionsPage from "../inventory/QCInspectionsPage";
 import ReportsPage from "../inventory/ReportsPage";
 import MaterialSpecificationsPage from "../inventory/MaterialSpecificationsPage";
 import CreateQuotationPage from "../inventory/CreateQuotationPage";
+import MaterialRequestsPage from "../inventory/MaterialRequestsPage";
+import WarehousesPage from "../inventory/WarehousesPage";
+import PurchaseOrderDetailPage from "../inventory/PurchaseOrderDetailPage";
+import PurchaseOrderEditMR from "../inventory/PurchaseOrderEditMR";
 import InventoryTasksPage from "../department/InventoryTasksPage";
 import { Line, Bar, Doughnut } from "react-chartjs-2";
 import {
@@ -45,6 +49,8 @@ import {
   BarChart3,
   FileText,
   Loader2,
+  ClipboardList,
+  Warehouse,
 } from "lucide-react";
 
 ChartJS.register(
@@ -428,6 +434,16 @@ const InventoryManagerDashboard = () => {
       icon: Package,
     },
     {
+      title: "Material Requests",
+      path: "/inventory-manager/material-requests",
+      icon: ClipboardList,
+    },
+    {
+      title: "Warehouses",
+      path: "/inventory-manager/warehouses",
+      icon: Warehouse,
+    },
+    {
       title: "Stock Management",
       icon: Boxes,
       submenu: [
@@ -757,6 +773,8 @@ const InventoryManagerDashboard = () => {
             />
           }
         />
+        <Route path="/material-requests" element={<MaterialRequestsPage />} />
+        <Route path="/warehouses" element={<WarehousesPage />} />
         <Route path="/stock/view" element={<ViewStockPage />} />
         <Route path="/stock/movements" element={<StockMovementsPage />} />
         <Route path="/stock/reorder" element={<ReorderLevelsPage />} />
@@ -770,6 +788,8 @@ const InventoryManagerDashboard = () => {
           element={<CreateQuotationPage />}
         />
         <Route path="/vendors/po" element={<PurchaseOrderPage />} />
+        <Route path="/vendors/po/:id" element={<PurchaseOrderDetailPage />} />
+        <Route path="/vendors/po/edit-mr/:id" element={<PurchaseOrderEditMR />} />
         <Route path="/qc/grn" element={<GRNProcessingPage />} />
         <Route path="/qc/inspections" element={<QCInspectionsPage />} />
         <Route

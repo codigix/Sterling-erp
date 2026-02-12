@@ -1,16 +1,12 @@
 const pool = require('./backend/config/database');
-
-async function checkEmployees() {
+async function check() {
   try {
-    const [rows] = await pool.execute('SELECT id, first_name, last_name FROM employees');
-    rows.forEach(row => {
-      console.log(`Employee #${row.id}: ${row.first_name} ${row.last_name}`);
-    });
+    const [employees] = await pool.execute('SELECT e.id, e.email, e.status, r.name as role_name FROM employees e JOIN roles r ON e.role_id = r.id');
+    console.log('Employees:', JSON.stringify(employees, null, 2));
     process.exit(0);
-  } catch (error) {
-    console.error('Error:', error);
+  } catch (e) {
+    console.error(e);
     process.exit(1);
   }
 }
-
-checkEmployees();
+check();

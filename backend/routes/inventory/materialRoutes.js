@@ -6,12 +6,12 @@ const materialController = require('../../controllers/inventory/materialControll
 
 router.use(authMiddleware);
 
-router.get('/', roleMiddleware('Admin', 'Inventory Manager', 'Design Engineer', 'Engineering'), materialController.getMaterials);
-router.post('/', roleMiddleware('Admin', 'Inventory Manager'), materialController.createMaterial);
-router.get('/:id', roleMiddleware('Admin', 'Inventory Manager', 'Procurement Manager'), materialController.getMaterialById);
-router.put('/:id', roleMiddleware('Admin', 'Inventory Manager'), materialController.updateMaterial);
-router.delete('/:id', roleMiddleware('Admin', 'Inventory Manager'), materialController.deleteMaterial);
-router.patch('/:id/quantity', roleMiddleware('Admin', 'Inventory Manager'), materialController.updateMaterialQuantity);
-router.get('/reorder/check', roleMiddleware('Admin', 'Inventory Manager'), materialController.checkReorderLevels);
+router.get('/', roleMiddleware('Admin', 'Inventory', 'Inventory Manager', 'inventory_manager', 'Design Engineer', 'design_engineer', 'Engineering', 'Production', 'production', 'production_manager'), materialController.getMaterials);
+router.post('/', roleMiddleware('Admin', 'Inventory', 'Inventory Manager', 'inventory_manager'), materialController.createMaterial);
+router.get('/:id', roleMiddleware('Admin', 'Inventory', 'Inventory Manager', 'inventory_manager', 'Procurement Manager', 'procurement_manager', 'Production', 'production', 'production_manager'), materialController.getMaterialById);
+router.put('/:id', roleMiddleware('Admin', 'Inventory', 'Inventory Manager', 'inventory_manager'), materialController.updateMaterial);
+router.delete('/:id', roleMiddleware('Admin', 'Inventory', 'Inventory Manager', 'inventory_manager'), materialController.deleteMaterial);
+router.patch('/:id/quantity', roleMiddleware('Admin', 'Inventory', 'Inventory Manager', 'inventory_manager'), materialController.updateMaterialQuantity);
+router.get('/reorder/check', roleMiddleware('Admin', 'Inventory', 'Inventory Manager', 'inventory_manager'), materialController.checkReorderLevels);
 
 module.exports = router;

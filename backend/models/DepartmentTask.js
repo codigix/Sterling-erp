@@ -1,4 +1,5 @@
 const pool = require('../config/database');
+const EmployeeTask = require('./EmployeeTask');
 
 class DepartmentTask {
   static async getDepartmentTasks(roleId, status = null, priority = null) {
@@ -23,7 +24,11 @@ class DepartmentTask {
                  LEFT JOIN root_cards rc ON dt.root_card_id = rc.id
                  LEFT JOIN projects p ON rc.project_id = p.id
                  LEFT JOIN sales_orders so ON COALESCE(dt.sales_order_id, rc.sales_order_id, p.sales_order_id) = so.id
-                 LEFT JOIN sales_order_details sod ON so.id = sod.sales_order_id
+                 LEFT JOIN sales_order_details sod ON sod.id = (
+                    SELECT id FROM sales_order_details 
+                    WHERE sales_order_id = so.id 
+                    LIMIT 1
+                 )
                  LEFT JOIN roles r ON dt.role_id = r.id
                  LEFT JOIN users u ON dt.assigned_by = u.id
                  WHERE dt.role_id = ?`;
@@ -87,7 +92,11 @@ class DepartmentTask {
        LEFT JOIN root_cards rc ON dt.root_card_id = rc.id
        LEFT JOIN projects p ON rc.project_id = p.id
        LEFT JOIN sales_orders so ON COALESCE(dt.sales_order_id, rc.sales_order_id, p.sales_order_id) = so.id
-       LEFT JOIN sales_order_details sod ON so.id = sod.sales_order_id
+       LEFT JOIN sales_order_details sod ON sod.id = (
+          SELECT id FROM sales_order_details 
+          WHERE sales_order_id = so.id 
+          LIMIT 1
+       )
        LEFT JOIN roles r ON dt.role_id = r.id
        LEFT JOIN users u ON dt.assigned_by = u.id
        WHERE dt.id = ?`,
@@ -148,7 +157,7 @@ class DepartmentTask {
 
     // Get current task details for synchronization before update
     const [currentTaskRows] = await pool.execute(
-      'SELECT root_card_id, task_title, sales_order_id FROM department_tasks WHERE id = ?',
+      'SELECT root_card_id, task_title, sales_order_id, work_order_operation_id FROM department_tasks WHERE id = ?',
       [taskId]
     );
 
@@ -202,10 +211,41 @@ class DepartmentTask {
       }
 
       // Special handling for production_entry completion
-      if (updates.status === 'completed' && task.task_title.startsWith('Production Entry:')) {
-        console.log(`[DepartmentTask] Production Entry completed. Updating Root Card ${task.root_card_id} status.`);
+      if (updates.status === 'completed' && (task.task_title.startsWith('Production Entry:') || task.task_title.startsWith('Production Entry Required:'))) {
+        console.log(`[DepartmentTask] Production Entry completed for task: ${task.task_title}`);
         
-        // Update root_cards status to completed
+        // 1. Mark the associated Work Order Operation as completed
+        if (task.work_order_operation_id) {
+          try {
+            await pool.execute(
+              "UPDATE work_order_operations SET status = 'completed', actual_end_date = COALESCE(actual_end_date, CURRENT_TIMESTAMP) WHERE id = ?",
+              [task.work_order_operation_id]
+            );
+            console.log(`[DepartmentTask] ✓ Work Order Operation ${task.work_order_operation_id} marked as completed`);
+
+            // 1b. Also update the associated production plan stage if it exists
+            const [empTasks] = await pool.execute(
+              "SELECT production_plan_stage_id FROM employee_tasks WHERE work_order_operation_id = ? AND production_plan_stage_id IS NOT NULL LIMIT 1",
+              [task.work_order_operation_id]
+            );
+
+            if (empTasks.length > 0 && empTasks[0].production_plan_stage_id) {
+              const stageId = empTasks[0].production_plan_stage_id;
+              await pool.execute(
+                "UPDATE production_plan_stages SET status = 'completed' WHERE id = ?",
+                [stageId]
+              );
+              console.log(`[DepartmentTask] ✓ Production Plan Stage ${stageId} marked as completed`);
+
+              // 1c. Unlock next stages
+              await EmployeeTask.unlockNextStages(stageId);
+            }
+          } catch (err) {
+            console.error(`[DepartmentTask] Error completing operation ${task.work_order_operation_id}:`, err.message);
+          }
+        }
+
+        // 2. Update root_cards status to completed
         if (task.root_card_id) {
           await pool.execute(
             "UPDATE root_cards SET status = 'completed' WHERE id = ?",
@@ -237,14 +277,36 @@ class DepartmentTask {
   }
 
   static async findByRootCardAndTitle(rootCardId, taskTitle) {
+    let query = 'SELECT * FROM department_tasks WHERE task_title = ?';
+    const params = [taskTitle];
+
+    if (rootCardId) {
+      query += ' AND root_card_id = ?';
+      params.push(rootCardId);
+    } else {
+      query += ' AND root_card_id IS NULL';
+    }
+
+    query += ' LIMIT 1';
+    
+    const [rows] = await pool.execute(query, params);
+    return rows[0] || null;
+  }
+
+  static async findByOperationAndTitle(operationId, taskTitle) {
+    if (!operationId) return null;
     const [rows] = await pool.execute(
-      `SELECT * FROM department_tasks WHERE root_card_id = ? AND task_title = ? LIMIT 1`,
-      [rootCardId, taskTitle]
+      `SELECT * FROM department_tasks WHERE work_order_operation_id = ? AND task_title = ? LIMIT 1`,
+      [operationId, taskTitle]
     );
     return rows[0] || null;
   }
 
-  static async createDepartmentTask(data) {
+  static async create(data, connection = null) {
+    return this.createDepartmentTask(data, connection);
+  }
+
+  static async createDepartmentTask(data, connection = null) {
     const {
       root_card_id,
       role_id,
@@ -259,7 +321,9 @@ class DepartmentTask {
       link = null
     } = data;
 
-    const [result] = await pool.execute(
+    const db = connection || pool;
+
+    const [result] = await db.execute(
       `INSERT INTO department_tasks (
         root_card_id, role_id, task_title, task_description, 
         status, priority, assigned_by, notes, 

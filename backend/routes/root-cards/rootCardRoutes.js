@@ -17,16 +17,14 @@ router.get('/config/all', systemConfigController.getAllConfig);
 router.get('/config/:configType', systemConfigController.getConfigByType);
 
 router.use(authMiddleware);
-router.use(roleMiddleware('Admin', 'Management', 'Sales', 'Production', 'Design Engineer'));
+router.use(roleMiddleware('Admin', 'Management', 'Sales', 'Production', 'Design Engineer', 'Inventory', 'inventory_manager', 'Inventory Manager', 'Procurement', 'Procurement Manager'));
 
 router.get('/assigned', rootCardController.getAssignedRootCards);
 router.get('/', rootCardController.getRootCards);
-router.get('/:id', rootCardController.getRootCardById);
-router.post('/', rootCardController.createRootCard);
-router.put('/:id', rootCardController.updateRootCard);
-router.patch('/:id/status', rootCardController.updateRootCardStatus);
-router.delete('/:id', rootCardController.deleteRootCard);
-router.post('/:id/assign', rootCardController.assignRootCard);
+
+// Move fixed paths ABOVE parameterized routes
+router.use('/requirements', materialRequirementsRoutes);
+router.use('/workflow', rootCardWorkflowRoutes);
 
 router.get('/drafts/latest', draftController.getLatestDraft);
 router.get('/drafts/:id', draftController.getDraftById);
@@ -34,12 +32,16 @@ router.post('/drafts', draftController.createDraft);
 router.put('/drafts/:id', draftController.updateDraft);
 router.delete('/drafts/:id', draftController.deleteDraft);
 
+router.get('/:id', rootCardController.getRootCardById);
+router.post('/', rootCardController.createRootCard);
+router.put('/:id', rootCardController.updateRootCard);
+router.patch('/:id/status', rootCardController.updateRootCardStatus);
+router.delete('/:id', rootCardController.deleteRootCard);
+router.post('/:id/assign', rootCardController.assignRootCard);
+
 router.post('/:rootCardId/design-details', designEngineeringController.createOrUpdate);
 router.post('/:rootCardId/workflow-tasks', roleMiddleware('Admin', 'Management', 'Design Engineer'), productionController.createWorkflowBasedTasks);
 router.post('/:rootCardId/send-to-inventory', rootCardController.sendToInventory);
 router.get('/:rootCardId/design-details', designEngineeringController.getDesignEngineering);
-
-router.use('/workflow', rootCardWorkflowRoutes);
-router.use('/requirements', materialRequirementsRoutes);
 
 module.exports = router;

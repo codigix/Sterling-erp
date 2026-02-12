@@ -51,15 +51,26 @@ const alertsNotificationController = {
       const { userId: inputId } = req.params;
       const { isRead, alertType, priority, limit } = req.query;
 
-      // Resolve userId if it might be an employeeId
+      // Resolve userId if it might be an employeeId or a demo username
       let userId = inputId;
       try {
-        const [emps] = await pool.execute("SELECT id, email FROM employees WHERE id = ?", [inputId]);
-        if (emps.length > 0) {
-          const [users] = await pool.execute("SELECT id FROM users WHERE email = ?", [emps[0].email]);
+        // Handle demo-username resolution
+        if (isNaN(inputId) && String(inputId).startsWith('demo-')) {
+          const username = String(inputId).replace('demo-', '');
+          const [users] = await pool.execute("SELECT id FROM users WHERE username = ?", [username]);
           if (users.length > 0) {
             userId = users[0].id;
-            console.log(`[getUserAlerts] Resolved employeeId ${inputId} to userId ${userId}`);
+            console.log(`[getUserAlerts] Resolved demo username ${inputId} to userId ${userId}`);
+          }
+        } else {
+          // Handle employeeId resolution
+          const [emps] = await pool.execute("SELECT id, email FROM employees WHERE id = ?", [inputId]);
+          if (emps.length > 0) {
+            const [users] = await pool.execute("SELECT id FROM users WHERE email = ?", [emps[0].email]);
+            if (users.length > 0) {
+              userId = users[0].id;
+              console.log(`[getUserAlerts] Resolved employeeId ${inputId} to userId ${userId}`);
+            }
           }
         }
       } catch (err) {
@@ -141,10 +152,17 @@ const alertsNotificationController = {
 
   async getUnreadCount(req, res) {
     try {
-      const { userId } = req.params;
-      
-      if (isNaN(userId) && String(userId).startsWith('demo-')) {
-        return res.json({ unreadCount: 0 });
+      const { userId: inputId } = req.params;
+      // Resolve userId if it might be an employeeId or a demo username
+      let userId = inputId;
+      try {
+        if (isNaN(inputId) && String(inputId).startsWith('demo-')) {
+          const username = String(inputId).replace('demo-', '');
+          const [users] = await pool.execute("SELECT id FROM users WHERE username = ?", [username]);
+          if (users.length > 0) userId = users[0].id;
+        }
+      } catch (err) {
+        console.warn('[getUnreadCount] ID resolution error:', err.message);
       }
 
       const unreadCount = await AlertsNotification.getUnreadCount(userId);
@@ -157,18 +175,17 @@ const alertsNotificationController = {
 
   async getAlertStats(req, res) {
     try {
-      const { userId } = req.params;
-
-      if (isNaN(userId) && String(userId).startsWith('demo-')) {
-        return res.json({
-          total_alerts: 0,
-          unread: 0,
-          task_blocked: 0,
-          status_update: 0,
-          delay_alert: 0,
-          material_shortage: 0,
-          quality_issue: 0
-        });
+      const { userId: inputId } = req.params;
+      // Resolve userId if it might be an employeeId or a demo username
+      let userId = inputId;
+      try {
+        if (isNaN(inputId) && String(inputId).startsWith('demo-')) {
+          const username = String(inputId).replace('demo-', '');
+          const [users] = await pool.execute("SELECT id FROM users WHERE username = ?", [username]);
+          if (users.length > 0) userId = users[0].id;
+        }
+      } catch (err) {
+        console.warn('[getAlertStats] ID resolution error:', err.message);
       }
 
       const stats = await AlertsNotification.getStats(userId);

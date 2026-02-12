@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import Swal from "sweetalert2";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -30,12 +30,13 @@ import useRootCardInventoryTask from "../../hooks/useRootCardInventoryTask";
 
 const QuotationsPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { completeCurrentTask, isFromDepartmentTasks } = useRootCardInventoryTask();
   const [quotations, setQuotations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [activeTab, setActiveTab] = useState("outbound");
+  const [activeTab, setActiveTab] = useState(location.state?.activeTab || "outbound");
   const [stats, setStats] = useState({});
   const [error, setError] = useState(null);
   const [vendors, setVendors] = useState([]);
@@ -301,6 +302,7 @@ const QuotationsPage = () => {
         ...prev,
         reference_id: selectedQuote.id,
         vendor_id: selectedQuote.vendor_id,
+        material_request_id: selectedQuote.material_request_id, // Added material_request_id
         items: (selectedQuote.items || []).map((item) => ({
           description: item.description,
           category: item.category || item.materialType || "",

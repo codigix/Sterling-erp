@@ -29,6 +29,15 @@ exports.getPurchaseOrderById = async (req, res) => {
     if (!purchaseOrder) {
       return res.status(404).json({ message: 'Purchase order not found' });
     }
+
+    if (purchaseOrder.items && typeof purchaseOrder.items === 'string') {
+      try {
+        purchaseOrder.items = JSON.parse(purchaseOrder.items);
+      } catch (e) {
+        console.error('Error parsing items for PO:', e);
+        purchaseOrder.items = [];
+      }
+    }
     
     res.json(purchaseOrder);
   } catch (error) {
@@ -39,20 +48,39 @@ exports.getPurchaseOrderById = async (req, res) => {
 
 exports.createPurchaseOrder = async (req, res) => {
   try {
-    const { quotation_id, vendor_id, items, total_amount, expected_delivery_date, notes } = req.body;
+    const { 
+      quotation_id, 
+      material_request_id,
+      vendor_id, 
+      items, 
+      subtotal,
+      tax_amount,
+      total_amount, 
+      expected_delivery_date, 
+      order_date,
+      currency,
+      tax_template,
+      notes 
+    } = req.body;
     
-    if (!quotation_id || !items || items.length === 0) {
-      return res.status(400).json({ message: 'Quotation ID and items are required' });
+    if ((!quotation_id && !material_request_id) || !items || items.length === 0) {
+      return res.status(400).json({ message: 'Quotation/Material Request ID and items are required' });
     }
     
     const purchaseOrderId = await PurchaseOrder.create({
       quotation_id,
+      material_request_id,
       vendor_id,
       items,
+      subtotal,
+      tax_amount,
       total_amount,
       expected_delivery_date,
+      order_date,
+      currency,
+      tax_template,
       notes,
-      status: 'pending'
+      status: 'draft'
     });
     
     const newPurchaseOrder = await PurchaseOrder.findById(purchaseOrderId);
@@ -63,6 +91,25 @@ exports.createPurchaseOrder = async (req, res) => {
     res.status(201).json(newPurchaseOrder);
   } catch (error) {
     console.error('Create purchase order error:', error);
+    res.status(500).json({ message: 'Internal server error', error: error.message });
+  }
+};
+
+exports.updatePurchaseOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+    
+    await PurchaseOrder.update(id, updateData);
+    
+    const updatedPO = await PurchaseOrder.findById(id);
+    if (updatedPO && updatedPO.items && typeof updatedPO.items === 'string') {
+      updatedPO.items = JSON.parse(updatedPO.items);
+    }
+    
+    res.json(updatedPO);
+  } catch (error) {
+    console.error('Update purchase order error:', error);
     res.status(500).json({ message: 'Internal server error', error: error.message });
   }
 };

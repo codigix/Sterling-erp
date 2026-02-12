@@ -5,6 +5,9 @@ const materialRequestController = require('../../controllers/procurement/materia
 
 router.use(authMiddleware);
 
+router.put('/:id/status', materialRequestController.updateMaterialRequestStatus);
+router.patch('/:id/status', materialRequestController.updateMaterialRequestStatus);
+
 router.post('/', materialRequestController.createMaterialRequest);
 router.post('/bulk', materialRequestController.bulkCreateMaterialRequests);
 
@@ -15,8 +18,6 @@ router.get('/root-card/:rootCardId', materialRequestController.getMaterialReques
 router.get('/:id', materialRequestController.getMaterialRequest);
 
 router.put('/:id', materialRequestController.updateMaterialRequest);
-
-router.put('/:id/status', materialRequestController.updateMaterialRequestStatus);
 
 router.delete('/:id', materialRequestController.deleteMaterialRequest);
 

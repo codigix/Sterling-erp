@@ -13,14 +13,23 @@ class Warehouse {
 
   static async create(data) {
     const [result] = await pool.execute(
-      `INSERT INTO warehouses (name, code, location, is_active) VALUES (?, ?, ?, ?)`,
-      [data.name, data.code, data.location || null, data.is_active !== undefined ? data.is_active : true]
+      `INSERT INTO warehouses (name, code, type, department, location, storage_capacity, parent_warehouse_id, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        data.name, 
+        data.code, 
+        data.type || null,
+        data.department || null,
+        data.location || null, 
+        data.storage_capacity || null,
+        data.parent_warehouse_id || null,
+        data.is_active !== undefined ? data.is_active : true
+      ]
     );
     return result.insertId;
   }
 
   static async update(id, data) {
-    const fields = ['name', 'code', 'location', 'is_active'];
+    const fields = ['name', 'code', 'type', 'department', 'location', 'storage_capacity', 'parent_warehouse_id', 'is_active'];
     const updates = [];
     const values = [];
 

@@ -15,6 +15,7 @@ import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 
 const ProductionDepartmentTasksPage = () => {
+  const navigate = useNavigate();
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -64,8 +65,8 @@ const ProductionDepartmentTasksPage = () => {
 
   const filteredTasks = tasks.filter(task => {
     const matchesSearch = 
-      task.task_title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      task.root_card_code?.toLowerCase().includes(searchTerm.toLowerCase());
+      (task.task_title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (task.root_card_code || '').toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === 'all' || task.status === statusFilter;
     
@@ -158,7 +159,12 @@ const ProductionDepartmentTasksPage = () => {
                   <tr key={task.id} className="hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
                     <td className="px-6 py-4">
                       <div className="font-medium text-slate-900 dark:text-white">{task.task_title}</div>
-                      <div className="text-xs text-slate-500 mt-1 line-clamp-1">{task.task_description}</div>
+                      {task.product_name && (
+                        <div className="text-xs font-bold text-indigo-600 dark:text-indigo-400 mt-0.5 uppercase tracking-tight">
+                          Item: {task.product_name}
+                        </div>
+                      )}
+                      <div className="text-xs text-slate-500 mt-1 line-clamp-1 italic font-medium">{task.task_description}</div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm text-slate-900 dark:text-white">{task.root_card_code || 'N/A'}</div>
@@ -184,6 +190,16 @@ const ProductionDepartmentTasksPage = () => {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-2">
+                        {task.link && (
+                          <button
+                            onClick={() => navigate(task.link)}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex items-center gap-1 text-xs font-bold"
+                            title="Go to Production Entry"
+                          >
+                            <ArrowRight size={18} />
+                            ENTRY
+                          </button>
+                        )}
                         {task.status !== 'completed' && (
                           <button
                             onClick={() => handleUpdateStatus(task.id, 'completed')}

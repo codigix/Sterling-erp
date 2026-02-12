@@ -30,10 +30,12 @@ const upload = multer({
 });
 
 router.use(authMiddleware);
+
+router.get('/documents', roleMiddleware('Admin', 'Engineering', 'Management', 'Design Engineer', 'Production', 'production_manager'), engineeringController.getDocuments);
+
 router.use(roleMiddleware('Admin', 'Engineering', 'Management', 'Design Engineer'));
 
 router.post('/documents/upload', upload.single('document'), engineeringController.uploadDocument);
-router.get('/documents', engineeringController.getDocuments);
 router.patch('/documents/:id/approve', engineeringController.approveDocument);
 
 module.exports = router;

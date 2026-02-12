@@ -482,9 +482,12 @@ exports.updateTaskStatus = async (req, res) => {
     }
 
     if (task.employee_id) {
-      await EmployeeTask.updateAssignedTaskStatus(taskId, status, notes);
+      const { producedQty, rejectedQty, scrapQty, notes: completionNotes } = req.body;
+      await EmployeeTask.updateAssignedTaskStatus(taskId, status, notes || completionNotes);
       const updatedTask = await EmployeeTask.getAssignedTaskById(taskId);
       
+      const { userId: taskOwnerUserId } = await resolveIds(task.employee_id);
+
       // Handle completion flow - Notify Production Department
       if (status === 'completed') {
         try {
@@ -492,79 +495,173 @@ exports.updateTaskStatus = async (req, res) => {
           
           // 1. Find Production Role ID
           const [roles] = await pool.execute("SELECT id FROM roles WHERE name = 'Production' OR name = 'production_manager' ORDER BY (CASE WHEN name = 'Production' THEN 0 ELSE 1 END) LIMIT 1");
-          const productionRoleId = roles.length > 0 ? roles[0].id : null;
+          let productionRoleId = roles.length > 0 ? roles[0].id : null;
+          
+          // Fallback to role ID 5 if not found by name
+          if (!productionRoleId) {
+            const [fallbackRoles] = await pool.execute("SELECT id FROM roles WHERE id = 5 LIMIT 1");
+            if (fallbackRoles.length > 0) productionRoleId = 5;
+          }
           
           if (productionRoleId) {
             const operationId = updatedTask.work_order_operation_id;
-            const entryLink = '/department/production';
             
-            // 2. Update Work Order Operation Status to completed if applicable
-            if (operationId && updatedTask.type === 'job_card') {
-              await WorkOrder.completeOperation(operationId);
-            }
+            // Prepare production entry details for auto-filling
+            const startTime = updatedTask.started_at ? new Date(updatedTask.started_at).toISOString() : '';
+            const endTime = updatedTask.completed_at ? new Date(updatedTask.completed_at).toISOString() : new Date().toISOString();
+            const operatorId = updatedTask.employee_id;
             
-            // 3. Create Department Task for Production Entry
-            await DepartmentTask.createDepartmentTask({
-              root_card_id: updatedTask.root_card_id || null,
-              role_id: productionRoleId,
-              task_title: `Production Entry Required: ${updatedTask.operation_name || updatedTask.title.replace('Job Card Operation: ', '')}`,
-              task_description: `Task "${updatedTask.title}" has been completed. Now do the production entry for Work Order: ${updatedTask.work_order_no || 'N/A'}.`,
-              priority: updatedTask.priority || 'medium',
-              status: 'pending',
-              assigned_by: task.employee_id,
-              sales_order_id: updatedTask.sales_order_id || null,
-              work_order_operation_id: operationId || null,
-              link: entryLink
-            });
+            let entryLink = operationId ? `/department/production/operations/${operationId}/entry` : '/department/production/department-tasks';
             
-            // 4. Create Assigned Task for Production Department
-            const [productionManagers] = await pool.execute(
-              "SELECT e.id FROM employees e JOIN roles r ON e.role_id = r.id WHERE r.name = 'production_manager' AND e.status = 'active' LIMIT 1"
-            );
+            // Add query parameters for auto-filling
+            const queryParams = new URLSearchParams();
+            if (operatorId) queryParams.append('operatorId', operatorId);
+            if (startTime) queryParams.append('startTime', startTime);
+            if (endTime) queryParams.append('endTime', endTime);
+            if (producedQty) queryParams.append('producedQty', producedQty);
+            if (rejectedQty) queryParams.append('rejectedQty', rejectedQty);
+            if (scrapQty) queryParams.append('scrapQty', scrapQty);
+            if (completionNotes || updatedTask.notes) queryParams.append('notes', completionNotes || updatedTask.notes);
             
-            let productionAssigneeId = productionManagers.length > 0 ? productionManagers[0].id : null;
-            
-            // If no specific manager, find any production employee
-            if (!productionAssigneeId) {
-              const [prodEmployees] = await pool.execute(
-                "SELECT e.id FROM employees e JOIN roles r ON e.role_id = r.id WHERE r.name = 'Production' AND e.status = 'active' LIMIT 1"
+            const qs = queryParams.toString();
+            if (qs) entryLink += (entryLink.includes('?') ? '&' : '?') + qs;
+
+            // 4. Resolve IDs if missing in the task record
+            let rootCardId = updatedTask.root_card_id;
+            let salesOrderId = updatedTask.sales_order_id;
+            let finalOperationId = operationId;
+
+            if ((!rootCardId || !salesOrderId || !finalOperationId) && operationId) {
+              const [opData] = await pool.execute(`
+                SELECT wo.root_card_id, wo.sales_order_id, woo.id as valid_op_id
+                FROM work_order_operations woo 
+                JOIN work_orders wo ON woo.work_order_id = wo.id 
+                WHERE woo.id = ?`, 
+                [operationId]
               );
-              if (prodEmployees.length > 0) productionAssigneeId = prodEmployees[0].id;
+              if (opData.length > 0) {
+                rootCardId = rootCardId || opData[0].root_card_id;
+                salesOrderId = salesOrderId || opData[0].sales_order_id;
+                finalOperationId = opData[0].valid_op_id;
+              } else {
+                console.warn(`[employeePortalController] Operation ID ${operationId} is invalid. Setting to null.`);
+                finalOperationId = null;
+              }
             }
 
-            // If we found someone to assign to, and it's not already assigned to them via step 4 in original code
-            if (productionAssigneeId && productionAssigneeId !== updatedTask.assigned_by) {
-              await EmployeeTask.createAssignedTask(productionAssigneeId, {
-                title: `Do Production Entry: ${updatedTask.operation_name || updatedTask.title}`,
-                description: `Task completed. Please do the production entry for WO: ${updatedTask.work_order_no || 'N/A'}.`,
-                type: 'production_entry',
-                priority: updatedTask.priority || 'medium',
-                workOrderOperationId: operationId,
-                salesOrderId: updatedTask.sales_order_id,
-                assignedBy: task.employee_id
-              });
-            }
-
-            // 5. Notify Production Managers ONLY (not all employees)
-            const [managerUsers] = await pool.execute(`
-              SELECT DISTINCT u.id 
-              FROM users u 
-              JOIN employees e ON u.email = e.email 
-              JOIN roles r ON e.role_id = r.id
-              WHERE r.name = 'production_manager' AND e.status = 'active'
-            `);
+            // 3. Create Department Task for Production Entry if it doesn't exist
+            const taskTitle = `Production Entry Required: ${updatedTask.operation_name || updatedTask.title?.replace('Job Card Operation: ', '') || 'New Operation'}`;
             
-            for (const mUser of managerUsers) {
-              await AlertsNotification.create({
-                userId: mUser.id,
-                fromUserId: req.user?.id || null,
-                alertType: 'status_update',
-                message: `Production Entry required for ${updatedTask.operation_name || updatedTask.title} (WO: ${updatedTask.work_order_no || 'N/A'})`,
-                relatedTable: 'employee_tasks',
-                relatedId: taskId,
-                priority: 'high',
-                link: entryLink
-              });
+            const connection = await pool.getConnection();
+            try {
+              await connection.beginTransaction();
+
+              // Verify foreign keys exist to avoid constraint failures
+              if (rootCardId) {
+                const [rcCheck] = await connection.execute('SELECT id FROM root_cards WHERE id = ?', [rootCardId]);
+                if (rcCheck.length === 0) rootCardId = null;
+              }
+              
+              if (salesOrderId) {
+                const [soCheck] = await connection.execute('SELECT id FROM sales_orders WHERE id = ?', [salesOrderId]);
+                if (soCheck.length === 0) salesOrderId = null;
+              }
+
+              if (finalOperationId) {
+                const [opCheck] = await connection.execute('SELECT id FROM work_order_operations WHERE id = ?', [finalOperationId]);
+                if (opCheck.length === 0) finalOperationId = null;
+              }
+
+              let existingTask = null;
+              if (finalOperationId) {
+                const [rows] = await connection.execute(
+                  `SELECT id FROM department_tasks WHERE work_order_operation_id = ? AND task_title = ? LIMIT 1 FOR UPDATE`,
+                  [finalOperationId, taskTitle]
+                );
+                existingTask = rows[0];
+              }
+              
+              if (!existingTask) {
+                let query = 'SELECT id FROM department_tasks WHERE task_title = ? AND role_id = ?';
+                const params = [taskTitle, productionRoleId];
+                if (rootCardId) {
+                  query += ' AND root_card_id = ?';
+                  params.push(rootCardId);
+                } else {
+                  query += ' AND root_card_id IS NULL';
+                }
+                query += ' LIMIT 1 FOR UPDATE';
+                
+                const [rows] = await connection.execute(query, params);
+                existingTask = rows[0];
+              }
+
+              if (!existingTask) {
+                const [result] = await connection.execute(
+                  `INSERT INTO department_tasks (
+                    root_card_id, role_id, task_title, task_description, 
+                    status, priority, assigned_by, notes, 
+                    sales_order_id, work_order_operation_id, link
+                  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                  [
+                    rootCardId || null, productionRoleId, taskTitle, 
+                    `Task "${updatedTask.title}" has been completed by ${req.user?.name || 'Employee'}. Now do the production entry for Work Order: ${updatedTask.work_order_no || 'N/A'}.`,
+                    'pending', updatedTask.priority || 'medium', taskOwnerUserId || req.user?.id || null,
+                    JSON.stringify({
+                      autoFill: {
+                        operatorId,
+                        startTime,
+                        endTime,
+                        producedQty,
+                        rejectedQty,
+                        scrapQty,
+                        notes: completionNotes || updatedTask.notes,
+                        operationId: finalOperationId
+                      }
+                    }),
+                    salesOrderId || null, finalOperationId || null, entryLink
+                  ]
+                );
+                console.log(`[employeePortalController] ✓ Created Department Task ID: ${result.insertId} for ${taskTitle}`);
+              } else {
+                console.log(`[employeePortalController] ℹ️ Department Task for ${taskTitle} already exists, skipping`);
+              }
+
+              await connection.commit();
+            } catch (txErr) {
+              await connection.rollback();
+              console.error('[employeePortalController] Transaction error in task flow:', txErr.message);
+            } finally {
+              connection.release();
+            }
+            
+            // 4. Notify Production Department (Production Managers and Production role users)
+            try {
+              const [managerUsers] = await pool.execute(`
+                SELECT DISTINCT u.id 
+                FROM users u 
+                LEFT JOIN employees e ON u.email = e.email 
+                JOIN roles r ON (e.role_id = r.id OR u.role_id = r.id)
+                WHERE (r.name = 'production_manager' OR r.name = 'Production' OR r.id = 5 OR r.id = 10) 
+                AND (e.status = 'active' OR e.status IS NULL)
+              `);
+              
+              console.log(`[employeePortalController] Notifying ${managerUsers.length} production users`);
+              
+              for (const mUser of managerUsers) {
+                await AlertsNotification.create({
+                  userId: mUser.id,
+                  fromUserId: req.user?.id || null,
+                  alertType: 'status_update',
+                  message: `📢 Production Entry Required: ${updatedTask.operation_name || updatedTask.title} (WO: ${updatedTask.work_order_no || 'N/A'}) is ready for entry.`,
+                  relatedTable: 'employee_tasks',
+                  relatedId: taskId,
+                  priority: 'high',
+                  link: entryLink
+                });
+              }
+            } catch (notifErr) {
+              console.error('[employeePortalController] Error sending notifications:', notifErr.message);
             }
           }
         } catch (flowError) {
@@ -577,6 +674,7 @@ exports.updateTaskStatus = async (req, res) => {
         data: updatedTask
       });
     } else {
+      const { producedQty, rejectedQty, scrapQty, notes: completionNotes } = req.body;
       await EmployeeTask.updateStatus(taskId, status);
       const updatedTask = await EmployeeTask.findById(taskId);
       
@@ -585,67 +683,164 @@ exports.updateTaskStatus = async (req, res) => {
         try {
           const pool = require('../../config/database');
           const [roles] = await pool.execute("SELECT id FROM roles WHERE name = 'Production' OR name = 'production_manager' ORDER BY (CASE WHEN name = 'Production' THEN 0 ELSE 1 END) LIMIT 1");
-          const productionRoleId = roles.length > 0 ? roles[0].id : null;
+          let productionRoleId = roles.length > 0 ? roles[0].id : null;
+          
+          // Fallback to role ID 5 if not found by name
+          if (!productionRoleId) {
+            const [fallbackRoles] = await pool.execute("SELECT id FROM roles WHERE id = 5 LIMIT 1");
+            if (fallbackRoles.length > 0) productionRoleId = 5;
+          }
           
           if (productionRoleId) {
-            const entryLink = '/department/production';
-            // Create Department Task for Production Entry
-            await DepartmentTask.createDepartmentTask({
-              root_card_id: updatedTask.root_card_id || null,
-              role_id: productionRoleId,
-              task_title: `Worker Task Completed: ${updatedTask.task}`,
-              task_description: `Worker ${req.user?.name || 'Employee'} has completed the task: ${updatedTask.task} for Root Card: ${updatedTask.root_card_title || 'N/A'}. Please do the production entry.`,
-              priority: updatedTask.priority || 'medium',
-              status: 'pending',
-              assigned_by: req.user?.id || null,
-              sales_order_id: updatedTask.sales_order_id || null,
-              link: entryLink
-            });
-
-            // Create Assigned Task for Production Department
-            const [productionManagers] = await pool.execute(
-              "SELECT e.id FROM employees e JOIN roles r ON e.role_id = r.id WHERE r.name = 'production_manager' AND e.status = 'active' LIMIT 1"
-            );
+            // Prepare production entry details for auto-filling
+            const endTime = new Date().toISOString();
+            let startTime = updatedTask.created_at ? new Date(updatedTask.created_at).toISOString() : endTime;
             
-            let productionAssigneeId = productionManagers.length > 0 ? productionManagers[0].id : null;
-            
-            if (!productionAssigneeId) {
-              const [prodEmployees] = await pool.execute(
-                "SELECT e.id FROM employees e JOIN roles r ON e.role_id = r.id WHERE r.name = 'Production' AND e.status = 'active' LIMIT 1"
-              );
-              if (prodEmployees.length > 0) productionAssigneeId = prodEmployees[0].id;
+            // Try to find when it was actually started from logs
+            if (updatedTask.logs) {
+              try {
+                const logs = typeof updatedTask.logs === 'string' ? JSON.parse(updatedTask.logs) : updatedTask.logs;
+                if (Array.isArray(logs)) {
+                  const startLog = logs.find(l => l.status === 'in_progress');
+                  if (startLog && startLog.timestamp) {
+                    startTime = new Date(startLog.timestamp).toISOString();
+                  }
+                }
+              } catch (e) {
+                console.warn('[employeePortalController] Error parsing worker task logs:', e.message);
+              }
             }
 
-            if (productionAssigneeId) {
-              await EmployeeTask.createAssignedTask(productionAssigneeId, {
-                title: `Do Production Entry: ${updatedTask.task}`,
-                description: `Worker task completed for Root Card: ${updatedTask.root_card_title || 'N/A'}. Please do the production entry.`,
-                type: 'production_entry',
-                priority: updatedTask.priority || 'medium',
-                salesOrderId: updatedTask.sales_order_id,
-                assignedBy: req.user?.id || null
-              });
+            const operatorId = updatedTask.worker_id;
+            const operatorUserId = req.user?.id;
+            
+            let entryLink = '/department/production/department-tasks';
+            const taskTitle = `Production Entry Required: ${updatedTask.task}`;
+
+            // Add query parameters for auto-filling if we can determine the link
+            const queryParams = new URLSearchParams();
+            if (operatorId) queryParams.append('operatorId', operatorId);
+            if (startTime) queryParams.append('startTime', startTime);
+            if (endTime) queryParams.append('endTime', endTime);
+            
+            const qs = queryParams.toString();
+            if (qs) entryLink += `?${qs}`;
+
+            // Resolve IDs if missing in the task record
+            let rootCardId = updatedTask.root_card_id;
+            let salesOrderId = updatedTask.sales_order_id;
+
+            if (!rootCardId && updatedTask.worker_id) {
+               // No operation_id for worker tasks usually, try finding by task/root_card_title
+               const [rcData] = await pool.execute("SELECT id, sales_order_id FROM root_cards WHERE title = ? LIMIT 1", [updatedTask.root_card_title]);
+               if (rcData.length > 0) {
+                 rootCardId = rcData[0].id;
+                 salesOrderId = salesOrderId || rcData[0].sales_order_id;
+               }
             }
 
-            // Notify Production Managers ONLY
-            const [managerUsers] = await pool.execute(`
-              SELECT DISTINCT u.id 
-              FROM users u 
-              JOIN employees e ON u.email = e.email 
-              JOIN roles r ON e.role_id = r.id
-              WHERE r.name = 'production_manager' AND e.status = 'active'
-            `);
-            for (const mUser of managerUsers) {
-              await AlertsNotification.create({
-                userId: mUser.id,
-                fromUserId: req.user?.id || null,
-                alertType: 'status_update',
-                message: `Worker task completed: ${updatedTask.task} (Root Card: ${updatedTask.root_card_title || 'N/A'})`,
-                relatedTable: 'worker_tasks',
-                relatedId: taskId,
-                priority: 'medium',
-                link: entryLink
-              });
+            const connection = await pool.getConnection();
+            try {
+              await connection.beginTransaction();
+
+              // Verify if rootCardId and salesOrderId actually exist IN THE TRANSACTION CONNECTION
+              if (rootCardId) {
+                const [rcCheck] = await connection.execute('SELECT id FROM root_cards WHERE id = ?', [rootCardId]);
+                if (rcCheck.length === 0) {
+                  console.warn(`[employeePortalController] WARNING: root_card_id ${rootCardId} not found. Setting to null.`);
+                  rootCardId = null;
+                }
+              }
+              
+              if (salesOrderId) {
+                const [soCheck] = await connection.execute('SELECT id FROM sales_orders WHERE id = ?', [salesOrderId]);
+                if (soCheck.length === 0) {
+                  console.warn(`[employeePortalController] WARNING: sales_order_id ${salesOrderId} not found. Setting to null.`);
+                  salesOrderId = null;
+                }
+              }
+
+              let query = 'SELECT id FROM department_tasks WHERE task_title = ? AND role_id = ?';
+              const params = [taskTitle, productionRoleId];
+              if (rootCardId) {
+                query += ' AND root_card_id = ?';
+                params.push(rootCardId);
+              } else {
+                query += ' AND root_card_id IS NULL';
+              }
+              query += ' LIMIT 1 FOR UPDATE';
+              
+              const [rows] = await connection.execute(query, params);
+              let existingTask = rows[0];
+
+              if (!existingTask) {
+                // Create Department Task for Production Entry
+                const [result] = await connection.execute(
+                  `INSERT INTO department_tasks (
+                    root_card_id, role_id, task_title, task_description, 
+                    status, priority, assigned_by, notes, 
+                    sales_order_id, link
+                  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                  [
+                    rootCardId || null, productionRoleId, taskTitle, 
+                    `Worker ${req.user?.name || 'Employee'} has completed the task: ${updatedTask.task} for Root Card: ${updatedTask.root_card_title || 'N/A'}. Please do the production entry.`,
+                    'pending', updatedTask.priority || 'medium', updatedTask.worker_id || req.user?.id || null,
+                    JSON.stringify({
+                      autoFill: {
+                        operatorId,
+                        startTime,
+                        endTime,
+                        producedQty,
+                        rejectedQty,
+                        scrapQty,
+                        notes: completionNotes,
+                        taskName: updatedTask.task,
+                        rootCardTitle: updatedTask.root_card_title
+                      }
+                    }),
+                    salesOrderId || null, entryLink
+                  ]
+                );
+                console.log(`[employeePortalController] ✓ Created Worker Department Task ID: ${result.insertId} for ${taskTitle}`);
+              } else {
+                console.log(`[employeePortalController] ℹ️ Worker Department Task for ${taskTitle} already exists, skipping`);
+              }
+
+              await connection.commit();
+            } catch (txErr) {
+              await connection.rollback();
+              console.error('[employeePortalController] Transaction error in worker task flow:', txErr.message);
+            } finally {
+              connection.release();
+            }
+
+            // Notify Production Department (Production Managers and Production role users)
+            try {
+              const [managerUsers] = await pool.execute(`
+                SELECT DISTINCT u.id 
+                FROM users u 
+                LEFT JOIN employees e ON u.email = e.email 
+                JOIN roles r ON (e.role_id = r.id OR u.role_id = r.id)
+                WHERE (r.name = 'production_manager' OR r.name = 'Production' OR r.id = 5 OR r.id = 10) 
+                AND (e.status = 'active' OR e.status IS NULL)
+              `);
+              
+              console.log(`[employeePortalController] Notifying ${managerUsers.length} production users for worker task`);
+
+              for (const mUser of managerUsers) {
+                await AlertsNotification.create({
+                  userId: mUser.id,
+                  fromUserId: req.user?.id || null,
+                  alertType: 'status_update',
+                  message: `📢 Worker task completed: ${updatedTask.task} (Root Card: ${updatedTask.root_card_title || 'N/A'}). Production Entry required.`,
+                  relatedTable: 'employee_tasks',
+                  relatedId: taskId,
+                  priority: 'high',
+                  link: entryLink
+                });
+              }
+            } catch (notifErr) {
+              console.error('[employeePortalController] Notification error in worker task flow:', notifErr.message);
             }
           }
         } catch (flowError) {

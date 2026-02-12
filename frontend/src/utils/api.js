@@ -11,6 +11,19 @@ axios.interceptors.request.use(
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      
+      // For demo users, add a special header to help the backend identify the simulated user
+      if (token === 'demo-token') {
+        const demoUser = localStorage.getItem('demoUser');
+        if (demoUser) {
+          try {
+            const parsedUser = JSON.parse(demoUser);
+            config.headers['X-Demo-User'] = parsedUser.username;
+          } catch (e) {
+            console.warn('Error parsing demo user for header', e);
+          }
+        }
+      }
     } else {
       delete config.headers.Authorization;
     }

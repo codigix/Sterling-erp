@@ -29,7 +29,7 @@ const DEPARTMENT_USERS = {
   admin: { username: "admin", password: "password", label: "Admin" },
   inventory: { username: "inventory.manager", password: "password", label: "Inventory" },
   design_engineer: { username: "design.engineer", password: "password", label: "Design Engineer" },
-  production: { username: "production.manager", password: "password", label: "Production" },
+  production: { username: "production", password: "password", label: "Production" },
   engineering: { username: "john.doe", password: "password", label: "Engineering" },
   qc: { username: "qc.manager", password: "password", label: "QC" },
 };
@@ -184,7 +184,7 @@ const LoginPage = () => {
                 <button 
                   type="button" 
                   className="quick-btn"
-                  onClick={() => setFormData({ username: "production.manager", password: "password" })}
+                  onClick={() => setFormData({ username: "production", password: "password" })}
                 >
                   Production
                 </button>

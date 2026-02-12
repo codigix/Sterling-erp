@@ -7,6 +7,7 @@ router.get('/stats', quotationController.getQuotationStats);
 router.get('/attachments/:id/download', quotationController.downloadQuotationAttachment);
 router.get('/vendor/:vendor_id', quotationController.getVendorQuotations);
 router.get('/root-card/:rootCardId', quotationController.getQuotationsByRootCard);
+router.get('/material-request/:id', quotationController.getQuotationsByMaterialRequest);
 router.get('/:id/communications', quotationController.getQuotationCommunications);
 router.get('/:id/responses', quotationController.getQuotationResponses);
 router.get('/:id', quotationController.getQuotationById);

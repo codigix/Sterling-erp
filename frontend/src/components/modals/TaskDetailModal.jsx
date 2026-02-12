@@ -1,12 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Modal, ModalBody, ModalHeader } from '../ui/Modal';
 import SwipeButton from '../ui/SwipeButton';
 import Badge from '../ui/Badge';
-import { Clock, AlertCircle, X, CheckCircle2, Play, Zap } from 'lucide-react';
+import { Clock, AlertCircle, X, CheckCircle2, Play, Zap, Box, MessageSquare } from 'lucide-react';
 
 const TaskDetailModal = ({ task, isOpen, onClose, onTaskComplete, isUpdating }) => {
   const navigate = useNavigate();
+  const [producedQty, setProducedQty] = useState('');
+  const [rejectedQty, setRejectedQty] = useState('');
+  const [scrapQty, setScrapQty] = useState('');
+  const [notes, setNotes] = useState('');
 
   if (!task) return null;
 
@@ -35,7 +39,18 @@ const TaskDetailModal = ({ task, isOpen, onClose, onTaskComplete, isUpdating }) 
   };
 
   const handleSwipeComplete = async () => {
-    await onTaskComplete(task.id, 'completed');
+    const details = {
+      producedQty: parseFloat(producedQty) || 0,
+      rejectedQty: parseFloat(rejectedQty) || 0,
+      scrapQty: parseFloat(scrapQty) || 0,
+      notes: notes
+    };
+    await onTaskComplete(task.id, 'completed', details);
+    // Reset form and close
+    setProducedQty('');
+    setRejectedQty('');
+    setScrapQty('');
+    setNotes('');
     onClose();
   };
 
@@ -68,7 +83,7 @@ const TaskDetailModal = ({ task, isOpen, onClose, onTaskComplete, isUpdating }) 
         </button>
       </div>
 
-      <div className="space-y-6 p-6 bg-white dark:bg-slate-900">
+      <div className="space-y-6 p-6 bg-white dark:bg-slate-900 overflow-y-auto max-h-[70vh]">
         <div>
           <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">Description</p>
           <p className="text-slate-900 dark:text-white">{task.description || 'No description provided'}</p>
@@ -118,11 +133,11 @@ const TaskDetailModal = ({ task, isOpen, onClose, onTaskComplete, isUpdating }) 
               </div>
             )}
 
-            {task.due_date && (
+            {task.started_at && (
               <div>
-                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-2">Due Date</p>
+                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-2">Started Date</p>
                 <p className="text-sm font-medium text-slate-900 dark:text-white">
-                  {new Date(task.due_date).toLocaleDateString('en-IN')}
+                  {new Date(task.started_at).toLocaleDateString('en-IN')} {new Date(task.started_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
                 </p>
               </div>
             )}
@@ -135,33 +150,63 @@ const TaskDetailModal = ({ task, isOpen, onClose, onTaskComplete, isUpdating }) 
                 </p>
               </div>
             )}
-
-            {task.started_at && (
-              <div>
-                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-2">Started Date</p>
-                <p className="text-sm font-medium text-slate-900 dark:text-white">
-                  {new Date(task.started_at).toLocaleDateString('en-IN')}
-                </p>
-              </div>
-            )}
-
-            {task.completed_at && (
-              <div>
-                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-2">Completed Date</p>
-                <p className="text-sm font-medium text-slate-900 dark:text-white">
-                  {new Date(task.completed_at).toLocaleDateString('en-IN')}
-                </p>
-              </div>
-            )}
-
-            {/* {task.notes && (
-              <div className="col-span-2">
-                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-2">Notes</p>
-                <p className="text-sm font-medium text-slate-900 dark:text-white">{task.notes}</p>
-              </div>
-            )} */}
           </div>
         </div>
+
+        {task.status === 'in_progress' && (
+          <div className="space-y-4 animate-in fade-in duration-500">
+            <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-2">
+              <Box className="w-5 h-5 text-indigo-600" />
+              <h3 className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-sm">Production Entry Details</h3>
+            </div>
+            
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-500 uppercase">Produced Qty <span className="text-red-500">*</span></label>
+                <input 
+                  type="number" 
+                  value={producedQty}
+                  onChange={(e) => setProducedQty(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none"
+                  placeholder="0"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-red-500 uppercase">Rejected Qty</label>
+                <input 
+                  type="number" 
+                  value={rejectedQty}
+                  onChange={(e) => setRejectedQty(e.target.value)}
+                  className="w-full px-3 py-2 bg-red-50/50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 rounded-lg text-sm font-bold text-red-600 focus:ring-2 focus:ring-red-500 outline-none"
+                  placeholder="0"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-500 uppercase">Scrap Qty</label>
+                <input 
+                  type="number" 
+                  value={scrapQty}
+                  onChange={(e) => setScrapQty(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-bold focus:ring-2 focus:ring-slate-500 outline-none"
+                  placeholder="0"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1">
+                <MessageSquare className="w-3 h-3" />
+                Completion Notes
+              </label>
+              <textarea 
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none min-h-[80px]"
+                placeholder="Enter any additional notes about this production run..."
+              />
+            </div>
+          </div>
+        )}
 
         <div className="pt-2 flex flex-col gap-3">
           {task.status === 'pending' ? (
@@ -170,11 +215,17 @@ const TaskDetailModal = ({ task, isOpen, onClose, onTaskComplete, isUpdating }) 
               Waiting for Production to Start Task
             </div>
           ) : (
-            <SwipeButton
-              onSwipeComplete={handleSwipeComplete}
-              isLoading={isUpdating}
-              isCompleted={task.status === 'completed'}
-            />
+            <div className={task.status === 'in_progress' && !producedQty ? 'opacity-50 pointer-events-none' : ''}>
+              <SwipeButton
+                onSwipeComplete={handleSwipeComplete}
+                isLoading={isUpdating}
+                isCompleted={task.status === 'completed'}
+                text={task.status === 'in_progress' ? "Swipe to Complete Task" : "Task Completed"}
+              />
+              {task.status === 'in_progress' && !producedQty && (
+                <p className="text-[10px] text-center text-red-500 font-bold mt-2 uppercase">Please enter Produced Quantity to complete</p>
+              )}
+            </div>
           )}
         </div>
       </div>

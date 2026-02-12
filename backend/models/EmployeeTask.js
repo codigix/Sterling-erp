@@ -451,123 +451,141 @@ class EmployeeTask {
     }
 
     if (task.work_order_operation_id) {
+      // If completing from employee side, we keep it 'in_progress' for production entry
+      // The final completion happens in DepartmentTask model after production entry
+      const newOpStatus = (status === 'completed') ? 'in_progress' : status;
       await pool.execute(
         `UPDATE work_order_operations SET status = ? WHERE id = ?`,
-        [status, task.work_order_operation_id]
+        [newOpStatus, task.work_order_operation_id]
       );
-      console.log(`[EmployeeTask] ✓ Task ${taskId} status changed to '${status}' - Work Order Operation ${task.work_order_operation_id} updated`);
+      console.log(`[EmployeeTask] ✓ Task ${taskId} status changed to '${status}' - Work Order Operation ${task.work_order_operation_id} updated to '${newOpStatus}'`);
     }
 
     if (task.production_plan_stage_id) {
+      // If completing from employee side, we keep it 'in_progress' for production entry
+      // The final completion happens in DepartmentTask model after production entry
+      const newStageStatus = (status === 'completed' && task.work_order_operation_id) ? 'in_progress' : status;
       await pool.execute(
         `UPDATE production_plan_stages SET status = ? WHERE id = ?`,
-        [status, task.production_plan_stage_id]
+        [newStageStatus, task.production_plan_stage_id]
       );
-      console.log(`[EmployeeTask] ✓ Task ${taskId} status changed to '${status}' - Stage ${task.production_plan_stage_id} updated`);
+      console.log(`[EmployeeTask] ✓ Task ${taskId} status changed to '${status}' - Stage ${task.production_plan_stage_id} updated to '${newStageStatus}'`);
       
-      if (status === 'completed') {
-        const [nextStages] = await pool.execute(
-          `SELECT pps.id, pps.stage_name, pps.stage_type, pps.assigned_employee_id, pps.production_plan_id,
-                  sod.product_details
-           FROM production_plan_stages pps
-           JOIN production_plans pp ON pps.production_plan_id = pp.id
-           LEFT JOIN sales_order_details sod ON sod.sales_order_id = pp.sales_order_id
-           WHERE pps.blocked_by_stage_id = ? LIMIT 1`,
-          [task.production_plan_stage_id]
-        );
-        
-        if (nextStages.length > 0) {
-          const nextStageId = nextStages[0].id;
-          const nextStageName = nextStages[0].stage_name;
-          const nextStageType = nextStages[0].stage_type;
-          const nextStageEmployeeId = nextStages[0].assigned_employee_id;
-          const planId = nextStages[0].production_plan_id;
-          
-          let productName = null;
-          if (nextStages[0].product_details) {
-            try {
-              const details = typeof nextStages[0].product_details === 'string' 
-                ? JSON.parse(nextStages[0].product_details) 
-                : nextStages[0].product_details;
-              productName = details.itemName || null;
-            } catch (e) {
-              console.warn('Error parsing product_details for next stage');
-            }
-          }
-          
-          console.log(`[EmployeeTask] Stage completion detected. Next stage: ${nextStageId}, Type: ${nextStageType}, Employee: ${nextStageEmployeeId}`);
-          
-          await pool.execute(
-            `UPDATE production_plan_stages SET is_blocked = FALSE WHERE id = ?`,
-            [nextStageId]
-          );
-          console.log(`[EmployeeTask] ✓ Stage ${nextStageId} unlocked`);
-          
-          // Create task for the unlocked stage
-          if (nextStageType === 'outsource') {
-            // Outsource stage - notify Production Department
-            try {
-              const AlertsNotification = require('./AlertsNotification');
-              
-              // Get all employees in Production Department
-              const [deptMembers] = await pool.execute(`
-                SELECT DISTINCT e.id 
-                FROM employees e
-                WHERE e.department = 'Production'
-                LIMIT 20
-              `);
-              
-              const notifMessage = productName 
-                ? `Outsource task "${nextStageName}" for ${productName} is now ready for production.`
-                : `Outsource task "${nextStageName}" is now ready for production. Previous stage completed!`;
-
-              // Send notification to each department member
-              for (const member of deptMembers) {
-                try {
-                  await AlertsNotification.create({
-                    userId: member.id,
-                    alertType: 'outsource_task_created',
-                    message: notifMessage,
-                    relatedTable: 'production_plan_stages',
-                    relatedId: nextStageId,
-                    priority: 'high'
-                  });
-                  console.log(`[EmployeeTask] ✓ Outsource notification sent to employee ${member.id}`);
-                } catch (notifErr) {
-                  console.warn(`[EmployeeTask] Warning - could not send notification to employee ${member.id}:`, notifErr.message);
-                }
-              }
-            } catch (outsourceError) {
-              console.error(`[EmployeeTask] Error handling outsource stage unlocking:`, outsourceError.message);
-            }
-          } else if (nextStageEmployeeId) {
-            // In-house stage - create task for employee
-            try {
-              const taskTitle = productName 
-                ? `Task for ${productName}: ${nextStageName}`
-                : `Production Stage: ${nextStageName}`;
-
-              const newTaskId = await this.createAssignedTask(nextStageEmployeeId, {
-                title: taskTitle,
-                description: `Assigned to production plan stage`,
-                type: 'production_stage',
-                priority: 'medium',
-                dueDate: null,
-                notes: `Production Plan ID: ${planId}`,
-                productionPlanStageId: nextStageId
-              });
-              console.log(`[EmployeeTask] ✓ New task ${newTaskId} created for employee ${nextStageEmployeeId} for stage ${nextStageName}`);
-            } catch (createTaskError) {
-              console.error(`[EmployeeTask] Error creating task for next stage:`, createTaskError.message);
-            }
-          }
-        } else {
-          console.log(`[EmployeeTask] No dependent stages found for stage ${task.production_plan_stage_id}`);
-        }
+      // Only unlock next stage if this stage is ACTUALLY completed (no production entry pending)
+      if (status === 'completed' && !task.work_order_operation_id) {
+        await EmployeeTask.unlockNextStages(task.production_plan_stage_id);
       }
     }
 
+    return { affectedRows: 1 };
+  }
+
+  static async unlockNextStages(currentStageId) {
+    try {
+      const [nextStages] = await pool.execute(
+        `SELECT pps.id, pps.stage_name, pps.stage_type, pps.assigned_employee_id, pps.production_plan_id,
+                sod.product_details
+         FROM production_plan_stages pps
+         JOIN production_plans pp ON pps.production_plan_id = pp.id
+         LEFT JOIN sales_order_details sod ON sod.sales_order_id = pp.sales_order_id
+         WHERE pps.blocked_by_stage_id = ?`,
+        [currentStageId]
+      );
+      
+      for (const nextStage of nextStages) {
+        const nextStageId = nextStage.id;
+        const nextStageName = nextStage.stage_name;
+        const nextStageType = nextStage.stage_type;
+        const nextStageEmployeeId = nextStage.assigned_employee_id;
+        const planId = nextStage.production_plan_id;
+        
+        let productName = null;
+        if (nextStage.product_details) {
+          try {
+            const details = typeof nextStage.product_details === 'string' 
+              ? JSON.parse(nextStage.product_details) 
+              : nextStage.product_details;
+            productName = details.itemName || null;
+          } catch (e) {
+            console.warn('Error parsing product_details for next stage');
+          }
+        }
+        
+        console.log(`[EmployeeTask.unlockNextStages] Next stage: ${nextStageId}, Type: ${nextStageType}, Employee: ${nextStageEmployeeId}`);
+        
+        await pool.execute(
+          `UPDATE production_plan_stages SET is_blocked = FALSE WHERE id = ?`,
+          [nextStageId]
+        );
+        console.log(`[EmployeeTask.unlockNextStages] ✓ Stage ${nextStageId} unlocked`);
+        
+        // Create task for the unlocked stage
+        if (nextStageType === 'outsource') {
+          // Outsource stage - notify Production Department
+          try {
+            const AlertsNotification = require('./AlertsNotification');
+            
+            // Get all employees in Production Department
+            const [deptMembers] = await pool.execute(`
+              SELECT DISTINCT e.id 
+              FROM employees e
+              WHERE e.department = 'Production'
+              LIMIT 20
+            `);
+            
+            const notifMessage = productName 
+              ? `Outsource task "${nextStageName}" for ${productName} is now ready for production.`
+              : `Outsource task "${nextStageName}" is now ready for production. Previous stage completed!`;
+
+            // Send notification to each department member
+            for (const member of deptMembers) {
+              try {
+                await AlertsNotification.create({
+                  userId: member.id,
+                  alertType: 'outsource_task_created',
+                  message: notifMessage,
+                  relatedTable: 'production_plan_stages',
+                  relatedId: nextStageId,
+                  priority: 'high'
+                });
+                console.log(`[EmployeeTask.unlockNextStages] ✓ Outsource notification sent to employee ${member.id}`);
+              } catch (notifErr) {
+                console.warn(`[EmployeeTask.unlockNextStages] Warning - could not send notification to employee ${member.id}:`, notifErr.message);
+              }
+            }
+          } catch (outsourceError) {
+            console.error(`[EmployeeTask.unlockNextStages] Error handling outsource stage unlocking:`, outsourceError.message);
+          }
+        } else if (nextStageEmployeeId) {
+          // In-house stage - create task for employee
+          try {
+            const taskTitle = productName 
+              ? `Task for ${productName}: ${nextStageName}`
+              : `Production Stage: ${nextStageName}`;
+
+            const newTaskId = await EmployeeTask.createAssignedTask(nextStageEmployeeId, {
+              title: taskTitle,
+              description: `Assigned to production plan stage`,
+              type: 'production_stage',
+              priority: 'medium',
+              dueDate: null,
+              notes: `Production Plan ID: ${planId}`,
+              productionPlanStageId: nextStageId
+            });
+            console.log(`[EmployeeTask.unlockNextStages] ✓ New task ${newTaskId} created for employee ${nextStageEmployeeId} for stage ${nextStageName}`);
+          } catch (createTaskError) {
+            console.error(`[EmployeeTask.unlockNextStages] Error creating task for next stage:`, createTaskError.message);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('[EmployeeTask.unlockNextStages] Error:', error.message);
+    }
+  }
+
+    /* 
     // Custom Workflow: Notification to Production Department on completion
+    // Note: This logic has been moved to employeePortalController.js to support refined workflow
     if (status === 'completed') {
       try {
         // Only trigger for relevant task types that lead to production
@@ -648,7 +666,7 @@ class EmployeeTask {
         console.error('[EmployeeTask] Production workflow trigger failed:', workflowError.message);
       }
     }
-  }
+    */
 
   static async getAssignedTasksStats(employeeId) {
     const [rows] = await pool.execute(

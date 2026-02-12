@@ -25,7 +25,7 @@ import taskService from "../../utils/taskService";
 const CreateQuotationPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { materials, rootCardId } = location.state || {};
+  const { materials, rootCardId, material_request_id } = location.state || {};
 
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -41,6 +41,7 @@ const CreateQuotationPage = () => {
   const [formData, setFormData] = useState({
     vendor_id: "",
     root_card_id: rootCardId || "",
+    material_request_id: material_request_id || "",
     valid_until: "",
     notes: "",
     items: [],
@@ -246,6 +247,7 @@ const CreateQuotationPage = () => {
         total_amount: calculateTotal(),
         valid_until: formData.valid_until,
         items: formData.items,
+        material_request_id: formData.material_request_id,
         notes: formData.root_card_id
           ? `Ref: Root Card ${formData.root_card_id}\n\n${formData.notes}`
           : formData.notes,

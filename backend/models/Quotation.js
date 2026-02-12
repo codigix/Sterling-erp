@@ -3,10 +3,11 @@ const pool = require('../config/database');
 class Quotation {
   static async findAll(filters = {}) {
     let query = `
-      SELECT q.*, v.name as vendor_name, ref.quotation_number as reference_number
+      SELECT q.*, v.name as vendor_name, ref.quotation_number as reference_number, mr.mr_number
       FROM quotations q 
       LEFT JOIN vendors v ON q.vendor_id = v.id 
       LEFT JOIN quotations ref ON q.reference_id = ref.id
+      LEFT JOIN material_requests mr ON q.material_request_id = mr.id
       WHERE 1=1
     `;
     const params = [];
@@ -45,10 +46,11 @@ class Quotation {
 
   static async findById(id) {
     const [rows] = await pool.execute(
-      `SELECT q.*, v.name as vendor_name, ref.quotation_number as reference_number
+      `SELECT q.*, v.name as vendor_name, ref.quotation_number as reference_number, mr.mr_number
        FROM quotations q 
        LEFT JOIN vendors v ON q.vendor_id = v.id 
        LEFT JOIN quotations ref ON q.reference_id = ref.id
+       LEFT JOIN material_requests mr ON q.material_request_id = mr.id
        WHERE q.id = ?`,
       [id]
     );
@@ -57,10 +59,11 @@ class Quotation {
 
   static async findByQuotationNumber(quotationNumber) {
     const [rows] = await pool.execute(
-      `SELECT q.*, v.name as vendor_name, ref.quotation_number as reference_number
+      `SELECT q.*, v.name as vendor_name, ref.quotation_number as reference_number, mr.mr_number
        FROM quotations q 
        LEFT JOIN vendors v ON q.vendor_id = v.id 
        LEFT JOIN quotations ref ON q.reference_id = ref.id
+       LEFT JOIN material_requests mr ON q.material_request_id = mr.id
        WHERE q.quotation_number = ?`,
       [quotationNumber]
     );
@@ -72,8 +75,8 @@ class Quotation {
     
     const [result] = await pool.execute(
       `INSERT INTO quotations (
-        vendor_id, quotation_number, total_amount, valid_until, status, items, notes, type, reference_id, sales_order_id, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+        vendor_id, quotation_number, total_amount, valid_until, status, items, notes, type, reference_id, sales_order_id, material_request_id, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
       [
         data.vendor_id,
         quotationNumber,
@@ -84,7 +87,8 @@ class Quotation {
         data.notes || null,
         data.type || 'outbound',
         data.reference_id || null,
-        data.sales_order_id || null
+        data.sales_order_id || null,
+        data.material_request_id || null
       ]
     );
     return result.insertId;
@@ -94,7 +98,7 @@ class Quotation {
     const updates = [];
     const params = [];
 
-    const fields = ['vendor_id', 'total_amount', 'valid_until', 'status', 'notes', 'type', 'reference_id', 'sales_order_id'];
+    const fields = ['vendor_id', 'total_amount', 'valid_until', 'status', 'notes', 'type', 'reference_id', 'sales_order_id', 'material_request_id'];
     
     for (const field of fields) {
       if (data[field] !== undefined) {

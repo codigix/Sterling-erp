@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
-import axios from "axios";
-import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autotable";
+import { useNavigate } from "react-router-dom";
+import axios from "../../utils/api";
 import Swal from "sweetalert2";
+import CreatePurchaseOrderModal from "./CreatePurchaseOrderModal";
 import {
   ShoppingCart,
   Search,
@@ -12,31 +11,29 @@ import {
   Download,
   Eye,
   CheckCircle,
-  Trash2,
+  FileText,
   Calendar,
-  DollarSign,
-  Truck,
   X,
   Mail,
-  Loader2,
   MessageSquare,
-  Paperclip,
+  RefreshCw,
+  ChevronRight,
+  Clock,
+  Send,
+  User,
+  Package,
+  Edit
 } from "lucide-react";
-import taskService from "@/utils/taskService";
 
 const PurchaseOrderPage = () => {
-  const location = useLocation();
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [purchaseOrders, setPurchaseOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [rootCards, setRootCards] = useState([]);
-  const [receivedQuotes, setReceivedQuotes] = useState([]);
+  const [editPO, setEditPO] = useState(null);
   const [stats, setStats] = useState(null);
-  const [selectedRootCardId, setSelectedRootCardId] = useState("");
-  const [selectedQuote, setSelectedQuote] = useState("");
-  const [formSubmitting, setFormSubmitting] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailData, setEmailData] = useState({
@@ -46,311 +43,33 @@ const PurchaseOrderPage = () => {
     subject: "",
     message: "",
   });
-  const [formData, setFormData] = useState({
-    expected_delivery_date: "",
-    notes: "",
-  });
-  const [taskId, setTaskId] = useState(null);
-
-  // Communications State
-  const [showCommsModal, setShowCommsModal] = useState(false);
-  const [communications, setCommunications] = useState([]);
-  const [loadingComms, setLoadingComms] = useState(false);
-  const [selectedPO, setSelectedPO] = useState(null);
-
+  const [showCreateOptions, setShowCreateOptions] = useState(false);
+  
   useEffect(() => {
-    const extractedTaskId = taskService.getTaskIdFromParams();
-    if (extractedTaskId) {
-      setTaskId(extractedTaskId);
-    }
     fetchPurchaseOrders();
-    fetchRootCards();
     fetchStats();
   }, []);
-
-  useEffect(() => {
-    if (location.state?.quotation && rootCards.length > 0) {
-      const { quotation } = location.state;
-      // Pre-select root card
-      if (quotation.root_card_id) {
-        setSelectedRootCardId(quotation.root_card_id);
-      }
-      setShowCreateModal(true);
-    }
-  }, [location.state, rootCards]);
-
-  useEffect(() => {
-    if (selectedRootCardId) {
-      fetchReceivedQuotes(selectedRootCardId);
-    } else {
-      setReceivedQuotes([]);
-      setSelectedQuote("");
-    }
-  }, [selectedRootCardId]);
-
-  useEffect(() => {
-    // Select the quotation after receivedQuotes are loaded
-    if (
-      location.state?.quotation &&
-      receivedQuotes.length > 0 &&
-      showCreateModal
-    ) {
-      const { quotation } = location.state;
-      const matchingQuote = receivedQuotes.find((q) => q.id === quotation.id);
-      if (matchingQuote) {
-        setSelectedQuote(matchingQuote.id);
-      }
-    }
-  }, [receivedQuotes, location.state, showCreateModal]);
 
   const fetchPurchaseOrders = async () => {
     try {
       setLoading(true);
-      const response = await axios.get("/procurement/purchase-orders");
-      const pos = (response.data.purchaseOrders || []).map((po) => ({
-        ...po,
-        items: typeof po.items === "string" ? JSON.parse(po.items) : po.items,
-      }));
-      setPurchaseOrders(pos);
+      const response = await axios.get("/inventory/purchase-orders");
+      setPurchaseOrders(response.data.purchaseOrders || response.data);
     } catch (error) {
       console.error("Error fetching purchase orders:", error);
+      Swal.fire("Error", "Failed to load purchase orders", "error");
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchRootCards = async () => {
-    try {
-      const response = await axios.get("/root-cards/requirements");
-      setRootCards(response.data.data || response.data || []);
-    } catch (error) {
-      console.error("Error fetching root cards:", error);
-    }
-  };
-
-  const fetchReceivedQuotes = async (rootCardId) => {
-    try {
-      const response = await axios.get(
-        "/procurement/purchase-orders/quotes/received",
-        {
-          params: { root_card_id: rootCardId },
-        }
-      );
-      const quotes = (response.data || []).map((q) => ({
-        ...q,
-        items: typeof q.items === "string" ? JSON.parse(q.items) : q.items,
-      }));
-      setReceivedQuotes(quotes);
-    } catch (error) {
-      console.error("Error fetching received quotes:", error);
-      setReceivedQuotes([]);
-    }
-  };
-
   const fetchStats = async () => {
     try {
-      const response = await axios.get(
-        "/procurement/purchase-orders/stats/all"
-      );
+      const response = await axios.get("/inventory/purchase-orders/stats/summary");
       setStats(response.data);
     } catch (error) {
       console.error("Error fetching stats:", error);
     }
-  };
-
-  const handleViewComms = async (po) => {
-    setSelectedPO(po);
-    setShowCommsModal(true);
-    setLoadingComms(true);
-    try {
-      const response = await axios.get(
-        `/procurement/purchase-orders/${po.id}/communications`
-      );
-      setCommunications(response.data);
-    } catch (error) {
-      console.error("Error fetching communications:", error);
-      Swal.fire("Error", "Failed to load communications", "error");
-    } finally {
-      setLoadingComms(false);
-    }
-  };
-
-  const handleCloseComms = () => {
-    setShowCommsModal(false);
-    fetchPurchaseOrders(); // Refresh list to update read status badges
-  };
-
-  const handleDownloadAttachment = async (attachmentId, fileName) => {
-    try {
-      const response = await axios.get(
-        `/procurement/purchase-orders/attachments/${attachmentId}/download`,
-        {
-          responseType: "blob",
-        }
-      );
-
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", fileName);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-    } catch (error) {
-      console.error("Error downloading attachment:", error);
-      Swal.fire("Error", "Failed to download attachment", "error");
-    }
-  };
-
-  const handleCreatePO = async (e) => {
-    e.preventDefault();
-
-    if (!selectedQuote) {
-      Swal.fire("Warning", "Please select a quotation", "warning");
-      return;
-    }
-
-    const quote = receivedQuotes.find((q) => q.id === parseInt(selectedQuote));
-    if (!quote) {
-      Swal.fire("Error", "Quotation not found", "error");
-      return;
-    }
-
-    setFormSubmitting(true);
-    try {
-      const payload = {
-        quotation_id: quote.id,
-        vendor_id: quote.vendor_id,
-        items: quote.items || [],
-        total_amount: quote.total_amount || 0,
-        expected_delivery_date: formData.expected_delivery_date || null,
-        notes: formData.notes || null,
-      };
-
-      const response = await axios.post(
-        "/procurement/purchase-orders",
-        payload
-      );
-
-      Swal.fire(
-        "Success",
-        "Purchase Order created successfully: " + response.data.po_number,
-        "success"
-      );
-
-      if (taskId) {
-        await taskService.autoCompleteTaskByAction(taskId, "create");
-      }
-
-      setShowCreateModal(false);
-      setSelectedRootCardId("");
-      setSelectedQuote("");
-      setFormData({
-        expected_delivery_date: "",
-        notes: "",
-      });
-      fetchPurchaseOrders();
-      fetchStats();
-    } catch (error) {
-      console.error("Error creating PO:", error);
-      Swal.fire(
-        "Error",
-        "Failed to create purchase order: " +
-          (error.response?.data?.message || error.message),
-        "error"
-      );
-    } finally {
-      setFormSubmitting(false);
-    }
-  };
-
-  const loadImage = (url) => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.src = url;
-      img.onload = () => resolve(img);
-      img.onerror = reject;
-    });
-  };
-
-  const generatePDF = async (po) => {
-    const doc = new jsPDF();
-
-    try {
-      const logo = await loadImage("/logo.png");
-      doc.addImage(logo, "PNG", 14, 5, 50, 15); // 40mm width, 20mm height
-    } catch (error) {
-      console.warn("Logo not found or failed to load:", error);
-    }
-
-    // Header
-    doc.setFontSize(20);
-    doc.text("PURCHASE ORDER", 105, 30, { align: "center" });
-
-    doc.setFontSize(10);
-    doc.text(`PO Number: ${po.po_number}`, 14, 45);
-    doc.text(
-      `Date: ${new Date(po.created_at || Date.now()).toLocaleDateString()}`,
-      14,
-      50
-    );
-    doc.text(`Vendor: ${po.vendor_name || "N/A"}`, 14, 55);
-
-    if (po.expected_delivery_date) {
-      doc.text(
-        `Expected Delivery: ${new Date(
-          po.expected_delivery_date
-        ).toLocaleDateString()}`,
-        14,
-        60
-      );
-    }
-
-    // Items Table
-    const tableColumn = [
-      "Description",
-      "Category",
-      "Quantity",
-      "Unit Price",
-      "Total",
-    ];
-    const tableRows = (po.items || []).map((item) => [
-      item.description,
-      item.category || item.materialType || "",
-      item.quantity,
-      `INR ${item.unit_price || 0}`,
-      `INR ${(item.quantity * (item.unit_price || 0)).toFixed(2)}`,
-    ]);
-
-    autoTable(doc, {
-      startY: 70,
-      head: [tableColumn],
-      body: tableRows,
-      theme: "grid",
-      headStyles: { fillColor: [66, 139, 202] },
-    });
-
-    // Total
-    const finalY = doc.lastAutoTable.finalY + 10;
-    doc.setFontSize(12);
-    doc.text(
-      `Total Amount: INR ${po.total_amount?.toLocaleString()}`,
-      140,
-      finalY
-    );
-
-    if (po.notes) {
-      doc.setFontSize(10);
-      doc.text("Notes:", 14, finalY + 10);
-      doc.text(po.notes, 14, finalY + 15);
-    }
-
-    return doc;
-  };
-
-  const handleViewPO = async (po) => {
-    const doc = await generatePDF(po);
-    window.open(doc.output("bloburl"), "_blank");
   };
 
   const handleSendEmail = (po) => {
@@ -358,670 +77,413 @@ const PurchaseOrderPage = () => {
       poId: po.id,
       poNumber: po.po_number,
       email: po.vendor_email || "",
-      subject: `Purchase Order ${po.po_number}`,
-      message: `Dear ${
-        po.vendor_name || "Vendor"
-      },\n\nPlease find attached Purchase Order ${
-        po.po_number
-      }.\n\nBest regards,\nSterling ERP`,
+      subject: `Purchase Order ${po.po_number} from Nobal Casting`,
+      message: `Dear ${po.vendor_name || 'Vendor'},\n\nPlease find attached the Purchase Order ${po.po_number}.\n\nBest regards,\nNobal Casting`,
     });
     setShowEmailModal(true);
   };
 
   const submitEmail = async (e) => {
     e.preventDefault();
-    if (!emailData.email) {
-      Swal.fire("Warning", "Please enter an email address", "warning");
-      return;
-    }
-
     setSendingEmail(true);
     try {
-      const po = purchaseOrders.find((p) => p.id === emailData.poId);
-      if (!po) throw new Error("PO not found");
-
-      const doc = await generatePDF(po);
-      const pdfBase64 = doc.output("datauristring");
-
-      await axios.post(`/procurement/purchase-orders/${po.id}/email`, {
-        email: emailData.email,
-        subject: emailData.subject,
-        message: emailData.message,
-        pdfBase64,
-      });
-
-      Swal.fire("Success", "Email sent successfully!", "success");
-
-      if (taskId) {
-        await taskService.autoCompleteTaskByAction(taskId, "send");
-      }
-
+      await axios.post(`/inventory/purchase-orders/${emailData.poId}/email`, emailData);
       setShowEmailModal(false);
+      Swal.fire("Success", "Purchase Order sent successfully", "success");
+      fetchPurchaseOrders();
     } catch (error) {
       console.error("Error sending email:", error);
-      Swal.fire(
-        "Error",
-        "Failed to send email: " +
-          (error.response?.data?.message || error.message),
-        "error"
-      );
+      Swal.fire("Error", "Failed to send Purchase Order", "error");
     } finally {
       setSendingEmail(false);
     }
   };
 
-  const handleUpdateStatus = async (po) => {
-    const { value: newStatus } = await Swal.fire({
-      title: "Update Status",
-      input: "select",
-      inputOptions: {
-        pending: "Pending",
-        approved: "Approved",
-        delivered: "Delivered",
-      },
-      inputValue: po.status,
-      showCancelButton: true,
-      confirmButtonText: "Update",
-      inputValidator: (value) => {
-        if (!value) {
-          return "You need to select a status!";
-        }
-      },
-    });
-
-    if (newStatus && newStatus !== po.status) {
-      try {
-        await axios.patch(`/procurement/purchase-orders/${po.id}/status`, {
-          status: newStatus,
-        });
-        Swal.fire("Success", "Status updated successfully", "success");
-
-        if (taskId && newStatus === "approved") {
-          await taskService.autoCompleteTaskByAction(taskId, "approve");
-        }
-
-        fetchPurchaseOrders();
-        fetchStats();
-      } catch (error) {
-        console.error("Error updating status:", error);
-        Swal.fire("Error", "Failed to update status", "error");
-      }
-    }
-  };
-
-  const handleDeletePO = async (poId) => {
-    const result = await Swal.fire({
-      title: "Are you sure?",
-      text: "You won't be able to revert this!",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#3085d6",
-      cancelButtonColor: "#d33",
-      confirmButtonText: "Yes, delete it!",
-    });
-
-    if (!result.isConfirmed) return;
-
-    try {
-      await axios.delete(`/procurement/purchase-orders/${poId}`);
-      Swal.fire("Deleted!", "Purchase Order has been deleted.", "success");
-      fetchPurchaseOrders();
-      fetchStats();
-    } catch (error) {
-      console.error("Error deleting PO:", error);
-      Swal.fire("Error", "Failed to delete purchase order", "error");
-    }
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat("en-IN").format(amount || 0);
   };
 
   const filteredData = purchaseOrders.filter((po) => {
     const matchesSearch =
-      po.po_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      po.vendor_name?.toLowerCase().includes(searchQuery.toLowerCase());
-
+      (po.po_number || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (po.vendor_name || "").toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === "all" || po.status === statusFilter;
-
     return matchesSearch && matchesStatus;
   });
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "pending":
-        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
-      case "approved":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
-      case "delivered":
-        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
-      default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200";
+  const handleEditPO = (po) => {
+    if (po.material_request_id) {
+      navigate(`/inventory-manager/vendors/po/edit-mr/${po.id}`);
+    } else {
+      setEditPO(po);
+      setShowCreateModal(true);
     }
   };
 
-  const formatDate = (date) => {
-    if (!date) return "N/A";
-    return new Date(date).toLocaleDateString("en-IN");
-  };
-
-  const formatCurrency = (amount) => {
-    return (amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 });
-  };
-
   return (
-    <div className="space-y-6">
+    <div className="p-6 bg-slate-50/50 dark:bg-slate-950 min-h-screen">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white text-xs flex items-center gap-2">
-            <ShoppingCart size={28} />
-            Purchase Orders
-          </h2>
-          <p className="text-slate-600 dark:text-slate-400 mt-1 text-xs">
-            Create and manage purchase orders from vendor quotations
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-blue-600 rounded-xl shadow-lg shadow-blue-500/20">
+              <ShoppingCart className="text-white" size={24} />
+            </div>
+            <div>
+              <nav className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-0.5">
+                <span>Buying</span>
+                <ChevronRight size={10} />
+                <span className="text-blue-600">Procurement</span>
+              </nav>
+              <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Purchase Orders</h1>
+            </div>
+          </div>
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+            Manage procurement cycles and supplier orders
           </p>
         </div>
-        <div className="flex gap-3 flex-wrap">
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 px-4 py- bg-green-600 hover:bg-green-700 text-white text-xs rounded-lg transition-colors font-medium"
+
+        <div className="flex items-center gap-3">
+          <div className="flex bg-white dark:bg-slate-900 rounded-lg p-1 border border-slate-200 dark:border-slate-800 shadow-sm">
+            <button className="px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-md transition-all text-slate-400 hover:text-slate-600">Kanban</button>
+            <button className="px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-md transition-all bg-blue-50 dark:bg-blue-900/30 text-blue-600 shadow-sm border border-blue-100 dark:border-blue-800/50">List</button>
+          </div>
+          <button 
+            onClick={fetchPurchaseOrders}
+            className="p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 shadow-sm transition-all"
           >
-            <Plus size={18} />
-            Create PO from Quote
+            <RefreshCw size={18} />
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium">
-            <Download size={18} />
-            Export Report
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setShowCreateOptions(!showCreateOptions)}
+              className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-lg font-bold text-xs uppercase tracking-wider hover:bg-blue-700 shadow-lg shadow-blue-500/25 transition-all"
+            >
+              <Plus size={16} /> Create Order
+            </button>
+            
+            {showCreateOptions && (
+              <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-100 dark:border-slate-800 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="px-4 py-2 border-b border-slate-50 dark:border-slate-800 mb-1">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Select PO Type</p>
+                </div>
+                <button 
+                  onClick={() => {
+                    setEditPO(null);
+                    setShowCreateModal(true);
+                    setShowCreateOptions(false);
+                  }}
+                  className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 flex items-center gap-3 uppercase tracking-wider transition-colors"
+                >
+                  <div className="p-1.5 bg-blue-50 dark:bg-blue-900/50 text-blue-600 rounded-md">
+                    <FileText size={14} />
+                  </div>
+                  From Quotation
+                </button>
+                <button 
+                  onClick={() => {
+                    Swal.fire({
+                      title: 'Create from MR',
+                      text: 'Redirecting to Material Requests page...',
+                      icon: 'info',
+                      timer: 1500,
+                      showConfirmButton: false
+                    }).then(() => {
+                      navigate('/inventory-manager/material-requests');
+                    });
+                    setShowCreateOptions(false);
+                  }}
+                  className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-purple-50 dark:hover:bg-purple-900/30 flex items-center gap-3 uppercase tracking-wider transition-colors"
+                >
+                  <div className="p-1.5 bg-purple-50 dark:bg-purple-900/50 text-purple-600 rounded-md">
+                    <Package size={14} />
+                  </div>
+                  From Material Request
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="relative">
-            <Search
-              size={18}
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"
-            />
-            <input
-              type="text"
-              placeholder="Search PO number or vendor..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs"
-            />
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
+        {[
+          { label: "Total Orders", value: stats?.total || 0, subValue: `Total: ₹${formatCurrency(stats?.total_amount)}`, icon: FileText, color: "blue", active: true },
+          { label: "Draft", value: stats?.draft || 0, subValue: "Pending submission", icon: FileText, color: "orange" },
+          { label: "Submitted", value: stats?.submitted || 0, subValue: "Active orders", icon: Mail, color: "blue" },
+          { label: "To Receive", value: stats?.to_receive || 0, subValue: "Awaiting delivery", icon: Download, color: "indigo" },
+          { label: "Partial", value: stats?.partial || 0, subValue: "Incomplete receipts", icon: CheckCircle, color: "red" },
+          { label: "Fulfilled", value: stats?.fulfilled || 0, subValue: "Fully received", icon: CheckCircle, color: "emerald" },
+        ].map((card, idx) => {
+          const Icon = card.icon;
+          const colors = {
+            blue: "border-blue-200 bg-blue-50 text-blue-600",
+            orange: "border-orange-200 bg-orange-50 text-orange-600",
+            indigo: "border-indigo-200 bg-indigo-50 text-indigo-600",
+            red: "border-red-200 bg-red-50 text-red-600",
+            emerald: "border-emerald-200 bg-emerald-50 text-emerald-600",
+          };
+          
+          return (
+            <div 
+              key={idx} 
+              className={`bg-white dark:bg-slate-900 p-4 rounded-xl border ${card.active ? 'border-blue-500 ring-2 ring-blue-500/10 shadow-lg shadow-blue-500/5' : 'border-slate-100 dark:border-slate-800 shadow-sm'} relative overflow-hidden group transition-all hover:shadow-md`}
+            >
+              <div className={`absolute top-0 right-0 p-4 opacity-5 transform rotate-12 transition-transform group-hover:rotate-6`}>
+                <Icon size={48} />
+              </div>
+              <div className="relative">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{card.label}</p>
+                  <div className={`w-6 h-6 rounded-md flex items-center justify-center border ${colors[card.color]}`}>
+                    <Icon size={12} />
+                  </div>
+                </div>
+                <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-0.5 tracking-tight">
+                  {card.value}
+                </h2>
+                <p className="text-[10px] font-medium text-slate-500 uppercase tracking-tight italic">
+                  {card.subValue}
+                </p>
+              </div>
+              {card.active && <div className="absolute bottom-0 left-0 w-full h-1 bg-blue-500"></div>}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Search & Filters */}
+      <div className="flex flex-col md:flex-row gap-4 mb-6">
+        <div className="flex-1 relative group">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500 transition-colors">
+            <Search size={18} />
           </div>
+          <input
+            type="text"
+            placeholder="Search by PO # or supplier..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-medium focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none shadow-sm"
+          />
+        </div>
 
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white font-medium text-xs"
-          >
-            <option value="all">All Status</option>
-            <option value="pending">Pending</option>
-            <option value="approved">Approved</option>
-            <option value="delivered">Delivered</option>
-          </select>
-
-          <button className="flex items-center justify-center gap-2 px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-xs">
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-500 shadow-sm">
+            <Filter size={14} />
+            <span className="text-[10px] font-bold uppercase tracking-wider">Status:</span>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="bg-transparent border-none text-[10px] font-bold uppercase tracking-wider text-blue-600 focus:ring-0 cursor-pointer"
+            >
+              <option value="all">All Orders</option>
+              <option value="draft">Draft</option>
+              <option value="submitted">Submitted</option>
+              <option value="approved">Approved</option>
+              <option value="delivered">Delivered</option>
+              <option value="fulfilled">Fulfilled</option>
+            </select>
+          </div>
+          <button className="p-2.5 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 shadow-lg shadow-emerald-500/20 transition-all">
             <Filter size={18} />
-            Advanced Filter
           </button>
         </div>
       </div>
 
       {/* Purchase Orders Table */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden mb-8">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-slate-50 dark:bg-slate-700 border-b border-slate-200 dark:border-slate-600">
-                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-900 dark:text-white">
-                  PO Number
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-900 dark:text-white">
-                  Vendor
-                </th>
-                <th className="px-6 py-3 text-right text-xs text-sm font-semibold text-slate-900 dark:text-white">
-                  Total Amount
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-900 dark:text-white">
-                  Expected Delivery
-                </th>
-                <th className="px-6 py-3 text-center text-sm font-semibold text-slate-900 dark:text-white">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-center text-sm font-semibold text-slate-900 dark:text-white">
-                  Items
-                </th>
-                <th className="px-6 py-3 text-center text-sm font-semibold text-slate-900 dark:text-white">
-                  Actions
-                </th>
+              <tr className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">PO Details</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Supplier</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Order -- Expected</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Amount</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Fulfillment</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Status</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200 dark:divide-slate-600">
+            <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
               {loading ? (
                 <tr>
-                  <td
-                    colSpan="7"
-                    className="px-6 py-8 text-center text-slate-500"
-                  >
-                    Loading purchase orders...
+                  <td colSpan="7" className="px-6 py-12 text-center">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Loading orders...</span>
+                    </div>
                   </td>
                 </tr>
               ) : filteredData.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan="7"
-                    className="px-6 py-8 text-center text-slate-500"
-                  >
-                    No purchase orders found
+                  <td colSpan="7" className="px-6 py-12 text-center">
+                    <div className="flex flex-col items-center gap-3 opacity-20">
+                      <ShoppingCart size={48} className="text-slate-400" />
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">No orders found</span>
+                    </div>
                   </td>
                 </tr>
               ) : (
-                filteredData.map((po) => (
-                  <tr
-                    key={po.id}
-                    className="hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-                  >
-                    <td className="px-6 py-3 text-slate-900 dark:text-white text-xs">
-                      {po.po_number}
-                    </td>
-                    <td className="px-6 py-3 text-slate-700 dark:text-slate-300 text-xs">
-                      {po.vendor_name || "N/A"}
-                    </td>
-                    <td className="px-6 py-3 text-right text-xs">
-                      <span className="font-semibold text-slate-900 dark:text-white">
-                        ₹{formatCurrency(po.total_amount)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-3 text-slate-700 dark:text-slate-300 text-xs">
-                      <div className="flex items-center gap-2">
-                        <Calendar size={14} className="text-slate-400" />
-                        {formatDate(po.expected_delivery_date)}
-                      </div>
-                    </td>
-                    <td className="px-6 py-3 text-center">
-                      <span
-                        className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(
-                          po.status
-                        )}`}
-                      >
-                        {po.status.charAt(0).toUpperCase() + po.status.slice(1)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-3 text-center text-xs text-slate-600 dark:text-slate-400 ">
-                      {(po.items || []).length} items
-                    </td>
-                    <td className="px-6 py-3 text-center">
-                      <div className="flex justify-center gap-2">
-                        <button
-                          onClick={() => handleViewPO(po)}
-                          className="p-2 hover:bg-blue-100 dark:hover:bg-blue-900 text-blue-600 dark:text-blue-400 rounded-lg transition-colors"
-                          title="View"
+                filteredData.map((po) => {
+                  const items = po.items || [];
+                  const totalQty = items.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+                  const receivedQty = items.reduce((sum, item) => sum + (Number(item.received) || 0), 0);
+                  const fulfillmentPercent = totalQty > 0 ? Math.round((receivedQty / totalQty) * 100) : 0;
+
+                  return (
+                    <tr key={po.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors group">
+                      <td className="px-6 py-4">
+                        <button 
+                          onClick={() => navigate(`/inventory-manager/vendors/po/${po.id}`)}
+                          className="text-[11px] font-black text-blue-600 hover:text-blue-700 uppercase tracking-tight block mb-0.5"
                         >
-                          <Eye size={16} />
+                          {po.po_number}
                         </button>
-                        <button
-                          onClick={() => handleSendEmail(po)}
-                          className="p-2 hover:bg-indigo-100 dark:hover:bg-indigo-900 text-indigo-600 dark:text-indigo-400 rounded-lg transition-colors"
-                          title="Send Email"
-                        >
-                          <Mail size={16} />
-                        </button>
-                        <button
-                          onClick={() => handleViewComms(po)}
-                          className="p-2 hover:bg-purple-100 dark:hover:bg-purple-900 text-purple-600 dark:text-purple-400 rounded-lg transition-colors relative"
-                          title="View Communications"
-                        >
-                          <MessageSquare size={16} />
-                          {po.unread_communication_count > 0 && (
-                            <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                              <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-                            </span>
-                          )}
-                        </button>
-                        <button
-                          onClick={() => handleUpdateStatus(po)}
-                          className="p-2 hover:bg-emerald-100 dark:hover:bg-emerald-900 text-emerald-600 dark:text-emerald-400 rounded-lg transition-colors"
-                          title="Update Status"
-                        >
-                          <CheckCircle size={16} />
-                        </button>
-                        {po.status !== "delivered" && (
+                        <div className="flex items-center gap-2">
+                          <FileText size={10} className="text-slate-400" />
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                            #{po.mr_number || po.quotation_id || 'Direct PO'}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <p className="text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-0.5 uppercase tracking-tight">{po.vendor_name || 'N/A'}</p>
+                        <p className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest flex items-center gap-1">
+                          <span className="w-1 h-1 rounded-full bg-emerald-500"></span> Active Vendor
+                        </p>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-slate-50 dark:bg-slate-800 text-slate-500 border border-slate-100 dark:border-slate-700">
+                            <Calendar size={10} />
+                            <span className="text-[9px] font-bold uppercase">{new Date(po.order_date || po.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
+                          </div>
+                          <ChevronRight size={10} className="text-slate-300" />
+                          <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-orange-50 dark:bg-orange-900/30 text-orange-600 border border-orange-100 dark:border-orange-800/30">
+                            <Clock size={10} />
+                            <span className="text-[9px] font-bold uppercase">{po.expected_delivery_date ? new Date(po.expected_delivery_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'N/A'}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <p className="text-[11px] font-bold text-slate-900 dark:text-white mb-0.5 tracking-tight">₹{formatCurrency(po.total_amount)}</p>
+                        <p className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest">Net Value</p>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider min-w-[50px]">
+                            {receivedQty}/{totalQty}
+                          </span>
+                          <div className="flex-1 h-1 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden min-w-[80px]">
+                            <div 
+                              className={`h-full transition-all duration-500 ${fulfillmentPercent === 100 ? 'bg-emerald-500' : 'bg-blue-500'}`}
+                              style={{ width: `${fulfillmentPercent}%` }}
+                            ></div>
+                          </div>
+                          <span className={`text-[10px] font-black tracking-widest min-w-[30px] ${fulfillmentPercent === 100 ? 'text-emerald-500' : 'text-blue-600'}`}>
+                            {fulfillmentPercent}%
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[9px] font-black uppercase tracking-widest border shadow-sm ${
+                          po.status === 'draft' ? 'bg-orange-50 text-orange-600 border-orange-100' :
+                          po.status === 'submitted' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                          po.status === 'approved' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                          po.status === 'fulfilled' || po.status === 'delivered' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
+                          'bg-slate-50 text-slate-500 border-slate-200'
+                        }`}>
+                          <div className={`w-1 h-1 rounded-full ${
+                            po.status === 'draft' ? 'bg-orange-500' :
+                            po.status === 'submitted' ? 'bg-blue-500' :
+                            'bg-emerald-500'
+                          }`}></div>
+                          {po.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-center gap-1">
                           <button
-                            onClick={() => handleDeletePO(po.id)}
-                            className="p-2 hover:bg-red-100 dark:hover:bg-red-900 text-red-600 dark:text-red-400 rounded-lg transition-colors"
-                            title="Delete"
+                            onClick={() => navigate(`/inventory-manager/vendors/po/${po.id}`)}
+                            className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-all"
+                            title="View"
                           >
-                            <Trash2 size={16} />
+                            <Eye size={14} />
                           </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                          <button
+                            onClick={() => handleEditPO(po)}
+                            className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded transition-all"
+                            title="Edit"
+                          >
+                            <Edit size={14} />
+                          </button>
+                          <button
+                            onClick={() => handleSendEmail(po)}
+                            className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded transition-all"
+                            title="Send"
+                          >
+                            <Send size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-slate-800 dark:to-slate-700 rounded-xl p-4 border border-blue-200 dark:border-slate-600">
-          <p className="text-sm font-semibold text-slate-600 dark:text-slate-400">
-            Total POs
-          </p>
-          <p className="text-2xl font-bold text-slate-900 dark:text-white text-xs mt-2">
-            {stats?.total || 0}
-          </p>
-        </div>
-        <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-slate-800 dark:to-slate-700 rounded-xl p-4 border border-yellow-200 dark:border-slate-600">
-          <p className="text-sm font-semibold text-slate-600 dark:text-slate-400">
-            Pending
-          </p>
-          <p className="text-2xl font-bold text-slate-900 dark:text-white text-xs mt-2">
-            {stats?.pending || 0}
-          </p>
-        </div>
-        <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-slate-800 dark:to-slate-700 rounded-xl p-4 border border-blue-200 dark:border-slate-600">
-          <p className="text-sm font-semibold text-slate-600 dark:text-slate-400">
-            Approved
-          </p>
-          <p className="text-2xl font-bold text-slate-900 dark:text-white text-xs mt-2">
-            {stats?.approved || 0}
-          </p>
-        </div>
-        <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-slate-800 dark:to-slate-700 rounded-xl p-4 border border-green-200 dark:border-slate-600">
-          <p className="text-sm font-semibold text-slate-600 dark:text-slate-400">
-            Delivered
-          </p>
-          <p className="text-2xl font-bold text-slate-900 dark:text-white text-xs mt-2">
-            {stats?.delivered || 0}
-          </p>
-        </div>
-      </div>
-
-      {/* Communications Modal */}
-      {showCommsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden">
-            <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
-              <div>
-                <h3 className="text-xl font-bold text-slate-900 dark:text-white text-xs">
-                  Communications
-                </h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                  PO: {selectedPO?.po_number} - {selectedPO?.vendor_name}
-                </p>
-              </div>
-              <button
-                onClick={handleCloseComms}
-                className="text-slate-400 hover:text-slate-500 transition-colors"
-              >
-                <X size={24} />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-6 space-y-4">
-              {loadingComms ? (
-                <div className="flex justify-center py-8">
-                  <Loader2 className="animate-spin text-blue-600" size={32} />
-                </div>
-              ) : communications.length === 0 ? (
-                <div className="text-center py-8 text-slate-500 dark:text-slate-400">
-                  <MessageSquare
-                    size={48}
-                    className="mx-auto mb-4 opacity-20"
-                  />
-                  <p>No communications found for this Purchase Order.</p>
-                  <p className="text-sm mt-2">
-                    Replies to emails with subject "{selectedPO?.po_number}"
-                    will appear here.
-                  </p>
-                </div>
-              ) : (
-                communications.map((comm) => (
-                  <div
-                    key={comm.id}
-                    className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4 border border-slate-200 dark:border-slate-700"
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <span className="font-semibold text-slate-900 dark:text-white">
-                          {comm.sender_email}
-                        </span>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                          {new Date(comm.received_at).toLocaleString()}
-                        </p>
-                      </div>
-                      {comm.has_attachments && (
-                        <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
-                          Attachments
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap font-mono bg-white dark:bg-slate-800 p-3 rounded border border-slate-200 dark:border-slate-700">
-                      {comm.content_text || "No text content"}
-                    </div>
-
-                    {comm.attachments && comm.attachments.length > 0 && (
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {comm.attachments.map((att) => (
-                          <button
-                            key={att.id}
-                            onClick={() =>
-                              handleDownloadAttachment(att.id, att.file_name)
-                            }
-                            className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-600 border border-slate-300 dark:border-slate-500 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-500 transition-colors"
-                          >
-                            <Paperclip size={14} />
-                            {att.file_name}
-                            <span className="text-slate-400 dark:text-slate-400 ml-1">
-                              ({Math.round(att.file_size / 1024)} KB)
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))
-              )}
-            </div>
-
-            <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
-              <p className="text-xs text-center text-slate-500">
-                The system automatically checks for replies every minute.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Create PO Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl">
-            <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 p-6 flex items-center justify-between z-10">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-2">
-                <Plus size={20} className="text-blue-500" />
-                Create Purchase Order
-              </h3>
-              <button
-                onClick={() => setShowCreateModal(false)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreatePO} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  Select Root Card <span className="text-red-500">*</span>
-                </label>
-                <select
-                  required
-                  value={selectedRootCardId}
-                  onChange={(e) => setSelectedRootCardId(e.target.value)}
-                  className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Select a root card...</option>
-                  {rootCards.map((rootCard) => (
-                    <option key={rootCard.id} value={rootCard.rootCardId}>
-                      {rootCard.projectName} ({rootCard.poNumber})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {selectedRootCardId && (
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                    Select Quotation <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    required
-                    value={selectedQuote}
-                    onChange={(e) => setSelectedQuote(e.target.value)}
-                    className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Select a quotation...</option>
-                    {receivedQuotes.map((quote) => (
-                      <option key={quote.id} value={quote.id}>
-                        {quote.vendor_name} - ₹
-                        {formatCurrency(quote.total_amount)} (
-                        {new Date(quote.created_at).toLocaleDateString()})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                    Expected Delivery Date
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.expected_delivery_date}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        expected_delivery_date: e.target.value,
-                      })
-                    }
-                    className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  Notes
-                </label>
-                <textarea
-                  value={formData.notes}
-                  onChange={(e) =>
-                    setFormData({ ...formData, notes: e.target.value })
-                  }
-                  rows={3}
-                  className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Additional notes for the vendor..."
-                />
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors font-medium"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={formSubmitting}
-                  className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white rounded-lg transition-colors font-medium flex items-center justify-center gap-2"
-                >
-                  {formSubmitting ? (
-                    <>
-                      <Loader2 size={16} className="animate-spin" />
-                      Creating PO...
-                    </>
-                  ) : (
-                    <>
-                      <Plus size={16} />
-                      Create PO
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
       {/* Email PO Modal */}
       {showEmailModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl">
-            <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 p-6 flex items-center justify-between z-10">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-2">
-                <Mail size={20} className="text-blue-500" />
-                Send Purchase Order
-              </h3>
-              <button
-                onClick={() => setShowEmailModal(false)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-              >
-                <X size={20} />
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full max-h-[90vh] overflow-hidden shadow-2xl flex flex-col border border-slate-100 dark:border-slate-800 animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-slate-50 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-3">
+                  <Mail className="text-blue-600" size={20} />
+                  Send Purchase Order
+                </h3>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">PO: {emailData.poNumber}</p>
+              </div>
+              <button onClick={() => setShowEmailModal(false)} className="p-2 hover:bg-white dark:hover:bg-slate-700 rounded-xl transition-all shadow-sm">
+                <X size={20} className="text-slate-400" />
               </button>
             </div>
 
             <form onSubmit={submitEmail} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  To (Email) <span className="text-red-500">*</span>
-                </label>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Recipient Email</label>
                 <input
                   type="email"
                   required
                   value={emailData.email}
-                  onChange={(e) =>
-                    setEmailData({ ...emailData, email: e.target.value })
-                  }
+                  onChange={(e) => setEmailData({ ...emailData, email: e.target.value })}
                   placeholder="vendor@example.com"
-                  className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  Subject
-                </label>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Subject</label>
                 <input
                   type="text"
                   value={emailData.subject}
-                  onChange={(e) =>
-                    setEmailData({ ...emailData, subject: e.target.value })
-                  }
-                  className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  onChange={(e) => setEmailData({ ...emailData, subject: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  Message
-                </label>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Message</label>
                 <textarea
                   value={emailData.message}
-                  onChange={(e) =>
-                    setEmailData({ ...emailData, message: e.target.value })
-                  }
+                  onChange={(e) => setEmailData({ ...emailData, message: e.target.value })}
                   rows={4}
-                  className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium focus:ring-2 focus:ring-blue-500/20 outline-none transition-all resize-none"
                 />
               </div>
 
@@ -1029,32 +491,37 @@ const PurchaseOrderPage = () => {
                 <button
                   type="button"
                   onClick={() => setShowEmailModal(false)}
-                  className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors font-medium"
+                  className="flex-1 px-6 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-200 transition-all"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={sendingEmail}
-                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg transition-colors font-medium flex items-center justify-center gap-2"
+                  className="flex-1 px-6 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-blue-700 shadow-lg shadow-blue-500/25 transition-all flex items-center justify-center gap-2"
                 >
-                  {sendingEmail ? (
-                    <>
-                      <Loader2 size={16} className="animate-spin" />
-                      Sending...
-                    </>
-                  ) : (
-                    <>
-                      <Mail size={16} />
-                      Send Email
-                    </>
-                  )}
+                  {sendingEmail ? <RefreshCw size={16} className="animate-spin" /> : <Send size={16} />}
+                  {sendingEmail ? 'Sending...' : 'Send PO'}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      {/* Create/Edit PO Modal Component */}
+      <CreatePurchaseOrderModal 
+        isOpen={showCreateModal}
+        onClose={() => {
+          setShowCreateModal(false);
+          setEditPO(null);
+        }}
+        editData={editPO}
+        onPOCreated={() => {
+          fetchPurchaseOrders();
+          fetchStats();
+        }}
+      />
     </div>
   );
 };

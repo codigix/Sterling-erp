@@ -45,7 +45,7 @@ exports.getQuotationById = async (req, res) => {
 
 exports.createQuotation = async (req, res) => {
   try {
-    const { vendor_id, total_amount, valid_until, items, notes, status, type, reference_id, sales_order_id } = req.body;
+    const { vendor_id, total_amount, valid_until, items, notes, status, type, reference_id, sales_order_id, material_request_id } = req.body;
     
     if (!vendor_id) {
       return res.status(400).json({ message: 'Vendor is required' });
@@ -65,7 +65,8 @@ exports.createQuotation = async (req, res) => {
       status: status || 'pending',
       type: type || 'outbound',
       reference_id: reference_id || null,
-      sales_order_id: sales_order_id || null
+      sales_order_id: sales_order_id || null,
+      material_request_id: material_request_id || null
     });
     
     const newQuotation = await Quotation.findById(quotationId);
@@ -224,6 +225,21 @@ exports.getQuotationsByRootCard = async (req, res) => {
   } catch (error) {
     console.error('Error fetching root card quotations:', error);
     res.status(500).json({ message: 'Error fetching root card quotations' });
+  }
+};
+
+exports.getQuotationsByMaterialRequest = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const quotations = await Quotation.findAll({ 
+      material_request_id: id
+    });
+    
+    res.json(quotations);
+  } catch (error) {
+    console.error('Error fetching material request quotations:', error);
+    res.status(500).json({ message: 'Error fetching material request quotations' });
   }
 };
 

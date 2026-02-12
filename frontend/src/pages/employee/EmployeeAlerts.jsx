@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import axios from "../../utils/api";
 import { useAuth } from "../../context/AuthContext";
 import Badge from "../../components/ui/Badge";
@@ -10,23 +10,29 @@ const EmployeeAlerts = () => {
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchAlerts = async () => {
-      try {
-        setLoading(true);
-        if (user?.id) {
-          const response = await axios.get(`/employee/portal/alerts/${user.id}`);
-          setAlerts(response.data || []);
-        }
-      } catch (error) {
-        console.error('Fetch alerts error:', error);
-      } finally {
-        setLoading(false);
+  const fetchAlerts = useCallback(async (showLoading = true) => {
+    try {
+      if (showLoading) setLoading(true);
+      if (user?.id) {
+        const response = await axios.get(`/employee/portal/alerts/${user.id}`);
+        setAlerts(response.data || []);
       }
-    };
-
-    fetchAlerts();
+    } catch (error) {
+      console.error('Fetch alerts error:', error);
+    } finally {
+      if (showLoading) setLoading(false);
+    }
   }, [user?.id]);
+
+  useEffect(() => {
+    fetchAlerts(true);
+
+    const interval = setInterval(() => {
+      fetchAlerts(false);
+    }, 5000); // Auto-refresh every 5 seconds
+
+    return () => clearInterval(interval);
+  }, [fetchAlerts]);
 
   const dismissAlert = (id) => {
     setAlerts(alerts.filter(a => a.id !== id));

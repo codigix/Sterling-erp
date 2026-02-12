@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import axios from "../../utils/api";
 import { useAuth } from "../../context/AuthContext";
 import Card, { CardContent, CardTitle, CardHeader } from "../../components/ui/Card";
@@ -17,39 +17,46 @@ const EmployeeDashboardHome = () => {
   const [recentTasks, setRecentTasks] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchStatsAndTasks = async () => {
-      try {
-        if (user?.id) {
-          const [statsRes, tasksRes] = await Promise.all([
-            axios.get(`/employee/portal/stats/${user.id}`),
-            axios.get(`/employee/portal/tasks/${user.id}`)
-          ]);
-          
-          setStats({
-            tasksCompleted: statsRes.data.tasksCompleted || 0,
-            tasksInProgress: statsRes.data.tasksInProgress || 0,
-            attendanceRate: statsRes.data.attendanceRate || 0,
-            upcomingTasks: statsRes.data.tasksPending || 0,
-            projectsActive: 2,
-            hoursLogged: statsRes.data.hoursLogged || 0
-          });
+  const fetchStatsAndTasks = useCallback(async (showLoading = true) => {
+    try {
+      if (showLoading) setLoading(true);
+      if (user?.id) {
+        const [statsRes, tasksRes] = await Promise.all([
+          axios.get(`/employee/portal/stats/${user.id}`),
+          axios.get(`/employee/portal/tasks/${user.id}`)
+        ]);
+        
+        setStats({
+          tasksCompleted: statsRes.data.tasksCompleted || 0,
+          tasksInProgress: statsRes.data.tasksInProgress || 0,
+          attendanceRate: statsRes.data.attendanceRate || 0,
+          upcomingTasks: statsRes.data.tasksPending || 0,
+          projectsActive: 2,
+          hoursLogged: statsRes.data.hoursLogged || 0
+        });
 
-          // Sort by creation date and take top 3
-          const sortedTasks = (tasksRes.data || [])
-            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-            .slice(0, 3);
-          setRecentTasks(sortedTasks);
-        }
-      } catch (error) {
-        console.error('Failed to fetch dashboard data:', error);
-      } finally {
-        setLoading(false);
+        // Sort by creation date and take top 3
+        const sortedTasks = (tasksRes.data || [])
+          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+          .slice(0, 3);
+        setRecentTasks(sortedTasks);
       }
-    };
-
-    fetchStatsAndTasks();
+    } catch (error) {
+      console.error('Failed to fetch dashboard data:', error);
+    } finally {
+      if (showLoading) setLoading(false);
+    }
   }, [user?.id]);
+
+  useEffect(() => {
+    fetchStatsAndTasks(true);
+
+    const interval = setInterval(() => {
+      fetchStatsAndTasks(false);
+    }, 5000); // Auto-refresh every 5 seconds
+
+    return () => clearInterval(interval);
+  }, [fetchStatsAndTasks]);
 
   return (
     <div className="w-full min-h-screen bg-white space-y-6 p-4">

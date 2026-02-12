@@ -8,7 +8,7 @@ const DEMO_USERS = {
   procurement: { password: "password", role: "Procurement", name: "Procurement Lead" },
   qc: { password: "password", role: "QC", name: "Quality Head" },
   inventory: { password: "password", role: "Inventory", name: "Stores Supervisor" },
-  production: { password: "password", role: "Production", name: "Production Planner" },
+  production: { password: "password", role: "Production", name: "Production Planner", department: "Production", departmentId: 2 },
   mes: { password: "password", role: "MES", name: "MES Controller" },
   challan: { password: "password", role: "Challan", name: "Logistics Coordinator" },
   "john.doe": { password: "password", role: "Employee", type: "employee", name: "John Doe", designation: "Senior Engineer", department: "Engineering", departmentId: 1 },

@@ -1,37 +1,100 @@
 const pool = require('../config/database');
 
 class MaterialRequest {
+  static async generateMRNumber() {
+    try {
+      const date = new Date();
+      const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');
+      const [rows] = await pool.execute(
+        "SELECT count(*) as count FROM material_requests WHERE mr_number LIKE ?",
+        [`MR-${dateStr}-%`]
+      );
+      const count = (rows[0].count + 1).toString().padStart(3, '0');
+      return `MR-${dateStr}-${count}`;
+    } catch (e) {
+      return `MR-${Date.now()}`;
+    }
+  }
+
   static async create(data, connection = null) {
     const conn = connection || (await pool.getConnection());
+    let shouldCommit = false;
     
     try {
-      const [result] = await conn.execute(
+      if (!connection) {
+        await conn.query('START TRANSACTION');
+        shouldCommit = true;
+      }
+
+      const mrNumber = data.mrNumber || await this.generateMRNumber();
+
+      // Validate sales_order_id existence
+      let salesOrderId = data.rootCardId || null;
+      if (salesOrderId) {
+        const [soRows] = await conn.execute('SELECT id FROM sales_orders WHERE id = ?', [salesOrderId]);
+        if (soRows.length === 0) {
+          console.warn(`Sales Order ID ${salesOrderId} not found, setting to NULL`);
+          salesOrderId = null;
+        }
+      }
+
+      // 1. Insert Header
+      const [headerResult] = await conn.execute(
         `INSERT INTO material_requests 
-         (sales_order_id, production_plan_id, material_name, material_code, 
-          quantity, unit, specification, required_date, priority, status, created_by, remarks)
+         (mr_number, sales_order_id, production_plan_id, department, purpose, 
+          target_warehouse_id, priority, status, created_by, requested_by, remarks, required_date)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-          data.rootCardId,
+          mrNumber,
+          salesOrderId,
           data.productionPlanId || null,
-          data.materialName,
-          data.materialCode || null,
-          data.quantity,
-          data.unit || 'Nos',
-          data.specification || null,
-          data.requiredDate || null,
+          data.department || 'Production',
+          data.purpose || 'Material Issue',
+          data.targetWarehouseId || null,
           data.priority || 'medium',
           data.status || 'draft',
           data.createdBy || null,
-          data.remarks || null
+          data.requestedBy || data.createdBy || null,
+          data.remarks || null,
+          (data.requiredDate && data.requiredDate !== '') ? data.requiredDate : null
         ]
       );
 
+      const materialRequestId = headerResult.insertId;
+
+      // 2. Insert Items
+      if (data.items && Array.isArray(data.items)) {
+        for (const item of data.items) {
+          await conn.execute(
+            `INSERT INTO material_request_items 
+             (material_request_id, material_name, material_code, quantity, unit, specification, status)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [
+              materialRequestId,
+              item.materialName,
+              item.materialCode || null,
+              item.quantity,
+              item.unit || 'Nos',
+              item.specification || null,
+              item.status || 'pending'
+            ]
+          );
+        }
+      }
+
+      if (shouldCommit) {
+        await conn.query('COMMIT');
+      }
+
       if (!connection) {
         conn.release();
       }
 
-      return result.insertId;
+      return materialRequestId;
     } catch (error) {
+      if (shouldCommit) {
+        await conn.query('ROLLBACK');
+      }
       if (!connection) {
         conn.release();
       }
@@ -39,80 +102,58 @@ class MaterialRequest {
     }
   }
 
-  static async bulkCreate(items, connection = null) {
-    const conn = connection || (await pool.getConnection());
-    
-    try {
-      if (!connection) await conn.query('START TRANSACTION');
-
-      const results = [];
-      for (const item of items) {
-        const [result] = await conn.execute(
-          `INSERT INTO material_requests 
-           (sales_order_id, production_plan_id, material_name, material_code, 
-            quantity, unit, specification, required_date, priority, status, created_by, remarks)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            item.rootCardId,
-            item.productionPlanId || null,
-            item.materialName,
-            item.materialCode || null,
-            item.quantity,
-            item.unit || 'Nos',
-            item.specification || null,
-            item.requiredDate || null,
-            item.priority || 'medium',
-            item.status || 'draft',
-            item.createdBy || null,
-            item.remarks || null
-          ]
-        );
-        results.push(result.insertId);
-      }
-
-      if (!connection) await conn.query('COMMIT');
-      if (!connection) conn.release();
-
-      return results;
-    } catch (error) {
-      if (!connection) {
-        await conn.query('ROLLBACK');
-        conn.release();
-      }
-      throw error;
+  static async bulkCreate(requests, connection = null) {
+    const results = [];
+    for (const req of requests) {
+      const id = await this.create(req, connection);
+      results.push(id);
     }
+    return results;
   }
 
   static async findById(id) {
+    // Get Header
     const [rows] = await pool.execute(
-      `SELECT mr.*, so.customer, u.username as created_by_name, pp.plan_name as production_plan_name
+      `SELECT mr.*, so.customer, u.username as created_by_name, 
+              ru.username as requested_by_name,
+              pp.plan_name as production_plan_name,
+              w.name as warehouse_name,
+              (SELECT COUNT(*) FROM quotations WHERE material_request_id = mr.id AND type = 'outbound') as rfq_count,
+              (SELECT COUNT(*) FROM quotations WHERE material_request_id = mr.id AND type = 'inbound' AND status = 'approved') as approved_quotation_count,
+              (SELECT id FROM quotations WHERE material_request_id = mr.id AND type = 'inbound' AND status = 'approved' LIMIT 1) as approved_quotation_id
        FROM material_requests mr
        LEFT JOIN sales_orders so ON so.id = mr.sales_order_id
        LEFT JOIN users u ON u.id = mr.created_by
+       LEFT JOIN users ru ON ru.id = mr.requested_by
        LEFT JOIN production_plans pp ON pp.id = mr.production_plan_id
+       LEFT JOIN warehouses w ON w.id = mr.target_warehouse_id
        WHERE mr.id = ?`,
       [id]
     );
-    return rows[0] || null;
-  }
 
-  static async findByRootCardId(rootCardId) {
-    const [rows] = await pool.execute(
-      `SELECT mr.* 
-       FROM material_requests mr
-       WHERE mr.sales_order_id = ?
-       ORDER BY mr.created_at DESC`,
-      [rootCardId]
+    if (rows.length === 0) return null;
+
+    const header = rows[0];
+
+    // Get Items
+    const [itemRows] = await pool.execute(
+      `SELECT * FROM material_request_items WHERE material_request_id = ?`,
+      [id]
     );
-    return rows || [];
+
+    header.items = itemRows;
+    return header;
   }
 
   static async findAll(filters = {}) {
-    let query = `SELECT mr.*, so.customer, u.username as created_by_name, pp.plan_name as production_plan_name
+    let query = `SELECT mr.*, so.customer, u.username as created_by_name, 
+                        pp.plan_name as production_plan_name,
+                        w.name as warehouse_name
                  FROM material_requests mr
                  LEFT JOIN sales_orders so ON so.id = mr.sales_order_id
                  LEFT JOIN users u ON u.id = mr.created_by
                  LEFT JOIN production_plans pp ON pp.id = mr.production_plan_id
+                 LEFT JOIN warehouses w ON w.id = mr.target_warehouse_id
                  WHERE 1=1`;
     const params = [];
 
@@ -132,7 +173,7 @@ class MaterialRequest {
     }
 
     if (filters.search) {
-      query += ' AND (mr.material_name LIKE ? OR mr.material_code LIKE ?)';
+      query += ' AND (mr.mr_number LIKE ? OR mr.department LIKE ?)';
       const likeSearch = `%${filters.search}%`;
       params.push(likeSearch, likeSearch);
     }
@@ -147,33 +188,16 @@ class MaterialRequest {
     const updates = [];
     const params = [];
 
-    if (data.materialName !== undefined) {
-      updates.push('material_name = ?');
-      params.push(data.materialName);
-    }
-    if (data.quantity !== undefined) {
-      updates.push('quantity = ?');
-      params.push(data.quantity);
-    }
-    if (data.specification !== undefined) {
-      updates.push('specification = ?');
-      params.push(data.specification);
-    }
-    if (data.requiredDate !== undefined) {
-      updates.push('required_date = ?');
-      params.push(data.requiredDate);
-    }
-    if (data.priority !== undefined) {
-      updates.push('priority = ?');
-      params.push(data.priority);
-    }
-    if (data.status !== undefined) {
-      updates.push('status = ?');
-      params.push(data.status);
-    }
-    if (data.remarks !== undefined) {
-      updates.push('remarks = ?');
-      params.push(data.remarks);
+    const fields = [
+      'status', 'priority', 'remarks', 'required_date', 
+      'target_warehouse_id', 'purpose', 'department'
+    ];
+
+    for (const field of fields) {
+      if (data[field] !== undefined) {
+        updates.push(`${field} = ?`);
+        params.push(data[field]);
+      }
     }
 
     if (updates.length === 0) {
@@ -200,58 +224,12 @@ class MaterialRequest {
     await pool.execute('DELETE FROM material_requests WHERE id = ?', [id]);
   }
 
-  static async addVendor(materialRequestId, vendorId, quotedPrice, deliveryDays, notes) {
-    const [result] = await pool.execute(
-      `INSERT INTO material_request_vendors 
-       (material_request_id, vendor_id, quoted_price, delivery_days, notes)
-       VALUES (?, ?, ?, ?, ?)`,
-      [materialRequestId, vendorId, quotedPrice || null, deliveryDays || null, notes || null]
-    );
-    return result.insertId;
-  }
-
-  static async getVendorsForMaterial(materialRequestId) {
-    const [rows] = await pool.execute(
-      `SELECT mrv.*, v.name as vendor_name, v.contact, v.email
-       FROM material_request_vendors mrv
-       LEFT JOIN vendors v ON v.id = mrv.vendor_id
-       WHERE mrv.material_request_id = ?
-       ORDER BY mrv.quoted_price ASC`,
-      [materialRequestId]
-    );
-    return rows || [];
-  }
-
-  static async selectVendor(materialRequestId, vendorId) {
-    const connection = await pool.getConnection();
-    
-    try {
-      await connection.query('START TRANSACTION');
-      
-      await connection.execute(
-        'UPDATE material_request_vendors SET selected = FALSE WHERE material_request_id = ?',
-        [materialRequestId]
-      );
-      
-      await connection.execute(
-        'UPDATE material_request_vendors SET selected = TRUE WHERE material_request_id = ? AND vendor_id = ?',
-        [materialRequestId, vendorId]
-      );
-      
-      await connection.query('COMMIT');
-    } catch (error) {
-      await connection.query('ROLLBACK');
-      throw error;
-    } finally {
-      connection.release();
-    }
-  }
-
   static async getStats() {
     const [rows] = await pool.execute(`
       SELECT
         COUNT(*) as total,
         SUM(CASE WHEN status = 'draft' THEN 1 ELSE 0 END) as draft,
+        SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
         SUM(CASE WHEN status = 'submitted' THEN 1 ELSE 0 END) as submitted,
         SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) as approved,
         SUM(CASE WHEN status = 'ordered' THEN 1 ELSE 0 END) as ordered,
