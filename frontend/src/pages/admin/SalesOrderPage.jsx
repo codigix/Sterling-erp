@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import axios from '../../utils/api';
 import { 
   Plus, 
   Trash2, 
@@ -26,7 +26,7 @@ const SalesOrderPage = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const response = await axios.get('/sales/management');
+      const response = await axios.get('sales/management');
       setData(response.data);
     } catch (error) {
       console.error('Fetch error:', error);
@@ -169,7 +169,7 @@ const SalesOrderPage = () => {
 
     if (result.isConfirmed) {
       try {
-        await axios.delete(`/sales/management/${id}`);
+        await axios.delete(`sales/management/${id}`);
         Swal.fire('Deleted!', 'Sales Order has been deleted.', 'success');
         fetchData();
       } catch (error) {

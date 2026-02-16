@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import axios from '../../utils/api';
 import {
   CheckCircle2,
   Circle,
@@ -38,7 +38,7 @@ const ProjectInventoryWorkflow = ({ projectId, rootCardId, projectTitle }) => {
     try {
       setLoading(true);
       const response = await axios.get(
-        `/inventory/root-card-tasks/root-card/${rootCardId}/tasks`
+        `inventory/root-card-tasks/root-card/${rootCardId}/tasks`
       );
       setTasks(response.data.tasks || []);
       setProgress(response.data.progress);
@@ -55,7 +55,7 @@ const ProjectInventoryWorkflow = ({ projectId, rootCardId, projectTitle }) => {
     try {
       setCompletingTask(taskId);
       const response = await axios.patch(
-        `/inventory/root-card-tasks/root-card/${rootCardId}/task/${taskId}/complete`,
+        `inventory/root-card-tasks/root-card/${rootCardId}/task/${taskId}/complete`,
         { notes: completionNotes }
       );
 

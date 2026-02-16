@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import axios from '../../utils/api';
 import { X, Loader2, AlertCircle } from 'lucide-react';
 import Swal from 'sweetalert2';
 
@@ -36,10 +36,10 @@ const CreateSalesOrderModal = ({ onCancel, onSuccess, editData }) => {
   const fetchData = async () => {
     try {
       const [customerRes, warehouseRes, rootCardRes, nextSoRes] = await Promise.all([
-        axios.get('/sales/customers'),
-        axios.get('/inventory/warehouses'),
-        axios.get('/sales/management/root-cards'),
-        !editData ? axios.get('/sales/management/next-so-number') : Promise.resolve({ data: { nextNumber: '' } })
+        axios.get('sales/customers'),
+        axios.get('inventory/warehouses'),
+        axios.get('sales/management/root-cards'),
+        !editData ? axios.get('sales/management/next-so-number') : Promise.resolve({ data: { nextNumber: '' } })
       ]);
       setCustomers(customerRes.data);
       setWarehouses(warehouseRes.data);
@@ -50,7 +50,7 @@ const CreateSalesOrderModal = ({ onCancel, onSuccess, editData }) => {
       }
 
       if (editData?.root_card_id) {
-        const bomsRes = await axios.get(`/sales/management/root-cards/${editData.root_card_id}/boms`);
+        const bomsRes = await axios.get(`sales/management/root-cards/${editData.root_card_id}/boms`);
         setBoms(bomsRes.data);
         const currentBOM = bomsRes.data.find(b => b.id === editData.bom_id);
         if (currentBOM) {
@@ -105,8 +105,8 @@ const CreateSalesOrderModal = ({ onCancel, onSuccess, editData }) => {
     setLoading(true);
     try {
       const [detailsRes, bomsRes] = await Promise.all([
-        axios.get(`/sales/management/root-cards/${rootCardId}`),
-        axios.get(`/sales/management/root-cards/${rootCardId}/boms`)
+        axios.get(`sales/management/root-cards/${rootCardId}`),
+        axios.get(`sales/management/root-cards/${rootCardId}/boms`)
       ]);
 
       const details = detailsRes.data;
@@ -189,10 +189,10 @@ const CreateSalesOrderModal = ({ onCancel, onSuccess, editData }) => {
       };
 
       if (editData) {
-        await axios.put(`/sales/management/${editData.id}`, submitData);
+        await axios.put(`sales/management/${editData.id}`, submitData);
         Swal.fire('Success', 'Sales Order updated successfully', 'success');
       } else {
-        await axios.post('/sales/management', submitData);
+        await axios.post('sales/management', submitData);
         Swal.fire('Success', 'Sales Order created successfully', 'success');
       }
       onSuccess();

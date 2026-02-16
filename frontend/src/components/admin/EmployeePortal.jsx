@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import axios from '../../utils/api';
 import './EmployeePortal.css';
 
 const EmployeePortal = () => {
@@ -17,9 +17,8 @@ const EmployeePortal = () => {
   const fetchTasks = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/employee/tasks', {
-        params: { dateFilter: filter },
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      const response = await axios.get('employee/tasks', {
+        params: { dateFilter: filter }
       });
       setTasks(response.data.tasks);
     } catch (error) {
@@ -31,9 +30,7 @@ const EmployeePortal = () => {
 
   const fetchStats = async () => {
     try {
-      const response = await axios.get('/employee/tasks/statistics', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
+      const response = await axios.get('employee/tasks/statistics');
       setStats(response.data);
     } catch (error) {
       console.error('Error fetching statistics:', error);
@@ -42,9 +39,8 @@ const EmployeePortal = () => {
 
   const updateTaskStatus = async (taskId, newStatus) => {
     try {
-      await axios.patch(`/employee/tasks/${taskId}/status`, 
-        { status: newStatus },
-        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+      await axios.patch(`employee/tasks/${taskId}/status`, 
+        { status: newStatus }
       );
       fetchTasks();
       fetchStats();

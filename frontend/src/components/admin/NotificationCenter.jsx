@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import axios from '../../utils/api';
 import './NotificationCenter.css';
 
 const NotificationCenter = ({ onClose }) => {
@@ -15,9 +15,7 @@ const NotificationCenter = ({ onClose }) => {
 
   const fetchNotifications = async () => {
     try {
-      const response = await axios.get('/notifications', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
+      const response = await axios.get('notifications');
       setNotifications(response.data.notifications);
       
       const unread = response.data.notifications.filter(n => !n.read_status).length;
@@ -31,9 +29,8 @@ const NotificationCenter = ({ onClose }) => {
 
   const markAsRead = async (notificationId) => {
     try {
-      await axios.patch(`/notifications/${notificationId}/read`,
-        {},
-        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+      await axios.patch(`notifications/${notificationId}/read`,
+        {}
       );
       fetchNotifications();
     } catch (error) {
@@ -43,9 +40,8 @@ const NotificationCenter = ({ onClose }) => {
 
   const markAllAsRead = async () => {
     try {
-      await axios.patch('/notifications/mark-all/read',
-        {},
-        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+      await axios.patch('notifications/mark-all/read',
+        {}
       );
       fetchNotifications();
     } catch (error) {
@@ -55,9 +51,7 @@ const NotificationCenter = ({ onClose }) => {
 
   const deleteNotification = async (notificationId) => {
     try {
-      await axios.delete(`/notifications/${notificationId}`,
-        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
-      );
+      await axios.delete(`notifications/${notificationId}`);
       fetchNotifications();
     } catch (error) {
       console.error('Error deleting notification:', error);

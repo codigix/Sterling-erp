@@ -14,7 +14,7 @@ import {
   TrendingUp,
   X,
 } from "lucide-react";
-import axios from "axios";
+import axios from "../../utils/api";
 import toastUtils from "../../utils/toastUtils";
 
 const VendorsPage = () => {
@@ -43,8 +43,6 @@ const VendorsPage = () => {
   const [selectedVendor, setSelectedVendor] = useState(null);
   const [categories, setCategories] = useState([]);
 
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5001/api";
-
   const fetchVendors = useCallback(async () => {
     try {
       setLoading(true);
@@ -56,7 +54,7 @@ const VendorsPage = () => {
       }
 
       const response = await axios.get(
-        `${API_URL}/inventory/vendors?${params}`
+        `inventory/vendors?${params}`
       );
       setVendors(response.data);
       setError(null);
@@ -66,21 +64,21 @@ const VendorsPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, ratingFilter, API_URL]);
+  }, [searchQuery, ratingFilter]);
 
   const fetchStats = useCallback(async () => {
     try {
-      const response = await axios.get(`${API_URL}/inventory/vendors/stats`);
+      const response = await axios.get(`inventory/vendors/stats`);
       setStats(response.data);
     } catch (err) {
       console.error("Error fetching stats:", err);
     }
-  }, [API_URL]);
+  }, []);
 
   const fetchCategories = useCallback(async () => {
     try {
       const response = await axios.get(
-        `${API_URL}/inventory/vendors/categories`
+        `inventory/vendors/categories`
       );
       const categoryData = response.data
         .map((cat) => cat.category)
@@ -89,19 +87,19 @@ const VendorsPage = () => {
     } catch (err) {
       console.error("Error fetching categories:", err);
     }
-  }, [API_URL]);
+  }, []);
 
   const fetchVendorById = useCallback(
     async (id) => {
       try {
-        const response = await axios.get(`${API_URL}/inventory/vendors/${id}`);
+        const response = await axios.get(`inventory/vendors/${id}`);
         return response.data;
       } catch (err) {
         console.error("Error fetching vendor:", err);
         return null;
       }
     },
-    [API_URL]
+    []
   );
 
   useEffect(() => {
@@ -113,7 +111,7 @@ const VendorsPage = () => {
   const handleDeleteVendor = async (id) => {
     if (window.confirm("Are you sure you want to delete this vendor?")) {
       try {
-        await axios.delete(`${API_URL}/inventory/vendors/${id}`);
+        await axios.delete(`inventory/vendors/${id}`);
         toastUtils.success("Vendor deleted successfully");
         fetchVendors();
       } catch (err) {
@@ -154,7 +152,7 @@ const VendorsPage = () => {
         rating: formData.rating ? parseFloat(formData.rating) : 0,
       };
 
-      await axios.post(`${API_URL}/inventory/vendors`, payload);
+      await axios.post(`inventory/vendors`, payload);
 
       setShowAddModal(false);
       setFormData({
@@ -215,7 +213,7 @@ const VendorsPage = () => {
       };
 
       await axios.put(
-        `${API_URL}/inventory/vendors/${editingVendor.id}`,
+        `inventory/vendors/${editingVendor.id}`,
         payload
       );
 
