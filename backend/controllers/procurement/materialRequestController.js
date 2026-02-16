@@ -381,9 +381,10 @@ exports.releaseMaterial = async (req, res) => {
         material_id: material.id,
         item_code: material.itemCode,
         item_name: material.itemName,
+        material_type: material.category, // Added material type (category)
         quantity: qty,
         unit: item.unit,
-        warehouse: targetWarehouse
+        warehouse: warehouseToDeduct
       });
     }
 

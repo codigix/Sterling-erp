@@ -76,8 +76,10 @@ const MaterialRequestModal = ({ isOpen, onClose, data, materials, planId, onSave
       }).then(() => {
         // Only redirect to inventory manager page if user is admin or inventory manager
         // Production users should stay on their current page (production plan)
-        const canViewInventory = ['Admin', 'Inventory Manager', 'Inventory'].includes(user?.role);
-        if (canViewInventory) {
+        const isProductionUser = user?.role?.toLowerCase().includes('production');
+        const canViewInventory = ['Admin', 'Inventory Manager', 'Inventory', 'Procurement'].includes(user?.role);
+        
+        if (canViewInventory && !isProductionUser) {
           navigate('/inventory-manager/material-requests');
         }
       });

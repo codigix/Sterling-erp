@@ -40,14 +40,14 @@ class Material {
   static async findAll(filters = {}) {
     let query = `
       SELECT i.*, ig.name as item_group_name,
-             COALESCE(SUM(ms.quantity), 0) as total_stock,
-             GROUP_CONCAT(DISTINCT CASE WHEN ms.quantity > 0 THEN ms.warehouse_name END) as available_in_warehouses
+             COALESCE(SUM(CASE WHEN ? IS NULL OR TRIM(LOWER(ms.warehouse_name)) = TRIM(LOWER(?)) THEN ms.quantity ELSE 0 END), 0) as total_stock,
+             GROUP_CONCAT(DISTINCT CASE WHEN ms.quantity > 0 THEN ms.warehouse_name END) as warehouses_list
       FROM inventory i 
       LEFT JOIN item_groups ig ON i.item_group_id = ig.id 
-      ${filters.onlyWithStock ? 'INNER' : 'LEFT'} JOIN material_stock ms ON i.id = ms.material_id
+      LEFT JOIN material_stock ms ON i.id = ms.material_id
       WHERE 1=1
     `;
-    const params = [];
+    const params = [filters.warehouse || null, filters.warehouse || null];
 
     if (filters.itemCode) {
       query += ' AND i.item_code LIKE ?';
@@ -64,23 +64,26 @@ class Material {
       params.push(filters.category);
     }
 
-    if (filters.warehouse) {
-      // If filtering by warehouse, we only want the sum for that specific warehouse
-      // Use TRIM and case-insensitive comparison for robustness
-      query += ' AND TRIM(LOWER(ms.warehouse_name)) = TRIM(LOWER(?))';
-      params.push(filters.warehouse);
-    }
-
     query += ' GROUP BY i.id';
 
+    if (filters.onlyWithStock) {
+      query += ' HAVING total_stock > 0';
+    }
+
     if (filters.belowReorderLevel) {
-      query += ' HAVING total_stock < i.reorder_level';
+      if (filters.onlyWithStock) {
+        query += ' AND total_stock < i.reorder_level';
+      } else {
+        query += ' HAVING total_stock < i.reorder_level';
+      }
     }
 
     const [rows] = await pool.execute(query, params);
     return (rows || []).map(row => {
       const formatted = Material.formatRow(row);
-      formatted.quantity = row.total_stock; // Override with sum from material_stock
+      formatted.total_stock = row.total_stock;
+      formatted.available_in_warehouses = row.warehouses_list;
+      formatted.quantity = row.total_stock; // For backward compatibility
       return formatted;
     });
   }
