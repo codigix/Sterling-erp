@@ -272,9 +272,16 @@ exports.deleteMaterialRequest = async (req, res) => {
       return res.status(404).json({ message: 'Material request not found' });
     }
 
-    if (materialRequest.status !== 'draft') {
+    if (!['draft', 'submitted', 'approved', 'pending'].includes(materialRequest.status)) {
       return res.status(400).json({
-        message: 'Only draft material requests can be deleted'
+        message: `Only requests in draft, submitted, or approved status can be deleted. Current status: ${materialRequest.status}`
+      });
+    }
+
+    // Check if there are linked Purchase Orders or Quotations before deleting
+    if (materialRequest.po_count > 0 || materialRequest.rfq_count > 0) {
+      return res.status(400).json({
+        message: 'Cannot delete material request with linked Purchase Orders or Quotations'
       });
     }
 

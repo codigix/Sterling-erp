@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
 import { Send, Activity, X, FileText, Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import axios from '../../utils/api';
 import Swal from 'sweetalert2';
+import { useAuth } from '../../context/AuthContext';
 
 const MaterialRequestModal = ({ isOpen, onClose, data, materials, planId, onSavePlan }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const navigate = useNavigate();
+  const { user } = useAuth();
 
   if (!isOpen) return null;
 
@@ -54,6 +58,7 @@ const MaterialRequestModal = ({ isOpen, onClose, data, materials, planId, onSave
         items: materials.map(m => ({
           materialName: m.itemName || m.specification || 'Unknown Material',
           materialCode: m.itemCode || m.materialCode || m.specification || null,
+          materialType: m.materialType || null,
           quantity: m.requiredQty || 0,
           unit: m.uom || 'Nos',
           specification: m.specification || null
@@ -68,6 +73,13 @@ const MaterialRequestModal = ({ isOpen, onClose, data, materials, planId, onSave
         title: 'Requests Generated',
         text: 'Material requests have been successfully sent to procurement.',
         confirmButtonColor: '#0f172a'
+      }).then(() => {
+        // Only redirect to inventory manager page if user is admin or inventory manager
+        // Production users should stay on their current page (production plan)
+        const canViewInventory = ['Admin', 'Inventory Manager', 'Inventory'].includes(user?.role);
+        if (canViewInventory) {
+          navigate('/inventory-manager/material-requests');
+        }
       });
       
       onClose();

@@ -67,12 +67,13 @@ class MaterialRequest {
         for (const item of data.items) {
           await conn.execute(
             `INSERT INTO material_request_items 
-             (material_request_id, material_name, material_code, quantity, unit, specification, status)
-             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+             (material_request_id, material_name, material_code, material_type, quantity, unit, specification, status)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               materialRequestId,
               item.materialName,
               item.materialCode || null,
+              item.materialType || null,
               item.quantity,
               item.unit || 'Nos',
               item.specification || null,
