@@ -101,6 +101,11 @@ const MaterialRequestDetailModal = ({ isOpen, onClose, request, warehouses, onSt
 
   if (!isOpen || !request) return null;
 
+  const allInStock = (request.items || []).every(item => {
+    const stockInfo = stockLevels[item.id] || { quantity: 0 };
+    return Number(stockInfo.quantity || 0) >= Number(item.quantity || 0);
+  });
+
   const handleAutoCreatePO = async () => {
     try {
       setCreatingPO(true);
@@ -112,12 +117,7 @@ const MaterialRequestDetailModal = ({ isOpen, onClose, request, warehouses, onSt
       });
 
       if (itemsToOrder.length === 0) {
-        Swal.fire({
-          icon: 'info',
-          title: 'All Items in Stock',
-          text: 'There are no items that require a Purchase Order as everything is in stock.',
-          confirmButtonColor: '#2563eb'
-        });
+        showSuccess("All Items in Stock: There are no items that require a Purchase Order as everything is in stock.");
         setCreatingPO(false);
         return;
       }
@@ -200,28 +200,36 @@ const MaterialRequestDetailModal = ({ isOpen, onClose, request, warehouses, onSt
     });
 
     if (itemsToQuote.length === 0) {
-      Swal.fire({
-        icon: 'info',
-        title: 'Stock Available',
-        text: 'All items are currently in stock. No quotation process needed.',
-        confirmButtonColor: '#2563eb'
-      });
+      showSuccess("Stock Available: All items are currently in stock. No quotation process needed.");
       return;
     }
 
-    navigate("/inventory-manager/quotations/sent", {
-      state: {
-        openModal: true,
-        preFilledMaterials: itemsToQuote.map((item) => ({
-          item_code: item.item_code || item.material_code || "",
-          description: item.item_name || item.material_name || item.description || "",
-          quantity: item.quantity || 0,
-          unit: item.unit || "",
-          unit_price: 0,
-        })),
-        reference_id: null,
-        material_request_id: request.id,
-      },
+    Swal.fire({
+      title: "Create Quotation?",
+      text: "To create a Purchase Order, you must first create and approve a Quotation. Would you like to proceed to the Quotation page?",
+      icon: "info",
+      showCancelButton: true,
+      confirmButtonColor: "#3b82f6",
+      cancelButtonColor: "#64748b",
+      confirmButtonText: "Yes, Create Quotation",
+      cancelButtonText: "Maybe later"
+    }).then((result) => {
+      if (result.isConfirmed) {
+        navigate("/inventory-manager/quotations/sent", {
+          state: {
+            openModal: true,
+            preFilledMaterials: itemsToQuote.map((item) => ({
+              item_code: item.item_code || item.material_code || "",
+              description: item.item_name || item.material_name || item.description || "",
+              quantity: item.quantity || 0,
+              unit: item.unit || "",
+              unit_price: 0,
+            })),
+            reference_id: null,
+            material_request_id: request.id,
+          },
+        });
+      }
     });
   };
 
@@ -464,7 +472,7 @@ const MaterialRequestDetailModal = ({ isOpen, onClose, request, warehouses, onSt
                     <FileText size={18} className="text-slate-400" />
                     <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Request Summary</h3>
                   </div>
-                  {(request.items || []).some(item => (stockLevels[item.id] || 0) < (item.quantity || 0)) ? (
+                  {!allInStock ? (
                     <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900/30 rounded-xl space-y-3">
                       <div className="flex gap-3">
                         <AlertCircle size={16} className="text-amber-600 mt-0.5" />
@@ -473,7 +481,7 @@ const MaterialRequestDetailModal = ({ isOpen, onClose, request, warehouses, onSt
                         </p>
                       </div>
                       <p className="text-[10px] text-amber-700 dark:text-amber-500 font-medium pl-7">
-                        You can release available items now and create a Purchase Order for the rest.
+                        You can create a Purchase Order for the out-of-stock items.
                       </p>
                     </div>
                   ) : (
@@ -523,17 +531,17 @@ const MaterialRequestDetailModal = ({ isOpen, onClose, request, warehouses, onSt
               <>
                 <button 
                   onClick={handleReleaseMaterial}
-                  disabled={releasing}
-                  className="px-6 py-2 bg-emerald-500 text-white font-bold rounded-lg hover:bg-emerald-600 transition-all text-xs uppercase flex items-center gap-2 shadow-lg shadow-emerald-500/20 disabled:opacity-50"
+                  disabled={releasing || !allInStock}
+                  className={`px-6 py-2 ${!allInStock ? "bg-slate-300 text-slate-500 cursor-not-allowed" : "bg-emerald-500 text-white hover:bg-emerald-600 shadow-lg shadow-emerald-500/20"} font-bold rounded-lg transition-all text-xs uppercase flex items-center gap-2 disabled:opacity-50`}
                 >
                   {releasing ? "Releasing..." : "Release Material"} <ShieldCheck size={16} />
                 </button>
                 <button 
                   onClick={request.approved_quotation_count > 0 ? handleAutoCreatePO : handleCreateQuotation}
-                  disabled={creatingPO || request.po_count > 0}
-                  className={`px-6 py-2 ${request.po_count > 0 ? "bg-slate-300 text-slate-500 cursor-not-allowed" : "bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-500/20"} font-bold rounded-lg transition-all text-xs uppercase flex items-center gap-2`}
+                  disabled={creatingPO || request.po_count > 0 || allInStock}
+                  className={`px-6 py-2 ${request.po_count > 0 || allInStock ? "bg-slate-300 text-slate-500 cursor-not-allowed" : "bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-500/20"} font-bold rounded-lg transition-all text-xs uppercase flex items-center gap-2`}
                 >
-                  {creatingPO ? "Creating..." : request.po_count > 0 ? "PO Created" : "Create Purchase Order"} <PlusCircle size={16} />
+                  {creatingPO ? "Creating..." : request.po_count > 0 ? "PO Created" : allInStock ? "In Stock" : "Create Purchase Order"} <PlusCircle size={16} />
                 </button>
               </>
             )}
@@ -545,6 +553,7 @@ const MaterialRequestDetailModal = ({ isOpen, onClose, request, warehouses, onSt
 };
 
 const MaterialRequestsPage = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("total");
   const [viewMode, setViewMode] = useState("list");
   const [searchQuery, setSearchQuery] = useState("");
@@ -554,6 +563,216 @@ const MaterialRequestsPage = () => {
   const [loading, setLoading] = useState(true);
   const [rootCards, setRootCards] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
+  const [expandedRows, setExpandedRows] = useState(new Set());
+
+  const toggleRow = (id) => {
+    setExpandedRows(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const WorkflowStepper = ({ request }) => {
+    const [localLoading, setLocalLoading] = useState(false);
+    if (!request) return null;
+    const status = request.status || 'draft';
+    
+    // Determine if we are on the Procurement path or Direct path
+    const isProcurementPath = request.po_count > 0 || request.approved_quotation_count > 0 || request.rfq_count > 0;
+
+    const steps = [
+      { id: 'request', label: 'Material Request', icon: ClipboardList, subLabel: 'Request & Approval' },
+      { id: 'quotation', label: 'Quotation', icon: FileText, subLabel: 'RFQ & Approval', hidden: !isProcurementPath && status === 'fulfilled' },
+      { id: 'po', label: 'Purchase Order', icon: ShieldCheck, subLabel: 'PO & Vendor Submission', hidden: !isProcurementPath && status === 'fulfilled' },
+      { id: 'grn', label: 'Goods Arrival', icon: Warehouse, subLabel: 'GRN & Inspection', hidden: !isProcurementPath && status === 'fulfilled' },
+      { id: 'fulfilled', label: 'Fulfillment', icon: CheckCircle, subLabel: 'Material Release' }
+    ].filter(step => !step.hidden);
+
+    const getStepStatus = (stepId, index) => {
+      const s = status.toLowerCase();
+      
+      if (stepId === 'request') {
+        if (s === 'draft') return 'current';
+        return 'completed';
+      }
+      
+      if (stepId === 'quotation') {
+        if (request.approved_quotation_count > 0) return 'completed';
+        if (request.rfq_count > 0 || s === 'approved') return 'current';
+        return 'pending';
+      }
+      
+      if (stepId === 'po') {
+        if (s === 'ordered' || s === 'received' || s === 'fulfilled') return 'completed';
+        if (request.po_count > 0 || request.approved_quotation_count > 0) return 'current';
+        return 'pending';
+      }
+      
+      if (stepId === 'grn') {
+        if (s === 'received' || s === 'fulfilled') return 'completed';
+        if (s === 'ordered') return 'current';
+        return 'pending';
+      }
+      
+      if (stepId === 'fulfilled') {
+        if (s === 'fulfilled') return 'completed';
+        if (s === 'received') return 'current';
+        return 'pending';
+      }
+      
+      return 'pending';
+    };
+
+    const handleStepClick = async (stepId) => {
+      if (stepId === 'request') {
+        fetchRequestDetails(request.id);
+        return;
+      }
+
+      if (stepId === 'fulfilled') {
+        fetchRequestDetails(request.id); // Open modal to release
+        return;
+      }
+
+      if (stepId === 'quotation' || stepId === 'po') {
+        setLocalLoading(true);
+        try {
+          // 1. Get current stock levels to know what to order
+          const items = request.items || [];
+          const itemsToProcess = [];
+          
+          for (const item of items) {
+            const query = item.material_code 
+              ? `itemCode=${encodeURIComponent(item.material_code)}` 
+              : `itemName=${encodeURIComponent(item.material_name)}`;
+              
+            const res = await axios.get(`/inventory/materials?${query}`);
+            const materials = res.data.materials || [];
+            const stockQty = materials.length > 0 
+              ? Number(materials[0].total_stock || materials[0].quantity || 0)
+              : 0;
+            
+            if (stockQty < Number(item.quantity || 0)) {
+              itemsToProcess.push(item);
+            }
+          }
+
+          if (itemsToProcess.length === 0 && stepId === 'quotation') {
+            showSuccess("All items are currently in stock. No quotation needed.");
+            setLocalLoading(false);
+            return;
+          }
+
+          if (stepId === 'quotation') {
+            Swal.fire({
+              title: "Create Quotation?",
+              text: "Would you like to proceed to create a Quotation for out-of-stock items?",
+              icon: "info",
+              showCancelButton: true,
+              confirmButtonText: "Yes, Proceed"
+            }).then((result) => {
+              if (result.isConfirmed) {
+                navigate("/inventory-manager/quotations/sent", {
+                  state: {
+                    openModal: true,
+                    preFilledMaterials: itemsToProcess.map(item => ({
+                      item_code: item.material_code || "",
+                      description: item.material_name || "",
+                      quantity: item.quantity || 0,
+                      unit: item.unit || "",
+                      unit_price: 0
+                    })),
+                    material_request_id: request.id
+                  }
+                });
+              }
+            });
+          } else if (stepId === 'po') {
+            if (request.approved_quotation_count > 0) {
+              // Redirect to detail modal to use handleAutoCreatePO logic
+              fetchRequestDetails(request.id);
+            } else {
+              showError("No approved quotation found. Please create and approve a quotation first.");
+              handleStepClick('quotation');
+            }
+          }
+        } catch (err) {
+          console.error("Error processing stepper action:", err);
+          showError("Failed to process action");
+        } finally {
+          setLocalLoading(false);
+        }
+        return;
+      }
+
+      const routes = {
+        'grn': '/inventory-manager/grn-processing'
+      };
+
+      const route = routes[stepId];
+      if (route) {
+        navigate(route);
+      }
+    };
+
+    return (
+      <div className="py-10 px-6 bg-white dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700 my-4 mx-8 animate-in slide-in-from-top-4 duration-500 shadow-sm relative">
+        {localLoading && (
+          <div className="absolute inset-0 bg-white/50 dark:bg-slate-800/50 z-20 flex items-center justify-center rounded-2xl">
+            <RefreshCw className="animate-spin text-blue-600" size={24} />
+          </div>
+        )}
+        <div className="relative flex justify-between items-center max-w-5xl mx-auto">
+          {/* Progress Line */}
+          <div className="absolute top-[20px] left-0 w-full h-1 bg-slate-100 dark:bg-slate-700 z-0 rounded-full" />
+          
+          {steps.map((step, idx) => {
+            const stepStatus = getStepStatus(step.id, idx);
+            const Icon = step.icon;
+            
+            return (
+              <div key={step.id} className="relative z-10 flex flex-col items-center group flex-1">
+                <button 
+                  onClick={() => handleStepClick(step.id)}
+                  disabled={localLoading}
+                  title={`Go to ${step.label}`}
+                  className={`
+                    w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-500 z-10
+                    ${stepStatus === 'completed' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 hover:scale-110' : 
+                      stepStatus === 'current' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20 scale-110 hover:scale-125' : 
+                      'bg-white dark:bg-slate-800 text-slate-400 border-2 border-slate-100 dark:border-slate-700 hover:border-blue-300'}
+                    ${localLoading ? 'opacity-50 cursor-not-allowed' : ''}
+                  `}
+                >
+                  <Icon size={20} />
+                </button>
+                
+                <div className="mt-4 text-center">
+                  <span className={`
+                    block text-[11px] font-bold uppercase tracking-widest transition-colors duration-500 whitespace-nowrap
+                    ${stepStatus === 'completed' ? 'text-emerald-600' : 
+                      stepStatus === 'current' ? 'text-blue-600' : 'text-slate-500'}
+                  `}>
+                    {step.label}
+                  </span>
+                  <span className="block text-[9px] font-medium text-slate-400 mt-0.5 uppercase tracking-tighter opacity-80">
+                    {step.subLabel}
+                  </span>
+                </div>
+                
+                {/* Connector for completed steps */}
+                {idx < steps.length - 1 && getStepStatus(steps[idx+1]?.id, idx+1) !== 'pending' && (
+                  <div className="absolute top-[20px] left-[calc(50%+20px)] w-[calc(100%-40px)] h-1 bg-emerald-500 z-0 animate-in fade-in zoom-in duration-700" />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
 
   const fetchWarehouses = useCallback(async () => {
     try {
@@ -602,7 +821,7 @@ const MaterialRequestsPage = () => {
       setShowDetailModal(true);
     } catch (error) {
       console.error("Error fetching request details:", error);
-      Swal.fire("Error", "Failed to fetch request details", "error");
+      showError("Failed to fetch request details");
     }
   };
 
@@ -620,12 +839,12 @@ const MaterialRequestsPage = () => {
 
       if (result.isConfirmed) {
         await axios.delete(`/inventory/material-requests/${id}`);
-        Swal.fire("Deleted!", "Material request has been deleted.", "success");
+        showSuccess("Material request has been deleted.");
         fetchMaterialRequests();
       }
     } catch (error) {
       console.error("Error deleting request:", error);
-      Swal.fire("Error", error.response?.data?.message || "Failed to delete request", "error");
+      showError(error.response?.data?.message || "Failed to delete request");
     }
   };
 
@@ -730,7 +949,27 @@ const MaterialRequestsPage = () => {
       fetchRootCards();
       fetchWarehouses();
     }
-    return () => { isMounted = false; };
+
+    // Auto-refresh when window gets focus to ensure user sees latest requests
+    const handleFocus = () => {
+      if (isMounted) {
+        fetchMaterialRequests();
+      }
+    };
+    window.addEventListener('focus', handleFocus);
+
+    // Background polling every 30 seconds to keep data fresh without manual refresh
+    const pollingInterval = setInterval(() => {
+      if (isMounted) {
+        fetchMaterialRequests();
+      }
+    }, 30000);
+
+    return () => { 
+      isMounted = false; 
+      window.removeEventListener('focus', handleFocus);
+      clearInterval(pollingInterval);
+    };
   }, [fetchMaterialRequests, fetchRootCards, fetchWarehouses]);
 
   const handleAddItem = () => {
@@ -753,12 +992,12 @@ const MaterialRequestsPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (newRequest.items.length === 0) {
-      Swal.fire("Error", "Please add at least one item", "error");
+      showError("Please add at least one item");
       return;
     }
 
     if (!newRequest.rootCardId) {
-      Swal.fire("Error", "Please select a Sales Order / Root Card", "error");
+      showError("Please select a Sales Order / Root Card");
       return;
     }
     
@@ -779,12 +1018,7 @@ const MaterialRequestsPage = () => {
 
       await axios.post("/inventory/material-requests", payload);
 
-      Swal.fire({
-        title: "Material Request Submitted",
-        text: "Your material requests have been submitted successfully.",
-        icon: "success",
-        confirmButtonColor: "#2563eb"
-      });
+      showSuccess("Your material requests have been submitted successfully.");
       
       setShowNewRequestModal(false);
       setNewRequest({
@@ -800,7 +1034,7 @@ const MaterialRequestsPage = () => {
       fetchMaterialRequests();
     } catch (error) {
       console.error("Error submitting material request:", error);
-      Swal.fire("Error", error.response?.data?.message || "Failed to submit material request", "error");
+      showError(error.response?.data?.message || "Failed to submit material request");
     }
   };
 
@@ -989,6 +1223,7 @@ const MaterialRequestsPage = () => {
             <table className="w-full text-left">
               <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
                 <tr>
+                  <th className="px-6 py-4 w-10"></th>
                   <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">ID</th>
                   <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Requester</th>
                   <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
@@ -1000,38 +1235,55 @@ const MaterialRequestsPage = () => {
               <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                 {materialRequests.length > 0 ? (
                   materialRequests.map((req) => (
-                    <tr key={req.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
-                      <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">{req.mr_number || `MR-${req.id}`}</td>
-                      <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{req.created_by_name || "System"}</td>
-                      <td className="px-6 py-4">{getStatusBadge(req.status)}</td>
-                      <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400 flex items-center gap-2">
-                        <Clock size={14} className="text-slate-400" />
-                        {req.required_date ? new Date(req.required_date).toLocaleDateString() : "N/A"}
-                      </td>
-                      <td className="px-6 py-4">{getAvailabilityBadge(req.id)}</td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex justify-end gap-1">
+                    <React.Fragment key={req.id}>
+                      <tr className={`hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors ${expandedRows.has(req.id) ? 'bg-blue-50/30 dark:bg-blue-900/10' : ''}`}>
+                        <td className="px-6 py-4">
                           <button 
-                            onClick={() => fetchRequestDetails(req.id)}
-                            className="p-2 text-slate-400 hover:text-blue-600 transition-colors"
-                            title="View Details"
+                            onClick={() => toggleRow(req.id)}
+                            className={`p-1 rounded-lg transition-all ${expandedRows.has(req.id) ? 'bg-blue-100 text-blue-600 rotate-180' : 'text-slate-400 hover:bg-slate-100'}`}
                           >
-                            <Eye size={18} />
+                            <ChevronDown size={18} />
                           </button>
-                          <button 
-                            onClick={() => handleDelete(req.id)}
-                            className="p-2 text-slate-400 hover:text-red-600 transition-colors"
-                            title="Delete Request"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                        </td>
+                        <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">{req.mr_number || `MR-${req.id}`}</td>
+                        <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{req.created_by_name || "System"}</td>
+                        <td className="px-6 py-4">{getStatusBadge(req.status)}</td>
+                        <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400 flex items-center gap-2">
+                          <Clock size={14} className="text-slate-400" />
+                          {req.required_date ? new Date(req.required_date).toLocaleDateString() : "N/A"}
+                        </td>
+                        <td className="px-6 py-4">{getAvailabilityBadge(req.id)}</td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex justify-end gap-1">
+                            <button 
+                              onClick={() => fetchRequestDetails(req.id)}
+                              className="p-2 text-slate-400 hover:text-blue-600 transition-colors"
+                              title="View Details"
+                            >
+                              <Eye size={18} />
+                            </button>
+                            <button 
+                              onClick={() => handleDelete(req.id)}
+                              className="p-2 text-slate-400 hover:text-red-600 transition-colors"
+                              title="Delete Request"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                      {expandedRows.has(req.id) && (
+                        <tr>
+                          <td colSpan="7" className="px-0 py-0 border-none">
+                            <WorkflowStepper request={req} />
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="6" className="px-6 py-10 text-center text-slate-500">No material requests found</td>
+                    <td colSpan="7" className="px-6 py-10 text-center text-slate-500">No material requests found</td>
                   </tr>
                 )}
               </tbody>

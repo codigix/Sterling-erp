@@ -67,12 +67,13 @@ class MaterialRequest {
         for (const item of data.items) {
           await conn.execute(
             `INSERT INTO material_request_items 
-             (material_request_id, material_name, material_code, quantity, unit, specification, status)
-             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+             (material_request_id, material_name, material_code, material_type, quantity, unit, specification, status)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               materialRequestId,
               item.materialName,
               item.materialCode || null,
+              item.materialType || null,
               item.quantity,
               item.unit || 'Nos',
               item.specification || null,
@@ -150,7 +151,10 @@ class MaterialRequest {
   static async findAll(filters = {}) {
     let query = `SELECT mr.*, so.customer, u.username as created_by_name, 
                         pp.plan_name as production_plan_name,
-                        w.name as warehouse_name
+                        w.name as warehouse_name,
+                        (SELECT COUNT(*) FROM quotations WHERE material_request_id = mr.id AND type = 'outbound') as rfq_count,
+                        (SELECT COUNT(*) FROM quotations WHERE material_request_id = mr.id AND type = 'inbound' AND status = 'approved') as approved_quotation_count,
+                        (SELECT COUNT(*) FROM purchase_orders WHERE material_request_id = mr.id) as po_count
                  FROM material_requests mr
                  LEFT JOIN sales_orders so ON so.id = mr.sales_order_id
                  LEFT JOIN users u ON u.id = mr.created_by
@@ -200,7 +204,10 @@ class MaterialRequest {
     const [rows] = await pool.execute(
       `SELECT mr.*, so.customer, u.username as created_by_name, 
               pp.plan_name as production_plan_name,
-              w.name as warehouse_name
+              w.name as warehouse_name,
+              (SELECT COUNT(*) FROM quotations WHERE material_request_id = mr.id AND type = 'outbound') as rfq_count,
+              (SELECT COUNT(*) FROM quotations WHERE material_request_id = mr.id AND type = 'inbound' AND status = 'approved') as approved_quotation_count,
+              (SELECT COUNT(*) FROM purchase_orders WHERE material_request_id = mr.id) as po_count
        FROM material_requests mr
        LEFT JOIN sales_orders so ON so.id = mr.sales_order_id
        LEFT JOIN users u ON u.id = mr.created_by

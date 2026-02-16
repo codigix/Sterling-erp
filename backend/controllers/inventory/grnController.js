@@ -188,14 +188,18 @@ exports.addToStock = async (req, res) => {
         
         // 2. Add each item to inventory
         const stockEntryItems = [];
+        console.log(`📦 Processing GRN #${id} for stock entry...`);
+        
         for (const item of grnItems) {
             const qtyToAdd = Number(item.received_quantity) || 0;
-            // Get warehouse from item, fallback to header or Main Warehouse
-            let targetWarehouse = (item.warehouse || grn.warehouse_name || 'Main Warehouse').trim();
+            // Robust warehouse detection: prefer item.warehouse, then item.target_warehouse, then grn.warehouse_name
+            let targetWarehouse = (item.warehouse || item.target_warehouse || grn.warehouse_name || 'Main Warehouse').trim();
             
             if (qtyToAdd > 0) {
                 const itemCode = item.material_code || item.item_code || null;
                 const itemName = item.material_name || item.description || item.item_name;
+                
+                console.log(`🔹 Item: ${itemName} | Qty: ${qtyToAdd} | Target Warehouse: ${targetWarehouse}`);
                 
                 let material = null;
                 if (itemCode) {
@@ -210,11 +214,11 @@ exports.addToStock = async (req, res) => {
                 let materialId;
                 if (material) {
                     materialId = material.id;
-                    console.log(`Updating existing material stock: ${material.itemName} (${material.itemCode}) at ${targetWarehouse}`);
+                    console.log(`   ✅ Updating existing material: ${material.itemName} at ${targetWarehouse}`);
                     // Update the new material_stock table and inventory main table
                     await Material.updateStock(material.id, targetWarehouse, qtyToAdd, item.batch_no || null);
                 } else {
-                    console.log(`Creating new material from GRN: ${itemName} at ${targetWarehouse}`);
+                    console.log(`   🆕 Creating new material: ${itemName} at ${targetWarehouse}`);
                     materialId = await Material.create({
                         itemCode: itemCode || `MAT-${Date.now()}-${Math.floor(Math.random()*1000)}`,
                         itemName: itemName,
@@ -244,15 +248,19 @@ exports.addToStock = async (req, res) => {
         
         // 3. Create Stock Entry record for tracking
         if (stockEntryItems.length > 0) {
+            // Group by warehouse for the main entry if needed, but the items have specific warehouses
+            const primaryWarehouse = stockEntryItems[0].warehouse || 'Main Warehouse';
+            
             await StockEntry.create({
                 grn_id: id,
                 entry_date: new Date(),
                 entry_type: 'Material Receipt',
-                to_warehouse: stockEntryItems[0].warehouse || 'Main Warehouse',
-                remarks: `Stock added from GRN: ${id}`,
+                to_warehouse: primaryWarehouse,
+                remarks: `Stock added from GRN: ${id}. Items distributed across: ${[...new Set(stockEntryItems.map(i => i.warehouse))].join(', ')}`,
                 items: stockEntryItems,
                 status: 'submitted'
             });
+            console.log(`✅ Stock Entry created for GRN #${id}`);
         }
         
         // 4. Update GRN status to 'completed'
