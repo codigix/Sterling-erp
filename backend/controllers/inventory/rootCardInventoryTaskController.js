@@ -9,28 +9,39 @@ exports.getRootCardInventoryTasks = async (req, res) => {
       return res.status(400).json({ message: 'Root Card ID is required' });
     }
 
-    const [rootCard] = await pool.execute(
-      'SELECT id, name, code FROM projects WHERE id = ? LIMIT 1',
+    const [rootCardRows] = await pool.execute(
+      'SELECT project_id FROM root_cards WHERE id = ? LIMIT 1',
       [rootCardId]
     );
 
-    if (!rootCard.length) {
+    if (!rootCardRows.length) {
       return res.status(404).json({ message: 'Root Card not found' });
     }
 
-    let tasks = await RootCardInventoryTask.getRootCardInventoryTasks(rootCardId, true);
+    const projectId = rootCardRows[0].project_id;
+
+    const [projectRows] = await pool.execute(
+      'SELECT id, name, code FROM projects WHERE id = ? LIMIT 1',
+      [projectId]
+    );
+
+    if (!projectRows.length) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    let tasks = await RootCardInventoryTask.getRootCardInventoryTasks(projectId, true);
     
     if (tasks.length === 0) {
-      console.log(`[getRootCardInventoryTasks] No tasks found for root card ${rootCardId}, auto-initializing...`);
-      const result = await RootCardInventoryTask.initializeRootCardTasks(rootCardId, null);
+      console.log(`[getRootCardInventoryTasks] No tasks found for project ${projectId} (Root Card ${rootCardId}), auto-initializing...`);
+      const result = await RootCardInventoryTask.initializeRootCardTasks(projectId, rootCardId, null);
       console.log(`[getRootCardInventoryTasks] Auto-initialization result:`, result);
-      tasks = await RootCardInventoryTask.getRootCardInventoryTasks(rootCardId, true);
+      tasks = await RootCardInventoryTask.getRootCardInventoryTasks(projectId, true);
     }
     
-    const progress = await RootCardInventoryTask.getRootCardWorkflowProgress(rootCardId);
+    const progress = await RootCardInventoryTask.getRootCardWorkflowProgress(projectId);
 
     res.json({
-      rootCard: rootCard[0],
+      rootCard: projectRows[0],
       tasks,
       progress,
       totalSteps: RootCardInventoryTask.WORKFLOW_STEPS.length
@@ -59,14 +70,21 @@ exports.getTaskById = async (req, res) => {
       return res.status(403).json({ message: 'Unauthorized: Root Card ID does not match' });
     }
 
-    const [rootCard] = await pool.execute(
-      'SELECT id, name, code FROM projects WHERE id = ? LIMIT 1',
+    const [rootCardRows] = await pool.execute(
+      'SELECT project_id FROM root_cards WHERE id = ? LIMIT 1',
       [rootCardId]
+    );
+
+    const projectId = rootCardRows.length ? rootCardRows[0].project_id : null;
+
+    const [projectRows] = await pool.execute(
+      'SELECT id, name, code FROM projects WHERE id = ? LIMIT 1',
+      [projectId]
     );
 
     res.json({
       task,
-      rootCard: rootCard[0],
+      rootCard: projectRows[0] || null,
       stepName: RootCardInventoryTask.WORKFLOW_STEPS.find(s => s.step === task.step_number)?.name
     });
   } catch (error) {
@@ -95,7 +113,13 @@ exports.completeTask = async (req, res) => {
       return res.status(404).json({ message: 'Task not found' });
     }
 
-    if (task.root_card_id !== parseInt(rootCardId)) {
+    const [rootCardRows] = await pool.execute(
+      'SELECT project_id FROM root_cards WHERE id = ? LIMIT 1',
+      [rootCardId]
+    );
+    const projectId = rootCardRows.length ? rootCardRows[0].project_id : null;
+
+    if (task.root_card_id !== projectId) {
       return res.status(403).json({ message: 'Unauthorized: Root Card ID does not match' });
     }
 
@@ -113,7 +137,7 @@ exports.completeTask = async (req, res) => {
     }
 
     const updatedTask = await RootCardInventoryTask.getTaskById(taskId);
-    const progress = await RootCardInventoryTask.getRootCardWorkflowProgress(rootCardId);
+    const progress = await RootCardInventoryTask.getRootCardWorkflowProgress(projectId);
 
     res.json({
       message: 'Task completed successfully',
@@ -146,7 +170,13 @@ exports.updateTaskStatus = async (req, res) => {
       return res.status(404).json({ message: 'Task not found' });
     }
 
-    if (task.root_card_id !== parseInt(rootCardId)) {
+    const [rootCardRows] = await pool.execute(
+      'SELECT project_id FROM root_cards WHERE id = ? LIMIT 1',
+      [rootCardId]
+    );
+    const projectId = rootCardRows.length ? rootCardRows[0].project_id : null;
+
+    if (task.root_card_id !== projectId) {
       return res.status(403).json({ message: 'Unauthorized: Root Card ID does not match' });
     }
 
@@ -157,7 +187,7 @@ exports.updateTaskStatus = async (req, res) => {
     }
 
     const updatedTask = await RootCardInventoryTask.getTaskById(taskId);
-    const progress = await RootCardInventoryTask.getRootCardWorkflowProgress(rootCardId);
+    const progress = await RootCardInventoryTask.getRootCardWorkflowProgress(projectId);
 
     res.json({
       message: 'Task status updated successfully',
@@ -178,7 +208,13 @@ exports.getWorkflowProgress = async (req, res) => {
       return res.status(400).json({ message: 'Root Card ID is required' });
     }
 
-    const progress = await RootCardInventoryTask.getRootCardWorkflowProgress(rootCardId);
+    const [rootCardRows] = await pool.execute(
+      'SELECT project_id FROM root_cards WHERE id = ? LIMIT 1',
+      [rootCardId]
+    );
+    const projectId = rootCardRows.length ? rootCardRows[0].project_id : null;
+
+    const progress = await RootCardInventoryTask.getRootCardWorkflowProgress(projectId);
 
     res.json(progress);
   } catch (error) {
@@ -206,7 +242,13 @@ exports.linkReferenceToTask = async (req, res) => {
       return res.status(404).json({ message: 'Task not found' });
     }
 
-    if (task.root_card_id !== parseInt(rootCardId)) {
+    const [rootCardRows] = await pool.execute(
+      'SELECT project_id FROM root_cards WHERE id = ? LIMIT 1',
+      [rootCardId]
+    );
+    const projectId = rootCardRows.length ? rootCardRows[0].project_id : null;
+
+    if (task.root_card_id !== projectId) {
       return res.status(403).json({ message: 'Unauthorized: Root Card ID does not match' });
     }
 

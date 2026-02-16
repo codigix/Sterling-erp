@@ -78,8 +78,8 @@ class ProductionRootCard {
              sod.product_details,
              u.username AS assigned_supervisor_name
       FROM root_cards rc
-      LEFT JOIN projects p ON p.id = rc.project_id
-      LEFT JOIN sales_orders so ON so.id = p.sales_order_id
+      INNER JOIN projects p ON p.id = rc.project_id
+      INNER JOIN sales_orders so ON so.id = p.sales_order_id
       LEFT JOIN design_engineering_details ded ON ded.sales_order_id = so.id
       LEFT JOIN sales_order_details sod ON sod.sales_order_id = so.id
       LEFT JOIN users u ON u.id = rc.assigned_supervisor
@@ -141,8 +141,8 @@ class ProductionRootCard {
                sod.product_details,
                u.username AS assigned_supervisor_name
         FROM root_cards rc
-        LEFT JOIN projects p ON p.id = rc.project_id
-        LEFT JOIN sales_orders so ON so.id = p.sales_order_id
+        INNER JOIN projects p ON p.id = rc.project_id
+        INNER JOIN sales_orders so ON so.id = p.sales_order_id
         LEFT JOIN design_engineering_details ded ON ded.sales_order_id = so.id
         LEFT JOIN sales_order_details sod ON sod.sales_order_id = so.id
         LEFT JOIN users u ON u.id = rc.assigned_supervisor
@@ -176,8 +176,8 @@ class ProductionRootCard {
                sod.product_details,
                u.username AS assigned_supervisor_name
         FROM root_cards rc
-        LEFT JOIN projects p ON p.id = rc.project_id
-        LEFT JOIN sales_orders so ON so.id = p.sales_order_id
+        INNER JOIN projects p ON p.id = rc.project_id
+        INNER JOIN sales_orders so ON so.id = p.sales_order_id
         LEFT JOIN design_engineering_details ded ON ded.sales_order_id = so.id
         LEFT JOIN sales_order_details sod ON sod.sales_order_id = so.id
         LEFT JOIN users u ON u.id = rc.assigned_supervisor

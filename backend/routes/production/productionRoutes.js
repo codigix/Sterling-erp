@@ -17,13 +17,13 @@ const upload = multer({
 
 router.use(authMiddleware);
 
-router.get('/root-cards', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer'), productionController.getProductionRootCards);
+router.get('/root-cards', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer', 'Inventory', 'inventory_manager', 'Inventory Manager'), productionController.getProductionRootCards);
 router.post('/root-cards', roleMiddleware('Admin', 'Management'), productionController.createProductionRootCard);
-router.get('/root-cards/:id', roleMiddleware('Admin', 'Management', 'Production'), productionController.getProductionRootCardById);
+router.get('/root-cards/:id', roleMiddleware('Admin', 'Management', 'Production', 'Inventory', 'inventory_manager', 'Inventory Manager'), productionController.getProductionRootCardById);
 router.put('/root-cards/:id', roleMiddleware('Admin', 'Management'), productionController.updateProductionRootCard);
 router.patch('/root-cards/:id', roleMiddleware('Admin', 'Management'), productionController.updateProductionRootCard);
-router.patch('/root-cards/:id/status', roleMiddleware('Admin', 'Management', 'Production'), productionController.updateProductionRootCardStatus);
-router.delete('/root-cards/:id', roleMiddleware('Admin', 'Management'), productionController.deleteProductionRootCard);
+router.patch('/root-cards/:id/status', roleMiddleware('Admin', 'Management', 'Production', 'Inventory', 'inventory_manager', 'Inventory Manager'), productionController.updateProductionRootCardStatus);
+router.delete('/root-cards/:id', roleMiddleware('Admin', 'Management', 'Inventory', 'inventory_manager', 'Inventory Manager'), productionController.deleteProductionRootCard);
 router.post('/root-cards/:id/stages', roleMiddleware('Admin', 'Management'), productionController.createProductionRootCardStage);
 router.delete('/root-cards/:id/stages/:stageId', roleMiddleware('Admin', 'Management'), productionController.deleteProductionRootCardStage);
 
