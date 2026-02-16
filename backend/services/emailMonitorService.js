@@ -106,7 +106,8 @@ class EmailMonitorService {
 
       await connection.openBox('INBOX');
 
-      const oneHourAgo = Date.now() - (60 * 60 * 1000);
+      // Check messages from the last 24 hours to be safe
+      const twentyFourHoursAgo = Date.now() - (24 * 60 * 60 * 1000);
       
       const searchCriteria = [
         ['OR', ['SUBJECT', 'QT-'], ['SUBJECT', 'PO-']]
@@ -122,7 +123,7 @@ class EmailMonitorService {
         try {
           const headerPart = item.parts.find(p => p.which === 'HEADER');
           const date = new Date(headerPart.body.date[0]).getTime();
-          return date >= oneHourAgo;
+          return date >= twentyFourHoursAgo;
         } catch (e) {
           return false;
         }
@@ -132,20 +133,21 @@ class EmailMonitorService {
 
       for (const item of recentMessages) {
         const subject = item.parts.find(p => p.which === 'HEADER').body.subject[0];
+        // console.log(`📧 Processing email: "${subject}"`);
         
-        // Look for PO number in subject: PO-timestamp-random
-        const poMatch = subject.match(/PO-\d+-\d+/);
-        // Look for QT number in subject: QT-timestamp-random
-        const qtMatch = subject.match(/QT-\d+-\d+/);
+        // Look for PO number in subject: PO-timestamp-random or PO-MR-timestamp-random
+        const poMatch = subject.match(/PO-(MR-)?\d+-\d+/);
+        // Look for QT number in subject: QT-timestamp-random or QT-MRS-timestamp-random
+        const qtMatch = subject.match(/QT-(MRS-)?\d+-\d+/);
         
         if (poMatch) {
           const poNumber = poMatch[0];
-          console.log(`🔎 Found potential PO reply for ${poNumber}`);
+          console.log(`🔍 Matched PO Number: ${poNumber} in subject`);
           
           const po = await PurchaseOrder.findByPoNumber(poNumber);
           
           if (po) {
-            console.log(`✅ Matched to PO ID: ${po.id}`);
+            console.log(`✅ PO found in database. ID: ${po.id}, PO#: ${po.po_number}`);
             
             // Let's do a specific fetch for this message to get full content
             const fullMessage = await connection.search([['UID', item.attributes.uid]], { bodies: [''], markSeen: true });
@@ -154,9 +156,11 @@ class EmailMonitorService {
               const source = fullMessage[0].parts[0].body;
               const parsed = await simpleParser(source);
               
+              console.log(`📩 Parsed email from: ${parsed.from.value[0].address}`);
               const exists = await PurchaseOrderCommunication.exists(parsed.messageId);
               
               if (!exists) {
+                console.log(`💾 Saving new communication record for PO ${poNumber}...`);
                 // Parse the email to get only the visible reply text
                 const visibleText = getVisibleText(parsed.text);
 
@@ -164,11 +168,12 @@ class EmailMonitorService {
                   po_id: po.id,
                   sender_email: parsed.from.value[0].address,
                   subject: parsed.subject,
-                  content_text: visibleText, // Save only the visible text
+                  content_text: visibleText,
                   content_html: parsed.html, 
                   message_id: parsed.messageId,
                   has_attachments: parsed.attachments && parsed.attachments.length > 0
                 });
+                console.log(`✨ Successfully saved communication ID: ${communicationId}`);
 
                 // Save attachments if any
                 if (parsed.attachments && parsed.attachments.length > 0) {

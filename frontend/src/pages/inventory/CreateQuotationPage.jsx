@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
+import toastUtils from "../../utils/toastUtils";
 import {
   ArrowLeft,
   Save,
@@ -129,7 +130,7 @@ const CreateQuotationPage = () => {
       setAnalysisMode(true);
     } catch (error) {
       console.error("Error fetching root card materials:", error);
-      Swal.fire("Error", "Failed to load root card requirements", "error");
+      toastUtils.error("Failed to load root card requirements");
     } finally {
       setLoadingMaterials(false);
     }
@@ -166,10 +167,10 @@ const CreateQuotationPage = () => {
       initializeItemsFromMaterials(selectedItems);
       setAnalysisMode(false);
 
-      // Swal.fire('Success', 'Requirements saved successfully', 'success');
+      // toastUtils.success('Requirements saved successfully');
     } catch (error) {
       console.error("Error saving requirements:", error);
-      Swal.fire("Error", "Failed to save requirements", "error");
+      toastUtils.error("Failed to save requirements");
     } finally {
       setSavingRequirements(false);
     }
@@ -236,7 +237,7 @@ const CreateQuotationPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.vendor_id) {
-      Swal.fire("Warning", "Please select a vendor", "warning");
+      toastUtils.warning("Please select a vendor");
       return;
     }
 
@@ -259,11 +260,11 @@ const CreateQuotationPage = () => {
         await taskService.autoCompleteTaskByAction(taskId, "create");
       }
 
-      Swal.fire("Success", "Quotation created successfully", "success");
-      navigate("/inventory-manager/vendors/quotations");
+      toastUtils.success("Quotation created successfully");
+      navigate("/inventory-manager/quotations/sent");
     } catch (error) {
       console.error("Error creating quotation:", error);
-      Swal.fire("Error", "Failed to create quotation", "error");
+      toastUtils.error("Failed to create quotation");
     } finally {
       setSubmitting(false);
     }

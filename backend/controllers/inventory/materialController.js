@@ -4,11 +4,14 @@ const Notification = require('../../models/Notification');
 
 exports.getMaterials = async (req, res) => {
   try {
-    const { itemCode, category, belowReorderLevel } = req.query;
+    const { itemCode, itemName, category, warehouse, belowReorderLevel, onlyWithStock } = req.query;
     const materials = await Material.findAll({
       itemCode,
+      itemName,
       category,
-      belowReorderLevel: belowReorderLevel === 'true'
+      warehouse,
+      belowReorderLevel: belowReorderLevel === 'true',
+      onlyWithStock: onlyWithStock === 'true'
     });
     res.json({ materials, total: materials.length });
   } catch (error) {

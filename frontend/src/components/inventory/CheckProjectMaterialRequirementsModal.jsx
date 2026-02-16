@@ -144,7 +144,7 @@ const CheckProjectMaterialRequirementsModal = ({
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       navigate(
-        `/inventory-manager/vendors/quotations?${navigationParams.toString()}`,
+        `/inventory-manager/quotations/sent?${navigationParams.toString()}`,
         {
           state: {
             selectedMaterials: selectedMaterialsList,

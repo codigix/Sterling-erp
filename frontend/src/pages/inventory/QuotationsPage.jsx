@@ -24,11 +24,13 @@ import {
   Mail,
   MessageSquare,
   Paperclip,
+  PlusCircle,
 } from "lucide-react";
 import axios from "../../utils/api";
 import useRootCardInventoryTask from "../../hooks/useRootCardInventoryTask";
+import CreateQuotationModal from "../../components/inventory/CreateQuotationModal";
 
-const QuotationsPage = () => {
+const QuotationsPage = ({ defaultTab }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { completeCurrentTask, isFromDepartmentTasks } = useRootCardInventoryTask();
@@ -36,20 +38,38 @@ const QuotationsPage = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [activeTab, setActiveTab] = useState(location.state?.activeTab || "outbound");
+  const [activeTab, setActiveTab] = useState(defaultTab || location.state?.activeTab || "outbound");
+
+  // Sync tab state when defaultTab prop changes (navigation between routes)
+  useEffect(() => {
+    if (defaultTab) {
+      setActiveTab(defaultTab);
+    }
+  }, [defaultTab]);
+
+  useEffect(() => {
+    if (location.state?.openModal && location.state?.preFilledMaterials) {
+      setShowAddModal(true);
+    }
+  }, [location.state]);
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    if (tab === "outbound") {
+      navigate("/inventory-manager/quotations/sent");
+    } else {
+      navigate("/inventory-manager/quotations/received");
+    }
+  };
   const [stats, setStats] = useState({});
   const [error, setError] = useState(null);
   const [vendors, setVendors] = useState([]);
-  const [rootCards, setRootCards] = useState([]); // Added rootCards state
+  const [rootCards, setRootCards] = useState([]);
+  const [materialRequests, setMaterialRequests] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedQuotation, setSelectedQuotation] = useState(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [analysisMode, setAnalysisMode] = useState(false);
-  const [rootCardMaterials, setRootCardMaterials] = useState([]);
-  const [loadingMaterials, setLoadingMaterials] = useState(false);
-  const [savingRequirements, setSavingRequirements] = useState(false);
-  const [rootCardQuotations, setRootCardQuotations] = useState([]);
+  const [initialData, setInitialData] = useState(null);
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailData, setEmailData] = useState({
@@ -63,16 +83,6 @@ const QuotationsPage = () => {
   const [selectedQuotationForComms, setSelectedQuotationForComms] = useState(null);
   const [communications, setCommunications] = useState([]);
   const [loadingCommunications, setLoadingCommunications] = useState(false);
-  const [formData, setFormData] = useState({
-    vendor_id: "",
-    root_card_id: "", // Added root_card_id
-    total_amount: 0,
-    valid_until: "",
-    items: [],
-    notes: "",
-    type: "outbound",
-    reference_id: null,
-  });
 
   const fetchQuotations = useCallback(async () => {
     try {
@@ -120,254 +130,32 @@ const QuotationsPage = () => {
     }
   }, []);
 
+  const fetchMaterialRequests = useCallback(async () => {
+    try {
+      const response = await axios.get("/inventory/material-requests");
+      setMaterialRequests(response.data.materialRequests || response.data || []);
+    } catch (err) {
+      console.error("Error fetching material requests:", err);
+    }
+  }, []);
+
   useEffect(() => {
     fetchQuotations();
     fetchStats();
     fetchVendors();
     fetchRootCards();
-  }, [fetchQuotations, fetchStats, fetchVendors, fetchRootCards]);
+    fetchMaterialRequests();
+  }, [fetchQuotations, fetchStats, fetchVendors, fetchRootCards, fetchMaterialRequests]);
 
-  const handleFormChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleAddItem = () => {
-    setFormData((prev) => ({
-      ...prev,
-      items: [...prev.items, { description: "", quantity: "", unit_price: "" }],
-    }));
-  };
-
-  const handleRemoveItem = (index) => {
-    setFormData((prev) => ({
-      ...prev,
-      items: prev.items.filter((_, i) => i !== index),
-    }));
-  };
-
-  const handleItemChange = (index, field, value) => {
-    setFormData((prev) => {
-      const newItems = prev.items.map((item, i) => {
-        if (i === index) {
-          return {
-            ...item,
-            [field]:
-              field === "description"
-                ? value
-                : value === ""
-                ? ""
-                : parseFloat(value) || 0,
-          };
-        }
-        return item;
-      });
-
-      const newTotal = newItems.reduce(
-        (sum, item) => sum + (item.quantity * item.unit_price || 0),
-        0
-      );
-      return {
-        ...prev,
-        items: newItems,
-        total_amount: newTotal,
-      };
-    });
-  };
-
-  const handleAddQuotation = async (e) => {
-    e.preventDefault();
-
-    if (!formData.vendor_id) {
-      Swal.fire("Warning", "Please select a vendor", "warning");
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      const notesWithRef = formData.root_card_id
-        ? `Ref: Root Card ${formData.root_card_id}\n\n${formData.notes}`
-        : formData.notes;
-
-      const payload = {
-        ...formData,
-        root_card_id: formData.root_card_id
-          ? parseInt(formData.root_card_id)
-          : null,
-        notes: notesWithRef,
-        total_amount: formData.total_amount || 0,
-        items: formData.items || [],
-      };
-
-      await axios.post("/inventory/quotations", payload);
-
-      setShowAddModal(false);
-      setFormData({
-        vendor_id: "",
-        root_card_id: "",
-        total_amount: 0,
-        valid_until: "",
-        items: [],
-        notes: "",
-        type: activeTab,
-        reference_id: null,
-      });
-
-      fetchQuotations();
-      fetchStats();
-      
-      if (activeTab === "outbound") {
-        await completeCurrentTask("RFQ quotation created");
-      } else if (activeTab === "inbound") {
-        await completeCurrentTask("Vendor quotation received and recorded");
-      }
-      
-      Swal.fire("Success", "Quotation created successfully", "success");
-    } catch (err) {
-      console.error("Error creating quotation:", err);
-      Swal.fire("Error", "Failed to create quotation", "error");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleRootCardChange = async (e) => {
-    const selectedRootCardId = e.target.value;
-
-    setFormData((prev) => ({
-      ...prev,
-      root_card_id: selectedRootCardId,
-      reference_id: null, // Reset reference_id when root card changes
-      items: [], // Reset items
-    }));
-
-    if (!selectedRootCardId) {
-      setFormData((prev) => ({ ...prev, items: [] }));
-      setRootCardMaterials([]);
-      setRootCardQuotations([]);
-      setAnalysisMode(false);
-      return;
-    }
-
-    try {
-      if (formData.type === "outbound") {
-        // Existing logic for Outbound - load materials
-        setLoadingMaterials(true);
-        const reqResponse = await axios.get(
-          `/root-cards/requirements/${selectedRootCardId}`
-        );
-        const reqData = reqResponse.data.data;
-
-        let parsedMaterials = reqData.materials || [];
-        if (typeof parsedMaterials === "string") {
-          parsedMaterials = JSON.parse(parsedMaterials);
-        }
-
-        const initializedMaterials = parsedMaterials.map((m) => ({
-          ...m,
-          selected:
-            (parseFloat(m.requiredQuantity) || 0) >
-            (parseFloat(m.currentStock) || 0),
-        }));
-
-        setRootCardMaterials(initializedMaterials);
-        setAnalysisMode(true);
-      } else {
-        // Logic for Inbound - load outbound quotations for this root card
-        const quotesResponse = await axios.get(
-          `/inventory/quotations/root-card/${selectedRootCardId}`
-        );
-        setRootCardQuotations(quotesResponse.data);
-      }
-    } catch (error) {
-      console.error("Error fetching root card data:", error);
-      Swal.fire("Error", "Failed to load root card details", "error");
-    } finally {
-      setLoadingMaterials(false);
-    }
-  };
-
-  const handleOutboundQuotationSelect = (e) => {
-    const quoteId = e.target.value;
-    if (!quoteId) return;
-
-    const selectedQuote = rootCardQuotations.find(
-      (q) => q.id.toString() === quoteId
-    );
-    if (selectedQuote) {
-      setFormData((prev) => ({
-        ...prev,
-        reference_id: selectedQuote.id,
-        vendor_id: selectedQuote.vendor_id,
-        material_request_id: selectedQuote.material_request_id, // Added material_request_id
-        items: (selectedQuote.items || []).map((item) => ({
-          description: item.description,
-          category: item.category || item.materialType || "",
-          quantity: item.quantity,
-          unit_price: 0,
-        })),
-        notes: `Response to ${selectedQuote.quotation_number}`,
-      }));
-    }
-  };
-
-  const handleRequirementChange = (index, field, value) => {
-    setRootCardMaterials((prev) => {
-      const newMaterials = [...prev];
-      newMaterials[index] = { ...newMaterials[index], [field]: value };
-
-      // Update selected state based on shortage if required qty changed
-      if (field === "requiredQuantity") {
-        const required = parseFloat(value) || 0;
-        const stock = parseFloat(newMaterials[index].currentStock) || 0;
-        newMaterials[index].selected = required > stock;
-      }
-
-      return newMaterials;
-    });
-  };
-
-  const handleSaveRequirements = async () => {
-    if (!formData.root_card_id) return;
-
-    try {
-      setSavingRequirements(true);
-      await axios.post(`/root-cards/requirements/${formData.root_card_id}`, {
-        materials: rootCardMaterials.map((m) => {
-          const rest = { ...m };
-          delete rest.selected;
-          return rest;
-        }),
-        procurementStatus: "pending",
-      });
-
-      // Auto-proceed to quote
-      const selectedItems = rootCardMaterials.filter((m) => m.selected);
-      const items = selectedItems.map((m) => ({
-        description: m.itemName || m.item_name || "Unnamed Material",
-        category: m.category || m.materialType || "",
-        quantity: Math.max(
-          0,
-          (parseFloat(m.requiredQuantity) || 0) -
-            (parseFloat(m.currentStock) || 0)
-        ),
-        unit_price: 0,
-      }));
-
-      setFormData((prev) => ({ ...prev, items }));
-      setAnalysisMode(false);
-
-      if (isFromDepartmentTasks()) {
-        await completeCurrentTask("Material requirements reviewed and quotation created");
-      }
-    } catch (error) {
-      console.error("Error saving requirements:", error);
-      Swal.fire("Error", "Failed to save requirements", "error");
-    } finally {
-      setSavingRequirements(false);
+  const handleQuotationCreated = () => {
+    fetchQuotations();
+    fetchStats();
+    
+    // Complete task based on active tab
+    if (activeTab === "outbound") {
+      completeCurrentTask("RFQ quotation created");
+    } else if (activeTab === "inbound") {
+      completeCurrentTask("Vendor quotation received and recorded");
     }
   };
 
@@ -413,24 +201,30 @@ const QuotationsPage = () => {
     );
     doc.text(`Vendor: ${quotation.vendor_name || "N/A"}`, 14, 55);
 
+    if (quotation.mr_number) {
+      doc.text(`Material Request: ${quotation.mr_number}`, 14, 60);
+    }
+
     if (quotation.valid_until) {
       doc.text(
         `Valid Until: ${new Date(quotation.valid_until).toLocaleDateString()}`,
         14,
-        60
+        quotation.mr_number ? 65 : 60
       );
     }
 
-    const tableColumn = ["Description", "Category", "Quantity"];
+    const tableColumn = ["Item Code", "Description", "Category", "Quantity", "Unit"];
     if (quotation.type === "inbound") {
       tableColumn.push("Unit Price", "Total");
     }
 
     const tableRows = (quotation.items || []).map((item) => {
       const row = [
+        item.item_code || item.material_code || "N/A",
         item.description,
         item.category || item.materialType || "",
         item.quantity,
+        item.unit || "N/A",
       ];
       if (quotation.type === "inbound") {
         row.push(
@@ -442,7 +236,7 @@ const QuotationsPage = () => {
     });
 
     autoTable(doc, {
-      startY: 70,
+      startY: quotation.valid_until || quotation.mr_number ? 75 : 70,
       head: [tableColumn],
       body: tableRows,
       theme: "grid",
@@ -641,16 +435,80 @@ const QuotationsPage = () => {
     }
   };
 
+  const handleCreatePOFromQuote = async (quote) => {
+    try {
+      const result = await Swal.fire({
+        title: "Create Purchase Order?",
+        text: `This will create a draft PO for ${quote.vendor_name} based on quote ${quote.quotation_number}.`,
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonColor: "#2563eb",
+        confirmButtonText: "Yes, Create PO",
+      });
+
+      if (!result.isConfirmed) return;
+
+      // Parse items if they are a string
+      let items = quote.items || [];
+      if (typeof items === "string") {
+        try {
+          items = JSON.parse(items);
+        } catch (e) {
+          console.error("Error parsing quote items:", e);
+          items = [];
+        }
+      }
+
+      const payload = {
+        quotation_id: quote.id,
+        material_request_id: quote.material_request_id || null,
+        vendor_id: quote.vendor_id,
+        items: items.map((item) => ({
+          material_name: item.description || item.material_name || "Unknown",
+          material_code: item.item_code || item.material_code || "",
+          quantity: item.quantity || 0,
+          unit: item.unit || "Nos",
+          rate: item.unit_price || 0,
+          amount: (item.quantity || 0) * (item.unit_price || 0),
+        })),
+        subtotal: quote.total_amount || 0,
+        total_amount: quote.total_amount || 0,
+        notes: `Created from Quotation: ${quote.quotation_number}`,
+      };
+
+      const response = await axios.post("/inventory/purchase-orders", payload);
+
+      Swal.fire({
+        icon: "success",
+        title: "PO Created",
+        text: `Purchase Order ${response.data.po_number} has been created successfully.`,
+        confirmButtonColor: "#2563eb",
+      }).then(() => {
+        navigate(`/inventory-manager/purchase-orders/${response.data.id}`);
+      });
+    } catch (error) {
+      console.error("Error creating PO from quote:", error);
+      Swal.fire(
+        "Error",
+        error.response?.data?.message || "Failed to create Purchase Order",
+        "error"
+      );
+    }
+  };
+
   const handleRecordResponse = (quote) => {
-    setFormData({
+    setInitialData({
       vendor_id: quote.vendor_id,
-      root_card_id: "",
+      root_card_id: quote.root_card_id || "",
+      material_request_id: quote.material_request_id || null,
       total_amount: 0,
       valid_until: "",
       items: (quote.items || []).map((item) => ({
+        item_code: item.item_code || item.material_code || "",
         description: item.description,
         category: item.category || item.materialType || "",
         quantity: item.quantity,
+        unit: item.unit || "",
         unit_price: 0,
       })),
       notes: `Response to ${quote.quotation_number}`,
@@ -715,7 +573,7 @@ const QuotationsPage = () => {
         <div className="flex gap-3 flex-wrap">
           <button
             onClick={() => {
-              setFormData({
+              setInitialData({
                 vendor_id: "",
                 root_card_id: "",
                 total_amount: 0,
@@ -725,9 +583,6 @@ const QuotationsPage = () => {
                 type: activeTab,
                 reference_id: null,
               });
-              setRootCardMaterials([]);
-              setRootCardQuotations([]);
-              setAnalysisMode(false);
               setShowAddModal(true);
             }}
             className={`flex items-center text-xs gap-2 px-4 py-2 text-white rounded-lg transition-colors font-medium ${
@@ -767,7 +622,7 @@ const QuotationsPage = () => {
               ? "text-blue-600 dark:text-blue-400"
               : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
           }`}
-          onClick={() => setActiveTab("outbound")}
+          onClick={() => handleTabChange("outbound")}
         >
           Sent Requests (RFQ)
           {activeTab === "outbound" && (
@@ -780,7 +635,7 @@ const QuotationsPage = () => {
               ? "text-blue-600 dark:text-blue-400"
               : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
           }`}
-          onClick={() => setActiveTab("inbound")}
+          onClick={() => handleTabChange("inbound")}
         >
           Received Quotes
           {activeTab === "inbound" && (
@@ -880,7 +735,7 @@ const QuotationsPage = () => {
                     }`}
                   >
                     <td className="px-6 py-4">
-                      <p className="font-bold text-slate-900 dark:text-white text-xs">
+                      <p className="font-bold text-slate-900 dark:text-white">
                         {quote.quotation_number}
                       </p>
                       {quote.reference_id && (
@@ -888,13 +743,18 @@ const QuotationsPage = () => {
                           Ref: {quote.reference_number}
                         </p>
                       )}
+                      {quote.mr_number && (
+                        <p className="text-xs text-blue-600 font-bold uppercase mt-0.5">
+                          MR: {quote.mr_number}
+                        </p>
+                      )}
                     </td>
-                    <td className="px-6 py-4 text-slate-700 dark:text-slate-300">
+                    <td className="px-6 py-4 text-slate-700 dark:text-slate-300 font-medium">
                       {quote.vendor_name}
                     </td>
                     {activeTab === "inbound" && (
                       <td className="px-6 py-4 text-right">
-                        <p className="font-bold text-slate-900 dark:text-white text-xs flex items-center justify-end gap-1">
+                        <p className="font-bold text-slate-900 dark:text-white flex items-center justify-end gap-1">
                           <DollarSign size={14} />
                           {quote.total_amount
                             ? quote.total_amount.toLocaleString()
@@ -903,10 +763,10 @@ const QuotationsPage = () => {
                       </td>
                     )}
                     <td className="px-6 py-4">
-                      <div className="flex items-center text-xs gap-2">
+                      <div className="flex items-center gap-2">
                         <Calendar size={14} className="text-slate-500" />
                         <div>
-                          <p className="text-sm font-medium text-slate-900 dark:text-white text-xs">
+                          <p className="text-sm font-medium text-slate-900 dark:text-white">
                             {formatDate(quote.valid_until)}
                           </p>
                           <p
@@ -965,13 +825,24 @@ const QuotationsPage = () => {
                           </button>
                         )}
                         {activeTab === "inbound" && (
-                          <button
-                            onClick={() => handleUpdateStatus(quote)}
-                            className="p-2 hover:bg-emerald-100 dark:hover:bg-emerald-900 text-emerald-600 dark:text-emerald-400 rounded-lg transition-colors"
-                            title="Update Status"
-                          >
-                            <CheckCircle size={16} />
-                          </button>
+                          <>
+                            <button
+                              onClick={() => handleUpdateStatus(quote)}
+                              className="p-2 hover:bg-emerald-100 dark:hover:bg-emerald-900 text-emerald-600 dark:text-emerald-400 rounded-lg transition-colors"
+                              title="Update Status"
+                            >
+                              <CheckCircle size={16} />
+                            </button>
+                            {quote.status === "approved" && (
+                              <button
+                                onClick={() => handleCreatePOFromQuote(quote)}
+                                className="p-2 hover:bg-blue-100 dark:hover:bg-blue-900 text-blue-600 dark:text-blue-400 rounded-lg transition-colors"
+                                title="Create Purchase Order"
+                              >
+                                <PlusCircle size={16} />
+                              </button>
+                            )}
+                          </>
                         )}
 
                         <button
@@ -1004,7 +875,7 @@ const QuotationsPage = () => {
           <p className="text-sm font-semibold text-slate-600 dark:text-slate-400">
             Total Quotations
           </p>
-          <p className="text-xl font-bold text-slate-900 dark:text-white text-xs mt-1">
+          <p className="text-xl font-bold text-slate-900 dark:text-white mt-1">
             {stats.total || 0}
           </p>
         </div>
@@ -1012,7 +883,7 @@ const QuotationsPage = () => {
           <p className="text-sm font-semibold text-slate-600 dark:text-slate-400">
             Pending Quotes
           </p>
-          <p className="text-xl font-bold text-slate-900 dark:text-white text-xs mt-1">
+          <p className="text-xl font-bold text-slate-900 dark:text-white mt-1">
             {stats.pending_count || 0}
           </p>
         </div>
@@ -1020,7 +891,7 @@ const QuotationsPage = () => {
           <p className="text-sm font-semibold text-slate-600 dark:text-slate-400">
             Approved Quotes
           </p>
-          <p className="text-xl font-bold text-slate-900 dark:text-white text-xs mt-1">
+          <p className="text-xl font-bold text-slate-900 dark:text-white mt-1">
             {stats.approved_count || 0}
           </p>
         </div>
@@ -1028,556 +899,32 @@ const QuotationsPage = () => {
           <p className="text-sm font-semibold text-slate-600 dark:text-slate-400">
             Total Value
           </p>
-          <p className="text-xl font-bold text-slate-900 dark:text-white text-xs mt-1">
+          <p className="text-xl font-bold text-slate-900 dark:text-white mt-1">
             {formatCurrency(stats.total_value)}
           </p>
         </div>
       </div>
 
       {/* Add Quotation Modal */}
-      {showAddModal && (
-        <div
-          className="fixed inset-0 bg-black/10 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-          onClick={() => setShowAddModal(false)}
-        >
-          <div
-            className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] overflow-hidden flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-slate-700 dark:to-slate-800 flex justify-between items-center px-8 py-6 border-b border-slate-200 dark:border-slate-600">
-              <div className="flex items-center gap-3">
-                {analysisMode && (
-                  <button
-                    onClick={() => setAnalysisMode(false)}
-                    className="p-1 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-full transition"
-                  >
-                    <ArrowLeft
-                      size={20}
-                      className="text-slate-600 dark:text-slate-400"
-                    />
-                  </button>
-                )}
-                <div>
-                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white text-xs">
-                    {analysisMode
-                      ? "Material Analysis"
-                      : formData.type === "inbound"
-                      ? "Record Vendor Quote"
-                      : "Create Quote Request (RFQ)"}
-                  </h3>
-                  <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 text-xs">
-                    {analysisMode
-                      ? "Review root card stock availability"
-                      : formData.type === "inbound"
-                      ? "Record details from vendor response"
-                      : "Create a new vendor quotation request"}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => {
-                  setShowAddModal(false);
-                  setAnalysisMode(false);
-                  setRootCardMaterials([]);
-                }}
-                className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors"
-              >
-                <X size={24} className="text-slate-600 dark:text-slate-400" />
-              </button>
-            </div>
-
-            {analysisMode ? (
-              // Analysis View
-              <div className="flex-1 overflow-hidden flex flex-col">
-                <div className="flex-1 overflow-y-auto px-8 py-6">
-                  {loadingMaterials ? (
-                    <div className="flex justify-center py-8">
-                      <Loader2
-                        className="animate-spin text-blue-600"
-                        size={32}
-                      />
-                    </div>
-                  ) : rootCardMaterials.length === 0 ? (
-                    <p className="text-center py-8 text-slate-500">
-                      No materials found for this root card.
-                    </p>
-                  ) : (
-                    <div className="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-lg">
-                      <table className="w-full">
-                        <thead className="bg-slate-50 dark:bg-slate-700/50">
-                          <tr>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase border-b border-slate-200 dark:border-slate-700">
-                              Include
-                            </th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase border-b border-slate-200 dark:border-slate-700">
-                              Material
-                            </th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase border-b border-slate-200 dark:border-slate-700">
-                              Current Stock
-                            </th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase border-b border-slate-200 dark:border-slate-700">
-                              Required Qty
-                            </th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase border-b border-slate-200 dark:border-slate-700">
-                              Shortage
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                          {rootCardMaterials.map((material, idx) => {
-                            const required =
-                              parseFloat(material.requiredQuantity) || 0;
-                            const stock =
-                              parseFloat(material.currentStock) || 0;
-                            const shortage = Math.max(0, required - stock);
-
-                            return (
-                              <tr
-                                key={idx}
-                                className={`hover:bg-slate-50 dark:hover:bg-slate-700/50 transition ${
-                                  shortage > 0
-                                    ? "bg-red-50/30 dark:bg-red-900/10"
-                                    : ""
-                                }`}
-                              >
-                                <td className="px-4 py-3">
-                                  <input
-                                    type="checkbox"
-                                    checked={material.selected || false}
-                                    onChange={(e) =>
-                                      handleRequirementChange(
-                                        idx,
-                                        "selected",
-                                        e.target.checked
-                                      )
-                                    }
-                                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                                  />
-                                </td>
-                                <td className="px-4 py-3">
-                                  <div className="text-sm font-medium text-slate-900 dark:text-white text-xs">
-                                    {material.itemName}
-                                  </div>
-                                  <div className="text-xs text-slate-500">
-                                    {material.category || material.materialType}
-                                  </div>
-                                </td>
-                                <td className="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">
-                                  {stock}
-                                </td>
-                                <td className="px-4 py-3">
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    value={material.requiredQuantity}
-                                    onChange={(e) =>
-                                      handleRequirementChange(
-                                        idx,
-                                        "requiredQuantity",
-                                        e.target.value
-                                      )
-                                    }
-                                    className="w-24 px-2 py-1 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                                  />
-                                </td>
-                                <td className="px-4 py-3">
-                                  <span
-                                    className={`text-sm font-bold ${
-                                      shortage > 0
-                                        ? "text-red-600"
-                                        : "text-green-600"
-                                    }`}
-                                  >
-                                    {shortage}
-                                  </span>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-                <div className="border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 px-8 py-4 flex gap-3 justify-end">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAnalysisMode(false);
-                      setFormData((prev) => ({ ...prev, root_card_id: "" }));
-                    }}
-                    className="px-6 py-2.5 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors font-medium"
-                  >
-                    Back
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleSaveRequirements}
-                    disabled={savingRequirements}
-                    className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium disabled:bg-blue-400"
-                  >
-                    {savingRequirements ? (
-                      <Loader2 size={18} className="animate-spin" />
-                    ) : (
-                      <Save size={18} />
-                    )}
-                    Update Quote Items
-                  </button>
-                </div>
-              </div>
-            ) : (
-              // Standard Form View
-              <>
-                <form
-                  onSubmit={handleAddQuotation}
-                  className="overflow-y-auto flex-1 px-8 py-6 space-y-6"
-                >
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                      {formData.type === "outbound"
-                        ? "Select Root Card (Optional)"
-                        : "Select Root Card"}
-                    </label>
-                    <div className="relative">
-                      <Briefcase
-                        className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-                        size={18}
-                      />
-                      <select
-                        name="root_card_id"
-                        value={formData.root_card_id}
-                        onChange={handleRootCardChange}
-                        className="w-full px-4 py-3 pl-11 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                      >
-                        <option value="">
-                          {formData.type === "outbound"
-                            ? "Select Root Card to Load Requirements"
-                            : "Select Root Card to Filter Quotes"}
-                        </option>
-                        {rootCards.map((p) => (
-                          <option key={p.rootCardId} value={p.rootCardId}>
-                            {p.projectName} ({p.poNumber})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  {formData.type === "inbound" && formData.root_card_id && (
-                    <div>
-                      {rootCardQuotations.length > 0 ? (
-                        <div>
-                          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                            Select Outbound Quotation (RFQ){" "}
-                            <span className="text-red-500">*</span>
-                          </label>
-                          <select
-                            onChange={handleOutboundQuotationSelect}
-                            className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                          >
-                            <option value="">-- Select Quotation --</option>
-                            {rootCardQuotations.map((q) => (
-                              <option key={q.id} value={q.id}>
-                                {q.quotation_number} ({q.vendor_name}) -{" "}
-                                {formatDate(q.created_at)}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      ) : (
-                        <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-                          <p className="text-sm text-amber-800 dark:text-amber-200">
-                            ℹ️ No RFQs found for this root card. Create an RFQ
-                            from the "Sent Requests" tab first.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                        Vendor <span className="text-red-500">*</span>
-                      </label>
-                      <select
-                        name="vendor_id"
-                        value={formData.vendor_id}
-                        onChange={handleFormChange}
-                        required
-                        disabled={formData.reference_id}
-                        className={`w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${
-                          formData.reference_id
-                            ? "opacity-50 cursor-not-allowed"
-                            : ""
-                        }`}
-                      >
-                        <option value="">-- Select a Vendor --</option>
-                        {vendors.map((vendor) => (
-                          <option key={vendor.id} value={vendor.id}>
-                            {vendor.name}{" "}
-                            {vendor.vendor_type
-                              ? `(${vendor.vendor_type
-                                  .replace("_", " ")
-                                  .toUpperCase()})`
-                              : ""}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  {formData.root_card_id && (
-                    <div className="flex justify-between items-center bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-800">
-                      <span className="text-sm text-blue-800 dark:text-blue-200 flex items-center gap-2">
-                        <Check size={16} />
-                        Materials loaded from root card analysis
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setAnalysisMode(true)}
-                        className="text-xs font-medium text-blue-600 hover:text-blue-700 underline"
-                      >
-                        Re-Analyze
-                      </button>
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-2 gap-4">
-                    {formData.type === "inbound" && (
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                          Total Amount (₹)
-                        </label>
-                        <div className="relative">
-                          <span className="absolute left-4 top-3 text-slate-500 dark:text-slate-400 font-medium">
-                            ₹
-                          </span>
-                          <input
-                            type="number"
-                            name="total_amount"
-                            value={formData.total_amount}
-                            onChange={handleFormChange}
-                            placeholder="0.00"
-                            step="0.01"
-                            disabled
-                            className="w-full pl-8 pr-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition opacity-75 cursor-not-allowed"
-                          />
-                        </div>
-                      </div>
-                    )}
-                    <div
-                      className={
-                        formData.type === "outbound" ? "col-span-2" : ""
-                      }
-                    >
-                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                        Valid Until
-                      </label>
-                      <input
-                        type="date"
-                        name="valid_until"
-                        value={formData.valid_until}
-                        onChange={handleFormChange}
-                        className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between items-center mb-3">
-                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                        Line Items
-                      </label>
-                      <button
-                        type="button"
-                        onClick={handleAddItem}
-                        className="flex items-center gap-1 text-xs px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium whitespace-nowrap"
-                      >
-                        <Plus size={14} />
-                        Add Item
-                      </button>
-                    </div>
-
-                    {formData.items.length === 0 ? (
-                      <p className="text-sm text-slate-500 dark:text-slate-400 py-4 text-center bg-slate-50 dark:bg-slate-700/50 rounded-lg border border-dashed border-slate-300 dark:border-slate-600">
-                        No items added yet. Click "Add Item" to include line
-                        items in this quotation.
-                      </p>
-                    ) : (
-                      <div className="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-lg">
-                        <table className="w-full">
-                          <thead className="bg-slate-50 dark:bg-slate-700/50">
-                            <tr>
-                              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase border-b border-slate-200 dark:border-slate-700">
-                                Description
-                              </th>
-                              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase border-b border-slate-200 dark:border-slate-700 w-24">
-                                Qty
-                              </th>
-                              {formData.type === "inbound" && (
-                                <>
-                                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase border-b border-slate-200 dark:border-slate-700 w-32">
-                                    Price
-                                  </th>
-                                  <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase border-b border-slate-200 dark:border-slate-700 w-32">
-                                    Total
-                                  </th>
-                                </>
-                              )}
-                              <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase border-b border-slate-200 dark:border-slate-700 w-16"></th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-200 dark:divide-slate-700 bg-white dark:bg-slate-800">
-                            {formData.items.map((item, index) => (
-                              <tr
-                                key={index}
-                                className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
-                              >
-                                <td className="px-4 py-2">
-                                  <div>
-                                    <input
-                                      type="text"
-                                      placeholder="Item name"
-                                      value={item.description}
-                                      onChange={(e) =>
-                                        handleItemChange(
-                                          index,
-                                          "description",
-                                          e.target.value
-                                        )
-                                      }
-                                      className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                                    />
-                                    {item.category && (
-                                      <div className="mt-1">
-                                        <span className="text-xs text-slate-500 dark:text-slate-400">
-                                          {item.category}
-                                        </span>
-                                      </div>
-                                    )}
-                                  </div>
-                                </td>
-                                <td className="px-4 py-2">
-                                  <input
-                                    type="number"
-                                    placeholder="1"
-                                    value={item.quantity}
-                                    onChange={(e) =>
-                                      handleItemChange(
-                                        index,
-                                        "quantity",
-                                        e.target.value
-                                      )
-                                    }
-                                    min="1"
-                                    className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                                  />
-                                </td>
-                                {formData.type === "inbound" && (
-                                  <>
-                                    <td className="px-4 py-2">
-                                      <input
-                                        type="number"
-                                        placeholder="0"
-                                        value={item.unit_price}
-                                        onChange={(e) =>
-                                          handleItemChange(
-                                            index,
-                                            "unit_price",
-                                            e.target.value
-                                          )
-                                        }
-                                        step="0.01"
-                                        className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                                      />
-                                    </td>
-                                    <td className="px-4 py-2 text-right">
-                                      <span className="font-semibold text-slate-900 dark:text-white">
-                                        ₹
-                                        {(
-                                          item.quantity * item.unit_price
-                                        ).toLocaleString("en-IN", {
-                                          minimumFractionDigits: 2,
-                                        })}
-                                      </span>
-                                    </td>
-                                  </>
-                                )}
-                                <td className="px-4 py-2 text-center">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleRemoveItem(index)}
-                                    className="p-2 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg transition-colors"
-                                    title="Remove item"
-                                  >
-                                    <Trash2 size={16} />
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </div>
-
-                  {formData.type === "inbound" && (
-                    <div className="bg-blue-50 dark:bg-slate-700/50 rounded-lg p-4 border border-blue-200 dark:border-slate-600">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                          Quotation Total
-                        </span>
-                        <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                          ₹
-                          {formData.total_amount.toLocaleString("en-IN", {
-                            minimumFractionDigits: 2,
-                          })}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                      Notes{" "}
-                      <span className="text-slate-500 dark:text-slate-400">
-                        (Optional)
-                      </span>
-                    </label>
-                    <textarea
-                      name="notes"
-                      value={formData.notes}
-                      onChange={handleFormChange}
-                      placeholder="Add any notes"
-                      rows="3"
-                      className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition resize-none"
-                    />
-                  </div>
-                </form>
-
-                <div className="border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 px-8 py-4 flex gap-3 justify-end">
-                  <button
-                    type="button"
-                    onClick={() => setShowAddModal(false)}
-                    className="px-6 py-2.5 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors font-medium"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    onClick={handleAddQuotation}
-                    disabled={submitting}
-                    className="px-6 py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-green-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium"
-                  >
-                    {submitting ? "Creating..." : "Create Quotation"}
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
+      <CreateQuotationModal
+        isOpen={showAddModal}
+        onClose={() => {
+          setShowAddModal(false);
+          setInitialData(null);
+          // Clear navigation state to prevent modal from reopening
+          window.history.replaceState({}, document.title);
+        }}
+        onQuotationCreated={handleQuotationCreated}
+        preFilledMaterials={location.state?.preFilledMaterials}
+        vendors={vendors}
+        rootCards={rootCards}
+        materialRequests={materialRequests}
+        initialData={initialData || {
+          type: activeTab,
+          reference_id: location.state?.reference_id,
+          material_request_id: location.state?.material_request_id
+        }}
+      />
 
       {/* View Quotation Modal */}
       {showViewModal && selectedQuotation && (
@@ -1591,11 +938,16 @@ const QuotationsPage = () => {
           >
             <div className="bg-gradient-to-r from-purple-50 to-purple-100 dark:from-slate-700 dark:to-slate-800 flex justify-between items-center px-8 py-6 border-b border-slate-200 dark:border-slate-600">
               <div>
-                <h3 className="text-2xl font-bold text-slate-900 dark:text-white text-xs">
+                <h3 className="text-2xl font-bold text-slate-900 dark:text-white">
                   {selectedQuotation.quotation_number}
                 </h3>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 text-xs">
+                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
                   {selectedQuotation.vendor_name}
+                  {selectedQuotation.mr_number && (
+                    <span className="ml-2 text-blue-600 font-bold">
+                      | MR: {selectedQuotation.mr_number}
+                    </span>
+                  )}
                 </p>
               </div>
               <button
@@ -1712,7 +1064,7 @@ const QuotationsPage = () => {
                 <button
                   onClick={() => {
                     setShowViewModal(false);
-                    navigate("/inventory-manager/vendors/po", {
+                    navigate("/inventory-manager/purchase-orders", {
                       state: { quotation: selectedQuotation },
                     });
                   }}

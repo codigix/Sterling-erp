@@ -74,8 +74,10 @@ class PurchaseOrder {
       `INSERT INTO purchase_orders (
         po_number, quotation_id, material_request_id, vendor_id, items, 
         subtotal, tax_amount, total_amount, expected_delivery_date, 
-        order_date, currency, tax_template, notes, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        order_date, currency, tax_template, notes, status,
+        shipping_address, incoterm, shipping_rule, tax_category,
+        payment_terms, payment_due_date, tax_rate, advance_paid, payable_balance
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         poNumber,
         data.quotation_id || null,
@@ -90,7 +92,16 @@ class PurchaseOrder {
         data.currency || 'INR',
         data.tax_template || null,
         data.notes || null,
-        data.status || 'draft'
+        data.status || 'draft',
+        data.shipping_address || null,
+        data.incoterm || 'EXW',
+        data.shipping_rule || 'Standard',
+        data.tax_category || 'GST',
+        data.payment_terms || null,
+        data.payment_due_date || null,
+        data.tax_rate || 18.00,
+        data.advance_paid || 0,
+        data.payable_balance || 0
       ]
     );
     return result.insertId;
@@ -108,7 +119,16 @@ class PurchaseOrder {
         order_date = ?, 
         currency = ?, 
         tax_template = ?, 
-        notes = ?
+        notes = ?,
+        shipping_address = ?,
+        incoterm = ?,
+        shipping_rule = ?,
+        tax_category = ?,
+        payment_terms = ?,
+        payment_due_date = ?,
+        tax_rate = ?,
+        advance_paid = ?,
+        payable_balance = ?
       WHERE id = ?`,
       [
         data.vendor_id || null,
@@ -117,10 +137,19 @@ class PurchaseOrder {
         data.tax_amount || 0,
         data.total_amount || 0,
         data.expected_delivery_date || null,
-        data.order_date || new Date(),
+        data.order_date || null,
         data.currency || 'INR',
         data.tax_template || null,
         data.notes || null,
+        data.shipping_address || null,
+        data.incoterm || 'EXW',
+        data.shipping_rule || 'Standard',
+        data.tax_category || 'GST',
+        data.payment_terms || null,
+        data.payment_due_date || null,
+        data.tax_rate || 18.00,
+        data.advance_paid || 0,
+        data.payable_balance || 0,
         id
       ]
     );
@@ -158,7 +187,7 @@ class PurchaseOrder {
         SUM(CASE WHEN status = 'draft' THEN 1 ELSE 0 END) as draft,
         SUM(CASE WHEN status = 'submitted' THEN 1 ELSE 0 END) as submitted,
         SUM(CASE WHEN status IN ('approved', 'ordered', 'pending') THEN 1 ELSE 0 END) as to_receive,
-        SUM(CASE WHEN status = 'received' THEN 1 ELSE 0 END) as partial,
+        SUM(CASE WHEN status IN ('goods arrival', 'received') THEN 1 ELSE 0 END) as partial,
         SUM(CASE WHEN status IN ('fulfilled', 'delivered') THEN 1 ELSE 0 END) as fulfilled
        FROM purchase_orders`
     );

@@ -70,8 +70,46 @@ class Quotation {
     return rows[0] || null;
   }
 
+  static async generateQuotationNumber(data) {
+    try {
+      const date = new Date();
+      const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');
+      
+      if (data.material_request_id) {
+        const [mrRows] = await pool.execute('SELECT mr_number FROM material_requests WHERE id = ?', [data.material_request_id]);
+        if (mrRows.length > 0) {
+          const mrNumber = mrRows[0].mr_number;
+          // Get count of quotations for this specific MR to use as suffix
+          const [countRows] = await pool.execute(
+            "SELECT count(*) as count FROM quotations WHERE material_request_id = ?",
+            [data.material_request_id]
+          );
+          const qSuffix = (countRows[0].count + 1).toString().padStart(2, '0');
+          // Format: QT-20260212-001-Q01 (where 20260212-001 is from MR)
+          return `QT-${mrNumber.replace('MR-', '')}-Q${qSuffix}`;
+        }
+      }
+
+      // Fallback or non-MR linked quotations
+      const [rows] = await pool.execute(
+        "SELECT count(*) as count FROM quotations WHERE quotation_number LIKE ?",
+        [`QT-${dateStr}-%`]
+      );
+      const count = (rows[0].count + 1).toString().padStart(3, '0');
+      let prefix = 'QT';
+      
+      if (data.sales_order_id) {
+        prefix = `QT-SO${data.sales_order_id}`;
+      }
+      
+      return `${prefix}-${dateStr}-${count}`;
+    } catch (e) {
+      return `QT-${Date.now()}`;
+    }
+  }
+
   static async create(data) {
-    const quotationNumber = `QT-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const quotationNumber = data.quotation_number || await this.generateQuotationNumber(data);
     
     const [result] = await pool.execute(
       `INSERT INTO quotations (

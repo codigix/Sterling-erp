@@ -3,8 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { X, Plus, Trash2, CheckCircle, Calendar, DollarSign, User, Package, FileText, Save, Edit, RefreshCw } from "lucide-react";
 import axios from "../../utils/api";
 import Swal from "sweetalert2";
+import toastUtils from "../../utils/toastUtils";
 
-const CreatePurchaseOrderModal = ({ isOpen, onClose, source, type, onPOCreated, editData }) => {
+const CreatePurchaseOrderModal = ({ isOpen, onClose, source, type, onPOCreated, editData, preFilledFromQuotation }) => {
   const navigate = useNavigate();
   const [vendors, setVendors] = useState([]);
   const [materialRequests, setMaterialRequests] = useState([]);
@@ -49,6 +50,29 @@ const CreatePurchaseOrderModal = ({ isOpen, onClose, source, type, onPOCreated, 
           material_request_id: editData.material_request_id,
           quotation_id: editData.quotation_id
         });
+      } else if (preFilledFromQuotation) {
+        // Create from Quotation (passed via prop)
+        setFlowType("quotation");
+        const initialItems = (preFilledFromQuotation.items || []).map(item => ({
+          material_name: item.material_name || item.description,
+          material_code: item.material_code || item.item_code,
+          quantity: item.quantity,
+          unit: item.unit || item.uom,
+          rate: item.rate || item.unit_price,
+          amount: item.amount || (item.quantity * (item.rate || item.unit_price))
+        }));
+
+        setFormData(prev => ({
+          ...prev,
+          quotation_id: preFilledFromQuotation.id,
+          vendor_id: preFilledFromQuotation.vendor_id,
+          items: initialItems,
+          subtotal: preFilledFromQuotation.total_amount,
+          total_amount: preFilledFromQuotation.total_amount,
+          notes: `Created from Quotation: ${preFilledFromQuotation.quotation_number || preFilledFromQuotation.id}`,
+          root_card_id: preFilledFromQuotation.root_card_id,
+          material_request_id: preFilledFromQuotation.material_request_id
+        }));
       } else if (source && type === 'material_request') {
         // Create from MR (triggered externally)
         setFlowType("mr");
@@ -140,7 +164,7 @@ const CreatePurchaseOrderModal = ({ isOpen, onClose, source, type, onPOCreated, 
 
   const handleMRSelect = (mrId) => {
     if (!mrId) return;
-    const selectedMR = materialRequests.find(mr => mr.id === parseInt(mrId));
+    const selectedMR = materialRequests.find(mr => String(mr.id) === String(mrId));
     if (selectedMR) {
       const initialItems = (selectedMR.items || []).map(item => ({
         material_name: item.material_name,
@@ -162,7 +186,7 @@ const CreatePurchaseOrderModal = ({ isOpen, onClose, source, type, onPOCreated, 
 
   const handleQuotationSelect = (quotationId) => {
     if (!quotationId) return;
-    const selectedQt = quotations.find(q => q.id === parseInt(quotationId));
+    const selectedQt = quotations.find(q => String(q.id) === String(quotationId));
     if (selectedQt) {
       const initialItems = (selectedQt.items || []).map(item => ({
         material_name: item.material_name || item.description,
@@ -226,11 +250,11 @@ const CreatePurchaseOrderModal = ({ isOpen, onClose, source, type, onPOCreated, 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.vendor_id) {
-      Swal.fire("Error", "Please select a supplier", "error");
+      toastUtils.warning("Please select a supplier");
       return;
     }
     if (formData.items.length === 0) {
-      Swal.fire("Error", "Please add at least one item", "error");
+      toastUtils.warning("Please add at least one item");
       return;
     }
 
@@ -240,22 +264,22 @@ const CreatePurchaseOrderModal = ({ isOpen, onClose, source, type, onPOCreated, 
       if (editData) {
         // Update existing PO
         response = await axios.put(`/inventory/purchase-orders/${editData.id}`, formData);
-        Swal.fire("Success", "Purchase Order updated successfully", "success");
+        toastUtils.success("Purchase Order updated successfully");
       } else {
         // Create new PO
         response = await axios.post("/inventory/purchase-orders", formData);
-        Swal.fire("Success", "Purchase Order created successfully", "success");
+        toastUtils.success("Purchase Order created successfully");
       }
       
       if (onPOCreated) onPOCreated();
       onClose();
       
       if (!editData) {
-        navigate(`/inventory-manager/vendors/po/${response.data.id || response.data.po_number}`);
+        navigate(`/inventory-manager/purchase-orders/${response.data.id || response.data.po_number}`);
       }
     } catch (error) {
       console.error("Error saving PO:", error);
-      Swal.fire("Error", error.response?.data?.message || "Failed to save purchase order", "error");
+      toastUtils.error(error.response?.data?.message || "Failed to save purchase order");
     } finally {
       setSubmitting(false);
     }
@@ -404,6 +428,27 @@ const CreatePurchaseOrderModal = ({ isOpen, onClose, source, type, onPOCreated, 
                   />
                 </div>
               </div>
+
+              {formData.vendor_id && (
+                <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <div className="p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 rounded-xl">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Supplier Name</p>
+                    <p className="text-xs font-bold text-slate-900 dark:text-white">
+                      {vendors.find(v => String(v.id) === String(formData.vendor_id))?.name || "N/A"}
+                    </p>
+                  </div>
+                  <div className="p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 rounded-xl">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Supplier ID</p>
+                    <p className="text-xs font-bold text-slate-900 dark:text-white">
+                      {vendors.find(v => String(v.id) === String(formData.vendor_id))?.vendor_code || formData.vendor_id}
+                    </p>
+                  </div>
+                  <div className="p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 rounded-xl">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Type</p>
+                    <p className="text-xs font-bold text-slate-900 dark:text-white">Standard Vendor</p>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Items Table */}

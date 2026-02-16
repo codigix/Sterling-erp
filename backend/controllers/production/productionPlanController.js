@@ -2,6 +2,7 @@ const ProductionPlan = require('../../models/ProductionPlan');
 const ProductionPlanDetail = require('../../models/ProductionPlanDetail');
 const ManufacturingStage = require('../../models/ManufacturingStage');
 const WorkOrder = require('../../models/WorkOrder');
+const MaterialRequest = require('../../models/MaterialRequest');
 const ComprehensiveBOM = require('../../models/ComprehensiveBOM');
 const pool = require('../../config/database');
 
@@ -881,6 +882,88 @@ const productionPlanController = {
       if (connection) {
         connection.release();
       }
+    }
+  },
+
+  async sendMaterialRequest(req, res) {
+    try {
+      const { id: planId } = req.params;
+      console.log(`[ProductionPlanController.sendMaterialRequest] Starting for plan ID: ${planId}`);
+
+      const plan = await ProductionPlan.findById(planId);
+      if (!plan) {
+        return res.status(404).json({ message: 'Production plan not found' });
+      }
+
+      // Fetch items for the plan
+      const detail = await ProductionPlanDetail.findByProductionPlanId(planId);
+      
+      if (!detail || ((!detail.materials || detail.materials.length === 0) && (!detail.subAssemblies || detail.subAssemblies.length === 0))) {
+        return res.status(400).json({ 
+          message: 'No materials or sub-assemblies found in this production plan to request.' 
+        });
+      }
+
+      // Combine materials and sub-assemblies for the request
+      const items = [];
+      
+      if (detail.materials && Array.isArray(detail.materials)) {
+        detail.materials.forEach(m => {
+          items.push({
+            materialCode: m.itemCode || m.materialCode,
+            materialName: m.itemName || m.materialName || m.itemCode,
+            quantity: m.requiredQty || m.quantity || 1,
+            unit: m.uom || m.unit || 'Nos',
+            specification: m.specification || m.notes || null
+          });
+        });
+      }
+
+      if (detail.subAssemblies && Array.isArray(detail.subAssemblies)) {
+        detail.subAssemblies.forEach(sa => {
+          items.push({
+            materialCode: sa.itemCode || sa.componentCode,
+            materialName: sa.productName || sa.itemName || sa.itemCode,
+            quantity: sa.requiredQty || sa.quantity || 1,
+            unit: sa.uom || sa.unit || 'Nos',
+            specification: sa.bomNo || null
+          });
+        });
+      }
+
+      if (items.length === 0) {
+        return res.status(400).json({ message: 'No valid items found to create a material request.' });
+      }
+
+      // Create the Material Request
+      const mrData = {
+        productionPlanId: planId,
+        salesOrderId: plan.sales_order_id || null,
+        department: 'Production',
+        purpose: 'Material Issue',
+        status: 'submitted',
+        createdBy: req.user?.id,
+        items: items,
+        remarks: `Generated from Production Plan: ${plan.plan_name || planId}`
+      };
+
+      const mrId = await MaterialRequest.create(mrData);
+      
+      // Update plan status if needed (optional)
+      // await ProductionPlan.updateStatus(planId, 'material_requested');
+
+      res.status(201).json({
+        success: true,
+        message: 'Material request sent successfully',
+        data: { materialRequestId: mrId }
+      });
+
+    } catch (error) {
+      console.error('[ProductionPlanController.sendMaterialRequest] Error:', error);
+      res.status(500).json({ 
+        message: 'Error sending material request', 
+        error: error.message 
+      });
     }
   }
 };

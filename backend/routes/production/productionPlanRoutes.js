@@ -17,5 +17,6 @@ router.put('/:id', productionPlanController.updatePlan);
 router.patch('/:id/status', productionPlanController.updatePlanStatus);
 router.delete('/:id', productionPlanController.deletePlan);
 router.post('/:id/generate-work-orders', productionPlanController.generateWorkOrders);
+router.post('/:id/send-material-request', productionPlanController.sendMaterialRequest);
 
 module.exports = router;

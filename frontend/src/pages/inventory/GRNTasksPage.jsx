@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import axios from "../../utils/api";
 import { useNavigate } from "react-router-dom";
+import toastUtils from "../../utils/toastUtils";
 import {
   Clock,
   CheckCircle,
@@ -96,7 +97,7 @@ const GRNTasksPage = () => {
   const handleCreateTask = async (e) => {
     e.preventDefault();
     if (!formData.title.trim()) {
-      alert("Task title is required");
+      toastUtils.warning("Task title is required");
       return;
     }
 
@@ -125,10 +126,11 @@ const GRNTasksPage = () => {
         });
         await fetchTasksForGRN(selectedGrn);
         handleTaskNavigation(response.data);
+        toastUtils.success("Task created successfully");
       }
     } catch (err) {
       console.error("Error creating task:", err);
-      alert(
+      toastUtils.error(
         "Failed to create task: " + (err.response?.data?.message || err.message)
       );
     } finally {
@@ -148,13 +150,13 @@ const GRNTasksPage = () => {
       taskTitle.includes("processing") ||
       taskTitle.includes("receiving")
     ) {
-      navigate(`/inventory-manager/qc/grn?${baseParams}`);
+      navigate(`/inventory-manager/grn-processing?${baseParams}`);
     } else if (
       taskTitle.includes("qc") ||
       taskTitle.includes("inspection") ||
       taskTitle.includes("inspect")
     ) {
-      navigate(`/inventory-manager/qc/inspections?${baseParams}`);
+      navigate(`/inventory-manager/grn-processing?${baseParams}`);
     } else if (
       taskTitle.includes("stock") ||
       taskTitle.includes("add") ||
@@ -177,9 +179,9 @@ const GRNTasksPage = () => {
       taskTitle.includes("po") ||
       taskTitle.includes("order")
     ) {
-      navigate(`/inventory-manager/vendors/po?${baseParams}`);
+      navigate(`/inventory-manager/purchase-orders?${baseParams}`);
     } else {
-      navigate(`/inventory-manager/qc/grn?${baseParams}`);
+      navigate(`/inventory-manager/grn-processing?${baseParams}`);
     }
   };
 

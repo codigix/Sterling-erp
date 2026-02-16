@@ -120,7 +120,9 @@ class MaterialRequest {
               w.name as warehouse_name,
               (SELECT COUNT(*) FROM quotations WHERE material_request_id = mr.id AND type = 'outbound') as rfq_count,
               (SELECT COUNT(*) FROM quotations WHERE material_request_id = mr.id AND type = 'inbound' AND status = 'approved') as approved_quotation_count,
-              (SELECT id FROM quotations WHERE material_request_id = mr.id AND type = 'inbound' AND status = 'approved' LIMIT 1) as approved_quotation_id
+              (SELECT id FROM quotations WHERE material_request_id = mr.id AND type = 'inbound' AND status = 'approved' LIMIT 1) as approved_quotation_id,
+              (SELECT COUNT(*) FROM purchase_orders WHERE material_request_id = mr.id) as po_count,
+              (SELECT po_number FROM purchase_orders WHERE material_request_id = mr.id LIMIT 1) as po_number
        FROM material_requests mr
        LEFT JOIN sales_orders so ON so.id = mr.sales_order_id
        LEFT JOIN users u ON u.id = mr.created_by
@@ -181,6 +183,43 @@ class MaterialRequest {
     query += ' ORDER BY mr.created_at DESC';
 
     const [rows] = await pool.execute(query, params);
+    
+    // Fetch items for each request
+    for (let row of rows) {
+      const [itemRows] = await pool.execute(
+        `SELECT * FROM material_request_items WHERE material_request_id = ?`,
+        [row.id]
+      );
+      row.items = itemRows;
+    }
+
+    return rows || [];
+  }
+
+  static async findByRootCardId(rootCardId) {
+    const [rows] = await pool.execute(
+      `SELECT mr.*, so.customer, u.username as created_by_name, 
+              pp.plan_name as production_plan_name,
+              w.name as warehouse_name
+       FROM material_requests mr
+       LEFT JOIN sales_orders so ON so.id = mr.sales_order_id
+       LEFT JOIN users u ON u.id = mr.created_by
+       LEFT JOIN production_plans pp ON pp.id = mr.production_plan_id
+       LEFT JOIN warehouses w ON w.id = mr.target_warehouse_id
+       WHERE mr.sales_order_id = ?
+       ORDER BY mr.created_at DESC`,
+      [rootCardId]
+    );
+
+    // Fetch items for each request
+    for (let row of rows) {
+      const [itemRows] = await pool.execute(
+        `SELECT * FROM material_request_items WHERE material_request_id = ?`,
+        [row.id]
+      );
+      row.items = itemRows;
+    }
+
     return rows || [];
   }
 

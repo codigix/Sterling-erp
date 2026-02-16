@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "../../utils/api";
 import {
   Plus,
@@ -14,6 +15,7 @@ import Badge from "../../components/ui/Badge";
 import "../../styles/TaskPage.css";
 
 const QCTasksPage = () => {
+  const navigate = useNavigate();
   const [grnInspections, setGrnInspections] = useState([]);
   const [stageQC, setStageQC] = useState([]);
   const [grnStats, setGrnStats] = useState({});
@@ -211,10 +213,16 @@ const QCTasksPage = () => {
                 </div>
 
                 <div className="flex gap-2 pt-4 border-t border-slate-200 dark:border-slate-700">
-                  <button className="flex-1 px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors text-sm font-medium">
+                  <button 
+                    onClick={() => navigate('/inventory-manager/grn-processing', { state: { grn_id: grn.dbId, action: 'inspect' } })}
+                    className="flex-1 px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors text-sm font-medium"
+                  >
                     Start Inspection
                   </button>
-                  <button className="flex-1 px-3 py-2 rounded-lg bg-slate-200 dark:bg-slate-700  dark: hover: transition-colors text-sm font-medium">
+                  <button 
+                    onClick={() => navigate('/inventory-manager/grn-processing', { state: { grn_id: grn.dbId, action: 'view' } })}
+                    className="flex-1 px-3 py-2 rounded-lg bg-slate-200 dark:bg-slate-700  dark: hover: transition-colors text-sm font-medium"
+                  >
                     View Details
                   </button>
                 </div>

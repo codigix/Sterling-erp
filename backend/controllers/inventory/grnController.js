@@ -1,11 +1,12 @@
 const GRN = require('../../models/GRN');
 const PurchaseOrder = require('../../models/PurchaseOrder');
 const Material = require('../../models/Material');
+const StockEntry = require('../../models/StockEntry');
 const emailService = require('../../services/emailService');
 
 const generateVendorDiscrepancyEmail = (grnData, poData, grnItems, status) => {
   const vendorName = grnData.vendor_name || 'Valued Vendor';
-  const poNumber = poData.po_number;
+  const poNumber = poData ? poData.po_number : 'Manual Receipt';
   const grnNumber = `GRN-${String(grnData.id).padStart(3, '0')}-${new Date(grnData.created_at).getFullYear()}`;
   const createdAt = grnData.created_at;
 
@@ -134,69 +135,133 @@ exports.addToStock = async (req, res) => {
             return res.status(404).json({ message: 'GRN not found' });
         }
         
-        const po = await PurchaseOrder.findById(grn.po_id);
-        if (!po) {
-            return res.status(404).json({ message: 'Purchase Order not found' });
+        if (grn.qc_status === 'completed') {
+            return res.status(400).json({ message: 'Stock has already been added for this GRN' });
+        }
+
+        const existingEntry = await StockEntry.findByGrnId(id);
+        if (existingEntry) {
+            // If entry exists but GRN status wasn't updated, update it now
+            await GRN.updateStatus(id, 'completed');
+            return res.status(400).json({ message: 'Stock entry already exists for this GRN' });
+        }
+        
+        let po = null;
+        if (grn.po_id) {
+          po = await PurchaseOrder.findById(grn.po_id);
         }
         
         // Parse items if string
         const grnItems = typeof grn.items === 'string' ? JSON.parse(grn.items) : grn.items;
+
+        // Auto-detect shortage/overage if status is not provided or generic
+        let effectiveStatus = status ? status.toLowerCase() : 'completed';
+        const hasItemShortage = grnItems.some(item => (Number(item.invoice_quantity || item.quantity) || 0) > (Number(item.received_quantity) || 0));
+        const hasItemOverage = grnItems.some(item => (Number(item.received_quantity) || 0) > (Number(item.invoice_quantity || item.quantity) || 0));
+
+        if (effectiveStatus === 'approved' || effectiveStatus === 'completed') {
+            if (hasItemShortage) effectiveStatus = 'shortage';
+            else if (hasItemOverage) effectiveStatus = 'overage';
+        }
+
+        // 1. Send email notification FIRST if there's a shortage, overage, or discrepancy
+        if (['shortage', 'overage', 'discrepancy'].includes(effectiveStatus)) {
+            const vendorEmail = grn.vendor_email || (po ? po.vendor_email : null);
+            if (vendorEmail) {
+                try {
+                    const emailHtml = generateVendorDiscrepancyEmail(grn, po, grnItems, effectiveStatus);
+                    const grnNumberFormatted = `GRN-${String(grn.id).padStart(3, '0')}-${new Date(grn.created_at).getFullYear()}`;
+                    await emailService.sendMail({
+                        to: vendorEmail,
+                        subject: `[${grnNumberFormatted}] Discrepancy Report${po ? ` for PO ${po.po_number}` : ''}`,
+                        html: emailHtml,
+                        text: `Goods Received Note Discrepancy Report${po ? ` for PO ${po.po_number}` : ''}`
+                    });
+                    console.log(`✅ Discrepancy email sent to vendor: ${vendorEmail}`);
+                } catch (emailError) {
+                    console.error('Email sending failed:', emailError.message);
+                }
+            } else {
+                console.warn('⚠️ No vendor email found for discrepancy notification');
+            }
+        }
         
-        // Add each item to inventory
+        // 2. Add each item to inventory
+        const stockEntryItems = [];
         for (const item of grnItems) {
             const qtyToAdd = Number(item.received_quantity) || 0;
+            // Get warehouse from item, fallback to header or Main Warehouse
+            let targetWarehouse = (item.warehouse || grn.warehouse_name || 'Main Warehouse').trim();
             
             if (qtyToAdd > 0) {
-                const itemCode = item.item_code || null;
-                const itemName = item.description || item.item_name;
+                const itemCode = item.material_code || item.item_code || null;
+                const itemName = item.material_name || item.description || item.item_name;
                 
                 let material = null;
                 if (itemCode) {
                     material = await Material.findByItemCode(itemCode);
-                } else if (itemName) {
+                }
+                
+                // Fallback to name if code match fails or doesn't exist
+                if (!material && itemName) {
                     material = await Material.findByName(itemName);
                 }
                 
+                let materialId;
                 if (material) {
-                    const newQty = (Number(material.quantity) || 0) + qtyToAdd;
-                    await Material.updateQuantity(material.id, newQty);
+                    materialId = material.id;
+                    console.log(`Updating existing material stock: ${material.itemName} (${material.itemCode}) at ${targetWarehouse}`);
+                    // Update the new material_stock table and inventory main table
+                    await Material.updateStock(material.id, targetWarehouse, qtyToAdd, item.batch_no || null);
                 } else {
-                    await Material.create({
+                    console.log(`Creating new material from GRN: ${itemName} at ${targetWarehouse}`);
+                    materialId = await Material.create({
                         itemCode: itemCode || `MAT-${Date.now()}-${Math.floor(Math.random()*1000)}`,
                         itemName: itemName,
                         category: item.category || 'Uncategorized',
-                        quantity: qtyToAdd,
+                        quantity: 0, 
                         unit: item.unit || 'units',
                         reorderLevel: 0,
-                        unitCost: item.unit_price || 0,
-                        location: 'Default Store',
-                        vendorId: po.vendor_id || null
+                        unitCost: item.rate || item.unit_price || 0,
+                        location: targetWarehouse,
+                        warehouse: targetWarehouse,
+                        vendorId: grn.vendor_id || (po ? po.vendor_id : null)
                     });
+                    await Material.updateStock(materialId, targetWarehouse, qtyToAdd, item.batch_no || null);
                 }
+
+                stockEntryItems.push({
+                    material_id: materialId,
+                    item_code: itemCode || (material ? material.itemCode : null),
+                    item_name: itemName,
+                    quantity: qtyToAdd,
+                    unit: item.unit || (material ? material.unit : 'units'),
+                    warehouse: targetWarehouse,
+                    batch_no: item.batch_no || null
+                });
             }
         }
         
-        // Send email notification if there's a shortage, overage, or discrepancy
-        if (status && ['shortage', 'overage', 'discrepancy'].includes(status.toLowerCase())) {
-            if (po.vendor_email) {
-                try {
-                    const emailHtml = generateVendorDiscrepancyEmail(grn, po, grnItems, status);
-                    const grnNumberFormatted = `GRN-${String(grn.id).padStart(3, '0')}-${new Date(grn.created_at).getFullYear()}`;
-                    await emailService.sendMail({
-                        to: po.vendor_email,
-                        subject: `[${grnNumberFormatted}] Discrepancy Report for PO ${po.po_number}`,
-                        html: emailHtml,
-                        text: `Goods Received Note Discrepancy Report for PO ${po.po_number}`
-                    });
-                    console.log(`✅ Discrepancy email sent to vendor: ${po.vendor_email}`);
-                } catch (emailError) {
-                    console.error('Email sending failed:', emailError.message);
-                }
-            }
+        // 3. Create Stock Entry record for tracking
+        if (stockEntryItems.length > 0) {
+            await StockEntry.create({
+                grn_id: id,
+                entry_date: new Date(),
+                entry_type: 'Material Receipt',
+                to_warehouse: stockEntryItems[0].warehouse || 'Main Warehouse',
+                remarks: `Stock added from GRN: ${id}`,
+                items: stockEntryItems,
+                status: 'submitted'
+            });
         }
         
-        // Update GRN status to 'completed'
+        // 4. Update GRN status to 'completed'
         await GRN.updateStatus(id, 'completed');
+        
+        // 5. Update Purchase Order status to 'fulfilled'
+        if (grn.po_id) {
+            await PurchaseOrder.updateStatus(grn.po_id, 'fulfilled');
+        }
         
         res.json({ message: 'Stock updated successfully' });
         
@@ -208,21 +273,23 @@ exports.addToStock = async (req, res) => {
 
 exports.createGRN = async (req, res) => {
   try {
-    const { po_id, items, qc_status } = req.body;
+    const { po_id, vendor_id, items, qc_status, receipt_date, transporter_notes } = req.body;
 
-    if (!po_id) {
-      return res.status(400).json({ message: 'Purchase Order ID is required' });
+    if (!po_id && !items) {
+      return res.status(400).json({ message: 'Purchase Order ID or Items are required' });
     }
 
-    // Check if GRN already exists for this PO
-    const existingGRN = await GRN.findByPoId(po_id);
-    if (existingGRN) {
-      return res.status(400).json({ message: 'GRN already exists for this Purchase Order' });
+    // Check if GRN already exists for this PO (only if po_id is provided)
+    if (po_id) {
+      const existingGRN = await GRN.findByPoId(po_id);
+      if (existingGRN) {
+        return res.status(400).json({ message: 'GRN already exists for this Purchase Order' });
+      }
     }
 
     // If items are not provided, fetch from PO
     let grnItems = items;
-    if (!grnItems) {
+    if (!grnItems && po_id) {
       const po = await PurchaseOrder.findById(po_id);
       if (!po) {
         return res.status(404).json({ message: 'Purchase Order not found' });
@@ -230,11 +297,34 @@ exports.createGRN = async (req, res) => {
       grnItems = typeof po.items === 'string' ? JSON.parse(po.items) : (po.items || []);
     }
 
+    if (!grnItems || grnItems.length === 0) {
+      return res.status(400).json({ message: 'At least one item is required' });
+    }
+
+    // Ensure material details are preserved
+    grnItems = grnItems.map(item => ({
+      ...item,
+      material_name: item.material_name || item.description || item.item_name || item.itemName,
+      material_code: item.material_code || item.item_code || item.itemCode,
+      description: item.material_name || item.description || item.item_name || item.itemName,
+      item_code: item.material_code || item.item_code || item.itemCode,
+      category: item.category || item.item_group || item.material_type || "-",
+      warehouse: item.warehouse || "Main Warehouse"
+    }));
+
     const grnId = await GRN.create({
-      po_id,
+      po_id: po_id || null,
+      vendor_id: vendor_id || null,
       items: grnItems,
-      qc_status: qc_status || 'pending'
+      qc_status: qc_status || 'pending',
+      receipt_date,
+      transporter_notes
     });
+
+    // Update Purchase Order status to 'goods arrival'
+    if (po_id) {
+      await PurchaseOrder.updateStatus(po_id, 'goods arrival');
+    }
 
     const newGRN = await GRN.findById(grnId);
     newGRN.items = typeof newGRN.items === 'string' ? JSON.parse(newGRN.items) : newGRN.items;

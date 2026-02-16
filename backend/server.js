@@ -47,6 +47,7 @@ const comprehensiveBOMRoutes = require('./routes/engineering/comprehensiveBOMRou
 const salesManagementRoutes = require('./routes/sales/salesManagementRoutes');
 const customerRoutes = require('./routes/sales/customerRoutes');
 const warehouseRoutes = require('./routes/inventory/warehouseRoutes');
+const stockEntryRoutes = require('./routes/inventory/stockEntryRoutes');
 
 const app = express();
 
@@ -108,6 +109,7 @@ app.use('/api/tracking', trackingRoutes);
 app.use('/api/sales/management', salesManagementRoutes);
 app.use('/api/sales/customers', customerRoutes);
 app.use('/api/inventory/warehouses', warehouseRoutes);
+app.use('/api/inventory/stock-entries', stockEntryRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });

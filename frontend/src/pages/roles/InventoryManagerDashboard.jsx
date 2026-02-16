@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Link, Routes, Route, Navigate } from "react-router-dom";
 import axios from "../../utils/api";
 import RoleDashboardLayout from "../../components/layout/RoleDashboardLayout";
-import ViewStockPage from "../inventory/ViewStockPage";
+import StockBalancePage from "../inventory/StockBalancePage";
+import StockEntriesPage from "../inventory/StockEntriesPage";
 import StockMovementsPage from "../inventory/StockMovementsPage";
 import ReorderLevelsPage from "../inventory/ReorderLevelsPage";
 import TrackInventoryPage from "../inventory/TrackInventoryPage";
@@ -11,15 +12,15 @@ import RackAndShelfPage from "../inventory/RackAndShelfPage";
 import VendorsPage from "../inventory/VendorsPage";
 import QuotationsPage from "../inventory/QuotationsPage";
 import PurchaseOrderPage from "../inventory/PurchaseOrderPage";
+import PurchaseReceiptPage from "../inventory/PurchaseReceiptPage";
 import GRNProcessingPage from "../inventory/GRNProcessingPage";
-import QCInspectionsPage from "../inventory/QCInspectionsPage";
 import ReportsPage from "../inventory/ReportsPage";
 import MaterialSpecificationsPage from "../inventory/MaterialSpecificationsPage";
 import CreateQuotationPage from "../inventory/CreateQuotationPage";
 import MaterialRequestsPage from "../inventory/MaterialRequestsPage";
 import WarehousesPage from "../inventory/WarehousesPage";
 import PurchaseOrderDetailPage from "../inventory/PurchaseOrderDetailPage";
-import PurchaseOrderEditMR from "../inventory/PurchaseOrderEditMR";
+import PurchaseOrderEditPage from "../inventory/PurchaseOrderEditPage";
 import InventoryTasksPage from "../department/InventoryTasksPage";
 import { Line, Bar, Doughnut } from "react-chartjs-2";
 import {
@@ -320,16 +321,30 @@ const DashboardContent = ({
         </h3>
         <div className="space-y-3">
           <Link
-            to="/inventory-manager/stock/view"
+            to="/inventory-manager/stock/balance"
             className="flex items-center text-xs gap-3 p-3 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900 rounded-lg transition-colors border border-blue-100 dark:border-blue-800"
           >
             <Package size={20} className="text-blue-600 dark:text-blue-400" />
             <div>
               <p className="font-medium text-blue-900 dark:text-blue-100">
-                View Stock
+                Stock Balance
               </p>
               <p className="text-xs text-blue-700 dark:text-blue-300">
-                See all items
+                Check current inventory levels
+              </p>
+            </div>
+          </Link>
+          <Link
+            to="/inventory-manager/stock/entries"
+            className="flex items-center text-xs gap-3 p-3 bg-emerald-50 dark:bg-emerald-900/30 hover:bg-emerald-100 dark:hover:bg-emerald-900 rounded-lg transition-colors border border-emerald-100 dark:border-emerald-800"
+          >
+            <Boxes size={20} className="text-emerald-600 dark:text-emerald-400" />
+            <div>
+              <p className="font-medium text-emerald-900 dark:text-emerald-100">
+                Stock Entries
+              </p>
+              <p className="text-xs text-emerald-700 dark:text-emerald-300">
+                View all stock movements
               </p>
             </div>
           </Link>
@@ -351,7 +366,7 @@ const DashboardContent = ({
             </div>
           </Link>
           <Link
-            to="/inventory-manager/vendors/po"
+            to="/inventory-manager/purchase-orders"
             className="flex items-center text-xs gap-3 p-3 bg-purple-50 dark:bg-purple-900/30 hover:bg-purple-100 dark:hover:bg-purple-900 rounded-lg transition-colors border border-purple-100 dark:border-purple-800"
           >
             <Truck size={20} className="text-purple-600 dark:text-purple-400" />
@@ -365,33 +380,33 @@ const DashboardContent = ({
             </div>
           </Link>
           <Link
-            to="/inventory-manager/qc/grn"
+            to="/inventory-manager/purchase-receipt"
             className="flex items-center text-xs gap-3 p-3 bg-emerald-50 dark:bg-emerald-900/30 hover:bg-emerald-100 dark:hover:bg-emerald-900 rounded-lg transition-colors border border-emerald-100 dark:border-emerald-800"
           >
-            <CheckCircle
+            <Truck
               size={20}
               className="text-emerald-600 dark:text-emerald-400"
             />
             <div>
               <p className="font-medium text-emerald-900 dark:text-emerald-100">
-                GRN Processing
+                Purchase Receipt
               </p>
               <p className="text-xs text-emerald-700 dark:text-emerald-300">
-                8 pending
+                Create new receipt
               </p>
             </div>
           </Link>
           <Link
-            to="/inventory-manager/grn-tasks"
+            to="/inventory-manager/grn-processing"
             className="flex items-center text-xs gap-3 p-3 bg-cyan-50 dark:bg-cyan-900/30 hover:bg-cyan-100 dark:hover:bg-cyan-900 rounded-lg transition-colors border border-cyan-100 dark:border-cyan-800"
           >
-            <Clock size={20} className="text-cyan-600 dark:text-cyan-400" />
+            <CheckCircle size={20} className="text-cyan-600 dark:text-cyan-400" />
             <div>
               <p className="font-medium text-cyan-900 dark:text-cyan-100">
-                GRN Task Management
+                GRN Processing
               </p>
               <p className="text-xs text-cyan-700 dark:text-cyan-300">
-                Manage GRN tasks
+                Quality Inspections
               </p>
             </div>
           </Link>
@@ -448,8 +463,13 @@ const InventoryManagerDashboard = () => {
       icon: Boxes,
       submenu: [
         {
-          title: "View Stock",
-          path: "/inventory-manager/stock/view",
+          title: "Stock Entries",
+          path: "/inventory-manager/stock/entries",
+          icon: ClipboardList,
+        },
+        {
+          title: "Stock Balance",
+          path: "/inventory-manager/stock/balance",
           icon: Package,
         },
         {
@@ -486,57 +506,44 @@ const InventoryManagerDashboard = () => {
       ],
     },
     {
-      title: "Vendor Management",
+      title: "Vendors",
+      path: "/inventory-manager/vendors",
       icon: Truck,
-      submenu: [
-        {
-          title: "Vendors",
-          path: "/inventory-manager/vendors/list",
-          icon: Truck,
-        },
-        {
-          title: "Quotations",
-          path: "/inventory-manager/vendors/quotations",
-          icon: TrendingUp,
-        },
-        {
-          title: "Purchase Orders",
-          path: "/inventory-manager/vendors/po",
-          icon: Package,
-        },
-      ],
     },
     {
-      title: "Quality Control",
-      icon: CheckCircle,
-      submenu: [
-        {
-          title: "GRN Processing",
-          path: "/inventory-manager/qc/grn",
-          icon: CheckCircle,
-        },
-        {
-          title: "QC Inspections",
-          path: "/inventory-manager/qc/inspections",
-          icon: CheckCircle,
-        },
-      ],
+      title: "Quotations",
+      path: "/inventory-manager/quotations",
+      icon: FileText,
     },
-
+    {
+      title: "Purchase Orders",
+      path: "/inventory-manager/purchase-orders",
+      icon: Package,
+    },
+    {
+      title: "Purchase Receipt",
+      path: "/inventory-manager/purchase-receipt",
+      icon: Truck,
+    },
+    {
+      title: "GRN Processing",
+      path: "/inventory-manager/grn-processing",
+      icon: CheckCircle,
+    },
     {
       title: "Material Specifications",
       path: "/inventory-manager/material-specs",
-      icon: FileText,
+      icon: ClipboardList,
     },
     {
       title: "Reports",
       path: "/inventory-manager/reports",
-      icon: TrendingUp,
+      icon: BarChart3,
     },
     {
       title: "Department Tasks",
       path: "/inventory-manager/department-tasks",
-      icon: CheckCircle,
+      icon: ClipboardList,
     },
   ];
 
@@ -775,23 +782,27 @@ const InventoryManagerDashboard = () => {
         />
         <Route path="/material-requests" element={<MaterialRequestsPage />} />
         <Route path="/warehouses" element={<WarehousesPage />} />
-        <Route path="/stock/view" element={<ViewStockPage />} />
+        <Route path="/stock/balance" element={<StockBalancePage />} />
+        <Route path="/stock/entries" element={<StockEntriesPage />} />
+        <Route path="/stock/view" element={<Navigate to="/inventory-manager/stock/balance" replace />} />
         <Route path="/stock/movements" element={<StockMovementsPage />} />
         <Route path="/stock/reorder" element={<ReorderLevelsPage />} />
         <Route path="/tracking/inventory" element={<TrackInventoryPage />} />
         <Route path="/tracking/batches" element={<BatchManagementPage />} />
         <Route path="/tracking/location" element={<RackAndShelfPage />} />
-        <Route path="/vendors/list" element={<VendorsPage />} />
-        <Route path="/vendors/quotations" element={<QuotationsPage />} />
+        <Route path="/vendors" element={<VendorsPage />} />
+        <Route path="/quotations" element={<Navigate to="sent" replace />} />
+        <Route path="/quotations/sent" element={<QuotationsPage defaultTab="outbound" />} />
+        <Route path="/quotations/received" element={<QuotationsPage defaultTab="inbound" />} />
         <Route
-          path="/vendors/quotations/new"
+          path="/quotations/new"
           element={<CreateQuotationPage />}
         />
-        <Route path="/vendors/po" element={<PurchaseOrderPage />} />
-        <Route path="/vendors/po/:id" element={<PurchaseOrderDetailPage />} />
-        <Route path="/vendors/po/edit-mr/:id" element={<PurchaseOrderEditMR />} />
-        <Route path="/qc/grn" element={<GRNProcessingPage />} />
-        <Route path="/qc/inspections" element={<QCInspectionsPage />} />
+        <Route path="/purchase-orders" element={<PurchaseOrderPage />} />
+        <Route path="/purchase-orders/:id" element={<PurchaseOrderDetailPage />} />
+        <Route path="/purchase-orders/edit/:id" element={<PurchaseOrderEditPage />} />
+        <Route path="/purchase-receipt" element={<PurchaseReceiptPage />} />
+        <Route path="/grn-processing" element={<GRNProcessingPage />} />
         <Route
           path="/material-specs"
           element={<MaterialSpecificationsPage />}

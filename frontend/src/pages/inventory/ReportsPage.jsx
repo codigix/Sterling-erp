@@ -13,6 +13,7 @@ import {
   PieChart,
   LineChart,
 } from "lucide-react";
+import { showInfo, showSuccess } from "../../utils/toastUtils";
 
 const ReportsPage = () => {
   const [dateRange, setDateRange] = useState("30days");
@@ -252,10 +253,16 @@ const ReportsPage = () => {
                   </div>
 
                   <div className="pt-3 border-t border-slate-200 dark:border-slate-700 flex gap-2">
-                    <button className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">
+                    <button 
+                      onClick={() => showInfo(`Generating ${report.name}...`)}
+                      className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+                    >
                       Generate
                     </button>
-                    <button className="flex-1 px-3 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-900 dark:text-white rounded-lg text-sm font-medium transition-colors">
+                    <button 
+                      onClick={() => showSuccess(`${report.name} downloaded successfully`)}
+                      className="flex-1 px-3 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-900 dark:text-white rounded-lg text-sm font-medium transition-colors"
+                    >
                       Download
                     </button>
                   </div>

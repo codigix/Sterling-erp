@@ -129,35 +129,35 @@ const InventoryTasksPage = () => {
       taskTitle.includes("rfq") ||
       (taskTitle.includes("quotation") && taskTitle.includes("create"))
     ) {
-      navigate(`/inventory-manager/vendors/quotations?${baseParams}`);
+      navigate(`/inventory-manager/quotations/sent?${baseParams}`);
     } else if (taskTitle.includes("send") && taskTitle.includes("quotation")) {
-      navigate(`/inventory-manager/vendors/quotations?${baseParams}`);
+      navigate(`/inventory-manager/quotations/sent?${baseParams}`);
     } else if (
       taskTitle.includes("receive") &&
       taskTitle.includes("quotation")
     ) {
-      navigate(`/inventory-manager/vendors/quotations?${baseParams}`);
+      navigate(`/inventory-manager/quotations/received?${baseParams}`);
     } else if (
       taskTitle.includes("create") &&
       taskTitle.includes("purchase order")
     ) {
-      navigate(`/inventory-manager/vendors/po?${baseParams}`);
+      navigate(`/inventory-manager/purchase-orders?${baseParams}`);
     } else if (taskTitle.includes("send") && taskTitle.includes("po")) {
-      navigate(`/inventory-manager/vendors/po?${baseParams}`);
+      navigate(`/inventory-manager/purchase-orders?${baseParams}`);
     } else if (
       taskTitle.includes("receive") &&
       taskTitle.includes("material")
     ) {
-      navigate(`/inventory-manager/qc/grn?${baseParams}`);
+      navigate(`/inventory-manager/grn-processing?${baseParams}`);
     } else if (
       taskTitle.includes("approve") &&
       taskTitle.includes("purchase order")
     ) {
-      navigate(`/inventory-manager/vendors/po?${baseParams}`);
+      navigate(`/inventory-manager/purchase-orders?${baseParams}`);
     } else if (taskTitle.includes("grn") || taskTitle.includes("processing")) {
-      navigate(`/inventory-manager/qc/grn?${baseParams}`);
+      navigate(`/inventory-manager/grn-processing?${baseParams}`);
     } else if (taskTitle.includes("qc") || taskTitle.includes("inspection")) {
-      navigate(`/inventory-manager/qc/inspections?${baseParams}`);
+      navigate(`/inventory-manager/grn-processing?${baseParams}`);
     } else if (taskTitle.includes("stock") && taskTitle.includes("add")) {
       navigate(`/inventory-manager/stock/view?${baseParams}`);
     } else if (taskTitle.includes("batch") || taskTitle.includes("location")) {
@@ -169,7 +169,7 @@ const InventoryTasksPage = () => {
     } else if (taskTitle.includes("reorder")) {
       navigate(`/inventory-manager/stock/reorder?${baseParams}`);
     } else {
-      navigate(`/inventory-manager/qc/grn?${baseParams}`);
+      navigate(`/inventory-manager/grn-processing?${baseParams}`);
     }
   };
 

@@ -23,7 +23,7 @@ import axios from "../../utils/api";
 import Swal from "sweetalert2";
 import toastUtils from "../../utils/toastUtils";
 
-const PurchaseOrderEditMR = () => {
+const PurchaseOrderEditPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -40,6 +40,7 @@ const PurchaseOrderEditMR = () => {
     shipping_address: "",
     incoterm: "EXW - Ex Works",
     shipping_rule: "Standard",
+    tax_category: "GST",
     payment_terms: "",
     payment_due_date: "",
     tax_rate: 18,
@@ -47,7 +48,8 @@ const PurchaseOrderEditMR = () => {
     subtotal: 0,
     tax_amount: 0,
     total_amount: 0,
-    payable_balance: 0
+    payable_balance: 0,
+    notes: ""
   });
 
   const calculateTotals = useCallback((items, taxRate, advance) => {
@@ -72,8 +74,18 @@ const PurchaseOrderEditMR = () => {
       const response = await axios.get(`/inventory/purchase-orders/${id}`);
       let data = response.data.purchaseOrder || response.data;
       
+      if (data.status !== 'draft') {
+        toastUtils.warning("Cannot edit a submitted Purchase Order.");
+        navigate(`/inventory-manager/purchase-orders/${id}`);
+        return;
+      }
       if (data.items && typeof data.items === 'string') {
-        data.items = JSON.parse(data.items);
+        try {
+            data.items = JSON.parse(data.items);
+        } catch (e) {
+            console.error("Error parsing items:", e);
+            data.items = [];
+        }
       }
       
       setFormData(prev => ({
@@ -84,7 +96,13 @@ const PurchaseOrderEditMR = () => {
         payment_due_date: data.payment_due_date ? data.payment_due_date.split('T')[0] : "",
         tax_rate: data.tax_rate || 18,
         advance_paid: data.advance_paid || 0,
-        items: data.items || []
+        items: data.items || [],
+        shipping_address: data.shipping_address || "",
+        incoterm: data.incoterm || "EXW - Ex Works",
+        shipping_rule: data.shipping_rule || "Standard",
+        tax_category: data.tax_category || "GST",
+        payment_terms: data.payment_terms || "",
+        notes: data.notes || ""
       }));
       
       calculateTotals(data.items || [], data.tax_rate || 18, data.advance_paid || 0);
@@ -139,7 +157,7 @@ const PurchaseOrderEditMR = () => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setSubmitting(true);
     try {
       await axios.put(`/inventory/purchase-orders/${id}`, formData);
@@ -155,7 +173,7 @@ const PurchaseOrderEditMR = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-950">
         <RefreshCw className="animate-spin text-blue-600" size={32} />
       </div>
     );
@@ -195,7 +213,7 @@ const PurchaseOrderEditMR = () => {
                 key={section.id}
                 onClick={() => {
                   setActiveSection(section.id);
-                  document.getElementById(section.id)?.scrollIntoView({ behavior: 'smooth' });
+                  document.getElementById(section.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
                   activeSection === section.id 
@@ -227,9 +245,9 @@ const PurchaseOrderEditMR = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 p-8 overflow-y-auto h-screen">
-        <div className="max-w-4xl mx-auto">
-          <header className="flex items-center justify-between mb-8">
+      <div className="flex-1 p-8 overflow-y-auto h-screen scroll-smooth">
+        <div className="max-w-4xl mx-auto pb-20">
+          <header className="flex items-center justify-between mb-8 bg-slate-50 dark:bg-slate-950 py-4">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-blue-600 rounded-2xl shadow-lg shadow-blue-500/20">
                 <Settings className="text-white" size={24} />
@@ -338,6 +356,27 @@ const PurchaseOrderEditMR = () => {
                     <option key={v.id} value={v.id}>{v.name} - {v.vendor_code || v.id}</option>
                   ))}
                 </select>
+                
+                {formData.vendor_id && (
+                    <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <div className="p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 rounded-xl">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Supplier Name</p>
+                            <p className="text-xs font-bold text-slate-900 dark:text-white">
+                                {vendors.find(v => String(v.id) === String(formData.vendor_id))?.name || "N/A"}
+                            </p>
+                        </div>
+                        <div className="p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 rounded-xl">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Supplier ID</p>
+                            <p className="text-xs font-bold text-slate-900 dark:text-white">
+                                {vendors.find(v => String(v.id) === String(formData.vendor_id))?.vendor_code || formData.vendor_id}
+                            </p>
+                        </div>
+                        <div className="p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 rounded-xl">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Type</p>
+                            <p className="text-xs font-bold text-slate-900 dark:text-white">Standard Vendor</p>
+                        </div>
+                    </div>
+                )}
               </div>
             </section>
 
@@ -361,29 +400,38 @@ const PurchaseOrderEditMR = () => {
                   <Plus size={14} /> Add Item
                 </button>
               </div>
+              
               <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
+                <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="border-b border-slate-50 dark:border-slate-800">
-                      <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-left">Item</th>
-                      <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-left">Quantity</th>
-                      <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-left">Unit Rate</th>
-                      <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-left">Row Total</th>
-                      <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center w-20"></th>
+                    <tr className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
+                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Item</th>
+                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Quantity</th>
+                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Unit Rate</th>
+                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Row Total</th>
+                      <th className="px-6 py-4 text-center"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
                     {formData.items.map((item, idx) => (
-                      <tr key={idx} className="group hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-all">
-                        <td className="px-6 py-4 min-w-[250px]">
-                          <input 
-                            type="text"
-                            value={item.material_name}
-                            onChange={(e) => handleItemChange(idx, 'material_name', e.target.value)}
-                            placeholder="Enter item name..."
-                            className="w-full bg-transparent border-none text-[11px] font-bold text-slate-900 dark:text-white placeholder:text-slate-300 focus:ring-0 outline-none uppercase"
-                          />
-                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{item.material_code || "No Code"}</p>
+                      <tr key={idx} className="group hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                        <td className="px-6 py-4">
+                          <div className="space-y-1">
+                            <input 
+                              type="text"
+                              value={item.material_name}
+                              onChange={(e) => handleItemChange(idx, 'material_name', e.target.value)}
+                              placeholder="Item Name"
+                              className="w-full bg-transparent border-none p-0 text-xs font-black text-slate-900 dark:text-white focus:ring-0 outline-none placeholder:text-slate-300"
+                            />
+                            <input 
+                              type="text"
+                              value={item.material_code}
+                              onChange={(e) => handleItemChange(idx, 'material_code', e.target.value)}
+                              placeholder="Item Code"
+                              className="w-full bg-transparent border-none p-0 text-[10px] font-bold text-slate-400 focus:ring-0 outline-none placeholder:text-slate-300"
+                            />
+                          </div>
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2">
@@ -391,14 +439,14 @@ const PurchaseOrderEditMR = () => {
                               type="number"
                               value={item.quantity}
                               onChange={(e) => handleItemChange(idx, 'quantity', e.target.value)}
-                              className="w-24 px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+                              className="w-20 px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
                             />
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{item.unit || "Nos"}</span>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{item.unit}</span>
                           </div>
                         </td>
                         <td className="px-6 py-4">
                           <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">₹</span>
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">₹</span>
                             <input 
                               type="number"
                               value={item.rate}
@@ -575,7 +623,7 @@ const PurchaseOrderEditMR = () => {
                   </div>
 
                   {/* Purchase Valuation Summary */}
-                  <div className="bg-slate-900 rounded-2xl overflow-hidden shadow-2xl flex flex-col h-full">
+                  <div className="bg-slate-900 rounded-2xl overflow-hidden shadow-2xl flex flex-col h-full sticky top-24">
                     <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between">
                       <h4 className="text-[10px] font-black text-white/50 uppercase tracking-[0.2em]">Purchase Valuation</h4>
                       <Calculator size={16} className="text-white/20" />
@@ -632,4 +680,4 @@ const PurchaseOrderEditMR = () => {
   );
 };
 
-export default PurchaseOrderEditMR;
+export default PurchaseOrderEditPage;

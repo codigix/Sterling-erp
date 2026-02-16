@@ -7,6 +7,7 @@ router.use(authMiddleware);
 
 router.put('/:id/status', materialRequestController.updateMaterialRequestStatus);
 router.patch('/:id/status', materialRequestController.updateMaterialRequestStatus);
+router.post('/:id/release', materialRequestController.releaseMaterial);
 
 router.post('/', materialRequestController.createMaterialRequest);
 router.post('/bulk', materialRequestController.bulkCreateMaterialRequests);

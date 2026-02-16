@@ -49,7 +49,7 @@ const QCInspectionsPage = () => {
       setInspections(response.data.grnInspections);
     } catch (error) {
       console.error("Error fetching inspections:", error);
-      Swal.fire("Error", "Failed to load inspections", "error");
+      toastUtils.error("Failed to load inspections");
     } finally {
       setLoading(false);
     }
@@ -82,7 +82,7 @@ const QCInspectionsPage = () => {
       const targetGRN = grnRes.data;
 
       if (!targetGRN) {
-        Swal.fire("Error", "GRN details not found", "error");
+        toastUtils.error("GRN details not found");
         return;
       }
 
@@ -146,7 +146,7 @@ const QCInspectionsPage = () => {
       setShowInspectModal(true);
     } catch (error) {
       console.error("Error preparing inspection:", error);
-      Swal.fire("Error", "Failed to prepare inspection form", "error");
+      toastUtils.error("Failed to prepare inspection form");
     }
   };
 
@@ -276,12 +276,12 @@ const QCInspectionsPage = () => {
         await taskService.autoCompleteTaskByAction(taskId, "save");
       }
 
-      Swal.fire("Success", "Inspection saved successfully", "success");
+      toastUtils.success("Inspection saved successfully");
       setShowInspectModal(false);
       fetchInspections();
     } catch (error) {
       console.error("Error saving inspection:", error);
-      Swal.fire("Error", "Failed to save inspection", "error");
+      toastUtils.error("Failed to save inspection");
     }
   };
 

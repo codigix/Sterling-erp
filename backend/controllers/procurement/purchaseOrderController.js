@@ -125,33 +125,6 @@ exports.updatePurchaseOrderStatus = async (req, res) => {
     
     await PurchaseOrder.updateStatus(id, status);
 
-    // Auto-create GRN if approved
-    if (status === 'approved') {
-      try {
-        const existingGRN = await GRN.findByPoId(id);
-        if (!existingGRN) {
-          const po = await PurchaseOrder.findById(id);
-          if (po) {
-             let items = [];
-             try {
-                items = typeof po.items === 'string' ? JSON.parse(po.items) : (po.items || []);
-             } catch (e) {
-                console.error('Error parsing items for GRN:', e);
-             }
-             
-             await GRN.create({
-               po_id: po.id,
-               items: items
-             });
-             console.log(`Auto-created GRN for PO #${po.po_number}`);
-          }
-        }
-      } catch (grnError) {
-        console.error('Error auto-creating GRN:', grnError);
-        // We don't fail the request if GRN creation fails, just log it
-      }
-    }
-
     res.json({ message: 'Purchase order status updated successfully' });
   } catch (error) {
     console.error('Update purchase order error:', error);

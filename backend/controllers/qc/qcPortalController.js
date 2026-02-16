@@ -162,8 +162,8 @@ exports.saveInspection = async (req, res) => {
         else if (status === 'failed') grnStatus = 'rejected';
         else if (status === 'conditional') grnStatus = 'hold';
         else if (status === 'partially_completed') grnStatus = 'approved'; // Or maybe 'partial'? Using 'approved' for now as inventory is good.
-        else if (status === 'shortage') grnStatus = 'approved'; // Inventory good, just short
-        else if (status === 'overage') grnStatus = 'approved'; // Inventory good, just over
+        else if (status === 'shortage') grnStatus = 'shortage'; // Preserve shortage status
+        else if (status === 'overage') grnStatus = 'overage'; // Preserve overage status
         
         // Calculate total accepted quantity from inspection
         let totalReceivedQty = 0;
@@ -213,7 +213,7 @@ exports.saveInspection = async (req, res) => {
                      ...item,
                      invoice_quantity: Number(result.invoice_quantity) || 0,
                      received_quantity: Number(result.accepted) || 0, // accepted is the received/approved qty for inventory
-                     rejected_quantity: Number(result.rejected) || 0,
+                     shortage_quantity: Math.max(0, (Number(result.invoice_quantity) || 0) - (Number(result.accepted) || 0)),
                      overage_quantity: Number(result.overage) || 0,
                      notes: result.notes || ''
                  };
@@ -264,7 +264,8 @@ exports.getInspectionDetails = async (req, res) => {
              }
             res.json(inspection);
         } else {
-            res.status(404).json({ message: 'Inspection not found' });
+            // Return 200 with null instead of 404 to avoid frontend console errors for non-existent inspections
+            res.json(null);
         }
     } catch (error) {
          console.error('Get inspection details error:', error);
@@ -342,7 +343,7 @@ exports.getGRNDetailsWithInspection = async (req, res) => {
                 ...item,
                 invoice_quantity: inspectionResult?.invoice_quantity !== undefined ? inspectionResult.invoice_quantity : (item.invoice_quantity || 0),
                 received: inspectionResult?.accepted !== undefined ? inspectionResult.accepted : (item.received_quantity || 0),
-                rejected: inspectionResult?.rejected !== undefined ? inspectionResult.rejected : (item.rejected_quantity || 0),
+                shortage: inspectionResult?.shortage !== undefined ? inspectionResult.shortage : (item.shortage_quantity || 0),
                 overage: inspectionResult?.overage !== undefined ? inspectionResult.overage : (item.overage_quantity || 0),
                 notes: inspectionResult?.notes || item.notes || ''
             };

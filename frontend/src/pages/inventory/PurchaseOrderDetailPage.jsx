@@ -23,8 +23,10 @@ import {
 } from "lucide-react";
 import axios from "../../utils/api";
 import Swal from "sweetalert2";
+import toastUtils from "../../utils/toastUtils";
 
 import CreatePurchaseOrderModal from "./CreatePurchaseOrderModal";
+import CreateGRNRequestModal from "./CreateGRNRequestModal";
 
 const PurchaseOrderDetailPage = () => {
   const { id } = useParams();
@@ -32,6 +34,7 @@ const PurchaseOrderDetailPage = () => {
   const [po, setPo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showGRNModal, setShowGRNModal] = useState(false);
 
   const fetchPODetails = useCallback(async () => {
     try {
@@ -63,7 +66,7 @@ const PurchaseOrderDetailPage = () => {
       setPo(data);
     } catch (error) {
       console.error("Error fetching PO details:", error);
-      Swal.fire("Error", "Failed to load Purchase Order details", "error");
+      toastUtils.error("Failed to load Purchase Order details");
     } finally {
       setLoading(false);
     }
@@ -76,11 +79,11 @@ const PurchaseOrderDetailPage = () => {
   const handleStatusUpdate = async (newStatus) => {
     try {
       await axios.patch(`/inventory/purchase-orders/${id}/status`, { status: newStatus });
-      Swal.fire("Success", `PO status updated to ${newStatus}`, "success");
+      toastUtils.success(`PO status updated to ${newStatus}`);
       fetchPODetails();
     } catch (error) {
       console.error("Error updating PO status:", error);
-      Swal.fire("Error", "Failed to update status", "error");
+      toastUtils.error("Failed to update status");
     }
   };
 
@@ -109,8 +112,8 @@ const PurchaseOrderDetailPage = () => {
   const getStatusStep = (status) => {
     const s = status?.toLowerCase() || "draft";
     if (s === "draft") return 0;
-    if (s === "submitted" || s === "pending" || s === "ordered") return 1;
-    if (s === "received" || s === "delivered") return 2;
+    if (s === "submitted" || s === "pending" || s === "ordered" || s === "approved") return 1;
+    if (s === "goods arrival" || s === "received" || s === "delivered") return 2;
     if (s === "fulfilled") return 3;
     return 0;
   };
@@ -144,6 +147,7 @@ const PurchaseOrderDetailPage = () => {
                 <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${
                   po.status === 'draft' ? 'bg-slate-100 text-slate-600 border-slate-200' :
                   po.status === 'submitted' ? 'bg-blue-100 text-blue-600 border-blue-200' :
+                  po.status === 'goods arrival' ? 'bg-amber-100 text-amber-600 border-amber-200' :
                   'bg-emerald-100 text-emerald-600 border-emerald-200'
                 }`}>
                   {po.status}
@@ -161,24 +165,38 @@ const PurchaseOrderDetailPage = () => {
                 <Download size={18} />
               </button>
             </div>
-            <button 
-              onClick={() => {
-                if (po.material_request_id) {
-                  navigate(`/inventory-manager/vendors/po/edit-mr/${po.id}`);
-                } else {
-                  setShowEditModal(true);
-                }
-              }}
-              className="flex items-center gap-2 px-6 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-blue-600 font-bold text-xs uppercase tracking-wider hover:bg-slate-50 shadow-sm"
-            >
-              <Edit size={16} /> Edit
-            </button>
+            {po.status === 'draft' && (
+              <button 
+                onClick={() => {
+                  navigate(`/inventory-manager/purchase-orders/edit/${po.id}`);
+                }}
+                className="flex items-center gap-2 px-6 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-blue-600 font-bold text-xs uppercase tracking-wider hover:bg-slate-50 shadow-sm"
+              >
+                <Edit size={16} /> Edit
+              </button>
+            )}
             {po.status === 'draft' && (
               <button 
                 onClick={() => handleStatusUpdate('submitted')}
                 className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-lg font-bold text-xs uppercase tracking-wider hover:bg-blue-700 shadow-lg shadow-blue-500/25"
               >
                 <CheckCircle size={16} /> Submit Order
+              </button>
+            )}
+            {po.status === 'submitted' && (
+              <button 
+                onClick={() => handleStatusUpdate('approved')}
+                className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 text-white rounded-lg font-bold text-xs uppercase tracking-wider hover:bg-emerald-700 shadow-lg shadow-emerald-500/25"
+              >
+                <CheckCircle size={16} /> Approve Order
+              </button>
+            )}
+            {(po.status === 'approved' || po.status === 'delivered' || po.status === 'received' || po.status === 'submitted') && (
+              <button 
+                onClick={() => setShowGRNModal(true)}
+                className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-lg font-bold text-xs uppercase tracking-wider hover:bg-blue-700 shadow-lg shadow-blue-500/25"
+              >
+                <Package size={16} /> Receive Material
               </button>
             )}
           </div>
@@ -471,8 +489,11 @@ const PurchaseOrderDetailPage = () => {
                   <span className="text-xs font-bold text-slate-600 group-hover:text-blue-600">Supplier Profile</span>
                   <ChevronRight size={14} className="text-slate-300 group-hover:text-blue-600" />
                 </button>
-                <button className="w-full flex items-center justify-between p-3 rounded-xl border border-slate-100 dark:border-slate-800 hover:bg-slate-50 transition-colors text-left group">
-                  <span className="text-xs font-bold text-slate-600 group-hover:text-blue-600">Related GRNs</span>
+                <button 
+                  onClick={() => navigate('/inventory-manager/purchase-receipt', { state: { po_number: po.po_number } })}
+                  className="w-full flex items-center justify-between p-3 rounded-xl border border-slate-100 dark:border-slate-800 hover:bg-slate-50 transition-colors text-left group"
+                >
+                  <span className="text-xs font-bold text-slate-600 group-hover:text-blue-600">Related Receipts</span>
                   <ChevronRight size={14} className="text-slate-300 group-hover:text-blue-600" />
                 </button>
                 <button className="w-full flex items-center justify-between p-3 rounded-xl border border-slate-100 dark:border-slate-800 hover:bg-slate-50 transition-colors text-left group">
@@ -498,6 +519,17 @@ const PurchaseOrderDetailPage = () => {
         onClose={() => setShowEditModal(false)}
         editData={po}
         onPOCreated={fetchPODetails}
+      />
+
+      {/* Create GRN Modal */}
+      <CreateGRNRequestModal 
+        isOpen={showGRNModal}
+        onClose={() => setShowGRNModal(false)}
+        po={po}
+        onGRNCreated={() => {
+          fetchPODetails();
+          navigate('/inventory-manager/grn-processing');
+        }}
       />
     </div>
   );

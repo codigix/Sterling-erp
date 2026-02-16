@@ -3,11 +3,14 @@ const pool = require('../config/database');
 class GRN {
   static async create(data) {
     const [result] = await pool.execute(
-      `INSERT INTO grn (po_id, items, qc_status) VALUES (?, ?, ?)`,
+      `INSERT INTO grn (po_id, vendor_id, items, qc_status, receipt_date, transporter_notes) VALUES (?, ?, ?, ?, ?, ?)`,
       [
-        data.po_id,
+        data.po_id || null,
+        data.vendor_id || null,
         JSON.stringify(data.items || []),
-        data.qc_status || 'pending'
+        data.qc_status || 'pending',
+        data.receipt_date || null,
+        data.transporter_notes || null
       ]
     );
     return result.insertId;
@@ -23,11 +26,14 @@ class GRN {
 
   static async findById(id) {
     const [rows] = await pool.execute(
-      `SELECT g.*, po.po_number, v.name as vendor_name
+      `SELECT g.*, po.po_number, 
+              COALESCE(v_po.name, v_direct.name) as vendor_name,
+              COALESCE(v_po.id, v_direct.id) as vendor_id,
+              COALESCE(v_po.email, v_direct.email) as vendor_email
        FROM grn g
-       JOIN purchase_orders po ON g.po_id = po.id
-       JOIN quotations q ON po.quotation_id = q.id
-       JOIN vendors v ON q.vendor_id = v.id
+       LEFT JOIN purchase_orders po ON g.po_id = po.id
+       LEFT JOIN vendors v_po ON po.vendor_id = v_po.id
+       LEFT JOIN vendors v_direct ON g.vendor_id = v_direct.id
        WHERE g.id = ?`,
       [id]
     );
@@ -36,11 +42,13 @@ class GRN {
 
   static async findAll(filters = {}) {
     let query = `
-      SELECT g.*, po.po_number, v.name as vendor_name
+      SELECT g.*, po.po_number, 
+             COALESCE(v_po.name, v_direct.name) as vendor_name,
+             COALESCE(v_po.id, v_direct.id) as vendor_id
       FROM grn g
-      JOIN purchase_orders po ON g.po_id = po.id
-      JOIN quotations q ON po.quotation_id = q.id
-      JOIN vendors v ON q.vendor_id = v.id
+      LEFT JOIN purchase_orders po ON g.po_id = po.id
+      LEFT JOIN vendors v_po ON po.vendor_id = v_po.id
+      LEFT JOIN vendors v_direct ON g.vendor_id = v_direct.id
       WHERE 1=1
     `;
     const params = [];

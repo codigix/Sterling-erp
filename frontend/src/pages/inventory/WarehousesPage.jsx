@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import axios from "../../utils/api";
 import Swal from "sweetalert2";
+import toastUtils from "../../utils/toastUtils";
 
 const WarehousesPage = () => {
   const [viewMode, setViewMode] = useState("list");
@@ -88,16 +89,16 @@ const WarehousesPage = () => {
     try {
       if (editingId) {
         await axios.put(`/inventory/warehouses/${editingId}`, formData);
-        Swal.fire("Success", "Warehouse updated successfully", "success");
+        toastUtils.success("Warehouse updated successfully");
       } else {
         await axios.post("/inventory/warehouses", formData);
-        Swal.fire("Success", "Warehouse created successfully", "success");
+        toastUtils.success("Warehouse created successfully");
       }
       setShowModal(false);
       fetchWarehouses();
     } catch (error) {
       console.error("Error saving warehouse:", error);
-      Swal.fire("Error", error.response?.data?.message || "Failed to save warehouse", "error");
+      toastUtils.error(error.response?.data?.message || "Failed to save warehouse");
     }
   };
 
@@ -115,11 +116,11 @@ const WarehousesPage = () => {
     if (result.isConfirmed) {
       try {
         await axios.delete(`/inventory/warehouses/${id}`);
-        Swal.fire("Deleted!", "Warehouse has been deleted.", "success");
+        toastUtils.success("Warehouse has been deleted.");
         fetchWarehouses();
       } catch (error) {
         console.error("Error deleting warehouse:", error);
-        Swal.fire("Error", "Failed to delete warehouse", "error");
+        toastUtils.error("Failed to delete warehouse");
       }
     }
   };

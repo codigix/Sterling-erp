@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import axios from "axios";
+import toastUtils from "../../utils/toastUtils";
 
 const VendorsPage = () => {
   const [vendors, setVendors] = useState([]);
@@ -113,10 +114,11 @@ const VendorsPage = () => {
     if (window.confirm("Are you sure you want to delete this vendor?")) {
       try {
         await axios.delete(`${API_URL}/inventory/vendors/${id}`);
+        toastUtils.success("Vendor deleted successfully");
         fetchVendors();
       } catch (err) {
         console.error("Error deleting vendor:", err);
-        alert("Failed to delete vendor");
+        toastUtils.error("Failed to delete vendor");
       }
     }
   };
@@ -141,7 +143,7 @@ const VendorsPage = () => {
     e.preventDefault();
 
     if (!formData.name.trim()) {
-      alert("Vendor name is required");
+      toastUtils.warning("Vendor name is required");
       return;
     }
 
@@ -169,10 +171,10 @@ const VendorsPage = () => {
 
       fetchVendors();
       fetchStats();
-      alert("Vendor added successfully");
+      toastUtils.success("Vendor added successfully");
     } catch (err) {
       console.error("Error adding vendor:", err);
-      alert("Failed to add vendor");
+      toastUtils.error("Failed to add vendor");
     } finally {
       setSubmitting(false);
     }
@@ -201,7 +203,7 @@ const VendorsPage = () => {
     e.preventDefault();
 
     if (!formData.name.trim()) {
-      alert("Vendor name is required");
+      toastUtils.warning("Vendor name is required");
       return;
     }
 
@@ -233,10 +235,10 @@ const VendorsPage = () => {
 
       fetchVendors();
       fetchStats();
-      alert("Vendor updated successfully");
+      toastUtils.success("Vendor updated successfully");
     } catch (err) {
       console.error("Error updating vendor:", err);
-      alert("Failed to update vendor");
+      toastUtils.error("Failed to update vendor");
     } finally {
       setSubmitting(false);
     }

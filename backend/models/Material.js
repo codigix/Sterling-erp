@@ -39,9 +39,12 @@ class Material {
 
   static async findAll(filters = {}) {
     let query = `
-      SELECT i.*, ig.name as item_group_name 
+      SELECT i.*, ig.name as item_group_name,
+             COALESCE(SUM(ms.quantity), 0) as total_stock,
+             GROUP_CONCAT(DISTINCT CASE WHEN ms.quantity > 0 THEN ms.warehouse_name END) as available_in_warehouses
       FROM inventory i 
       LEFT JOIN item_groups ig ON i.item_group_id = ig.id 
+      ${filters.onlyWithStock ? 'INNER' : 'LEFT'} JOIN material_stock ms ON i.id = ms.material_id
       WHERE 1=1
     `;
     const params = [];
@@ -51,50 +54,105 @@ class Material {
       params.push(`%${filters.itemCode}%`);
     }
 
+    if (filters.itemName) {
+      query += ' AND i.item_name LIKE ?';
+      params.push(`%${filters.itemName}%`);
+    }
+
     if (filters.category) {
       query += ' AND i.category = ?';
       params.push(filters.category);
     }
 
+    if (filters.warehouse) {
+      // If filtering by warehouse, we only want the sum for that specific warehouse
+      // Use TRIM and case-insensitive comparison for robustness
+      query += ' AND TRIM(LOWER(ms.warehouse_name)) = TRIM(LOWER(?))';
+      params.push(filters.warehouse);
+    }
+
+    query += ' GROUP BY i.id';
+
     if (filters.belowReorderLevel) {
-      query += ' AND i.quantity < i.reorder_level';
+      query += ' HAVING total_stock < i.reorder_level';
     }
 
     const [rows] = await pool.execute(query, params);
-    return (rows || []).map(Material.formatRow);
+    return (rows || []).map(row => {
+      const formatted = Material.formatRow(row);
+      formatted.quantity = row.total_stock; // Override with sum from material_stock
+      return formatted;
+    });
+  }
+
+  static async updateStock(materialId, warehouse, quantity, batchNo = null) {
+    // Add quantity to material_stock (can be negative for issues)
+    await pool.execute(`
+      INSERT INTO material_stock (material_id, warehouse_name, quantity, batch_no)
+      VALUES (?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE quantity = quantity + VALUES(quantity)
+    `, [materialId, warehouse, quantity, batchNo]);
+
+    // Update main inventory table's quantity and warehouse for backward compatibility
+    await pool.execute(`
+      UPDATE inventory i
+      SET i.quantity = (SELECT COALESCE(SUM(quantity), 0) FROM material_stock WHERE material_id = ?),
+          i.warehouse = ?
+      WHERE i.id = ?
+    `, [materialId, warehouse, materialId]);
+  }
+
+  static async getStockByWarehouse(materialId) {
+    const [rows] = await pool.execute(
+      'SELECT warehouse_name, quantity, batch_no FROM material_stock WHERE material_id = ?',
+      [materialId]
+    );
+    return rows;
   }
 
   static async findById(id) {
     const [rows] = await pool.execute(
-      `SELECT i.*, ig.name as item_group_name 
+      `SELECT i.*, ig.name as item_group_name,
+              COALESCE((SELECT SUM(quantity) FROM material_stock WHERE material_id = i.id), 0) as total_stock
        FROM inventory i 
        LEFT JOIN item_groups ig ON i.item_group_id = ig.id 
        WHERE i.id = ?`,
       [id]
     );
-    return Material.formatRow(rows[0]);
+    if (!rows[0]) return null;
+    const formatted = Material.formatRow(rows[0]);
+    formatted.quantity = rows[0].total_stock;
+    return formatted;
   }
 
   static async findByItemCode(itemCode) {
     const [rows] = await pool.execute(
-      `SELECT i.*, ig.name as item_group_name 
+      `SELECT i.*, ig.name as item_group_name,
+              COALESCE((SELECT SUM(quantity) FROM material_stock WHERE material_id = i.id), 0) as total_stock
        FROM inventory i 
        LEFT JOIN item_groups ig ON i.item_group_id = ig.id 
-       WHERE i.item_code = ?`,
+       WHERE TRIM(LOWER(i.item_code)) = TRIM(LOWER(?))`,
       [itemCode]
     );
-    return Material.formatRow(rows[0]);
+    if (!rows[0]) return null;
+    const formatted = Material.formatRow(rows[0]);
+    formatted.quantity = rows[0].total_stock;
+    return formatted;
   }
 
   static async findByName(itemName) {
     const [rows] = await pool.execute(
-      `SELECT i.*, ig.name as item_group_name 
+      `SELECT i.*, ig.name as item_group_name,
+              COALESCE((SELECT SUM(quantity) FROM material_stock WHERE material_id = i.id), 0) as total_stock
        FROM inventory i 
        LEFT JOIN item_groups ig ON i.item_group_id = ig.id 
-       WHERE i.item_name = ?`,
+       WHERE TRIM(LOWER(i.item_name)) = TRIM(LOWER(?))`,
       [itemName]
     );
-    return Material.formatRow(rows[0]);
+    if (!rows[0]) return null;
+    const formatted = Material.formatRow(rows[0]);
+    formatted.quantity = rows[0].total_stock;
+    return formatted;
   }
 
   static async create(data) {
@@ -104,7 +162,7 @@ class Material {
       weightPerUnit, weightUom, drawingNo, revision, 
       materialGrade, eanBarcode, gstPercent,
       quantity, reorderLevel, location, vendorId, unitCost,
-      rack, shelf, qrCode
+      rack, shelf, qrCode, warehouse
     } = data;
     const [result] = await pool.execute(
       `INSERT INTO inventory (
@@ -113,16 +171,16 @@ class Material {
         weight_per_unit, weight_uom, drawing_no, revision, 
         material_grade, ean_barcode, gst_percent,
         quantity, reorder_level, location, vendor_id, unit_cost,
-        rack, shelf, qr_code
+        rack, shelf, qr_code, warehouse
       )
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        itemCode, 
-        itemName, 
+        itemCode || `MAT-${Date.now()}-${Math.floor(Math.random()*1000)}`, 
+        itemName || "Unnamed Item", 
         batch || null, 
         specification || null, 
-        unit, 
-        category || null, 
+        unit || "units", 
+        category || "Uncategorized", 
         itemGroupId || null, 
         valuationRate || 0, 
         sellingRate || 0, 
@@ -141,7 +199,8 @@ class Material {
         unitCost || 0,
         rack || null,
         shelf || null,
-        qrCode || null
+        qrCode || null,
+        warehouse || null
       ]
     );
     return result.insertId;

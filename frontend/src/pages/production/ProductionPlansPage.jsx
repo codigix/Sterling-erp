@@ -23,9 +23,12 @@ import {
   BarChart2,
   Send,
   Bell,
+  Box,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
+import { showSuccess, showError } from "../../utils/toastUtils";
+import MaterialRequestModal from "../../components/production/MaterialRequestModal";
 
 // --- Main Component ---
 const ProductionPlansPage = () => {
@@ -39,13 +42,14 @@ const ProductionPlansPage = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [readyItems, setReadyItems] = useState([]);
+  const [showMaterialRequestModal, setShowMaterialRequestModal] = useState(false);
+  const [selectedPlanData, setSelectedPlanData] = useState(null);
+  const [selectedPlanMaterials, setSelectedPlanMaterials] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchPlans();
     fetchStats();
-    fetchReadyForProduction();
   }, []);
 
   const fetchPlans = async () => {
@@ -66,17 +70,6 @@ const ProductionPlansPage = () => {
       setStats(response.data);
     } catch (error) {
       console.error("Error fetching production stats:", error);
-    }
-  };
-
-  const fetchReadyForProduction = async () => {
-    try {
-      const response = await axios.get("/production/ready-for-production", {
-        __sessionGuard: true,
-      });
-      setReadyItems(response.data?.data?.readyItems || []);
-    } catch (err) {
-      console.error("Error fetching ready items:", err);
     }
   };
 
@@ -124,6 +117,46 @@ const ProductionPlansPage = () => {
 
   const handleCreateNew = () => {
     navigate("/department/production/plans/new");
+  };
+
+  const handleGenerateWorkOrders = async (planId) => {
+    try {
+      const response = await axios.post(`/production/plans/${planId}/generate-work-orders`);
+      showSuccess(response.data.message || "Work orders generated successfully");
+      fetchPlans();
+    } catch (error) {
+      console.error("Error generating work orders:", error);
+      showError(error.response?.data?.message || "Failed to generate work orders");
+    }
+  };
+
+  const handleSendMaterialRequest = async (planId) => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`/production/plans/${planId}/with-stages`);
+      const plan = response.data;
+      
+      console.log('--- ProductionPlansPage Debug ---');
+      console.log('Plan fetched:', plan);
+      
+      setSelectedPlanData({
+        planId: plan.id,
+        salesOrderId: plan.sales_order_id,
+        rootCardId: plan.root_card_id,
+        // Ensure both field names are present for compatibility with the modal's logic
+        sales_order_id: plan.sales_order_id,
+        root_card_id: plan.root_card_id,
+        estimatedCompletionDate: plan.estimated_completion_date,
+        planName: plan.plan_name
+      });
+      setSelectedPlanMaterials(plan.materials || []);
+      setShowMaterialRequestModal(true);
+    } catch (error) {
+      console.error("Error fetching plan details for material request:", error);
+      showError(error.response?.data?.message || "Failed to fetch plan details");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const filteredPlans = plans.filter(
@@ -434,8 +467,16 @@ const ProductionPlansPage = () => {
                                 ),
                             },
                             { icon: BarChart2 },
-                            { icon: Settings },
-                            { icon: Send },
+                            { 
+                              icon: Settings,
+                              tooltip: "Create Work Orders",
+                              onClick: () => handleGenerateWorkOrders(plan.id)
+                            },
+                            { 
+                              icon: Send,
+                              tooltip: "Send Material Request",
+                              onClick: () => handleSendMaterialRequest(plan.id)
+                            },
                             {
                               icon: Edit2,
                               onClick: () =>
@@ -454,6 +495,7 @@ const ProductionPlansPage = () => {
                             <button
                               key={idx}
                               onClick={action.onClick}
+                              title={action.tooltip}
                               className={`p-2 rounded-lg transition-all relative ${
                                 action.variant === "danger"
                                   ? "text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
@@ -490,6 +532,15 @@ const ProductionPlansPage = () => {
           </div>
         </div>
       </div>
+      {showMaterialRequestModal && (
+        <MaterialRequestModal
+          isOpen={showMaterialRequestModal}
+          onClose={() => setShowMaterialRequestModal(false)}
+          data={selectedPlanData}
+          materials={selectedPlanMaterials}
+          planId={selectedPlanData?.planId}
+        />
+      )}
     </div>
   );
 };

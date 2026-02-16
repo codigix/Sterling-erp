@@ -107,6 +107,8 @@ import AccountantDashboard from "./pages/roles/AccountantDashboard";
 import WorkerDashboard from "./pages/roles/WorkerDashboard";
 import ProductionManagerDashboard from "./pages/roles/ProductionManagerDashboard";
 
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import "./App.css";
 
 const SessionWatcher = () => {
@@ -133,6 +135,7 @@ function App() {
       <Router>
         <SessionWatcher />
         <div className="App">
+          <ToastContainer />
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
