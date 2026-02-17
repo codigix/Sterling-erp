@@ -43,8 +43,19 @@ class MaterialRequirementsDetail {
   }
 
   static async create(data) {
+    const rootCardId = data.rootCardId || data.salesOrderId || data.sales_order_id;
+    
+    // Safety check: if record already exists, update it instead
+    if (rootCardId) {
+      const existing = await this.findByRootCardId(rootCardId);
+      if (existing) {
+        console.log(`[MaterialRequirementsDetail] Record already exists for ID ${rootCardId}. Redirecting to update.`);
+        return this.update(rootCardId, data);
+      }
+    }
+
     const params = [
-      data.rootCardId || null,
+      rootCardId || null,
       stringifyJsonField(ensureArray(data.materials)) || '[]',
       data.totalMaterialCost || 0,
       data.procurementStatus || 'pending',
@@ -207,7 +218,8 @@ class MaterialRequirementsDetail {
     if (!Array.isArray(materials)) return 0;
     return materials.reduce((total, material) => {
       const quantity = parseFloat(material.quantity) || 0;
-      const price = parseFloat(material.sellingRate || material.selling_rate || material.unitPrice || material.unitCost || material.valuationRate || material.valuation_rate || 0);
+      // Prioritize cost/valuation over selling rate for BOM calculations
+      const price = parseFloat(material.valuationRate || material.valuation_rate || material.unitCost || material.unit_cost || material.unitPrice || material.sellingRate || material.selling_rate || 0);
       return total + (quantity * price);
     }, 0);
   }

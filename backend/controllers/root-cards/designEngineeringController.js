@@ -138,6 +138,7 @@ class DesignEngineeringController {
   static async uploadDesignDocuments(req, res) {
     try {
       const { rootCardId } = req.params;
+      const { type } = req.body; // 'drawings' or 'documents'
       const files = req.files || [];
       const userId = req.user?.id || req.user?.userId;
 
@@ -183,7 +184,7 @@ class DesignEngineeringController {
             size: file.size,
             mimeType: file.mimetype,
             uploadedBy: userId
-          });
+          }, type); // Pass the type here
           uploadedDocs.push(doc);
         } else {
           // For drafts, we just return the file info. 
@@ -195,7 +196,8 @@ class DesignEngineeringController {
             size: file.size,
             mimeType: file.mimetype,
             uploadedAt: new Date().toISOString(),
-            uploadedBy: userId
+            uploadedBy: userId,
+            type: type // Keep track of type for drafts too
           });
         }
       }

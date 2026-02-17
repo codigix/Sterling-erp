@@ -1,10 +1,10 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import axios from "../../../utils/api";
 import { sendAssignmentNotifications, sendOrderCreatedNotification } from "../../../utils/notificationService";
 import { RootCardProvider } from "./context";
 import { useFormUI } from "./hooks";
 import { useRootCardContext } from "./hooks";
-import { updateDraftWithStepData, saveAllStepsToRootCard, saveStepDataToAPI } from "./stepDataHandler";
+import { updateDraftWithStepData, saveAllStepsToRootCard, saveStepDataToAPI, deleteDraft } from "./stepDataHandler";
 import WizardHeader from "./shared/WizardHeader";
 import FormActions from "./shared/FormActions";
 import Step1_ClientPO from "./steps/Step1_ClientPO";
@@ -15,7 +15,7 @@ import Step5_QualityCheck from "./steps/Step5_QualityCheck";
 import Step6_Shipment from "./steps/Step6_Shipment";
 import Step7_Delivery from "./steps/Step7_Delivery";
 import RootCardViewOnly from "./RootCardViewOnly";
-import { AlertCircle, CheckCircle2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, History, X } from "lucide-react";
 import "./RootCardForm.css";
 
 export default function RootCardForm({ mode = 'create', initialData = null, onSubmit, onCancel }) {
@@ -27,9 +27,23 @@ export default function RootCardForm({ mode = 'create', initialData = null, onSu
 }
 
 function RootCardFormContent({ onSubmit, onCancel, mode = 'create', initialData = null }) {
-  const { state, setStep, setLoading, setError, setSuccess, setOrderId, setConfigData, setEmployees, updateField, setPoDocuments, setMaterialDetailsTable, setProductionPhaseDetails, setDraftData } = useRootCardContext();
+  const { state, setStep, setLoading, setError, setSuccess, setOrderId, setConfigData, setEmployees, updateField, setPoDocuments, setMaterialDetailsTable, setProductionPhaseDetails, setDraftData, reset } = useRootCardContext();
   const { currentStep, loading, error, successMessage } = useFormUI();
   const { formData } = state;
+
+  const [pendingDraft, setPendingDraft] = useState(null);
+  const [showResumeModal, setShowResumeModal] = useState(false);
+
+  const formatDateForInput = (dateStr) => {
+    if (!dateStr) return '';
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return '';
+      return d.toISOString().split('T')[0];
+    } catch {
+      return '';
+    }
+  };
 
   const loadAllStepData = React.useCallback(async (rootCardId) => {
     try {
@@ -44,16 +58,6 @@ function RootCardFormContent({ onSubmit, onCancel, mode = 'create', initialData 
       const deliveryResponse = await axios.get(`/root-cards/steps/${rootCardId}/delivery`).catch(() => null);
       const allStepsResponse = await axios.get(`/root-cards/steps/${rootCardId}/steps`).catch(() => null);
 
-      const formatDateForInput = (dateStr) => {
-        if (!dateStr) return '';
-        try {
-          const d = new Date(dateStr);
-          if (isNaN(d.getTime())) return '';
-          return d.toISOString().split('T')[0];
-        } catch {
-          return '';
-        }
-      };
 
       // Set assignees from all steps
       if (allStepsResponse?.data?.data?.steps) {
@@ -115,9 +119,13 @@ function RootCardFormContent({ onSubmit, onCancel, mode = 'create', initialData 
         // Ensure materials array is also available at the root for Step 3
         if (materialsData.materials) {
           updateField('materials', materialsData.materials);
+        } else if (materialsData.materialProcurement?.materials) {
+          updateField('materials', materialsData.materialProcurement.materials);
         }
+        
         if (materialsData.materialDetailsTable) {
           setMaterialDetailsTable(materialsData.materialDetailsTable);
+          updateField('materialDetailsTable', materialsData.materialDetailsTable);
         }
       }
 
@@ -200,25 +208,46 @@ function RootCardFormContent({ onSubmit, onCancel, mode = 'create', initialData 
       setLoading(true);
       const response = await axios.get('/root-cards/drafts/latest');
       if (response.data?.draft) {
-        const draft = response.data.draft;
-        
-        setDraftData({
-          id: draft.id,
-          currentStep: draft.current_step,
-          formData: draft.formData,
-          materialDetailsTable: draft.formData?.materialDetailsTable,
-          productionPhaseDetails: draft.formData?.productionPhaseDetails,
-          poDocuments: draft.poDocuments
-        });
-        
-        setSuccess(`Resumed draft from ${new Date(draft.updated_at).toLocaleString()}`);
+        setPendingDraft(response.data.draft);
+        setShowResumeModal(true);
       }
       setLoading(false);
     } catch (err) {
       console.error('Error loading draft:', err);
       setLoading(false);
     }
-  }, [setLoading, setDraftData, setSuccess]);
+  }, [setLoading]);
+
+  const handleResume = () => {
+    if (pendingDraft) {
+      setDraftData({
+        id: pendingDraft.id,
+        currentStep: pendingDraft.current_step,
+        formData: pendingDraft.formData,
+        materialDetailsTable: pendingDraft.formData?.materialDetailsTable,
+        productionPhaseDetails: pendingDraft.formData?.productionPhaseDetails,
+        poDocuments: pendingDraft.poDocuments
+      });
+      setSuccess(`Resumed draft from ${new Date(pendingDraft.updated_at).toLocaleString()}`);
+    }
+    setShowResumeModal(false);
+    setPendingDraft(null);
+  };
+
+  const handleStartFresh = async () => {
+    try {
+      if (pendingDraft?.id) {
+        await deleteDraft(pendingDraft.id);
+      }
+      reset();
+      setSuccess("Started with a fresh root card.");
+    } catch (err) {
+      console.error("Error clearing draft:", err);
+    } finally {
+      setShowResumeModal(false);
+      setPendingDraft(null);
+    }
+  };
 
   useEffect(() => {
     const fetchConfigData = async () => {
@@ -255,11 +284,19 @@ function RootCardFormContent({ onSubmit, onCancel, mode = 'create', initialData 
       updateField('poNumber', initialData.po_number || '');
       updateField('clientName', initialData.customer || '');
       updateField('projectName', initialData.project_name || '');
-      updateField('orderDate', initialData.order_date || '');
-      updateField('estimatedEndDate', initialData.due_date || '');
+      updateField('orderDate', formatDateForInput(initialData.order_date));
+      updateField('poDate', formatDateForInput(initialData.order_date));
+      updateField('estimatedEndDate', formatDateForInput(initialData.due_date));
       updateField('projectPriority', initialData.priority || 'medium');
       updateField('status', initialData.status || 'pending');
       updateField('totalAmount', initialData.total?.toString() || '');
+      
+      if (initialData.project_scope) {
+        updateField('projectRequirements', {
+          ...(formData.projectRequirements || {}),
+          ...initialData.project_scope
+        });
+      }
       
       loadAllStepData(initialData.id);
     } else if (mode === 'create') {
@@ -513,7 +550,7 @@ function RootCardFormContent({ onSubmit, onCancel, mode = 'create', initialData 
           materialDetailsTable: state.materialDetailsTable,
           productionPhaseDetails: state.productionPhaseDetails
         };
-        const summary = await saveAllStepsToRootCard(createdOrderId, mergedFormData);
+        const summary = await saveAllStepsToRootCard(createdOrderId, mergedFormData, state.poDocuments || []);
         console.log('All step data saved successfully:', summary);
       } catch (err) {
         console.warn('Could not save some step data:', err.message);
@@ -530,8 +567,7 @@ function RootCardFormContent({ onSubmit, onCancel, mode = 'create', initialData 
 
       try {
         if (state.createdOrderId) {
-          await axios.delete(`/root-cards/drafts/${state.createdOrderId}`);
-          console.log('Draft deleted successfully');
+          await deleteDraft(state.createdOrderId);
         }
       } catch (err) {
         console.warn('Could not delete draft:', err.message);
@@ -590,6 +626,61 @@ function RootCardFormContent({ onSubmit, onCancel, mode = 'create', initialData 
           mode={mode}
         />
       </div>
+
+      {/* Resume Draft Modal */}
+      {showResumeModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform animate-in zoom-in-95 duration-200">
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
+                  <History size={24} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-900">Resume Progress?</h3>
+                  <p className="text-sm text-slate-500">We found an unfinished root card draft.</p>
+                </div>
+              </div>
+
+              {pendingDraft && (
+                <div className="bg-slate-50 rounded-xl p-4 mb-6 border border-slate-100">
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Project:</span>
+                      <span className="font-medium text-slate-700">{pendingDraft.formData?.projectName || 'Unnamed Project'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Last Saved Step:</span>
+                      <span className="font-medium text-slate-700">Step {pendingDraft.current_step}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Saved On:</span>
+                      <span className="font-medium text-slate-700">{new Date(pendingDraft.updated_at).toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={handleResume}
+                  className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-all shadow-lg shadow-blue-200 flex items-center justify-center gap-2"
+                >
+                  <History size={18} />
+                  Resume Last Draft
+                </button>
+                <button
+                  onClick={handleStartFresh}
+                  className="w-full py-3 px-4 bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 rounded-xl font-medium transition-all flex items-center justify-center gap-2"
+                >
+                  <X size={18} />
+                  Start Fresh
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

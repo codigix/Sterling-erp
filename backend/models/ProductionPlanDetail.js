@@ -56,8 +56,8 @@ class ProductionPlanDetail {
     const [rows] = await pool.execute(
       `SELECT ppd.*
        FROM production_plan_details ppd
-       WHERE ppd.root_card_id = ?`,
-      [rootCardId]
+       WHERE ppd.root_card_id = ? OR ppd.sales_order_id = ?`,
+      [rootCardId, rootCardId]
     );
     return rows[0] ? this.formatRow(rows[0]) : null;
   }
@@ -74,6 +74,17 @@ class ProductionPlanDetail {
   }
 
   static async create(data) {
+    const rootCardId = data.rootCardId || data.salesOrderId;
+    
+    // Safety check: if record already exists, update it instead
+    if (rootCardId) {
+      const existing = await this.findByRootCardId(rootCardId);
+      if (existing) {
+        console.log(`[ProductionPlanDetail] Record already exists for ID ${rootCardId}. Redirecting to update.`);
+        return this.update(rootCardId, data, !!data.rootCardId);
+      }
+    }
+
     const normalized = normalizeStepData(data, {
       productionStartDate: 'timeline.startDate',
       estimatedCompletionDate: 'timeline.endDate',

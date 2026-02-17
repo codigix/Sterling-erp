@@ -1373,6 +1373,40 @@ async function runMigrations() {
       console.log('⚠️ Could not update production_plan_details columns:', err.message);
     }
 
+    // Migration: Add missing columns to client_po_details
+    try {
+      const [columns] = await connection.execute('SHOW COLUMNS FROM client_po_details');
+      const columnNames = columns.map(c => c.Field);
+      
+      if (!columnNames.includes('product_details')) {
+        await connection.execute('ALTER TABLE client_po_details ADD COLUMN product_details JSON');
+        console.log('✅ Added product_details column to client_po_details');
+      }
+      if (!columnNames.includes('project_requirements')) {
+        await connection.execute('ALTER TABLE client_po_details ADD COLUMN project_requirements JSON');
+        console.log('✅ Added project_requirements column to client_po_details');
+      }
+      if (!columnNames.includes('shipping_address')) {
+        await connection.execute('ALTER TABLE client_po_details ADD COLUMN shipping_address TEXT');
+        console.log('✅ Added shipping_address column to client_po_details');
+      }
+    } catch (err) {
+      console.log('⚠️ Could not update client_po_details columns:', err.message);
+    }
+
+    // Migration: Add material_details_table to material_requirements_details
+    try {
+      const [columns] = await connection.execute('SHOW COLUMNS FROM material_requirements_details');
+      const columnNames = columns.map(c => c.Field);
+      
+      if (!columnNames.includes('material_details_table')) {
+        await connection.execute('ALTER TABLE material_requirements_details ADD COLUMN material_details_table JSON');
+        console.log('✅ Added material_details_table column to material_requirements_details');
+      }
+    } catch (err) {
+      console.log('⚠️ Could not update material_requirements_details columns:', err.message);
+    }
+
     console.log('\n✅ All migrations completed successfully!');
   } catch (error) {
     console.error('❌ Migration failed:', error.message);

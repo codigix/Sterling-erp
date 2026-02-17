@@ -45,6 +45,7 @@ export default function Step2_DesignEngineering({ readOnly = false }) {
       files.forEach(file => {
         formData.append('documents', file);
       });
+      formData.append('type', type);
 
       const response = await axios.post(`/root-cards/steps/${rootCardId}/design-engineering/upload`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
@@ -97,7 +98,7 @@ export default function Step2_DesignEngineering({ readOnly = false }) {
                 onChange={(e) => handleFileUpload(e, "drawings")}
                 className="hidden"
                 id="drawingsUpload"
-                accept=".pdf,.dwg,.dxf,.step,.igs,.png,.jpg,.jpeg"
+                accept=".pdf,.dwg,.dxf,.step,.stp,.igs,.iges,.png,.jpg,.jpeg,.zip,.rar"
                 disabled={uploading || readOnly}
               />
               <label htmlFor="drawingsUpload" className="cursor-pointer block">
@@ -110,7 +111,7 @@ export default function Step2_DesignEngineering({ readOnly = false }) {
                   {uploading ? "Uploading..." : "Click to upload or drag design files"}
                 </p>
                 <p className="text-slate-500 text-xs mt-1">
-                  PDF, DWG, DXF, STEP, IGS, PNG, JPG
+                  PDF, DWG, DXF, STEP, IGS, PNG, JPG, ZIP, RAR
                 </p>
               </label>
             </div>
@@ -155,7 +156,7 @@ export default function Step2_DesignEngineering({ readOnly = false }) {
                 onChange={(e) => handleFileUpload(e, "documents")}
                 className="hidden"
                 id="documentsUpload"
-                accept=".pdf,.doc,.docx,.xlsx,.txt"
+                accept=".pdf,.doc,.docx,.xlsx,.xls,.txt,.csv,.zip,.rar,.ppt,.pptx"
                 disabled={uploading || readOnly}
               />
               <label htmlFor="documentsUpload" className="cursor-pointer block">
@@ -168,7 +169,7 @@ export default function Step2_DesignEngineering({ readOnly = false }) {
                   {uploading ? "Uploading..." : "Click to upload or drag documents"}
                 </p>
                 <p className="text-slate-500 text-xs mt-1">
-                  PDF, DOC, DOCX, XLSX, TXT
+                  PDF, DOC, DOCX, XLSX, TXT, CSV, ZIP, PPTX
                 </p>
               </label>
             </div>

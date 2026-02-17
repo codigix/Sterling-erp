@@ -39,6 +39,17 @@ class DesignEngineeringDetail {
   }
 
   static async create(data) {
+    const rootCardId = data.rootCardId || data.salesOrderId || data.sales_order_id;
+    
+    // Safety check: if record already exists, update it instead
+    if (rootCardId) {
+      const existing = await this.findByRootCardId(rootCardId);
+      if (existing) {
+        console.log(`[DesignEngineeringDetail] Record already exists for ID ${rootCardId}. Redirecting to update.`);
+        return this.update(rootCardId, data);
+      }
+    }
+
     const normalized = normalizeStepData(data, {
       documents: 'designEngineering.attachments.documents',
       drawings3D: 'designEngineering.attachments.drawings',
@@ -78,33 +89,42 @@ class DesignEngineeringDetail {
   }
 
   static async update(rootCardId, data) {
-    const normalized = normalizeStepData(data, {
-      documents: 'designEngineering.attachments.documents',
-      drawings3D: 'designEngineering.attachments.drawings',
-      designStatus: 'designEngineering.designStatus',
-      bomData: 'designEngineering.bomData',
-      specifications: 'designEngineering.specifications',
-      designNotes: 'designEngineering.designNotes'
-    });
+    // Prefer nested attachments if they exist, otherwise use root fields
+    const documents = data.attachments?.documents || 
+                      data.designEngineering?.attachments?.documents || 
+                      data.documents || 
+                      data.referenceDocuments || [];
+                      
+    const drawings3D = data.attachments?.drawings || 
+                       data.designEngineering?.attachments?.drawings || 
+                       data.drawings3D || [];
 
-    // Fallback to direct keys if designEngineering prefix not present
-    if (normalized.documents === undefined) normalized.documents = data.attachments?.documents || data.documents || data.referenceDocuments;
-    if (normalized.drawings3D === undefined) normalized.drawings3D = data.attachments?.drawings || data.drawings3D;
-    if (normalized.designStatus === undefined) normalized.designStatus = data.designStatus || data.generalDesignInfo?.designStatus;
-    if (normalized.bomData === undefined) normalized.bomData = data.bomData || data.bomSheet;
-    if (normalized.specifications === undefined) normalized.specifications = data.specifications || data.productSpecification;
-    if (normalized.designNotes === undefined) normalized.designNotes = data.designNotes || data.commentsNotes?.internalDesignNotes;
+    const designStatus = data.designStatus || 
+                         data.designEngineering?.designStatus || 
+                         data.generalDesignInfo?.designStatus || 'draft';
+
+    const bomData = data.bomData || 
+                    data.designEngineering?.bomData || 
+                    data.bomSheet || null;
+
+    const specifications = data.specifications || 
+                           data.designEngineering?.specifications || 
+                           data.productSpecification || null;
+
+    const designNotes = data.designNotes || 
+                        data.designEngineering?.designNotes || 
+                        data.commentsNotes?.internalDesignNotes || null;
 
     const params = [
-      stringifyJsonField(ensureArray(normalized.documents)) || '[]',
-      normalized.designStatus || 'draft',
-      stringifyJsonField(normalized.bomData) || null,
-      stringifyJsonField(ensureArray(normalized.drawings3D)) || '[]',
-      stringifyJsonField(normalized.specifications) || null,
-      normalized.designNotes || null,
-      normalized.reviewedBy || null,
-      normalized.designStatus === 'approved' && !normalized.reviewedAt ? new Date() : (normalized.reviewedAt || null),
-      normalized.approvalComments || null,
+      stringifyJsonField(ensureArray(documents)) || '[]',
+      designStatus,
+      stringifyJsonField(bomData) || null,
+      stringifyJsonField(ensureArray(drawings3D)) || '[]',
+      stringifyJsonField(specifications) || null,
+      designNotes || null,
+      data.reviewedBy || null,
+      designStatus === 'approved' && !data.reviewedAt ? new Date() : (data.reviewedAt || null),
+      data.approvalComments || null,
       rootCardId
     ];
 
@@ -138,9 +158,10 @@ class DesignEngineeringDetail {
     );
   }
 
-  static async addDocument(rootCardId, documentData) {
+  static async addDocument(rootCardId, documentData, type = 'documents') {
+    const column = type === 'drawings' ? 'drawings_3d' : 'documents';
     const [existing] = await pool.execute(
-      `SELECT documents FROM design_engineering_details WHERE sales_order_id = ?`,
+      `SELECT ${column} FROM design_engineering_details WHERE sales_order_id = ?`,
       [rootCardId]
     );
 
@@ -148,14 +169,14 @@ class DesignEngineeringDetail {
       throw new Error('Design engineering details not found');
     }
 
-    let documents = [];
+    let currentItems = [];
     try {
-      documents = JSON.parse(existing[0].documents || '[]');
+      currentItems = JSON.parse(existing[0][column] || '[]');
     } catch (err) {
-      documents = [];
+      currentItems = [];
     }
 
-    const newDocument = {
+    const newItem = {
       id: Date.now(),
       name: documentData.name,
       path: documentData.path,
@@ -165,14 +186,14 @@ class DesignEngineeringDetail {
       uploadedBy: documentData.uploadedBy
     };
 
-    documents.push(newDocument);
+    currentItems.push(newItem);
 
     await pool.execute(
-      `UPDATE design_engineering_details SET documents = ?, updated_at = CURRENT_TIMESTAMP WHERE sales_order_id = ?`,
-      [JSON.stringify(documents), rootCardId]
+      `UPDATE design_engineering_details SET ${column} = ?, updated_at = CURRENT_TIMESTAMP WHERE sales_order_id = ?`,
+      [JSON.stringify(currentItems), rootCardId]
     );
 
-    return newDocument;
+    return newItem;
   }
 
   static async getDocuments(rootCardId) {

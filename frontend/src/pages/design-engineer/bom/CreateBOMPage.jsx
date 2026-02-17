@@ -283,50 +283,10 @@ const CreateBOMPage = () => {
         potentialMaterials = (reqRes.data.data.materials || []).map(req => ({ ...req, id: req.id || `req-${Date.now()}-${Math.random()}` }));
       }
 
-      // Design Engineering Specs
+      // DESIGN ENGINEERING DATA REMOVED AS PER USER REQUEST
+      // Only using Material Requirements (Step 3) for strict isolation
       const designEngineering = rootCard.steps?.step2_design || rootCard.designEngineering;
-      if (designEngineering) {
-        const specs = designEngineering.specifications || {};
-        const categoriesMap = { steelSections: 'Steel Section', fasteners: 'Fastener', components: 'Component', electrical: 'Electrical', consumables: 'Consumable' };
-
-        Object.entries(categoriesMap).forEach(([field, category]) => {
-          const items = specs[field];
-          if (Array.isArray(items)) {
-            items.forEach(itemName => {
-              if (itemName && typeof itemName === 'string' && itemName.trim()) {
-                const trimmedName = itemName.trim();
-                if (!potentialMaterials.some(m => (m.itemName || m.name) === trimmedName)) {
-                  // Try to find if this item exists in global materials to get its real code
-                  const existingMaterial = (materialsRes.data.materials || []).find(m => m.itemName === trimmedName);
-                  
-                  potentialMaterials.push({ 
-                    id: `des-spec-${Date.now()}-${Math.random()}`, 
-                    itemName: trimmedName, 
-                    itemCode: existingMaterial?.itemCode || `DES-${trimmedName.substring(0, 3).toUpperCase()}`, 
-                    category: category, 
-                    uom: category === 'Fastener' || category === 'Component' ? 'pcs' : 'Kg', 
-                    rate: existingMaterial?.sellingRate || existingMaterial?.unit_cost || 0 
-                  });
-                }
-              }
-            });
-          }
-        });
-
-        if (designEngineering.bomData && Array.isArray(designEngineering.bomData)) {
-          designEngineering.bomData.forEach(item => {
-            const name = item.itemName || item.name;
-            if (name && !potentialMaterials.some(m => (m.itemName || m.name) === name)) {
-              potentialMaterials.push({ 
-                ...item, 
-                itemName: name,
-                itemCode: item.itemCode || item.item_code || `DE-${name.substring(0, 3).toUpperCase()}`,
-                id: item.id || `des-bom-${Date.now()}-${Math.random()}` 
-              });
-            }
-          });
-        }
-      }
+      
       setRequirementMaterials(potentialMaterials);
       
       return { rootCard, designEngineering, potentialMaterials, combinedStages };
@@ -439,7 +399,7 @@ const CreateBOMPage = () => {
         quantity: parseFloat(item.quantity) || 1,
         uom: item.uom || item.unit || "Kg",
         itemGroup: item.category || item.item_group || "Raw Material",
-        rate: parseFloat(item.sellingRate || item.selling_rate || item.rate || item.unitCost || item.unit_cost || 0),
+        rate: parseFloat(item.valuationRate || item.valuation_rate || item.sellingRate || item.selling_rate || item.rate || item.unitCost || item.unit_cost || 0),
         warehouse: item.location || item.warehouse || "",
         operation: ""
       }));
@@ -530,7 +490,7 @@ const CreateBOMPage = () => {
       itemCode: m.itemCode,
       category: m.itemGroupName || m.category,
       unit: m.unit,
-      unit_cost: m.sellingRate || m.selling_rate || m.unitCost || m.unit_cost || m.valuationRate || m.valuation_rate || 0,
+      unit_cost: m.valuationRate || m.valuation_rate || m.unitCost || m.unit_cost || 0,
       sellingRate: m.sellingRate || m.selling_rate || 0,
       valuationRate: m.valuationRate || m.valuation_rate || 0,
       lossPercent: parseFloat(m.lossPercent || m.loss_percent) || 0,
@@ -538,16 +498,24 @@ const CreateBOMPage = () => {
       specification: m.specification
     }));
 
-    const combined = [...subAssemblies];
+    const combined = [];
     
-    // If root card is selected, add project items first (they take precedence)
+    // If root card is selected, we ONLY show project items and their specific sub-assemblies
     if (bomData.productInfo.rootCardId) {
+      // 1. Add sub-assemblies specifically for this root card
+      const projectSubAssemblies = subAssemblies.filter(sa => 
+        (existingBoms.find(b => b.id === sa.bomId)?.rootCardId?.toString() === bomData.productInfo.rootCardId.toString())
+      );
+      
+      projectSubAssemblies.forEach(sa => combined.push(sa));
+
+      // 2. Add project items from Material Requirements step
       const projectItems = requirementMaterials.map(req => ({
         itemName: req.itemName || req.name,
         itemCode: req.itemCode || `REQ-${(req.itemName || req.name || "").substring(0, 3).toUpperCase()}`,
         category: req.itemGroupName || req.itemGroup || req.category,
         unit: req.uom || req.unit,
-        unit_cost: req.sellingRate || req.selling_rate || req.rate || req.unitCost || req.unit_cost || req.valuationRate || req.valuation_rate || 0,
+        unit_cost: req.valuationRate || req.valuation_rate || req.rate || req.unitCost || req.unit_cost || 0,
         sellingRate: req.sellingRate || req.selling_rate || 0,
         valuationRate: req.valuationRate || req.valuation_rate || 0,
         lossPercent: parseFloat(req.lossPercent || req.loss_percent) || 0,
@@ -560,9 +528,13 @@ const CreateBOMPage = () => {
           combined.push(item);
         }
       });
+      
+      return combined;
     }
 
-    // Always include general materials as fallback
+    // If NO root card is selected (e.g., creating a generic BOM), 
+    // fall back to all materials and all sub-assemblies
+    combined.push(...subAssemblies);
     allMaterials.forEach(item => {
       if (!combined.some(m => m.itemCode === item.itemCode)) {
         combined.push(item);
@@ -703,7 +675,7 @@ const CreateBOMPage = () => {
             ...c,
             componentCode: selectedMaterial.itemCode,
             uom: selectedMaterial.unit || c.uom,
-            rate: (c.rate === 0) ? (selectedMaterial.sellingRate || selectedMaterial.unit_cost || c.rate) : c.rate,
+            rate: (c.rate === 0) ? (selectedMaterial.valuationRate || selectedMaterial.unit_cost || c.rate) : c.rate,
             notes: (selectedMaterial.specification || selectedMaterial.description) || c.notes
           } : c
         )
@@ -728,7 +700,7 @@ const CreateBOMPage = () => {
             itemCode: selectedMaterial.itemCode || m.itemCode,
             itemGroup: selectedMaterial.category || m.itemGroup,
             uom: selectedMaterial.unit || m.uom,
-            rate: (m.rate === 0) ? (selectedMaterial.sellingRate || selectedMaterial.unit_cost || m.rate) : m.rate,
+            rate: (m.rate === 0) ? (selectedMaterial.valuationRate || selectedMaterial.unit_cost || m.rate) : m.rate,
             warehouse: selectedMaterial.location || m.warehouse,
             operation: m.operation
           } : m
@@ -1133,7 +1105,7 @@ const CreateBOMPage = () => {
                         ...prev,
                         componentCode: val,
                         uom: selectedMaterial?.unit || prev.uom,
-                        rate: selectedMaterial?.sellingRate || selectedMaterial?.unit_cost || prev.rate,
+                        rate: selectedMaterial?.valuationRate || selectedMaterial?.unit_cost || prev.rate,
                         lossPercent: selectedMaterial?.lossPercent || 0,
                         notes: (selectedMaterial?.specification || selectedMaterial?.description) || prev.notes
                       }));
@@ -1403,7 +1375,7 @@ const CreateBOMPage = () => {
                             itemCode: selectedMaterial?.itemCode || prev.itemCode,
                             uom: selectedMaterial?.unit || prev.uom,
                             itemGroup: selectedMaterial?.category || prev.itemGroup,
-                            rate: selectedMaterial?.sellingRate || selectedMaterial?.unit_cost || prev.rate,
+                            rate: selectedMaterial?.valuationRate || selectedMaterial?.unit_cost || prev.rate,
                             warehouse: selectedMaterial?.location || prev.warehouse
                           }));
                         }}

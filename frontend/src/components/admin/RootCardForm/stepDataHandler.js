@@ -119,6 +119,18 @@ export const updateDraftWithStepData = async (draftId, formData, currentStep, po
   }
 };
 
+export const deleteDraft = async (draftId) => {
+  try {
+    if (!draftId) return;
+    const response = await axios.delete(`/root-cards/drafts/${draftId}`);
+    console.log('Draft deleted successfully:', response.data);
+    return response.data;
+  } catch (err) {
+    console.error('Error deleting draft:', err);
+    throw err;
+  }
+};
+
 export const saveStepDataToAPI = async (stepNumber, rootCardId, formData, poDocuments = []) => {
   try {
     if (!rootCardId) {

@@ -23,11 +23,43 @@ const designUpload = multer({
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'application/vnd.ms-excel',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'text/plain',
+      'text/csv',
       'image/png',
       'image/jpeg',
       'image/x-cad',
       'application/x-dwg',
-      'application/x-autocad-dxf'
+      'image/vnd.dwg',
+      'image/x-dwg',
+      'application/dwg',
+      'application/x-autocad-dxf',
+      'application/dxf',
+      'image/vnd.dxf',
+      'application/octet-stream', // Many CAD files
+      'application/step',
+      'model/step',
+      'application/iges',
+      'model/iges',
+      'application/x-step',
+      'application/x-iges',
+      'application/x-cad',
+      'application/x-dwg',
+      'application/x-dxf',
+      'application/zip',
+      'application/x-zip-compressed',
+      'application/x-rar-compressed',
+      'application/x-7z-compressed',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'text/plain',
+      'text/csv',
+      'text/rtf'
     ];
     if (allowedMimes.includes(file.mimetype)) {
       cb(null, true);
@@ -47,8 +79,15 @@ const poUpload = multer({
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'application/vnd.ms-excel',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'text/plain',
+      'text/csv',
       'image/png',
-      'image/jpeg'
+      'image/jpeg',
+      'application/zip',
+      'application/x-zip-compressed',
+      'application/x-rar-compressed',
+      'application/x-7z-compressed',
+      'application/octet-stream'
     ];
     if (allowedMimes.includes(file.mimetype)) {
       cb(null, true);

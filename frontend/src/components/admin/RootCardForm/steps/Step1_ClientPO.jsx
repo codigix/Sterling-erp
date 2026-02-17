@@ -1,14 +1,18 @@
-import React, { useEffect, useMemo } from "react";
-import { FileText, User, FolderOpen, FileCheck } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import { FileText, User, FolderOpen, FileCheck, Paperclip, Loader2 } from "lucide-react";
 import Input from "../../../ui/Input";
 import FormSection from "../shared/FormSection";
 import FormRow from "../shared/FormRow";
 import Tabs from "../../../ui/Tabs";
 import { useFormData, useRootCardContext } from "../hooks";
+import AllDocumentsView from "../shared/AllDocumentsView";
+import axios from "../../../../utils/api";
 
 export default function Step1_ClientPO({ readOnly = false }) {
   const { formData, updateField } = useFormData();
-  const { setNestedField } = useRootCardContext();
+  const { setNestedField, state, setPoDocuments, initialData } = useRootCardContext();
+  const [uploading, setUploading] = useState(false);
+  const rootCardId = initialData?.id || state.createdOrderId;
   
   useEffect(() => {
     if (!readOnly && formData.projectName && !formData.projectCode) {
@@ -26,6 +30,38 @@ export default function Step1_ClientPO({ readOnly = false }) {
       updateField("poNumber", generatedPO);
     }
   }, [formData.projectName, formData.poNumber, updateField, readOnly]);
+
+  const handleFileUpload = async (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
+    if (!rootCardId) {
+      alert("Please save the basic details first before uploading documents.");
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const uploadFormData = new FormData();
+      files.forEach(file => {
+        uploadFormData.append('documents', file);
+      });
+
+      const response = await axios.post(`/root-cards/steps/${rootCardId}/client-po/upload`, uploadFormData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      if (response.data?.success) {
+        const newlyUploaded = response.data.data.uploaded;
+        setPoDocuments([...(state.poDocuments || []), ...newlyUploaded]);
+      }
+    } catch (err) {
+      console.error("Upload failed:", err);
+      alert("Failed to upload files. Please try again.");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const clientInfoContent = useMemo(() => (
     <FormSection
@@ -295,6 +331,25 @@ export default function Step1_ClientPO({ readOnly = false }) {
     </FormSection>
   ), [formData.projectRequirements, setNestedField, readOnly]);
 
+  const attachmentsContent = useMemo(() => (
+    <FormSection
+      title="Project Attachments"
+      subtitle="View all uploaded documents for this project"
+      icon={Paperclip}
+    >
+      {uploading && (
+        <div className="flex items-center justify-center py-4 text-blue-600">
+          <Loader2 className="animate-spin mr-2" size={20} />
+          <span>Uploading documents...</span>
+        </div>
+      )}
+      <AllDocumentsView 
+        readOnly={readOnly} 
+        onUploadPO={handleFileUpload} 
+      />
+    </FormSection>
+  ), [readOnly, uploading, handleFileUpload]);
+
   const tabs = useMemo(() => [
     {
       label: "Client Info",
@@ -307,7 +362,7 @@ export default function Step1_ClientPO({ readOnly = false }) {
     {
       label: "Project Requirements",
       content: projectRequirementsContent,
-    },
+    }
   ], [clientInfoContent, projectDetailsContent, projectRequirementsContent]);
 
   return (

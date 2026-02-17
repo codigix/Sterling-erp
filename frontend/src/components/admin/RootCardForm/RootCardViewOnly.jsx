@@ -86,6 +86,12 @@ export default function RootCardViewOnly({ formData, initialData, onBack, employ
         });
       }
 
+      if (state.poDocuments?.length > 0) {
+        addSection('Step 1: PO Attachments', {
+          'Attachments': state.poDocuments.map(doc => doc.name).join(', ')
+        });
+      }
+
       if (formData?.designEngineering) {
         const designData = formData.designEngineering;
         addSection('Step 2: Design Engineering', {
@@ -315,6 +321,20 @@ export default function RootCardViewOnly({ formData, initialData, onBack, employ
                 )}
                 <DetailField label="Notes" value={formData?.notes} />
               </div>
+
+              {formData?.attachments?.length > 0 && (
+                <div className="bg-white border-b border-slate-200 p-2 mb-0">
+                  <h3 className="text-md font-semibold text-slate-900 mb-2">Project Attachments</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {formData.attachments.map((file, idx) => (
+                      <div key={idx} className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-md text-sm text-slate-700">
+                        <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
+                        {typeof file === 'string' ? file.split('/').pop() : file.name}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </section>
         )}
@@ -418,6 +438,38 @@ export default function RootCardViewOnly({ formData, initialData, onBack, employ
               {formData.materialProcurement.notes && (
                 <div className="bg-white border-b border-slate-200  p-2 mb-0">
                   <DetailField label="Notes" value={formData.materialProcurement.notes} />
+                </div>
+              )}
+
+              {Array.isArray(formData.materialDetailsTable) && formData.materialDetailsTable.length > 0 && (
+                <div className="bg-white border-b border-slate-200 p-2 mb-0 overflow-x-auto">
+                  <h3 className="text-md font-semibold text-slate-900 mb-4">Material Details Table</h3>
+                  <table className="min-w-full divide-y divide-slate-200 border border-slate-200 rounded-lg">
+                    <thead className="bg-slate-50">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Sr. No.</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Description</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Spec/Size</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Qty</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">UOM</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Category</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Source</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-slate-200">
+                      {formData.materialDetailsTable.map((row, idx) => (
+                        <tr key={idx}>
+                          <td className="px-4 py-2 whitespace-nowrap text-sm text-slate-900">{idx + 1}</td>
+                          <td className="px-4 py-2 whitespace-nowrap text-sm text-slate-900">{row.materialDescription}</td>
+                          <td className="px-4 py-2 whitespace-nowrap text-sm text-slate-900">{row.specification}</td>
+                          <td className="px-4 py-2 whitespace-nowrap text-sm text-slate-900">{row.quantity}</td>
+                          <td className="px-4 py-2 whitespace-nowrap text-sm text-slate-900">{row.uom}</td>
+                          <td className="px-4 py-2 whitespace-nowrap text-sm text-slate-900">{row.category}</td>
+                          <td className="px-4 py-2 whitespace-nowrap text-sm text-slate-900">{row.source}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
 

@@ -48,11 +48,19 @@ class ProductionPlanController {
           }
         }
 
+        let finalPlanName = data.planName || `Production Plan for ${isRootCard ? 'RC' : 'SO'} ${rootCardId}`;
+        let finalPlanId = data.planId || data.id;
+        
+        // Generate a unique ID if not provided, to avoid "Duplicate entry 'Production Plan'"
+        if (!finalPlanId || finalPlanId === 'Production Plan') {
+          finalPlanId = `PP-${Date.now()}-${rootCardId}`;
+        }
+
         const planData = {
-          id: data.planName,
+          id: finalPlanId,
           salesOrderId: finalSalesOrderId,
           rootCardId: isRootCard ? parseInt(rootCardId) : null,
-          planName: data.planName || 'Production Plan',
+          planName: finalPlanName,
           targetQuantity: data.targetQuantity || 1,
           status: 'draft',
           plannedStartDate: data.timeline?.startDate || null,
