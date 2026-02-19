@@ -18,7 +18,6 @@ const SearchableSelect = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [prevValue, setPrevValue] = useState(value);
   const [dropdownStyle, setDropdownStyle] = useState({});
   const wrapperRef = useRef(null);
   const inputRef = useRef(null);
@@ -29,14 +28,13 @@ const SearchableSelect = ({
 
   const selectedOption = options.find(opt => String(opt.value) === String(value));
 
-  // Adjust search term when value changes from outside
-  if (value !== prevValue) {
-    setPrevValue(value);
+  // Sync search term when value or options change
+  useEffect(() => {
     const desiredTerm = selectedOption 
       ? selectedOption.label 
       : (value && allowCustom ? String(value) : '');
     setSearchTerm(desiredTerm);
-  }
+  }, [value, options, allowCustom, selectedOption]);
 
   const filteredOptions = options.filter(option =>
     (option?.label || '').toLowerCase().includes(searchTerm.toLowerCase())
@@ -142,7 +140,7 @@ const SearchableSelect = ({
   return (
     <div className={`relative ${className}`} ref={wrapperRef}>
       {label && (
-        <label htmlFor={inputId} className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1 tracking-tight">
+        <label htmlFor={inputId} className="block text-xs font-black text-slate-900 dark:text-slate-100 mb-1.5 tracking-tight uppercase">
           {label}
         </label>
       )}

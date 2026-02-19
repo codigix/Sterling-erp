@@ -396,8 +396,8 @@ const ProductionPlansPage = () => {
                             <p className="text-sm font-semibold text-slate-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
                               {plan.plan_name}
                             </p>
-                            <p className="text-xs text-slate-500 truncate max-w-[200px]">
-                              {plan.product_name}
+                            <p className="text-[11px] font-bold text-slate-500 truncate max-w-[250px] mt-0.5">
+                              {plan.product_name || "Product Name Not Set"}
                             </p>
                           </div>
                         </div>

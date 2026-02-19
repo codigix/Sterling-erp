@@ -520,7 +520,7 @@ const CreateSalesOrderModal = ({ onCancel, onSuccess, editData }) => {
           </div>
 
           {/* Section 4: BOM Details Summary */}
-          {selectedBOMData && (
+          {/* {selectedBOMData && (
             <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
               <div className="bg-slate-50 dark:bg-slate-800 px-5 py-3 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
                 <h4 className="font-bold text-slate-700 dark:text-slate-200 text-sm">BOM Details Summary</h4>
@@ -547,7 +547,7 @@ const CreateSalesOrderModal = ({ onCancel, onSuccess, editData }) => {
                 </div>
               </div>
             </div>
-          )}
+          )} */}
 
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
             <button

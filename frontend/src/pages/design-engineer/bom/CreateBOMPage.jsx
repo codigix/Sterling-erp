@@ -66,28 +66,29 @@ const OperationOptions = [
 ];
 
 const AccordionSection = memo(({ title, section, children, itemCount = 0, expandedSections, toggleSection }) => (
-  <div className="border border-slate-200 dark:border-slate-700 rounded-lg mb-2">
-    <div className="flex items-center justify-between px-4 py-2 bg-slate-50 dark:bg-slate-700/50">
-      <button
-        onClick={() => toggleSection(section)}
-        className="flex-1 flex items-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-700 transition py-2"
-      >
-        <ChevronDown
-          size={16}
-          className={`transition-transform ${expandedSections[section] ? "" : "-rotate-90"}`}
-        />
-        <h3 className="text-xs font-semibold text-slate-900 dark:text-white">
+  <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm overflow-hidden transition-all duration-200">
+    <div className={`px-5 py-4 flex items-center justify-between cursor-pointer select-none transition-colors ${expandedSections[section] ? "bg-slate-50/80 dark:bg-slate-800/50" : "hover:bg-slate-50/50 dark:hover:bg-slate-800/30"}`}
+      onClick={() => toggleSection(section)}
+    >
+      <div className="flex items-center gap-4">
+        <div className={`p-2 rounded-lg transition-colors ${expandedSections[section] ? "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400" : "bg-slate-100 dark:bg-slate-800 text-slate-500"}`}>
+          <ChevronDown
+            size={20}
+            className={`transition-transform duration-300 ${expandedSections[section] ? "" : "-rotate-90"}`}
+          />
+        </div>
+        <h3 className="text-base font-bold text-slate-900 dark:text-white">
           {title}
         </h3>
         {itemCount > 0 && (
-          <span className="ml-2 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full">
-            {itemCount}
+          <span className="text-[10px] font-bold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-2.5 py-1 rounded-full uppercase tracking-wider">
+            {itemCount} Items
           </span>
         )}
-      </button>
+      </div>
     </div>
     {expandedSections[section] && (
-      <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+      <div className="p-5 md:p-6 border-t border-slate-100 dark:border-slate-800 animate-in fade-in slide-in-from-top-2 duration-200">
         {children}
       </div>
     )}
@@ -837,26 +838,28 @@ const CreateBOMPage = () => {
   const isRootCardSelected = !!bomData.productInfo.rootCardId;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-3">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-slate-50/50 dark:bg-slate-950 p-4 md:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-3 mb-4">
-          <button
-            onClick={() => navigate("/design-engineer/dashboard")}
-            className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg"
-          >
-            <ChevronLeft size={18} />
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
-              {editMode ? "Edit BOM" : "Create BOM"}
-            </h1>
-            <p className="text-xs text-slate-600 dark:text-slate-400">Bill of Materials</p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => navigate("/design-engineer/dashboard")}
+              className="p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl shadow-sm transition-all"
+            >
+              <ChevronLeft size={20} className="text-slate-600 dark:text-slate-400" />
+            </button>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
+                {editMode ? "Edit BOM" : "Create BOM"}
+              </h1>
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Bill of Materials Management</p>
+            </div>
           </div>
         </div>
 
         {/* Accordions Container */}
-        <div className=" p-3">
+        <div className="space-y-4">
           {/* Product Information Section */}
           <AccordionSection 
             title="Product Information" 
@@ -864,8 +867,8 @@ const CreateBOMPage = () => {
             expandedSections={expandedSections}
             toggleSection={toggleSection}
           >
-            <div className="mb-4 pb-4 border-b border-slate-200 dark:border-slate-700">
-              <div className="max-w-md">
+            <div className="mb-8 pb-6 border-b border-slate-100 dark:border-slate-800">
+              <div className="max-w-xl">
                 <SearchableSelect
                   label="Fetch from Root Card"
                   name="rootCardSelect"
@@ -876,13 +879,15 @@ const CreateBOMPage = () => {
                   placeholder="Select a root card to auto-fill details"
                   disabled={loadingMaterials}
                 />
-                <p className="text-[10px] text-slate-500 mt-1">
+                <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-2 flex items-center gap-1.5">
+                  <span className="w-1 h-1 rounded-full bg-blue-500"></span>
                   Selecting a root card will automatically populate product information and link this BOM to its project.
                 </p>
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
-              <div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="space-y-1">
                 <SearchableSelect
                   label="Product Name *"
                   name="productName"
@@ -895,7 +900,7 @@ const CreateBOMPage = () => {
                   allowCustom={true}
                 />
               </div>
-              <div>
+              <div className="space-y-1">
                 <SearchableSelect
                   label="Item Code"
                   name="itemCode"
@@ -908,8 +913,8 @@ const CreateBOMPage = () => {
                   allowCustom={true}
                 />
               </div>
-              <div>
-                <label htmlFor="customer" className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+              <div className="space-y-1">
+                <label htmlFor="customer" className="block text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider mb-1.5 ml-1">
                   Customer
                 </label>
                 <input
@@ -924,11 +929,11 @@ const CreateBOMPage = () => {
                     })
                   }
                   placeholder="Customer Name"
-                  className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs"
+                  className="w-full px-3 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none shadow-sm placeholder:text-slate-400"
                 />
               </div>
-              <div>
-                <label htmlFor="bomNumber" className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+              <div className="space-y-1">
+                <label htmlFor="bomNumber" className="block text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider mb-1.5 ml-1">
                   BOM Number
                 </label>
                 <input
@@ -943,10 +948,10 @@ const CreateBOMPage = () => {
                     })
                   }
                   placeholder="BOM-2024-001"
-                  className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs"
+                  className="w-full px-3 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none shadow-sm placeholder:text-slate-400"
                 />
               </div>
-              <div>
+              <div className="space-y-1">
                 <SearchableSelect
                   label="Item Group"
                   name="itemGroup"
@@ -963,26 +968,37 @@ const CreateBOMPage = () => {
                   allowCustom={true}
                 />
               </div>
-              <div>
-                <label htmlFor="quantity" className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Quantity
+              <div className="space-y-1">
+                <label htmlFor="quantity" className="block text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider mb-1.5 ml-1">
+                  Quantity & UOM
                 </label>
-                <div className="flex gap-1">
-                  <input
-                    type="number"
-                    id="quantity"
-                    name="quantity"
-                    aria-label="Quantity"
-                    value={bomData.productInfo.quantity}
-                    onChange={(e) =>
-                      setBomData({
-                        ...bomData,
-                        productInfo: { ...bomData.productInfo, quantity: parseFloat(e.target.value) },
-                      })
-                    }
-                    className="w-1/2 px-2 py-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs"
-                  />
-                  <div className="w-1/2">
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <input
+                      type="number"
+                      id="quantity"
+                      name="quantity"
+                      aria-label="Quantity"
+                      value={bomData.productInfo.quantity}
+                      onChange={(e) =>
+                        setBomData({
+                          ...bomData,
+                          productInfo: { ...bomData.productInfo, quantity: e.target.value === "" ? "" : parseFloat(e.target.value) },
+                        })
+                      }
+                      onBlur={(e) => {
+                        if (e.target.value === "") {
+                          setBomData(prev => ({
+                            ...prev,
+                            productInfo: { ...prev.productInfo, quantity: 0 }
+                          }));
+                        }
+                      }}
+                      onFocus={(e) => e.target.select()}
+                      className="w-full px-3 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none shadow-sm"
+                    />
+                  </div>
+                  <div className="w-[160px]">
                     <SearchableSelect
                       name="uom"
                       id="uom"
@@ -995,14 +1011,14 @@ const CreateBOMPage = () => {
                           productInfo: { ...bomData.productInfo, uom: value },
                         })
                       }
-                      placeholder="Select UOM"
+                      placeholder="UOM"
                       allowCustom={true}
                     />
                   </div>
                 </div>
               </div>
-              <div>
-                <label htmlFor="revision" className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+              <div className="space-y-1">
+                <label htmlFor="revision" className="block text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider mb-1.5 ml-1">
                   Revision
                 </label>
                 <input
@@ -1013,14 +1029,23 @@ const CreateBOMPage = () => {
                   onChange={(e) =>
                     setBomData({
                       ...bomData,
-                      productInfo: { ...bomData.productInfo, revision: parseInt(e.target.value) },
+                      productInfo: { ...bomData.productInfo, revision: e.target.value === "" ? "" : parseInt(e.target.value) },
                     })
                   }
-                  className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs"
+                  onBlur={(e) => {
+                    if (e.target.value === "") {
+                      setBomData(prev => ({
+                        ...prev,
+                        productInfo: { ...prev.productInfo, revision: 1 }
+                      }));
+                    }
+                  }}
+                  onFocus={(e) => e.target.select()}
+                  className="w-full px-3 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none shadow-sm"
                 />
               </div>
-              <div className="md:col-span-3">
-                <label htmlFor="description" className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+              <div className="md:col-span-2 lg:col-span-3 space-y-1">
+                <label htmlFor="description" className="block text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider mb-1.5 ml-1">
                   Description
                 </label>
                 <textarea
@@ -1033,13 +1058,14 @@ const CreateBOMPage = () => {
                       productInfo: { ...bomData.productInfo, description: e.target.value },
                     })
                   }
-                  className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs"
-                  rows="2"
+                  className="w-full px-3 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none shadow-sm placeholder:text-slate-400"
+                  rows="3"
                 />
               </div>
             </div>
-            <div className="mt-2 flex gap-6 items-end">
-              <div className="w-40">
+
+            <div className="mt-8 flex flex-wrap items-center gap-8 p-4 bg-slate-50 dark:bg-slate-800/30 rounded-2xl border border-slate-100 dark:border-slate-800">
+              <div className="w-48">
                 <SearchableSelect
                   label="Status"
                   name="status"
@@ -1054,12 +1080,13 @@ const CreateBOMPage = () => {
                   }
                 />
               </div>
-              <div className="flex gap-3 mb-2">
-                <label className="flex items-center gap-1 cursor-pointer text-xs">
+              <div className="flex items-center gap-2 pt-5">
+                <label className="relative inline-flex items-center cursor-pointer group">
                   <input
                     type="checkbox"
                     name="isDefault"
                     id="isDefault"
+                    className="sr-only peer"
                     checked={bomData.productInfo.isDefault}
                     onChange={(e) =>
                       setBomData({
@@ -1068,7 +1095,8 @@ const CreateBOMPage = () => {
                       })
                     }
                   />
-                  <span className="text-slate-700 dark:text-slate-300">Set as Default</span>
+                  <div className="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  <span className="ms-3 text-sm font-semibold text-slate-700 dark:text-slate-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">Set as Default BOM</span>
                 </label>
               </div>
             </div>
@@ -1083,261 +1111,306 @@ const CreateBOMPage = () => {
             toggleSection={toggleSection}
           >
             {!isRootCardSelected ? (
-              <div className="text-center py-6 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-dashed border-slate-300 dark:border-slate-700">
-                <p className="text-sm text-slate-500 dark:text-slate-400">Please select a Root Card in Product Information to add components.</p>
+              <div className="text-center py-12 bg-slate-50/50 dark:bg-slate-800/20 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800">
+                <div className="mx-auto w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-3">
+                  <Plus size={24} className="text-slate-400" />
+                </div>
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-1">No Root Card Selected</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs mx-auto">Please select a Root Card in Product Information to start adding components.</p>
               </div>
             ) : (
-              <>
+              <div className="space-y-6">
                 {/* Quick Add Form */}
-                <div className="mb-4 p-3 bg-blue-50/50 dark:bg-blue-900/10 rounded-lg border border-blue-100 dark:border-blue-900/30">
-              <div className="flex items-center gap-2 mb-3 text-blue-700 dark:text-blue-400 font-semibold text-xs">
-                <Plus size={14} /> Add Component
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
-                <div className="md:col-span-3">
-                  <SearchableSelect
-                    label="Component/ Sub assemblies *"
-                    options={subAssemblyOptions}
-                    value={newComponent.componentCode}
-                    onChange={(val) => {
-                      const selectedMaterial = allAvailableMaterials.find(m => m.itemCode === val);
-                      setNewComponent(prev => ({
-                        ...prev,
-                        componentCode: val,
-                        uom: selectedMaterial?.unit || prev.uom,
-                        rate: selectedMaterial?.valuationRate || selectedMaterial?.unit_cost || prev.rate,
-                        lossPercent: selectedMaterial?.lossPercent || 0,
-                        notes: (selectedMaterial?.specification || selectedMaterial?.description) || prev.notes
-                      }));
-                    }}
-                    placeholder="Search sub-assembly.."
-                    allowCustom={true}
-                  />
+                <div className="p-5 bg-blue-50/30 dark:bg-blue-900/10 rounded-2xl border border-blue-100/50 dark:border-blue-900/20">
+                  <div className="flex items-center gap-2 mb-4 text-blue-700 dark:text-blue-400 font-bold text-[11px] uppercase tracking-wider">
+                    <div className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
+                      <Plus size={12} />
+                    </div>
+                    Add Component / Sub-assembly
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                    <div className="md:col-span-3">
+                      <SearchableSelect
+                        label="Component Name *"
+                        options={subAssemblyOptions}
+                        value={newComponent.componentCode}
+                        onChange={(val) => {
+                          const selectedMaterial = allAvailableMaterials.find(m => m.itemCode === val);
+                          setNewComponent(prev => ({
+                            ...prev,
+                            componentCode: val,
+                            uom: selectedMaterial?.unit || prev.uom,
+                            rate: selectedMaterial?.valuationRate || selectedMaterial?.unit_cost || prev.rate,
+                            lossPercent: selectedMaterial?.lossPercent || 0,
+                            notes: (selectedMaterial?.specification || selectedMaterial?.description) || prev.notes
+                          }));
+                        }}
+                        placeholder="Search components.."
+                        allowCustom={true}
+                      />
+                    </div>
+                    <div className="md:col-span-1">
+                      <label className="block text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider mb-1.5 ml-1">Qty *</label>
+                      <input
+                        type="number"
+                        value={newComponent.quantity}
+                        onChange={(e) => setNewComponent(prev => ({ ...prev, quantity: e.target.value === "" ? "" : parseFloat(e.target.value) }))}
+                        onBlur={(e) => {
+                          if (e.target.value === "") {
+                            setNewComponent(prev => ({ ...prev, quantity: 0 }));
+                          }
+                        }}
+                        onFocus={(e) => e.target.select()}
+                        className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none"
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <SearchableSelect
+                        label="UOM"
+                        options={UOMSelectOptions}
+                        value={newComponent.uom}
+                        onChange={(val) => setNewComponent(prev => ({ ...prev, uom: val }))}
+                        allowCustom={true}
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider mb-1.5 ml-1">Rate (₹)</label>
+                      <input
+                        type="number"
+                        value={newComponent.rate}
+                        onChange={(e) => setNewComponent(prev => ({ ...prev, rate: e.target.value === "" ? "" : parseFloat(e.target.value) }))}
+                        onBlur={(e) => {
+                          if (e.target.value === "") {
+                            setNewComponent(prev => ({ ...prev, rate: 0 }));
+                          }
+                        }}
+                        onFocus={(e) => e.target.select()}
+                        className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none"
+                      />
+                    </div>
+                    <div className="md:col-span-1">
+                      <label className="block text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider mb-1.5 ml-1">Loss %</label>
+                      <input
+                        type="number"
+                        value={newComponent.lossPercent}
+                        onChange={(e) => setNewComponent(prev => ({ ...prev, lossPercent: e.target.value === "" ? "" : parseFloat(e.target.value) }))}
+                        onBlur={(e) => {
+                          if (e.target.value === "") {
+                            setNewComponent(prev => ({ ...prev, lossPercent: 0 }));
+                          }
+                        }}
+                        onFocus={(e) => e.target.select()}
+                        className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none"
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider mb-1.5 ml-1">Notes</label>
+                      <input
+                        type="text"
+                        value={newComponent.notes}
+                        onChange={(e) => setNewComponent(prev => ({ ...prev, notes: e.target.value }))}
+                        placeholder="Additional details"
+                        className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none"
+                      />
+                    </div>
+                    <div className="md:col-span-1">
+                      <button 
+                        onClick={() => handleAddItem("components")}
+                        className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold flex items-center justify-center gap-1.5 transition shadow-sm active:scale-95"
+                      >
+                        <Plus size={14} /> Add
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <div className="md:col-span-1">
-                  <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400 mb-1">Qty *</label>
-                  <input
-                    type="number"
-                    value={newComponent.quantity}
-                    onChange={(e) => setNewComponent(prev => ({ ...prev, quantity: parseFloat(e.target.value) }))}
-                    className="w-full px-2 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div className="md:col-span-1">
-                  <SearchableSelect
-                    label="UOM"
-                    options={UOMSelectOptions}
-                    value={newComponent.uom}
-                    onChange={(val) => setNewComponent(prev => ({ ...prev, uom: val }))}
-                    allowCustom={true}
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400 mb-1">Rate (₹)</label>
-                  <input
-                    type="number"
-                    value={newComponent.rate}
-                    onChange={(e) => setNewComponent(prev => ({ ...prev, rate: parseFloat(e.target.value) }))}
-                    className="w-full px-2 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div className="md:col-span-1">
-                  <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400 mb-1">Loss % (Scrap)</label>
-                  <input
-                    type="number"
-                    value={newComponent.lossPercent}
-                    onChange={(e) => setNewComponent(prev => ({ ...prev, lossPercent: parseFloat(e.target.value) }))}
-                    className="w-full px-2 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div className="md:col-span-3">
-                  <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400 mb-1">Notes</label>
-                  <input
-                    type="text"
-                    value={newComponent.notes}
-                    onChange={(e) => setNewComponent(prev => ({ ...prev, notes: e.target.value }))}
-                    placeholder="Notes"
-                    className="w-full px-2 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div className="md:col-span-1">
-                  <button 
-                    onClick={() => handleAddItem("components")}
-                    className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold flex items-center justify-center gap-1 transition shadow-sm"
-                  >
-                    <Plus size={16} /> Add
-                  </button>
-                </div>
-              </div>
-            </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="bg-slate-100 dark:bg-slate-700">
-                    <th className="px-2 py-1 text-left font-semibold w-10">#</th>
-                    <th className="px-2 py-1 text-left font-semibold">Code</th>
-                    <th className="px-2 py-1 text-center font-semibold w-auto">Qty</th>
-                    <th className="px-2 py-1 text-left font-semibold w-auto">UOM</th>
-                    <th className="px-2 py-1 text-right font-semibold w-auto">Rate</th>
-                    <th className="px-2 py-1 text-right font-semibold w-auto">Amount</th>
-                    <th className="px-2 py-1 text-right font-semibold w-auto">Loss%</th>
-                    <th className="px-2 py-1 text-left font-semibold">Notes</th>
-                    <th className="px-2 py-1 text-center font-semibold w-auto">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {bomData.components.map((row, index) => {
-                    const isEditing = editingComponentId === row.id;
-                    const amount = (parseFloat(row.quantity) || 0) * (parseFloat(row.rate) || 0);
-
-                    return (
-                      <tr key={row.id} className="border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                        <td className="px-2 py-1 text-slate-500">{index + 1}</td>
-                        <td className="px-2 py-1 font-medium text-slate-700 dark:text-slate-300">
-                          {isEditing ? (
-                            <SearchableSelect
-                              name={`comp-code-${row.id}`}
-                              id={`comp-code-${row.id}`}
-                              aria-label="Component Code"
-                              options={subAssemblyOptions}
-                              value={row.componentCode}
-                              onChange={(value) => handleComponentSelect(row.id, value)}
-                              placeholder="Select sub-assembly"
-                              allowCustom={true}
-                            />
-                          ) : (
-                            row.componentCode
-                          )}
-                        </td>
-                        <td className="px-2 py-1 text-center">
-                          {isEditing ? (
-                            <input
-                              type="number"
-                              name={`comp-qty-${row.id}`}
-                              id={`comp-qty-${row.id}`}
-                              aria-label="Component Quantity"
-                              value={row.quantity}
-                              onChange={(e) => updateTableRow("components", row.id, "quantity", parseFloat(e.target.value))}
-                              className="w-20 p-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs text-center"
-                            />
-                          ) : (
-                            row.quantity
-                          )}
-                        </td>
-                        <td className="px-2 py-1">
-                          {isEditing ? (
-                            <SearchableSelect
-                              name={`comp-uom-${row.id}`}
-                              id={`comp-uom-${row.id}`}
-                              aria-label="Component UOM"
-                              options={UOMSelectOptions}
-                              value={row.uom}
-                              onChange={(value) => updateTableRow("components", row.id, "uom", value)}
-                              placeholder="Select UOM"
-                              allowCustom={true}
-                            />
-                          ) : (
-                            row.uom
-                          )}
-                        </td>
-                        <td className="px-2 py-1 text-right">
-                          {isEditing ? (
-                            <input
-                              type="number"
-                              name={`comp-rate-${row.id}`}
-                              id={`comp-rate-${row.id}`}
-                              aria-label="Component Rate"
-                              value={row.rate}
-                              onChange={(e) => updateTableRow("components", row.id, "rate", parseFloat(e.target.value))}
-                              className="w-24 p-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs text-right"
-                            />
-                          ) : (
-                            <span>₹{(parseFloat(row.rate) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                          )}
-                        </td>
-                        <td className="px-2 py-1 text-right font-semibold text-slate-900 dark:text-white">
-                          ₹{amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                        </td>
-                        <td className="px-2 py-1 text-right">
-                          {isEditing ? (
-                            <input
-                              type="number"
-                              name={`comp-loss-${row.id}`}
-                              id={`comp-loss-${row.id}`}
-                              aria-label="Component Loss Percentage"
-                              value={row.lossPercent}
-                              onChange={(e) => updateTableRow("components", row.id, "lossPercent", parseFloat(e.target.value))}
-                              className="w-16 p-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs text-right"
-                            />
-                          ) : (
-                            <span>{row.lossPercent}%</span>
-                          )}
-                        </td>
-                        <td className="px-2 py-1">
-                          {isEditing ? (
-                            <input
-                              type="text"
-                              name={`comp-notes-${row.id}`}
-                              id={`comp-notes-${row.id}`}
-                              aria-label="Component Notes"
-                              value={row.notes}
-                              onChange={(e) => updateTableRow("components", row.id, "notes", e.target.value)}
-                              className="w-full p-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs"
-                            />
-                          ) : (
-                            <span className="text-slate-500">{row.notes || "-"}</span>
-                          )}
-                        </td>
-                        <td className="px-2 py-1">
-                          <div className="flex items-center justify-center gap-2">
-                            {isEditing ? (
-                              <>
-                                <button
-                                  onClick={() => setEditingComponentId(null)}
-                                  className="p-1 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded transition-colors"
-                                  title="Save"
-                                >
-                                  <Check size={14} />
-                                </button>
-                                <button
-                                  onClick={() => setEditingComponentId(null)}
-                                  className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
-                                  title="Cancel"
-                                >
-                                  <X size={14} />
-                                </button>
-                              </>
-                            ) : (
-                              <>
-                                <button
-                                  onClick={() => setEditingComponentId(row.id)}
-                                  className="p-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
-                                  title="Edit Row"
-                                >
-                                  <Edit2 size={14} />
-                                </button>
-                                <button
-                                  onClick={() => removeTableRow("components", row.id)}
-                                  className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
-                                  title="Delete Row"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </td>
+                <div className="overflow-hidden border border-slate-100 dark:border-slate-800 rounded-2xl shadow-sm">
+                  <table className="w-full text-xs text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50/80 dark:bg-slate-800/50">
+                        <th className="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider w-10">#</th>
+                        <th className="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Component Code</th>
+                        <th className="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider text-center">Qty</th>
+                        <th className="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">UOM</th>
+                        <th className="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider text-right">Rate</th>
+                        <th className="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider text-right">Amount</th>
+                        <th className="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider text-right">Loss%</th>
+                        <th className="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Notes</th>
+                        <th className="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider text-center">Actions</th>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-            {bomData.components.length === 0 && (
-              <p className="text-center text-slate-500 text-xs py-2">No components added</p>
-            )}
-              </>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                      {bomData.components.map((row, index) => {
+                        const isEditing = editingComponentId === row.id;
+                        const amount = (parseFloat(row.quantity) || 0) * (parseFloat(row.rate) || 0);
+
+                        return (
+                          <tr key={row.id} className="bg-white dark:bg-slate-900 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                            <td className="px-4 py-3 text-slate-400 font-medium">{index + 1}</td>
+                            <td className="px-4 py-3">
+                              {isEditing ? (
+                                <SearchableSelect
+                                  name={`comp-code-${row.id}`}
+                                  id={`comp-code-${row.id}`}
+                                  aria-label="Component Code"
+                                  options={subAssemblyOptions}
+                                  value={row.componentCode}
+                                  onChange={(value) => handleComponentSelect(row.id, value)}
+                                  placeholder="Select sub-assembly"
+                                  allowCustom={true}
+                                />
+                              ) : (
+                                <span className="font-bold text-slate-700 dark:text-slate-200">{row.componentCode}</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              {isEditing ? (
+                                <input
+                                  type="number"
+                                  name={`comp-qty-${row.id}`}
+                                  id={`comp-qty-${row.id}`}
+                                  aria-label="Component Quantity"
+                                  value={row.quantity}
+                                  onChange={(e) => updateTableRow("components", row.id, "quantity", e.target.value === "" ? "" : parseFloat(e.target.value))}
+                                  onBlur={(e) => {
+                                    if (e.target.value === "") {
+                                      updateTableRow("components", row.id, "quantity", 0);
+                                    }
+                                  }}
+                                  onFocus={(e) => e.target.select()}
+                                  className="w-20 px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 text-xs text-center focus:ring-2 focus:ring-blue-500/20 outline-none"
+                                />
+                              ) : (
+                                <span className="font-semibold text-slate-600 dark:text-slate-400">{row.quantity}</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              {isEditing ? (
+                                <SearchableSelect
+                                  name={`comp-uom-${row.id}`}
+                                  id={`comp-uom-${row.id}`}
+                                  aria-label="Component UOM"
+                                  options={UOMSelectOptions}
+                                  value={row.uom}
+                                  onChange={(value) => updateTableRow("components", row.id, "uom", value)}
+                                  placeholder="Select UOM"
+                                  allowCustom={true}
+                                />
+                              ) : (
+                                <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-[10px] font-bold text-slate-600 dark:text-slate-400">{row.uom}</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              {isEditing ? (
+                                <input
+                                  type="number"
+                                  name={`comp-rate-${row.id}`}
+                                  id={`comp-rate-${row.id}`}
+                                  aria-label="Component Rate"
+                                  value={row.rate}
+                                  onChange={(e) => updateTableRow("components", row.id, "rate", e.target.value === "" ? "" : parseFloat(e.target.value))}
+                                  onBlur={(e) => {
+                                    if (e.target.value === "") {
+                                      updateTableRow("components", row.id, "rate", 0);
+                                    }
+                                  }}
+                                  onFocus={(e) => e.target.select()}
+                                  className="w-24 px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 text-xs text-right focus:ring-2 focus:ring-blue-500/20 outline-none"
+                                />
+                              ) : (
+                                <span className="font-medium text-slate-600 dark:text-slate-400">₹{(parseFloat(row.rate) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <span className="font-bold text-slate-900 dark:text-white">₹{amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              {isEditing ? (
+                                <input
+                                  type="number"
+                                  name={`comp-loss-${row.id}`}
+                                  id={`comp-loss-${row.id}`}
+                                  aria-label="Component Loss Percentage"
+                                  value={row.lossPercent}
+                                  onChange={(e) => updateTableRow("components", row.id, "lossPercent", e.target.value === "" ? "" : parseFloat(e.target.value))}
+                                  onBlur={(e) => {
+                                    if (e.target.value === "") {
+                                      updateTableRow("components", row.id, "lossPercent", 0);
+                                    }
+                                  }}
+                                  onFocus={(e) => e.target.select()}
+                                  className="w-16 px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 text-xs text-right focus:ring-2 focus:ring-blue-500/20 outline-none"
+                                />
+                              ) : (
+                                <span className="text-red-500 font-medium">{row.lossPercent}%</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              {isEditing ? (
+                                <input
+                                  type="text"
+                                  name={`comp-notes-${row.id}`}
+                                  id={`comp-notes-${row.id}`}
+                                  aria-label="Component Notes"
+                                  value={row.notes}
+                                  onChange={(e) => updateTableRow("components", row.id, "notes", e.target.value)}
+                                  className="w-full px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-blue-500/20 outline-none"
+                                />
+                              ) : (
+                                <span className="text-slate-500 dark:text-slate-400 truncate max-w-[150px] block" title={row.notes}>{row.notes || "-"}</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center justify-center gap-1">
+                                {isEditing ? (
+                                  <>
+                                    <button
+                                      onClick={() => setEditingComponentId(null)}
+                                      className="p-1.5 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-colors"
+                                      title="Save"
+                                    >
+                                      <Check size={16} />
+                                    </button>
+                                    <button
+                                      onClick={() => setEditingComponentId(null)}
+                                      className="p-1.5 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-colors"
+                                      title="Cancel"
+                                    >
+                                      <X size={16} />
+                                    </button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <button
+                                      onClick={() => setEditingComponentId(row.id)}
+                                      className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                                      title="Edit Row"
+                                    >
+                                      <Edit2 size={16} />
+                                    </button>
+                                    <button
+                                      onClick={() => removeTableRow("components", row.id)}
+                                      className="p-1.5 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-colors"
+                                      title="Delete Row"
+                                    >
+                                      <Trash2 size={16} />
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                {bomData.components.length === 0 && (
+                  <div className="text-center py-6 text-slate-400 text-xs font-medium italic">
+                    No components added yet. Use the form above to add your first component.
+                  </div>
+                )}
+              </div>
             )}
           </AccordionSection>
 
@@ -1350,17 +1423,24 @@ const CreateBOMPage = () => {
             toggleSection={toggleSection}
           >
             {!isRootCardSelected ? (
-              <div className="text-center py-6 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-dashed border-slate-300 dark:border-slate-700">
-                <p className="text-sm text-slate-500 dark:text-slate-400">Please select a Root Card in Product Information to add materials.</p>
+              <div className="text-center py-12 bg-slate-50/50 dark:bg-slate-800/20 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800">
+                <div className="mx-auto w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-3">
+                  <Plus size={24} className="text-slate-400" />
+                </div>
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-1">No Root Card Selected</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs mx-auto">Please select a Root Card in Product Information to start adding materials.</p>
               </div>
             ) : (
-              <>
+              <div className="space-y-6">
                 {/* Quick Add Form */}
-                <div className="mb-4 p-3 bg-green-50/50 dark:bg-green-900/10 rounded-lg border border-green-100 dark:border-green-900/30">
-                  <div className="flex items-center gap-2 mb-3 text-green-700 dark:text-green-400 font-semibold text-xs">
-                    <Plus size={14} /> Add Raw Material
+                <div className="p-5 bg-emerald-50/30 dark:bg-emerald-900/10 rounded-2xl border border-emerald-100/50 dark:border-emerald-900/20">
+                  <div className="flex items-center gap-2 mb-4 text-emerald-700 dark:text-emerald-400 font-bold text-[11px] uppercase tracking-wider">
+                    <div className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center">
+                      <Plus size={12} />
+                    </div>
+                    Add Raw Material
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
                     <div className="md:col-span-2">
                       <SearchableSelect
                         label="Item Name *"
@@ -1379,20 +1459,26 @@ const CreateBOMPage = () => {
                             warehouse: selectedMaterial?.location || prev.warehouse
                           }));
                         }}
-                        placeholder="Search by name.."
+                        placeholder="Search items.."
                         allowCustom={true}
                       />
                     </div>
                     <div className="md:col-span-1">
-                      <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400 mb-1">Qty *</label>
+                      <label className="block text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider mb-1.5 ml-1">Qty *</label>
                       <input
                         type="number"
                         value={newMaterial.quantity}
-                        onChange={(e) => setNewMaterial(prev => ({ ...prev, quantity: parseFloat(e.target.value) }))}
-                        className="w-full px-2 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-green-500"
+                        onChange={(e) => setNewMaterial(prev => ({ ...prev, quantity: e.target.value === "" ? "" : parseFloat(e.target.value) }))}
+                        onBlur={(e) => {
+                          if (e.target.value === "") {
+                            setNewMaterial(prev => ({ ...prev, quantity: 0 }));
+                          }
+                        }}
+                        onFocus={(e) => e.target.select()}
+                        className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all outline-none"
                       />
                     </div>
-                    <div className="md:col-span-1">
+                    <div className="md:col-span-2">
                       <SearchableSelect
                         label="UOM"
                         options={UOMSelectOptions}
@@ -1412,12 +1498,18 @@ const CreateBOMPage = () => {
                       />
                     </div>
                     <div className="md:col-span-1">
-                      <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400 mb-1">Rate (₹)</label>
+                      <label className="block text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider mb-1.5 ml-1">Rate (₹)</label>
                       <input
                         type="number"
                         value={newMaterial.rate}
-                        onChange={(e) => setNewMaterial(prev => ({ ...prev, rate: parseFloat(e.target.value) }))}
-                        className="w-full px-2 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-green-500"
+                        onChange={(e) => setNewMaterial(prev => ({ ...prev, rate: e.target.value === "" ? "" : parseFloat(e.target.value) }))}
+                        onBlur={(e) => {
+                          if (e.target.value === "") {
+                            setNewMaterial(prev => ({ ...prev, rate: 0 }));
+                          }
+                        }}
+                        onFocus={(e) => e.target.select()}
+                        className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all outline-none"
                       />
                     </div>
                     <div className="md:col-span-2">
@@ -1430,7 +1522,7 @@ const CreateBOMPage = () => {
                         allowCustom={true}
                       />
                     </div>
-                    <div className="md:col-span-2">
+                    <div className="md:col-span-1">
                       <SearchableSelect
                         label="Operation"
                         options={operationSelectOptions}
@@ -1443,58 +1535,59 @@ const CreateBOMPage = () => {
                     <div className="md:col-span-1">
                       <button 
                         onClick={() => handleAddItem("materials")}
-                        className="w-full py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold flex items-center justify-center gap-1 transition shadow-sm"
+                        className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold flex items-center justify-center gap-1.5 transition shadow-sm active:scale-95"
                       >
-                        <Plus size={16} /> Add
+                        <Plus size={14} /> Add
                       </button>
                     </div>
                   </div>
                 </div>
 
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs">
+                <div className="overflow-hidden border border-slate-100 dark:border-slate-800 rounded-2xl shadow-sm">
+                  <table className="w-full text-xs text-left border-collapse">
                     <thead>
-                      <tr className="bg-slate-100 dark:bg-slate-700">
-                        <th className="px-2 py-1 text-left font-semibold w-10">#</th>
-                        <th className="px-2 py-1 text-left font-semibold">Item Code</th>
-                        <th className="px-2 py-1 text-left font-semibold">Item Name</th>
-                        <th className="px-2 py-1 text-center font-semibold w-auto">Qty</th>
-                        <th className="px-2 py-1 text-left font-semibold w-auto">UOM</th>
-                        <th className="px-2 py-1 text-right font-semibold w-auto">Rate</th>
-                        <th className="px-2 py-1 text-right font-semibold w-auto">Amount</th>
-                        <th className="px-2 py-1 text-left font-semibold w-auto">Warehouse</th>
-                        <th className="px-2 py-1 text-left font-semibold w-auto">Operation</th>
-                        <th className="px-2 py-1 text-center font-semibold w-auto">Actions</th>
+                      <tr className="bg-slate-50/80 dark:bg-slate-800/50">
+                        <th className="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider w-10">#</th>
+                        <th className="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Item Details</th>
+                        <th className="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider text-center">Qty</th>
+                        <th className="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">UOM</th>
+                        <th className="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider text-right">Rate</th>
+                        <th className="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider text-right">Amount</th>
+                        <th className="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Warehouse</th>
+                        <th className="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Operation</th>
+                        <th className="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider text-center">Actions</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                       {bomData.materials.map((row, index) => {
                         const isEditing = editingMaterialId === row.id;
                         const amount = (parseFloat(row.quantity) || 0) * (parseFloat(row.rate) || 0);
                         
                         return (
-                          <tr key={row.id} className="border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                            <td className="px-2 py-1 text-slate-500">{index + 1}</td>
-                            <td className="px-2 py-1 font-medium text-slate-700 dark:text-slate-300">
-                              {row.itemCode || "-"}
-                            </td>
-                            <td className="px-2 py-1">
+                          <tr key={row.id} className="bg-white dark:bg-slate-900 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                            <td className="px-4 py-3 text-slate-400 font-medium">{index + 1}</td>
+                            <td className="px-4 py-3">
                               {isEditing ? (
-                                <SearchableSelect
-                                  name={`mat-name-${row.id}`}
-                                  id={`mat-name-${row.id}`}
-                                  aria-label="Material Item Name"
-                                  options={productNameOptions}
-                                  value={row.itemName}
-                                  onChange={(value) => handleMaterialSelect(row.id, value)}
-                                  placeholder="Select item"
-                                  allowCustom={true}
-                                />
+                                <div className="space-y-1">
+                                  <SearchableSelect
+                                    name={`mat-name-${row.id}`}
+                                    id={`mat-name-${row.id}`}
+                                    aria-label="Item Name"
+                                    options={productNameOptions}
+                                    value={row.itemName}
+                                    onChange={(value) => handleMaterialSelect(row.id, value)}
+                                    placeholder="Select item"
+                                    allowCustom={true}
+                                  />
+                                </div>
                               ) : (
-                                <span className="text-slate-900 dark:text-white font-medium">{row.itemName}</span>
+                                <div className="flex flex-col">
+                                  <span className="font-bold text-slate-700 dark:text-slate-200">{row.itemName}</span>
+                                  <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-tight">{row.itemCode || "NO-CODE"} • {row.itemGroup}</span>
+                                </div>
                               )}
                             </td>
-                            <td className="px-2 py-1 text-center">
+                            <td className="px-4 py-3 text-center">
                               {isEditing ? (
                                 <input
                                   type="number"
@@ -1502,14 +1595,20 @@ const CreateBOMPage = () => {
                                   id={`mat-qty-${row.id}`}
                                   aria-label="Material Quantity"
                                   value={row.quantity}
-                                  onChange={(e) => updateTableRow("materials", row.id, "quantity", parseFloat(e.target.value))}
-                                  className="w-20 p-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs text-center"
+                                  onChange={(e) => updateTableRow("materials", row.id, "quantity", e.target.value === "" ? "" : parseFloat(e.target.value))}
+                                  onBlur={(e) => {
+                                    if (e.target.value === "") {
+                                      updateTableRow("materials", row.id, "quantity", 0);
+                                    }
+                                  }}
+                                  onFocus={(e) => e.target.select()}
+                                  className="w-20 px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 text-xs text-center focus:ring-2 focus:ring-emerald-500/20 outline-none"
                                 />
                               ) : (
-                                <span>{row.quantity}</span>
+                                <span className="font-semibold text-slate-600 dark:text-slate-400">{row.quantity}</span>
                               )}
                             </td>
-                            <td className="px-2 py-1">
+                            <td className="px-4 py-3">
                               {isEditing ? (
                                 <SearchableSelect
                                   name={`mat-uom-${row.id}`}
@@ -1518,14 +1617,14 @@ const CreateBOMPage = () => {
                                   options={UOMSelectOptions}
                                   value={row.uom}
                                   onChange={(value) => updateTableRow("materials", row.id, "uom", value)}
-                                  placeholder="Select UOM"
+                                  placeholder="UOM"
                                   allowCustom={true}
                                 />
                               ) : (
-                                <span>{row.uom}</span>
+                                <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-[10px] font-bold text-slate-600 dark:text-slate-400">{row.uom}</span>
                               )}
                             </td>
-                            <td className="px-2 py-1 text-right">
+                            <td className="px-4 py-3 text-right">
                               {isEditing ? (
                                 <input
                                   type="number"
@@ -1533,82 +1632,88 @@ const CreateBOMPage = () => {
                                   id={`mat-rate-${row.id}`}
                                   aria-label="Material Rate"
                                   value={row.rate}
-                                  onChange={(e) => updateTableRow("materials", row.id, "rate", parseFloat(e.target.value))}
-                                  className="w-24 p-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs text-right"
+                                  onChange={(e) => updateTableRow("materials", row.id, "rate", e.target.value === "" ? "" : parseFloat(e.target.value))}
+                                  onBlur={(e) => {
+                                    if (e.target.value === "") {
+                                      updateTableRow("materials", row.id, "rate", 0);
+                                    }
+                                  }}
+                                  onFocus={(e) => e.target.select()}
+                                  className="w-24 px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 text-xs text-right focus:ring-2 focus:ring-emerald-500/20 outline-none"
                                 />
                               ) : (
-                                <span>₹{(parseFloat(row.rate) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                <span className="font-medium text-slate-600 dark:text-slate-400">₹{(parseFloat(row.rate) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                               )}
                             </td>
-                            <td className="px-2 py-1 text-right font-semibold text-slate-900 dark:text-white">
-                              ₹{amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            <td className="px-4 py-3 text-right">
+                              <span className="font-bold text-slate-900 dark:text-white">₹{amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                             </td>
-                            <td className="px-2 py-1">
+                            <td className="px-4 py-3">
                               {isEditing ? (
                                 <SearchableSelect
                                   name={`mat-wh-${row.id}`}
                                   id={`mat-wh-${row.id}`}
-                                  aria-label="Material Warehouse"
+                                  aria-label="Warehouse"
                                   options={warehouseOptions}
                                   value={row.warehouse}
                                   onChange={(value) => updateTableRow("materials", row.id, "warehouse", value)}
-                                  placeholder="Select warehouse"
+                                  placeholder="Warehouse"
                                   allowCustom={true}
                                 />
                               ) : (
-                                <span className="text-slate-500">{row.warehouse || "-"}</span>
+                                <span className="text-slate-600 dark:text-slate-400 font-medium">{row.warehouse || "-"}</span>
                               )}
                             </td>
-                            <td className="px-2 py-1">
+                            <td className="px-4 py-3">
                               {isEditing ? (
                                 <SearchableSelect
                                   name={`mat-op-${row.id}`}
                                   id={`mat-op-${row.id}`}
-                                  aria-label="Material Operation"
+                                  aria-label="Operation"
                                   options={operationSelectOptions}
                                   value={row.operation}
                                   onChange={(value) => updateTableRow("materials", row.id, "operation", value)}
-                                  placeholder="Select operation"
+                                  placeholder="Operation"
                                   allowCustom={true}
                                 />
                               ) : (
-                                <span className="text-slate-500">{row.operation || "-"}</span>
+                                <span className="px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg font-bold text-[10px] uppercase tracking-wider">{row.operation || "-"}</span>
                               )}
                             </td>
-                            <td className="px-2 py-1">
-                              <div className="flex items-center justify-center gap-2">
+                            <td className="px-4 py-3">
+                              <div className="flex items-center justify-center gap-1">
                                 {isEditing ? (
                                   <>
                                     <button
                                       onClick={() => setEditingMaterialId(null)}
-                                      className="p-1 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded transition-colors"
+                                      className="p-1.5 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-colors"
                                       title="Save"
                                     >
-                                      <Check size={14} />
+                                      <Check size={16} />
                                     </button>
                                     <button
                                       onClick={() => setEditingMaterialId(null)}
-                                      className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                                      className="p-1.5 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-colors"
                                       title="Cancel"
                                     >
-                                      <X size={14} />
+                                      <X size={16} />
                                     </button>
                                   </>
                                 ) : (
                                   <>
                                     <button
                                       onClick={() => setEditingMaterialId(row.id)}
-                                      className="p-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
+                                      className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
                                       title="Edit Row"
                                     >
-                                      <Edit2 size={14} />
+                                      <Edit2 size={16} />
                                     </button>
                                     <button
                                       onClick={() => removeTableRow("materials", row.id)}
-                                      className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                                      className="p-1.5 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-colors"
                                       title="Delete Row"
                                     >
-                                      <Trash2 size={14} />
+                                      <Trash2 size={16} />
                                     </button>
                                   </>
                                 )}
@@ -1620,10 +1725,12 @@ const CreateBOMPage = () => {
                     </tbody>
                   </table>
                 </div>
-            {bomData.materials.length === 0 && (
-              <p className="text-center text-slate-500 text-xs py-2">No materials added</p>
-            )}
-              </>
+                {bomData.materials.length === 0 && (
+                  <div className="text-center py-6 text-slate-400 text-xs font-medium italic">
+                    No materials added yet. Use the form above to add your first material.
+                  </div>
+                )}
+              </div>
             )}
           </AccordionSection>
 
@@ -1636,318 +1743,339 @@ const CreateBOMPage = () => {
             toggleSection={toggleSection}
           >
             {!isRootCardSelected ? (
-              <div className="text-center py-6 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-dashed border-slate-300 dark:border-slate-700">
-                <p className="text-sm text-slate-500 dark:text-slate-400">Please select a Root Card in Product Information to add operations.</p>
+              <div className="text-center py-12 bg-slate-50/50 dark:bg-slate-800/20 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800">
+                <div className="mx-auto w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-3">
+                  <Plus size={24} className="text-slate-400" />
+                </div>
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-1">No Root Card Selected</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs mx-auto">Please select a Root Card in Product Information to start adding operations.</p>
               </div>
             ) : (
-              <>
+              <div className="space-y-6">
                 {/* Quick Add Form */}
-                <div className="mb-4 p-3 bg-purple-50/50 dark:bg-purple-900/10 rounded-lg border border-purple-100 dark:border-purple-900/30">
-              <div className="flex items-center gap-2 mb-3 text-purple-700 dark:text-purple-400 font-semibold text-xs">
-                <Plus size={14} /> Add Operation
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
-                <div className="md:col-span-2">
-                  <SearchableSelect
-                    label="Operation *"
-                    options={operationSelectOptions}
-                    value={newOperation.operationName}
-                    onChange={(val) => setNewOperation(prev => ({ ...prev, operationName: val }))}
-                    placeholder="Select"
-                    allowCustom={true}
-                  />
+                <div className="p-5 bg-purple-50/30 dark:bg-purple-900/10 rounded-2xl border border-purple-100/50 dark:border-purple-900/20">
+                  <div className="flex items-center gap-2 mb-4 text-purple-700 dark:text-purple-400 font-bold text-[11px] uppercase tracking-wider">
+                    <div className="w-5 h-5 rounded-full bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center">
+                      <Plus size={12} />
+                    </div>
+                    Add Manufacturing Operation
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                    <div className="md:col-span-2">
+                      <SearchableSelect
+                        label="Operation *"
+                        options={operationSelectOptions}
+                        value={newOperation.operationName}
+                        onChange={(val) => setNewOperation(prev => ({ ...prev, operationName: val }))}
+                        placeholder="Select"
+                        allowCustom={true}
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <SearchableSelect
+                        label="Workstation"
+                        options={workstationOptions}
+                        value={newOperation.workstation}
+                        onChange={(val) => setNewOperation(prev => ({ ...prev, workstation: val }))}
+                        placeholder="Select"
+                        allowCustom={true}
+                      />
+                    </div>
+                    <div className="md:col-span-1">
+                      <label className="block text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider mb-1.5 ml-1 whitespace-nowrap">Cycle (Min)</label>
+                      <input
+                        type="number"
+                        value={newOperation.cycleTime}
+                        onChange={(e) => {
+                          const val = e.target.value === "" ? "" : parseFloat(e.target.value);
+                          setNewOperation(prev => {
+                            const updated = { ...prev, cycleTime: val };
+                            updated.cost = updateOperationCost(updated);
+                            return updated;
+                          });
+                        }}
+                        onBlur={(e) => {
+                          if (e.target.value === "") {
+                            setNewOperation(prev => ({ ...prev, cycleTime: 0 }));
+                          }
+                        }}
+                        onFocus={(e) => e.target.select()}
+                        className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all outline-none"
+                      />
+                    </div>
+                    <div className="md:col-span-1">
+                      <label className="block text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider mb-1.5 ml-1 whitespace-nowrap">Setup (Min)</label>
+                      <input
+                        type="number"
+                        value={newOperation.setupTime}
+                        onChange={(e) => {
+                          const val = e.target.value === "" ? "" : parseFloat(e.target.value);
+                          setNewOperation(prev => {
+                            const updated = { ...prev, setupTime: val };
+                            updated.cost = updateOperationCost(updated);
+                            return updated;
+                          });
+                        }}
+                        onBlur={(e) => {
+                          if (e.target.value === "") {
+                            setNewOperation(prev => ({ ...prev, setupTime: 0 }));
+                          }
+                        }}
+                        onFocus={(e) => e.target.select()}
+                        className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all outline-none"
+                      />
+                    </div>
+                    <div className="md:col-span-1">
+                      <label className="block text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider mb-1.5 ml-1">Rate/Hr</label>
+                      <input
+                        type="number"
+                        value={newOperation.hourlyRate}
+                        onChange={(e) => {
+                          const val = e.target.value === "" ? "" : parseFloat(e.target.value);
+                          setNewOperation(prev => {
+                            const updated = { ...prev, hourlyRate: val };
+                            updated.cost = updateOperationCost(updated);
+                            return updated;
+                          });
+                        }}
+                        onBlur={(e) => {
+                          if (e.target.value === "") {
+                            setNewOperation(prev => ({ ...prev, hourlyRate: 0 }));
+                          }
+                        }}
+                        onFocus={(e) => e.target.select()}
+                        className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all outline-none"
+                      />
+                    </div>
+                    <div className="md:col-span-1">
+                      <label className="block text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider mb-1.5 ml-1">Cost (₹)</label>
+                      <input
+                        type="number"
+                        value={newOperation.cost}
+                        onChange={(e) => setNewOperation(prev => ({ ...prev, cost: e.target.value === "" ? "" : parseFloat(e.target.value) }))}
+                        onBlur={(e) => {
+                          if (e.target.value === "") {
+                            setNewOperation(prev => ({ ...prev, cost: 0 }));
+                          }
+                        }}
+                        onFocus={(e) => e.target.select()}
+                        className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all outline-none"
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <SearchableSelect
+                        label="Type"
+                        options={operationTypeOptions}
+                        value={newOperation.type}
+                        onChange={(val) => setNewOperation(prev => ({ ...prev, type: val }))}
+                      />
+                    </div>
+                    <div className="md:col-span-1">
+                      <SearchableSelect
+                        label="Target Warehouse"
+                        options={warehouseOptions}
+                        value={newOperation.targetWarehouse}
+                        onChange={(val) => setNewOperation(prev => ({ ...prev, targetWarehouse: val }))}
+                        placeholder="Select"
+                        allowCustom={true}
+                      />
+                    </div>
+                    <div className="md:col-span-1">
+                      <button 
+                        onClick={() => handleAddItem("operations")}
+                        className="w-full py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold flex items-center justify-center gap-1.5 transition shadow-sm active:scale-95"
+                      >
+                        <Plus size={14} /> Add
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <div className="md:col-span-2">
-                  <SearchableSelect
-                    label="Workstation"
-                    options={workstationOptions}
-                    value={newOperation.workstation}
-                    onChange={(val) => setNewOperation(prev => ({ ...prev, workstation: val }))}
-                    placeholder="Select"
-                    allowCustom={true}
-                  />
-                </div>
-                <div className="md:col-span-1">
-                  <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400 mb-1">Cycle Time</label>
-                  <input
-                    type="number"
-                    value={newOperation.cycleTime}
-                    onChange={(e) => {
-                      const val = parseFloat(e.target.value) || 0;
-                      setNewOperation(prev => {
-                        const updated = { ...prev, cycleTime: val };
-                        updated.cost = updateOperationCost(updated);
-                        return updated;
-                      });
-                    }}
-                    className="w-full px-2 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs"
-                  />
-                </div>
-                <div className="md:col-span-1">
-                  <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400 mb-1">Setup Time</label>
-                  <input
-                    type="number"
-                    value={newOperation.setupTime}
-                    onChange={(e) => {
-                      const val = parseFloat(e.target.value) || 0;
-                      setNewOperation(prev => {
-                        const updated = { ...prev, setupTime: val };
-                        updated.cost = updateOperationCost(updated);
-                        return updated;
-                      });
-                    }}
-                    className="w-full px-2 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs"
-                  />
-                </div>
-                <div className="md:col-span-1">
-                  <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400 mb-1">Rate</label>
-                  <input
-                    type="number"
-                    value={newOperation.hourlyRate}
-                    onChange={(e) => {
-                      const val = parseFloat(e.target.value) || 0;
-                      setNewOperation(prev => {
-                        const updated = { ...prev, hourlyRate: val };
-                        updated.cost = updateOperationCost(updated);
-                        return updated;
-                      });
-                    }}
-                    className="w-full px-2 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs"
-                  />
-                </div>
-                <div className="md:col-span-1">
-                  <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400 mb-1">Cost</label>
-                  <input
-                    type="number"
-                    value={newOperation.cost}
-                    onChange={(e) => setNewOperation(prev => ({ ...prev, cost: parseFloat(e.target.value) }))}
-                    className="w-full px-2 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs"
-                  />
-                </div>
-                <div className="md:col-span-1">
-                  <SearchableSelect
-                    label="Type"
-                    options={operationTypeOptions}
-                    value={newOperation.type}
-                    onChange={(val) => setNewOperation(prev => ({ ...prev, type: val }))}
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <SearchableSelect
-                    label="Target Wh"
-                    options={warehouseOptions}
-                    value={newOperation.targetWarehouse}
-                    onChange={(val) => setNewOperation(prev => ({ ...prev, targetWarehouse: val }))}
-                    placeholder="Select"
-                    allowCustom={true}
-                  />
-                </div>
-                <div className="md:col-span-1">
-                  <button 
-                    onClick={() => handleAddItem("operations")}
-                    className="w-full py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold flex items-center justify-center gap-1 transition shadow-sm"
-                  >
-                    <Plus size={16} /> Add
-                  </button>
-                </div>
-              </div>
-            </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="bg-slate-100 dark:bg-slate-700">
-                    <th className="px-2 py-1 text-left font-semibold w-10">#</th>
-                    <th className="px-2 py-1 text-left font-semibold">Operation</th>
-                    <th className="px-2 py-1 text-left font-semibold w-auto">Workstation</th>
-                    <th className="px-2 py-1 text-center font-semibold w-auto">Cycle Time</th>
-                    <th className="px-2 py-1 text-center font-semibold w-auto">Setup Time</th>
-                    <th className="px-2 py-1 text-right font-semibold w-auto">Rate</th>
-                    <th className="px-2 py-1 text-right font-semibold w-auto">Cost</th>
-                    <th className="px-2 py-1 text-left font-semibold w-auto">Type</th>
-                    <th className="px-2 py-1 text-left font-semibold w-auto">Target Wh</th>
-                    <th className="px-2 py-1 text-center font-semibold w-auto">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {bomData.operations.map((row, index) => {
-                    const isEditing = editingOperationId === row.id;
-                    
-                    return (
-                      <tr key={row.id} className="border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                        <td className="px-2 py-1 text-slate-500">{index + 1}</td>
-                        <td className="px-2 py-1 font-medium text-slate-700 dark:text-slate-300">
-                          {isEditing ? (
-                            <SearchableSelect
-                              name={`op-name-${row.id}`}
-                              id={`op-name-${row.id}`}
-                              aria-label="Operation Name"
-                              options={operationSelectOptions}
-                              value={row.operationName}
-                              onChange={(value) => updateTableRow("operations", row.id, "operationName", value)}
-                              placeholder="Select operation"
-                              allowCustom={true}
-                            />
-                          ) : (
-                            row.operationName
-                          )}
-                        </td>
-                        <td className="px-2 py-1">
-                          {isEditing ? (
-                            <SearchableSelect
-                              name={`op-work-${row.id}`}
-                              id={`op-work-${row.id}`}
-                              aria-label="Workstation"
-                              options={workstationOptions}
-                              value={row.workstation}
-                              onChange={(value) => updateTableRow("operations", row.id, "workstation", value)}
-                              placeholder="Select workstation"
-                              allowCustom={true}
-                            />
-                          ) : (
-                            <span className="text-slate-500">{row.workstation || "-"}</span>
-                          )}
-                        </td>
-                        <td className="px-2 py-1 text-center">
-                          {isEditing ? (
-                            <input
-                              type="number"
-                              name={`op-cycle-${row.id}`}
-                              id={`op-cycle-${row.id}`}
-                              aria-label="Cycle Time"
-                              value={row.cycleTime}
-                              onChange={(e) => updateOperationRow(row.id, "cycleTime", parseFloat(e.target.value))}
-                              className="w-16 p-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs text-center"
-                            />
-                          ) : (
-                            row.cycleTime
-                          )}
-                        </td>
-                        <td className="px-2 py-1 text-center">
-                          {isEditing ? (
-                            <input
-                              type="number"
-                              name={`op-setup-${row.id}`}
-                              id={`op-setup-${row.id}`}
-                              aria-label="Setup Time"
-                              value={row.setupTime}
-                              onChange={(e) => updateOperationRow(row.id, "setupTime", parseFloat(e.target.value))}
-                              className="w-16 p-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs text-center"
-                            />
-                          ) : (
-                            row.setupTime
-                          )}
-                        </td>
-                        <td className="px-2 py-1 text-right">
-                          {isEditing ? (
-                            <input
-                              type="number"
-                              name={`op-rate-${row.id}`}
-                              id={`op-rate-${row.id}`}
-                              aria-label="Hourly Rate"
-                              value={row.hourlyRate}
-                              onChange={(e) => updateOperationRow(row.id, "hourlyRate", parseFloat(e.target.value))}
-                              className="w-20 p-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs text-right"
-                            />
-                          ) : (
-                            <span>₹{(parseFloat(row.hourlyRate) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                          )}
-                        </td>
-                        <td className="px-2 py-1 text-right font-semibold text-slate-900 dark:text-white">
-                          {isEditing ? (
-                            <input
-                              type="number"
-                              name={`op-cost-${row.id}`}
-                              id={`op-cost-${row.id}`}
-                              aria-label="Operation Cost"
-                              value={row.cost}
-                              onChange={(e) => updateOperationRow(row.id, "cost", parseFloat(e.target.value))}
-                              className="w-24 p-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs text-right"
-                            />
-                          ) : (
-                            <span>₹{(parseFloat(row.cost) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                          )}
-                        </td>
-                        <td className="px-2 py-1">
-                          {isEditing ? (
-                            <SearchableSelect
-                              name={`op-type-${row.id}`}
-                              id={`op-type-${row.id}`}
-                              aria-label="Operation Type"
-                              options={operationTypeOptions}
-                              value={row.type}
-                              onChange={(value) => updateTableRow("operations", row.id, "type", value)}
-                              placeholder="Select type"
-                            />
-                          ) : (
-                            <span className="capitalize text-slate-500">{row.type?.replace("-", " ") || "-"}</span>
-                          )}
-                        </td>
-                        <td className="px-2 py-1">
-                          {isEditing ? (
-                            <SearchableSelect
-                              name={`op-twh-${row.id}`}
-                              id={`op-twh-${row.id}`}
-                              aria-label="Target Warehouse"
-                              options={warehouseOptions}
-                              value={row.targetWarehouse}
-                              onChange={(value) => updateTableRow("operations", row.id, "targetWarehouse", value)}
-                              placeholder="Select warehouse"
-                              allowCustom={true}
-                            />
-                          ) : (
-                            <span className="text-slate-500">{row.targetWarehouse || "-"}</span>
-                          )}
-                        </td>
-                        <td className="px-2 py-1">
-                          <div className="flex items-center justify-center gap-2">
-                            {isEditing ? (
-                              <>
-                                <button
-                                  onClick={() => setEditingOperationId(null)}
-                                  className="p-1 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded transition-colors"
-                                  title="Save"
-                                >
-                                  <Check size={14} />
-                                </button>
-                                <button
-                                  onClick={() => setEditingOperationId(null)}
-                                  className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
-                                  title="Cancel"
-                                >
-                                  <X size={14} />
-                                </button>
-                              </>
-                            ) : (
-                              <>
-                                <button
-                                  onClick={() => setEditingOperationId(row.id)}
-                                  className="p-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
-                                  title="Edit Row"
-                                >
-                                  <Edit2 size={14} />
-                                </button>
-                                <button
-                                  onClick={() => removeTableRow("operations", row.id)}
-                                  className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
-                                  title="Delete Row"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </td>
+                <div className="overflow-hidden border border-slate-100 dark:border-slate-800 rounded-2xl shadow-sm">
+                  <table className="w-full text-xs text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50/80 dark:bg-slate-800/50">
+                        <th className="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider w-10">#</th>
+                        <th className="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Operation</th>
+                        <th className="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Workstation</th>
+                        <th className="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider text-center">Cycle Time</th>
+                        <th className="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider text-center">Setup Time</th>
+                        <th className="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider text-right">Rate</th>
+                        <th className="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider text-right">Cost</th>
+                        <th className="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider text-center">Actions</th>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-            {bomData.operations.length === 0 && (
-              <p className="text-center text-slate-500 text-xs py-2">No operations added</p>
-            )}
-              </>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                      {bomData.operations.map((row, index) => {
+                        const isEditing = editingOperationId === row.id;
+                        
+                        return (
+                          <tr key={row.id} className="bg-white dark:bg-slate-900 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                            <td className="px-4 py-3 text-slate-400 font-medium">{index + 1}</td>
+                            <td className="px-4 py-3">
+                              {isEditing ? (
+                                <SearchableSelect
+                                  name={`op-name-${row.id}`}
+                                  id={`op-name-${row.id}`}
+                                  aria-label="Operation Name"
+                                  options={operationSelectOptions}
+                                  value={row.operationName}
+                                  onChange={(value) => updateTableRow("operations", row.id, "operationName", value)}
+                                  placeholder="Select operation"
+                                  allowCustom={true}
+                                />
+                              ) : (
+                                <div className="flex flex-col">
+                                  <span className="font-bold text-slate-700 dark:text-slate-200">{row.operationName}</span>
+                                  <span className="text-[10px] font-bold text-blue-500 dark:text-blue-400 uppercase tracking-tight">{row.type?.replace("-", " ")}</span>
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              {isEditing ? (
+                                <SearchableSelect
+                                  name={`op-work-${row.id}`}
+                                  id={`op-work-${row.id}`}
+                                  aria-label="Workstation"
+                                  options={workstationOptions}
+                                  value={row.workstation}
+                                  onChange={(value) => updateTableRow("operations", row.id, "workstation", value)}
+                                  placeholder="Select workstation"
+                                  allowCustom={true}
+                                />
+                              ) : (
+                                <span className="text-slate-600 dark:text-slate-400 font-medium">{row.workstation || "-"}</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              {isEditing ? (
+                                <input
+                                  type="number"
+                                  name={`op-cycle-${row.id}`}
+                                  id={`op-cycle-${row.id}`}
+                                  aria-label="Cycle Time"
+                                  value={row.cycleTime}
+                                  onChange={(e) => updateOperationRow(row.id, "cycleTime", e.target.value === "" ? "" : parseFloat(e.target.value))}
+                                  onBlur={(e) => {
+                                    if (e.target.value === "") {
+                                      updateOperationRow(row.id, "cycleTime", 0);
+                                    }
+                                  }}
+                                  onFocus={(e) => e.target.select()}
+                                  className="w-16 px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 text-xs text-center focus:ring-2 focus:ring-purple-500/20 outline-none"
+                                />
+                              ) : (
+                                <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-[10px] font-bold text-slate-600 dark:text-slate-400">{row.cycleTime} Min</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              {isEditing ? (
+                                <input
+                                  type="number"
+                                  name={`op-setup-${row.id}`}
+                                  id={`op-setup-${row.id}`}
+                                  aria-label="Setup Time"
+                                  value={row.setupTime}
+                                  onChange={(e) => updateOperationRow(row.id, "setupTime", e.target.value === "" ? "" : parseFloat(e.target.value))}
+                                  onBlur={(e) => {
+                                    if (e.target.value === "") {
+                                      updateOperationRow(row.id, "setupTime", 0);
+                                    }
+                                  }}
+                                  onFocus={(e) => e.target.select()}
+                                  className="w-16 px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 text-xs text-center focus:ring-2 focus:ring-purple-500/20 outline-none"
+                                />
+                              ) : (
+                                <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-[10px] font-bold text-slate-600 dark:text-slate-400">{row.setupTime} Min</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              {isEditing ? (
+                                <input
+                                  type="number"
+                                  name={`op-rate-${row.id}`}
+                                  id={`op-rate-${row.id}`}
+                                  aria-label="Hourly Rate"
+                                  value={row.hourlyRate}
+                                  onChange={(e) => updateOperationRow(row.id, "hourlyRate", e.target.value === "" ? "" : parseFloat(e.target.value))}
+                                  onBlur={(e) => {
+                                    if (e.target.value === "") {
+                                      updateOperationRow(row.id, "hourlyRate", 0);
+                                    }
+                                  }}
+                                  onFocus={(e) => e.target.select()}
+                                  className="w-20 px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 text-xs text-right focus:ring-2 focus:ring-purple-500/20 outline-none"
+                                />
+                              ) : (
+                                <span className="font-medium text-slate-600 dark:text-slate-400">₹{(parseFloat(row.hourlyRate) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              {isEditing ? (
+                                <input
+                                  type="number"
+                                  name={`op-cost-${row.id}`}
+                                  id={`op-cost-${row.id}`}
+                                  aria-label="Operation Cost"
+                                  value={row.cost}
+                                  onChange={(e) => updateOperationRow(row.id, "cost", parseFloat(e.target.value))}
+                                  className="w-24 px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 text-xs text-right focus:ring-2 focus:ring-purple-500/20 outline-none"
+                                />
+                              ) : (
+                                <span className="font-bold text-slate-900 dark:text-white">₹{(parseFloat(row.cost) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center justify-center gap-1">
+                                {isEditing ? (
+                                  <>
+                                    <button
+                                      onClick={() => setEditingOperationId(null)}
+                                      className="p-1.5 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-colors"
+                                      title="Save"
+                                    >
+                                      <Check size={16} />
+                                    </button>
+                                    <button
+                                      onClick={() => setEditingOperationId(null)}
+                                      className="p-1.5 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-colors"
+                                      title="Cancel"
+                                    >
+                                      <X size={16} />
+                                    </button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <button
+                                      onClick={() => setEditingOperationId(row.id)}
+                                      className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                                      title="Edit Row"
+                                    >
+                                      <Edit2 size={16} />
+                                    </button>
+                                    <button
+                                      onClick={() => removeTableRow("operations", row.id)}
+                                      className="p-1.5 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-colors"
+                                      title="Delete Row"
+                                    >
+                                      <Trash2 size={16} />
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                {bomData.operations.length === 0 && (
+                  <div className="text-center py-6 text-slate-400 text-xs font-medium italic">
+                    No operations added yet. Use the form above to add your first operation.
+                  </div>
+                )}
+              </div>
             )}
           </AccordionSection>
 
@@ -1960,340 +2088,379 @@ const CreateBOMPage = () => {
             toggleSection={toggleSection}
           >
             {!isRootCardSelected ? (
-              <div className="text-center py-6 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-dashed border-slate-300 dark:border-slate-700">
-                <p className="text-sm text-slate-500 dark:text-slate-400">Please select a Root Card in Product Information to add scrap items.</p>
+              <div className="text-center py-12 bg-slate-50/50 dark:bg-slate-800/20 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800">
+                <div className="mx-auto w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-3">
+                  <Plus size={24} className="text-slate-400" />
+                </div>
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-1">No Root Card Selected</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs mx-auto">Please select a Root Card in Product Information to start adding scrap items.</p>
               </div>
             ) : (
-              <>
+              <div className="space-y-6">
                 {/* Quick Add Form */}
-                <div className="mb-4 p-3 bg-orange-50/50 dark:bg-orange-900/10 rounded-lg border border-orange-100 dark:border-orange-900/30">
-              <div className="flex items-center gap-2 mb-3 text-orange-700 dark:text-orange-400 font-semibold text-xs">
-                <Plus size={14} /> Add Scrap Item
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
-                <div className="md:col-span-2">
-                  <SearchableSelect
-                    label="Code"
-                    options={itemCodeOptions}
-                    value={newScrap.itemCode}
-                    onChange={(val) => {
-                      const selectedMaterial = allAvailableMaterials.find(m => m.itemCode === val);
-                      setNewScrap(prev => ({
-                        ...prev,
-                        itemCode: val,
-                        name: selectedMaterial?.itemName || prev.name,
-                        rate: selectedMaterial?.unit_cost || prev.rate
-                      }));
-                    }}
-                    placeholder="Select code"
-                    allowCustom={true}
-                  />
+                <div className="p-5 bg-orange-50/30 dark:bg-orange-900/10 rounded-2xl border border-orange-100/50 dark:border-orange-900/20">
+                  <div className="flex items-center gap-2 mb-4 text-orange-700 dark:text-orange-400 font-bold text-[11px] uppercase tracking-wider">
+                    <div className="w-5 h-5 rounded-full bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center">
+                      <Plus size={12} />
+                    </div>
+                    Add Scrap Item
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                    <div className="md:col-span-2">
+                      <SearchableSelect
+                        label="Code"
+                        options={itemCodeOptions}
+                        value={newScrap.itemCode}
+                        onChange={(val) => {
+                          const selectedMaterial = allAvailableMaterials.find(m => m.itemCode === val);
+                          setNewScrap(prev => ({
+                            ...prev,
+                            itemCode: val,
+                            name: selectedMaterial?.itemName || prev.name,
+                            rate: selectedMaterial?.unit_cost || prev.rate
+                          }));
+                        }}
+                        placeholder="Select"
+                        allowCustom={true}
+                      />
+                    </div>
+                    <div className="md:col-span-3">
+                      <SearchableSelect
+                        label="Name"
+                        options={productNameOptions}
+                        value={newScrap.name}
+                        onChange={(val) => {
+                          const selectedMaterial = allAvailableMaterials.find(m => m.itemName === val);
+                          setNewScrap(prev => ({
+                            ...prev,
+                            name: val,
+                            itemCode: selectedMaterial?.itemCode || prev.itemCode,
+                            rate: selectedMaterial?.unit_cost || prev.rate
+                          }));
+                        }}
+                        placeholder="Select"
+                        allowCustom={true}
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider mb-1.5 ml-1">Input Qty</label>
+                      <input
+                        type="number"
+                        value={newScrap.inputQty}
+                        onChange={(e) => setNewScrap(prev => ({ ...prev, inputQty: e.target.value === "" ? "" : parseFloat(e.target.value) }))}
+                        onBlur={(e) => {
+                          if (e.target.value === "") {
+                            setNewScrap(prev => ({ ...prev, inputQty: 0 }));
+                          }
+                        }}
+                        onFocus={(e) => e.target.select()}
+                        className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all outline-none"
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider mb-1.5 ml-1">Loss %</label>
+                      <input
+                        type="number"
+                        value={newScrap.lossPercent}
+                        onChange={(e) => setNewScrap(prev => ({ ...prev, lossPercent: e.target.value === "" ? "" : parseFloat(e.target.value) }))}
+                        onBlur={(e) => {
+                          if (e.target.value === "") {
+                            setNewScrap(prev => ({ ...prev, lossPercent: 0 }));
+                          }
+                        }}
+                        onFocus={(e) => e.target.select()}
+                        className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all outline-none"
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider mb-1.5 ml-1">Rate (₹)</label>
+                      <input
+                        type="number"
+                        value={newScrap.rate}
+                        onChange={(e) => setNewScrap(prev => ({ ...prev, rate: e.target.value === "" ? "" : parseFloat(e.target.value) }))}
+                        onBlur={(e) => {
+                          if (e.target.value === "") {
+                            setNewScrap(prev => ({ ...prev, rate: 0 }));
+                          }
+                        }}
+                        onFocus={(e) => e.target.select()}
+                        className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all outline-none"
+                      />
+                    </div>
+                    <div className="md:col-span-1">
+                      <button 
+                        onClick={() => handleAddItem("scrapLoss")}
+                        className="w-full py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold flex items-center justify-center gap-1.5 transition shadow-sm active:scale-95"
+                      >
+                        <Plus size={14} /> Add
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <div className="md:col-span-3">
-                  <SearchableSelect
-                    label="Name"
-                    options={productNameOptions}
-                    value={newScrap.name}
-                    onChange={(val) => {
-                      const selectedMaterial = allAvailableMaterials.find(m => m.itemName === val);
-                      setNewScrap(prev => ({
-                        ...prev,
-                        name: val,
-                        itemCode: selectedMaterial?.itemCode || prev.itemCode,
-                        rate: selectedMaterial?.unit_cost || prev.rate
-                      }));
-                    }}
-                    placeholder="Select name"
-                    allowCustom={true}
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400 mb-1">Input Qty</label>
-                  <input
-                    type="number"
-                    value={newScrap.inputQty}
-                    onChange={(e) => setNewScrap(prev => ({ ...prev, inputQty: parseFloat(e.target.value) }))}
-                    className="w-full px-2 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs"
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400 mb-1">Loss %</label>
-                  <input
-                    type="number"
-                    value={newScrap.lossPercent}
-                    onChange={(e) => setNewScrap(prev => ({ ...prev, lossPercent: parseFloat(e.target.value) }))}
-                    className="w-full px-2 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs"
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400 mb-1">Rate</label>
-                  <input
-                    type="number"
-                    value={newScrap.rate}
-                    onChange={(e) => setNewScrap(prev => ({ ...prev, rate: parseFloat(e.target.value) }))}
-                    className="w-full px-2 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs"
-                  />
-                </div>
-                <div className="md:col-span-1">
-                  <button 
-                    onClick={() => handleAddItem("scrapLoss")}
-                    className="w-full py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-semibold flex items-center justify-center gap-1 transition shadow-sm"
-                  >
-                    <Plus size={16} /> Add
-                  </button>
-                </div>
-              </div>
-            </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="bg-slate-100 dark:bg-slate-700">
-                    <th className="px-2 py-1 text-left font-semibold w-10">#</th>
-                    <th className="px-2 py-1 text-left font-semibold">Code</th>
-                    <th className="px-2 py-1 text-left font-semibold">Name</th>
-                    <th className="px-2 py-1 text-center font-semibold w-auto">Input Qty</th>
-                    <th className="px-2 py-1 text-center font-semibold w-auto">Loss %</th>
-                    <th className="px-2 py-1 text-right font-semibold w-auto">Rate</th>
-                    <th className="px-2 py-1 text-right font-semibold w-auto">Amount</th>
-                    <th className="px-2 py-1 text-center font-semibold w-auto">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {bomData.scrapLoss.map((row, index) => {
-                    const isEditing = editingScrapId === row.id;
-                    const amount = ((parseFloat(row.inputQty) || 0) * (parseFloat(row.rate) || 0) * (parseFloat(row.lossPercent) || 0)) / 100;
-
-                    return (
-                      <tr key={row.id} className="border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                        <td className="px-2 py-1 text-slate-500">{index + 1}</td>
-                        <td className="px-2 py-1 font-medium text-slate-700 dark:text-slate-300">
-                          {isEditing ? (
-                            <SearchableSelect
-                              name={`scrap-code-${row.id}`}
-                              id={`scrap-code-${row.id}`}
-                              aria-label="Scrap Item Code"
-                              options={itemCodeOptions}
-                              value={row.itemCode}
-                              onChange={(value) => {
-                                const selectedMaterial = allAvailableMaterials.find(m => m.itemCode === value);
-                                setBomData(prev => ({
-                                  ...prev,
-                                  scrapLoss: prev.scrapLoss.map(s => 
-                                    s.id === row.id ? {
-                                      ...s,
-                                      itemCode: value,
-                                      name: selectedMaterial?.itemName || s.name,
-                                      rate: selectedMaterial?.unit_cost || s.rate
-                                    } : s
-                                  )
-                                }));
-                              }}
-                              placeholder="Select code"
-                              allowCustom={true}
-                            />
-                          ) : (
-                            row.itemCode || "-"
-                          )}
-                        </td>
-                        <td className="px-2 py-1">
-                          {isEditing ? (
-                            <SearchableSelect
-                              name={`scrap-name-${row.id}`}
-                              id={`scrap-name-${row.id}`}
-                              aria-label="Scrap Item Name"
-                              options={productNameOptions}
-                              value={row.name}
-                              onChange={(value) => {
-                                const selectedMaterial = allAvailableMaterials.find(m => m.itemName === value);
-                                setBomData(prev => ({
-                                  ...prev,
-                                  scrapLoss: prev.scrapLoss.map(s => 
-                                    s.id === row.id ? {
-                                      ...s,
-                                      name: value,
-                                      itemCode: selectedMaterial?.itemCode || s.itemCode,
-                                      rate: selectedMaterial?.unit_cost || s.rate
-                                    } : s
-                                  )
-                                }));
-                              }}
-                              placeholder="Select name"
-                              allowCustom={true}
-                            />
-                          ) : (
-                            <span className="text-slate-900 dark:text-white font-medium">{row.name}</span>
-                          )}
-                        </td>
-                        <td className="px-2 py-1 text-center">
-                          {isEditing ? (
-                            <input
-                              type="number"
-                              name={`scrap-qty-${row.id}`}
-                              id={`scrap-qty-${row.id}`}
-                              aria-label="Scrap Input Quantity"
-                              value={row.inputQty}
-                              onChange={(e) => updateTableRow("scrapLoss", row.id, "inputQty", parseFloat(e.target.value))}
-                              className="w-20 p-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs text-center"
-                            />
-                          ) : (
-                            row.inputQty
-                          )}
-                        </td>
-                        <td className="px-2 py-1 text-center">
-                          {isEditing ? (
-                            <input
-                              type="number"
-                              name={`scrap-loss-${row.id}`}
-                              id={`scrap-loss-${row.id}`}
-                              aria-label="Scrap Loss Percentage"
-                              value={row.lossPercent}
-                              onChange={(e) => updateTableRow("scrapLoss", row.id, "lossPercent", parseFloat(e.target.value))}
-                              className="w-20 p-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs text-center"
-                            />
-                          ) : (
-                            row.lossPercent + "%"
-                          )}
-                        </td>
-                        <td className="px-2 py-1 text-right">
-                          {isEditing ? (
-                            <input
-                              type="number"
-                              name={`scrap-rate-${row.id}`}
-                              id={`scrap-rate-${row.id}`}
-                              aria-label="Scrap Rate"
-                              value={row.rate}
-                              onChange={(e) => updateTableRow("scrapLoss", row.id, "rate", parseFloat(e.target.value))}
-                              className="w-24 p-1 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-xs text-right"
-                            />
-                          ) : (
-                            <span>₹{(parseFloat(row.rate) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                          )}
-                        </td>
-                        <td className="px-2 py-1 text-right font-semibold text-slate-900 dark:text-white">
-                          ₹{amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                        </td>
-                        <td className="px-2 py-1">
-                          <div className="flex items-center justify-center gap-2">
-                            {isEditing ? (
-                              <>
-                                <button
-                                  onClick={() => setEditingScrapId(null)}
-                                  className="p-1 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded transition-colors"
-                                  title="Save"
-                                >
-                                  <Check size={14} />
-                                </button>
-                                <button
-                                  onClick={() => setEditingScrapId(null)}
-                                  className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
-                                  title="Cancel"
-                                >
-                                  <X size={14} />
-                                </button>
-                              </>
-                            ) : (
-                              <>
-                                <button
-                                  onClick={() => setEditingScrapId(row.id)}
-                                  className="p-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
-                                  title="Edit Row"
-                                >
-                                  <Edit2 size={14} />
-                                </button>
-                                <button
-                                  onClick={() => removeTableRow("scrapLoss", row.id)}
-                                  className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
-                                  title="Delete Row"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </td>
+                <div className="overflow-hidden border border-slate-100 dark:border-slate-800 rounded-2xl shadow-sm">
+                  <table className="w-full text-xs text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50/80 dark:bg-slate-800/50">
+                        <th className="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider w-10">#</th>
+                        <th className="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Item Details</th>
+                        <th className="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider text-center">Input Qty</th>
+                        <th className="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider text-center">Loss %</th>
+                        <th className="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider text-right">Rate</th>
+                        <th className="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider text-right">Amount</th>
+                        <th className="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider text-center">Actions</th>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-            {bomData.scrapLoss.length === 0 && (
-              <p className="text-center text-slate-500 text-xs py-2">No scrap items added</p>
-            )}
-              </>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                      {bomData.scrapLoss.map((row, index) => {
+                        const isEditing = editingScrapId === row.id;
+                        const amount = ((parseFloat(row.inputQty) || 0) * (parseFloat(row.rate) || 0) * (parseFloat(row.lossPercent) || 0)) / 100;
+
+                        return (
+                          <tr key={row.id} className="bg-white dark:bg-slate-900 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                            <td className="px-4 py-3 text-slate-400 font-medium">{index + 1}</td>
+                            <td className="px-4 py-3">
+                              {isEditing ? (
+                                <div className="space-y-2 min-w-[150px]">
+                                  <SearchableSelect
+                                    options={itemCodeOptions}
+                                    value={row.itemCode}
+                                    onChange={(value) => {
+                                      const selectedMaterial = allAvailableMaterials.find(m => m.itemCode === value);
+                                      setBomData(prev => ({
+                                        ...prev,
+                                        scrapLoss: prev.scrapLoss.map(s => 
+                                          s.id === row.id ? {
+                                            ...s,
+                                            itemCode: value,
+                                            name: selectedMaterial?.itemName || s.name,
+                                            rate: selectedMaterial?.unit_cost || s.rate
+                                          } : s
+                                        )
+                                      }));
+                                    }}
+                                    allowCustom={true}
+                                  />
+                                  <SearchableSelect
+                                    options={productNameOptions}
+                                    value={row.name}
+                                    onChange={(value) => {
+                                      const selectedMaterial = allAvailableMaterials.find(m => m.itemName === value);
+                                      setBomData(prev => ({
+                                        ...prev,
+                                        scrapLoss: prev.scrapLoss.map(s => 
+                                          s.id === row.id ? {
+                                            ...s,
+                                            name: value,
+                                            itemCode: selectedMaterial?.itemCode || s.itemCode,
+                                            rate: selectedMaterial?.unit_cost || s.rate
+                                          } : s
+                                        )
+                                      }));
+                                    }}
+                                    allowCustom={true}
+                                  />
+                                </div>
+                              ) : (
+                                <div className="flex flex-col">
+                                  <span className="font-bold text-slate-700 dark:text-slate-200">{row.name}</span>
+                                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{row.itemCode || "-"}</span>
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              {isEditing ? (
+                                <input
+                                  type="number"
+                                  value={row.inputQty}
+                                  onChange={(e) => updateTableRow("scrapLoss", row.id, "inputQty", e.target.value === "" ? "" : parseFloat(e.target.value))}
+                                  onBlur={(e) => {
+                                    if (e.target.value === "") {
+                                      updateTableRow("scrapLoss", row.id, "inputQty", 0);
+                                    }
+                                  }}
+                                  onFocus={(e) => e.target.select()}
+                                  className="w-16 px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 text-xs text-center focus:ring-2 focus:ring-orange-500/20 outline-none"
+                                />
+                              ) : (
+                                <span className="font-medium text-slate-600 dark:text-slate-400">{row.inputQty}</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              {isEditing ? (
+                                <input
+                                  type="number"
+                                  value={row.lossPercent}
+                                  onChange={(e) => updateTableRow("scrapLoss", row.id, "lossPercent", e.target.value === "" ? "" : parseFloat(e.target.value))}
+                                  onBlur={(e) => {
+                                    if (e.target.value === "") {
+                                      updateTableRow("scrapLoss", row.id, "lossPercent", 0);
+                                    }
+                                  }}
+                                  onFocus={(e) => e.target.select()}
+                                  className="w-16 px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 text-xs text-center focus:ring-2 focus:ring-orange-500/20 outline-none"
+                                />
+                              ) : (
+                                <span className="px-2 py-0.5 bg-orange-50 dark:bg-orange-900/20 rounded text-[10px] font-bold text-orange-600 dark:text-orange-400">{row.lossPercent}%</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              {isEditing ? (
+                                <input
+                                  type="number"
+                                  value={row.rate}
+                                  onChange={(e) => updateTableRow("scrapLoss", row.id, "rate", e.target.value === "" ? "" : parseFloat(e.target.value))}
+                                  onBlur={(e) => {
+                                    if (e.target.value === "") {
+                                      updateTableRow("scrapLoss", row.id, "rate", 0);
+                                    }
+                                  }}
+                                  onFocus={(e) => e.target.select()}
+                                  className="w-20 px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 text-xs text-right focus:ring-2 focus:ring-orange-500/20 outline-none"
+                                />
+                              ) : (
+                                <span className="font-medium text-slate-600 dark:text-slate-400">₹{(parseFloat(row.rate) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-right font-bold text-slate-900 dark:text-white">
+                              ₹{amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center justify-center gap-1">
+                                {isEditing ? (
+                                  <>
+                                    <button
+                                      onClick={() => setEditingScrapId(null)}
+                                      className="p-1.5 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-colors"
+                                      title="Save"
+                                    >
+                                      <Check size={16} />
+                                    </button>
+                                    <button
+                                      onClick={() => setEditingScrapId(null)}
+                                      className="p-1.5 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-colors"
+                                      title="Cancel"
+                                    >
+                                      <X size={16} />
+                                    </button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <button
+                                      onClick={() => setEditingScrapId(row.id)}
+                                      className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                                      title="Edit Row"
+                                    >
+                                      <Edit2 size={16} />
+                                    </button>
+                                    <button
+                                      onClick={() => removeTableRow("scrapLoss", row.id)}
+                                      className="p-1.5 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-colors"
+                                      title="Delete Row"
+                                    >
+                                      <Trash2 size={16} />
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                {bomData.scrapLoss.length === 0 && (
+                  <div className="text-center py-6 text-slate-400 text-xs font-medium italic">
+                    No scrap items added yet.
+                  </div>
+                )}
+              </div>
             )}
           </AccordionSection>
 
-          {/* Costs Section */}
+          {/* Cost Summary Section */}
           <AccordionSection 
             title="Cost Summary" 
             section="costs"
             expandedSections={expandedSections}
             toggleSection={toggleSection}
           >
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-3">
-              <div className="bg-blue-50 dark:bg-blue-900/30 p-2 rounded border border-blue-200 dark:border-blue-700">
-                <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">Material</p>
-                <p className="text-sm font-bold text-blue-900 dark:text-blue-100">₹{costs.materialCost.toFixed(2)}</p>
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+              <div className="bg-blue-50/50 dark:bg-blue-900/10 p-4 rounded-2xl border border-blue-100 dark:border-blue-900/30">
+                <p className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-1">Material</p>
+                <p className="text-xl font-black text-blue-900 dark:text-blue-100">₹{costs.materialCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
               </div>
-              <div className="bg-cyan-50 dark:bg-cyan-900/30 p-2 rounded border border-cyan-200 dark:border-cyan-700">
-                <p className="text-xs text-cyan-600 dark:text-cyan-400 font-medium">Component</p>
-                <p className="text-sm font-bold text-cyan-900 dark:text-cyan-100">₹{costs.componentCost.toFixed(2)}</p>
+              <div className="bg-cyan-50/50 dark:bg-cyan-900/10 p-4 rounded-2xl border border-cyan-100 dark:border-cyan-900/30">
+                <p className="text-[10px] font-bold text-cyan-600 dark:text-cyan-400 uppercase tracking-widest mb-1">Component</p>
+                <p className="text-xl font-black text-cyan-900 dark:text-cyan-100">₹{costs.componentCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
               </div>
-              <div className="bg-purple-50 dark:bg-purple-900/30 p-2 rounded border border-purple-200 dark:border-purple-700">
-                <p className="text-xs text-purple-600 dark:text-purple-400 font-medium">Labour</p>
-                <p className="text-sm font-bold text-purple-900 dark:text-purple-100">₹{costs.operationCost.toFixed(2)}</p>
+              <div className="bg-purple-50/50 dark:bg-purple-900/10 p-4 rounded-2xl border border-purple-100 dark:border-purple-900/30">
+                <p className="text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-widest mb-1">Labour</p>
+                <p className="text-xl font-black text-purple-900 dark:text-purple-100">₹{costs.operationCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
               </div>
-              <div className="bg-red-50 dark:bg-red-900/30 p-2 rounded border border-red-200 dark:border-red-700">
-                <p className="text-xs text-red-600 dark:text-red-400 font-medium">Scrap Loss</p>
-                <p className="text-sm font-bold text-red-900 dark:text-red-100">-₹{costs.scrapLossCost.toFixed(2)}</p>
+              <div className="bg-rose-50/50 dark:bg-rose-900/10 p-4 rounded-2xl border border-rose-100 dark:border-rose-900/30">
+                <p className="text-[10px] font-bold text-rose-600 dark:text-rose-400 uppercase tracking-widest mb-1">Scrap Loss</p>
+                <p className="text-xl font-black text-rose-900 dark:text-rose-100">-₹{costs.scrapLossCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
               </div>
-              <div className="bg-green-50 dark:bg-green-900/30 p-2 rounded border border-green-200 dark:border-green-700">
-                <p className="text-xs text-green-600 dark:text-green-400 font-medium">Total</p>
-                <p className="text-sm font-bold text-green-900 dark:text-green-100">₹{costs.totalBOMCost.toFixed(2)}</p>
+              <div className="bg-emerald-500 p-4 rounded-2xl shadow-lg shadow-emerald-500/20">
+                <p className="text-[10px] font-bold text-emerald-50 uppercase tracking-widest mb-1">Total Cost</p>
+                <p className="text-xl font-black text-white">₹{costs.totalBOMCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
               </div>
             </div>
-            <div className="text-xs space-y-1 bg-slate-50 dark:bg-slate-700/30 p-2 rounded">
-              <div className="flex justify-between">
-                <span className="text-slate-600 dark:text-slate-400">Material Cost After Scrap:</span>
-                <span className="font-medium">₹{costs.materialCostAfterScrap.toFixed(2)}</span>
+
+            <div className="mt-6 pt-6 border-t border-slate-100 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tight">Material Cost After Scrap:</span>
+                  <span className="text-sm font-black text-slate-900 dark:text-white">₹{costs.materialCostAfterScrap.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tight">Cost Per Unit:</span>
+                  <span className="text-lg font-black text-emerald-600 dark:text-emerald-400">₹{(costs.totalBOMCost / (bomData.productInfo.quantity || 1)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                </div>
               </div>
-              <div className="flex justify-between border-t border-slate-200 dark:border-slate-600 pt-1 font-semibold">
-                <span>Cost Per Unit:</span>
-                <span className="text-green-600 dark:text-green-400">₹{(costs.totalBOMCost / (bomData.productInfo.quantity || 1)).toFixed(2)}</span>
+              
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => navigate("/design-engineer/bom/view")}
+                  className="px-6 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl font-bold transition-all active:scale-95"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSave()}
+                  disabled={saving}
+                  className="px-8 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white rounded-xl font-bold shadow-lg shadow-emerald-600/20 transition-all active:scale-95 flex items-center gap-2"
+                >
+                  {saving ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save size={18} />
+                      {editMode ? "Update BOM" : "Create BOM"}
+                    </>
+                  )}
+                </button>
+                {editMode && (
+                  <button
+                    type="button"
+                    onClick={() => handleSave(true)}
+                    disabled={saving}
+                    className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-lg shadow-blue-600/20 transition-all active:scale-95 flex items-center gap-2"
+                  >
+                    <Copy size={18} />
+                    Save as New Revision
+                  </button>
+                )}
               </div>
             </div>
           </AccordionSection>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex gap-2 justify-end mt-4">
-          <button
-            onClick={() => navigate("/design-engineer/bom/view")}
-            className="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded text-slate-700 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-700 text-sm"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={() => handleSave()}
-            disabled={saving}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded font-semibold disabled:opacity-50 text-sm"
-          >
-            <Save size={16} />
-            {saving ? "Saving..." : editMode ? "Update BOM" : "Create BOM"}
-          </button>
-          {editMode && (
-            <button
-              onClick={() => handleSave(true)}
-              disabled={saving}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold disabled:opacity-50 text-sm"
-              title="Save as a new revision (Revision number will increment)"
-            >
-              <Copy size={16} />
-              {saving ? "Saving..." : "Save as New Revision"}
-            </button>
-          )}
         </div>
       </div>
     </div>

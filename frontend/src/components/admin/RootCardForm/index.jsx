@@ -15,8 +15,10 @@ import Step5_QualityCheck from "./steps/Step5_QualityCheck";
 import Step6_Shipment from "./steps/Step6_Shipment";
 import Step7_Delivery from "./steps/Step7_Delivery";
 import RootCardViewOnly from "./RootCardViewOnly";
-import { AlertCircle, CheckCircle2, History, X } from "lucide-react";
+import { History, X } from "lucide-react";
 import "./RootCardForm.css";
+import { showSuccess, showError } from "../../../utils/toastUtils";
+import Swal from "sweetalert2";
 
 export default function RootCardForm({ mode = 'create', initialData = null, onSubmit, onCancel }) {
   return (
@@ -228,7 +230,7 @@ function RootCardFormContent({ onSubmit, onCancel, mode = 'create', initialData 
         productionPhaseDetails: pendingDraft.formData?.productionPhaseDetails,
         poDocuments: pendingDraft.poDocuments
       });
-      setSuccess(`Resumed draft from ${new Date(pendingDraft.updated_at).toLocaleString()}`);
+      showSuccess(`Resumed draft from ${new Date(pendingDraft.updated_at).toLocaleString()}`);
     }
     setShowResumeModal(false);
     setPendingDraft(null);
@@ -240,9 +242,10 @@ function RootCardFormContent({ onSubmit, onCancel, mode = 'create', initialData 
         await deleteDraft(pendingDraft.id);
       }
       reset();
-      setSuccess("Started with a fresh root card.");
+      showSuccess("Started with a fresh root card.");
     } catch (err) {
       console.error("Error clearing draft:", err);
+      showError("Failed to clear draft");
     } finally {
       setShowResumeModal(false);
       setPendingDraft(null);
@@ -343,7 +346,7 @@ function RootCardFormContent({ onSubmit, onCancel, mode = 'create', initialData 
         setStep(currentStep + 1);
       } catch (err) {
         console.error('Error saving step:', err);
-        setError(err.message || `Failed to save step ${currentStep}`);
+        showError(err.message || `Failed to save step ${currentStep}`);
       } finally {
         setLoading(false);
       }
@@ -372,7 +375,7 @@ function RootCardFormContent({ onSubmit, onCancel, mode = 'create', initialData 
       }
     } catch (err) {
       console.error('Error:', err);
-      setError(err.message || 'An error occurred');
+      showError(err.message || 'An error occurred');
     } finally {
       setLoading(false);
     }
@@ -391,14 +394,13 @@ function RootCardFormContent({ onSubmit, onCancel, mode = 'create', initialData 
         setStep(currentStep - 1);
       } catch (err) {
         console.error('Error saving step:', err);
-        setError(err.message || `Failed to save step ${currentStep}`);
+        showError(err.message || `Failed to save step ${currentStep}`);
       } finally {
         setLoading(false);
       }
     } else {
       setStep(currentStep - 1);
     }
-    setError(null);
   };
 
   const createDraft = async () => {
@@ -417,7 +419,7 @@ function RootCardFormContent({ onSubmit, onCancel, mode = 'create', initialData 
 
       const draftId = response.data.id || response.data._id;
       setOrderId(draftId);
-      setSuccess(`Step ${currentStep} saved successfully!`);
+      showSuccess(`Step ${currentStep} saved as draft successfully!`);
       setStep(currentStep + 1);
     } catch (err) {
       throw new Error(err.response?.data?.message || "Failed to create draft");
@@ -440,7 +442,7 @@ function RootCardFormContent({ onSubmit, onCancel, mode = 'create', initialData 
       };
 
       await updateDraftWithStepData(draftId, mergedFormData, currentStep, state.poDocuments || []);
-      setSuccess(`Step ${currentStep} saved successfully!`);
+      showSuccess(`Step ${currentStep} saved successfully!`);
     } catch (err) {
       console.error('updateDraft error:', err);
       throw new Error(err.message || `Failed to save step ${currentStep}`);
@@ -450,7 +452,6 @@ function RootCardFormContent({ onSubmit, onCancel, mode = 'create', initialData 
   const handleSubmit = async () => {
     if (mode === 'edit') {
       setLoading(true);
-      setError(null);
       try {
         const mergedFormData = {
           ...formData,
@@ -471,12 +472,16 @@ function RootCardFormContent({ onSubmit, onCancel, mode = 'create', initialData 
           status: formData.status || "pending",
         });
 
-        setSuccess("Root Card updated successfully!");
-        setTimeout(() => {
+        Swal.fire({
+          title: 'Updated!',
+          text: 'Root Card has been updated successfully.',
+          icon: 'success',
+          confirmButtonColor: '#3085d6',
+        }).then(() => {
           if (onSubmit) onSubmit();
-        }, 2000);
+        });
       } catch (err) {
-        setError(err.response?.data?.message || "Failed to update root card");
+        showError(err.response?.data?.message || "Failed to update root card");
       } finally {
         setLoading(false);
       }
@@ -485,19 +490,22 @@ function RootCardFormContent({ onSubmit, onCancel, mode = 'create', initialData 
 
     if (mode === 'assign') {
       setLoading(true);
-      setError(null);
       try {
         await axios.post(`/root-cards/${initialData.id}/assign`, {
           assignedTo: formData.internalProjectOwner,
           assignedAt: new Date().toISOString(),
         });
 
-        setSuccess("Root Card assigned successfully!");
-        setTimeout(() => {
+        Swal.fire({
+          title: 'Assigned!',
+          text: 'Root Card has been assigned successfully.',
+          icon: 'success',
+          confirmButtonColor: '#3085d6',
+        }).then(() => {
           if (onSubmit) onSubmit();
-        }, 2000);
+        });
       } catch (err) {
-        setError(err.response?.data?.message || "Failed to assign root card");
+        showError(err.response?.data?.message || "Failed to assign root card");
       } finally {
         setLoading(false);
       }
@@ -505,7 +513,6 @@ function RootCardFormContent({ onSubmit, onCancel, mode = 'create', initialData 
     }
 
     setLoading(true);
-    setError(null);
     try {
       const orderDate = formData.poDate || formData.orderDate || new Date().toISOString().split("T")[0];
       const estimatedDate = formData.estimatedEndDate || formData.deliveryTimeline || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
@@ -573,13 +580,17 @@ function RootCardFormContent({ onSubmit, onCancel, mode = 'create', initialData 
         console.warn('Could not delete draft:', err.message);
       }
 
-      setSuccess("Root Card created and all steps saved successfully!");
-      setTimeout(() => {
+      Swal.fire({
+        title: 'Success!',
+        text: 'Root Card created and all steps saved successfully.',
+        icon: 'success',
+        confirmButtonColor: '#3085d6',
+      }).then(() => {
         if (onSubmit) onSubmit();
-      }, 2000);
+      });
     } catch (err) {
       console.error('Error:', err);
-      setError(err.response?.data?.message || err.message || "Failed to create root card");
+      showError(err.response?.data?.message || err.message || "Failed to create root card");
     } finally {
       setLoading(false);
     }
@@ -599,17 +610,6 @@ function RootCardFormContent({ onSubmit, onCancel, mode = 'create', initialData 
   return (
     <div className="w-full min-h-screen bg-gradient-to-br from-slate-50 via-purple-50/30 to-slate-50">
       <div className="max-w-5xl mx-auto">
-        {(error || successMessage) && (
-          <div className={`mb-4 p-3 rounded-lg flex items-center text-xs gap-2 text-sm animate-in ${
-            error 
-              ? 'bg-red-50 text-red-700 border border-red-200' 
-              : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-          }`}>
-            {error ? <AlertCircle size={18} className="flex-shrink-0" /> : <CheckCircle2 size={18} className="flex-shrink-0" />}
-            <span className="font-medium">{error || successMessage}</span>
-          </div>
-        )}
-
         <WizardHeader currentStep={currentStep} mode={mode} />
         
         <div className="mt-6">

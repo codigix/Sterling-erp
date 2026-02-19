@@ -10,6 +10,8 @@ import Select from "../../../ui/Select";
 import SearchableSelect from "../../../ui/SearchableSelect";
 import { useFormData, useRootCardContext } from "../hooks";
 import axios from "../../../../utils/api";
+import Swal from "sweetalert2";
+import { showSuccess, showError } from "../../../../utils/toastUtils";
 
 export default function Step3_MaterialRequirement({ readOnly = false }) {
   const { formData, updateField } = useFormData();
@@ -65,10 +67,6 @@ export default function Step3_MaterialRequirement({ readOnly = false }) {
     noOfCavity: 1,
     weightPerUnit: 0,
     weightUom: "kg",
-    drawingNo: "",
-    revision: "",
-    materialGrade: "",
-    eanBarcode: "",
     gstPercent: 0,
     quantity: 1,
   });
@@ -92,19 +90,32 @@ export default function Step3_MaterialRequirement({ readOnly = false }) {
         await axios.post("/inventory/item-groups", newGroup);
       }
       setNewGroup({ name: "", description: "" });
+      showSuccess(editingGroup ? "Item group updated successfully!" : "Item group created successfully!");
       fetchInventoryData();
     } catch (error) {
-      alert(error.response?.data?.message || "Error processing item group");
+      showError(error.response?.data?.message || "Error processing item group");
     }
   }, [editingGroup, newGroup, fetchInventoryData]);
 
   const handleDeleteGroup = useCallback(async (id) => {
-    if (!window.confirm("Are you sure you want to delete this group?")) return;
-    try {
-      await axios.delete(`/inventory/item-groups/${id}`);
-      fetchInventoryData();
-    } catch (error) {
-      alert(error.response?.data?.message || "Error deleting group");
+    const result = await Swal.fire({
+      title: "Are you sure?",
+      text: "You won't be able to revert this!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Yes, delete it!"
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await axios.delete(`/inventory/item-groups/${id}`);
+        showSuccess("Item group deleted successfully!");
+        fetchInventoryData();
+      } catch (error) {
+        showError(error.response?.data?.message || "Error deleting group");
+      }
     }
   }, [fetchInventoryData]);
 
@@ -140,24 +151,43 @@ export default function Step3_MaterialRequirement({ readOnly = false }) {
         // Update item in project materials
         const updatedMaterials = materials.map(m => {
           if ((editingItem && m.materialId === editingItem.id) || (editingRequirementId && m.id === editingRequirementId)) {
+            const valuationRate = parseFloat(newItem.valuationRate) || 0;
+            const sellingRate = parseFloat(newItem.sellingRate) || 0;
+            const noOfCavity = parseInt(newItem.noOfCavity) || 1;
+            const weightPerUnit = parseFloat(newItem.weightPerUnit) || 0;
+            const quantity = parseFloat(newItem.quantity) || 1;
+            const gstPercent = parseFloat(newItem.gstPercent) || 0;
+
             return { 
               ...m, 
               name: newItem.itemName, 
+              item_name: newItem.itemName,
+              itemName: newItem.itemName,
               itemCode: newItem.itemCode, 
+              item_code: newItem.itemCode,
               unit: newItem.unit, 
+              default_uom: newItem.unit,
+              defaultUom: newItem.unit,
               category: newItem.category,
+              material_type: newItem.category,
+              materialType: newItem.category,
               itemGroupId: finalGroupId,
-              gstPercent: newItem.gstPercent,
-              quantity: newItem.quantity,
-              valuationRate: newItem.valuationRate,
-              sellingRate: newItem.sellingRate,
-              noOfCavity: newItem.noOfCavity,
-              weightPerUnit: newItem.weightPerUnit,
+              item_group_id: finalGroupId,
+              itemGroupName: itemGroups.find(g => String(g.id) === String(finalGroupId))?.name || newItem.itemGroupId,
+              item_group_name: itemGroups.find(g => String(g.id) === String(finalGroupId))?.name || newItem.itemGroupId,
+              gstPercent: gstPercent,
+              gst_percent: gstPercent,
+              quantity: quantity,
+              valuationRate: valuationRate,
+              valuation_rate: valuationRate,
+              sellingRate: sellingRate,
+              selling_rate: sellingRate,
+              noOfCavity: noOfCavity,
+              no_of_cavity: noOfCavity,
+              weightPerUnit: weightPerUnit,
+              weight_per_unit: weightPerUnit,
               weightUom: newItem.weightUom,
-              drawingNo: newItem.drawingNo,
-              revision: newItem.revision,
-              materialGrade: newItem.materialGrade,
-              eanBarcode: newItem.eanBarcode
+              weight_uom: newItem.weightUom
             };
           }
           return m;
@@ -167,35 +197,52 @@ export default function Step3_MaterialRequirement({ readOnly = false }) {
         setEditingRequirementId(null);
         setShowItemModal(false);
       } else {
-        // Check if item already exists in inventory to link it
-        const existingItem = inventoryItems.find(i => i.itemCode === newItem.itemCode);
-        let materialId = existingItem ? existingItem.id : null;
-        
         // Automatically add to project materials (WITHOUT adding to inventory table)
+        // We no longer search for existingItem to ensure total isolation between root cards.
+        const valuationRate = parseFloat(newItem.valuationRate) || 0;
+        const sellingRate = parseFloat(newItem.sellingRate) || 0;
+        const noOfCavity = parseInt(newItem.noOfCavity) || 1;
+        const weightPerUnit = parseFloat(newItem.weightPerUnit) || 0;
+        const quantity = parseFloat(newItem.quantity) || 1;
+        const gstPercent = parseFloat(newItem.gstPercent) || 0;
+
         const newEntry = {
           id: Date.now() + Math.random(),
-          materialId: materialId, // null for new items, ID for existing inventory items
+          materialId: null, // Always null to keep it independent for this project
           name: newItem.itemName,
+          itemName: newItem.itemName,
+          item_name: newItem.itemName,
           category: newItem.category,
-          quantity: newItem.quantity || 1, 
+          materialType: newItem.category,
+          material_type: newItem.category,
+          quantity: quantity, 
           unit: newItem.unit,
+          default_uom: newItem.unit,
+          defaultUom: newItem.unit,
           itemCode: newItem.itemCode,
+          item_code: newItem.itemCode,
           itemGroupId: finalGroupId,
-          gstPercent: newItem.gstPercent,
-          valuationRate: newItem.valuationRate,
-          sellingRate: newItem.sellingRate,
-          noOfCavity: newItem.noOfCavity,
-          weightPerUnit: newItem.weightPerUnit,
+          item_group_id: finalGroupId,
+          itemGroupName: itemGroups.find(g => String(g.id) === String(finalGroupId))?.name || newItem.itemGroupId,
+          item_group_name: itemGroups.find(g => String(g.id) === String(finalGroupId))?.name || newItem.itemGroupId,
+          gstPercent: gstPercent,
+          gst_percent: gstPercent,
+          valuationRate: valuationRate,
+          valuation_rate: valuationRate,
+          sellingRate: sellingRate,
+          selling_rate: sellingRate,
+          noOfCavity: noOfCavity,
+          no_of_cavity: noOfCavity,
+          weightPerUnit: weightPerUnit,
+          weight_per_unit: weightPerUnit,
           weightUom: newItem.weightUom,
-          drawingNo: newItem.drawingNo,
-          revision: newItem.revision,
-          materialGrade: newItem.materialGrade,
-          eanBarcode: newItem.eanBarcode,
-          isNewInventoryItem: !existingItem // Flag to identify items not yet in inventory
+          weight_uom: newItem.weightUom,
+          isNewInventoryItem: true
         };
         
         const updated = [...materials, newEntry];
         updateField("materials", updated);
+        showSuccess("Material added to project requirements!");
         setShowItemModal(false);
       }
       
@@ -210,44 +257,53 @@ export default function Step3_MaterialRequirement({ readOnly = false }) {
         noOfCavity: 1,
         weightPerUnit: 0,
         weightUom: "kg",
-        drawingNo: "",
-        revision: "",
-        materialGrade: "",
-        eanBarcode: "",
         gstPercent: 0,
         quantity: 1,
       });
       fetchInventoryData();
     } catch (error) {
       console.error("Error processing item:", error);
-      alert("Error processing item");
+      showError("Error processing item");
     }
   }, [newItem, itemGroups, inventoryItems, editingItem, editingRequirementId, materials, updateField, fetchInventoryData]);
 
   const handleEditRequirement = useCallback((material) => {
+    console.log('[Step3] Editing material:', material);
+    
     // Try to find in inventory first
     const item = inventoryItems.find(i => i.id === material.materialId) || material;
     
     setEditingItem(material.materialId ? item : null);
     setEditingRequirementId(material.id);
+    
+    // Helper to get value with multiple key fallbacks and handling 0 as valid
+    const getVal = (obj1, obj2, keys, defaultVal = "") => {
+      for (const key of keys) {
+        if (obj1 && obj1[key] !== undefined && obj1[key] !== null) return obj1[key];
+      }
+      for (const key of keys) {
+        if (obj2 && obj2[key] !== undefined && obj2[key] !== null) return obj2[key];
+      }
+      return defaultVal;
+    };
+
+    // Explicitly map all fields from the project-specific material record
+    // using multiple fallbacks to handle both camelCase and snake_case from different sources
     setNewItem({
-      itemCode: item.itemCode || material.itemCode || "",
-      itemName: item.itemName || material.name || "",
-      itemGroupId: item.itemGroupId || material.itemGroupId || "",
-      category: item.category || material.category || "Raw Material",
-      unit: item.unit || material.unit || "Nos",
-      valuationRate: item.valuationRate || material.valuationRate || 0,
-      sellingRate: item.sellingRate || material.sellingRate || 0,
-      noOfCavity: item.noOfCavity || material.noOfCavity || 1,
-      weightPerUnit: item.weightPerUnit || material.weightPerUnit || 0,
-      weightUom: item.weightUom || material.weightUom || "kg",
-      drawingNo: item.drawingNo || material.drawingNo || "",
-      revision: item.revision || material.revision || "",
-      materialGrade: item.materialGrade || material.materialGrade || "",
-      eanBarcode: item.eanBarcode || material.eanBarcode || "",
-      gstPercent: item.gstPercent || material.gstPercent || 0,
-      quantity: material.quantity || 1,
+      itemCode: getVal(material, item, ["itemCode", "item_code", "code"]),
+      itemName: getVal(material, item, ["name", "itemName", "item_name"]),
+      itemGroupId: getVal(material, item, ["itemGroupId", "item_group_id", "itemGroup", "item_group", "itemGroupName", "item_group_name"]),
+      category: getVal(material, item, ["category", "materialType", "material_type"], "Raw Material"),
+      unit: getVal(material, item, ["unit", "defaultUom", "default_uom"], "Nos"),
+      valuationRate: getVal(material, item, ["valuationRate", "valuation_rate", "rate", "cost"], 0),
+      sellingRate: getVal(material, item, ["sellingRate", "selling_rate", "price"], 0),
+      noOfCavity: getVal(material, item, ["noOfCavity", "no_of_cavity", "cavity"], 1),
+      weightPerUnit: getVal(material, item, ["weightPerUnit", "weight_per_unit", "weight"], 0),
+      weightUom: getVal(material, item, ["weightUom", "weight_uom", "weight_unit"], "kg"),
+      gstPercent: getVal(material, item, ["gstPercent", "gst_percent", "gst"], 0),
+      quantity: getVal(material, item, ["quantity"], 1),
     });
+    
     setShowItemModal(true);
   }, [inventoryItems]);
 
@@ -303,9 +359,22 @@ export default function Step3_MaterialRequirement({ readOnly = false }) {
     });
   }, [generateItemCode]);
 
-  const removeMaterial = useCallback((id) => {
-    const updated = materials.filter(m => m.id !== id);
-    updateField("materials", updated);
+  const removeMaterial = useCallback(async (id) => {
+    const result = await Swal.fire({
+      title: "Remove Material?",
+      text: "This material will be removed from this project's requirements.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, remove it!"
+    });
+
+    if (result.isConfirmed) {
+      const updated = materials.filter(m => m.id !== id);
+      updateField("materials", updated);
+      showSuccess("Material removed from project.");
+    }
   }, [materials, updateField]);
 
   const content = useMemo(() => (
@@ -324,6 +393,20 @@ export default function Step3_MaterialRequirement({ readOnly = false }) {
             onClick={() => {
               setEditingItem(null);
               setEditingRequirementId(null);
+              setNewItem({
+                itemCode: "",
+                itemName: "",
+                itemGroupId: "",
+                category: "Raw Material",
+                unit: "Nos",
+                valuationRate: 0,
+                sellingRate: 0,
+                noOfCavity: 1,
+                weightPerUnit: 0,
+                weightUom: "kg",
+                gstPercent: 0,
+                quantity: 1,
+              });
               setShowItemModal(true);
             }}
             variant="secondary"
@@ -392,16 +475,16 @@ export default function Step3_MaterialRequirement({ readOnly = false }) {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-slate-900 font-bold">
-                      {material.name}
+                      {material.name || material.itemName || material.item_name}
                     </td>
                     <td className="px-6 py-4 text-slate-600">
-                      {itemGroups.find(g => g.id === material.itemGroupId)?.name || <span className="text-slate-300">—</span>}
+                      {itemGroups.find(g => String(g.id) === String(material.itemGroupId || material.item_group_id))?.name || material.itemGroupName || material.item_group_name || <span className="text-slate-300">—</span>}
                     </td>
                     <td className="px-6 py-4 text-slate-600">
-                      {material.unit}
+                      {material.unit || material.defaultUom || material.default_uom}
                     </td>
                     <td className="px-6 py-4 text-slate-600">
-                      {Number(material.gstPercent || 0).toFixed(2)}%
+                      {Number(material.gstPercent || material.gst_percent || 0).toFixed(2)}%
                     </td>
                     <td className="px-6 py-4 text-slate-900 font-bold">
                       {material.quantity}
@@ -470,7 +553,7 @@ export default function Step3_MaterialRequirement({ readOnly = false }) {
             </div>
             <div>
               <h2 className="text-xl font-bold text-slate-900 dark:text-white leading-tight">
-                {editingItem ? "Edit Item" : "Add New Item"}
+                {(editingItem || editingRequirementId) ? "Edit Item" : "Add New Item"}
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">Define item specifications for this project</p>
             </div>
@@ -489,44 +572,6 @@ export default function Step3_MaterialRequirement({ readOnly = false }) {
         <form onSubmit={handleCreateItem} className="bg-white dark:bg-slate-900 overflow-hidden">
           <div className="p-6 max-h-[70vh] overflow-y-auto modal-body-scroll">
             <div className="space-y-6">
-              {!editingItem && (
-                <div className="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-xl border border-blue-100 dark:border-blue-800/50 mb-4">
-                  <SearchableSelect
-                    label="Search Existing Item (Optional)"
-                    placeholder="Search by name or code to pre-fill"
-                    options={inventoryItems.map(i => ({
-                      value: i.id,
-                      label: `${i.itemCode} - ${i.itemName}`
-                    }))}
-                    onChange={(id) => {
-                      const item = inventoryItems.find(i => i.id === id);
-                      if (item) {
-                        setNewItem({
-                          itemCode: item.itemCode,
-                          itemName: item.itemName,
-                          itemGroupId: item.itemGroupId || "",
-                          category: item.category || "Raw Material",
-                          unit: item.unit || "Nos",
-                          valuationRate: item.valuationRate || 0,
-                          sellingRate: item.sellingRate || 0,
-                          noOfCavity: item.noOfCavity || 1,
-                          weightPerUnit: item.weightPerUnit || 0,
-                          weightUom: item.weightUom || "kg",
-                          drawingNo: item.drawingNo || "",
-                          revision: item.revision || "",
-                          materialGrade: item.materialGrade || "",
-                          eanBarcode: item.eanBarcode || "",
-                          gstPercent: item.gstPercent || 0,
-                        });
-                      }
-                    }}
-                  />
-                  <p className="text-[10px] text-blue-600 dark:text-blue-400 mt-1">
-                    Select an existing item from inventory or fill details below to create a new one.
-                  </p>
-                </div>
-              )}
-
               {/* Main Item Specification Grid */}
               <div className="space-y-4">
                 <FormRow cols={3}>
@@ -611,28 +656,7 @@ export default function Step3_MaterialRequirement({ readOnly = false }) {
                   />
                 </FormRow>
 
-                <FormRow cols={3}>
-                  <Input
-                    label="Drawing No (Optional)"
-                    placeholder="Enter drawing number"
-                    value={newItem.drawingNo}
-                    onChange={(e) => setNewItem({...newItem, drawingNo: e.target.value})}
-                  />
-                  <Input
-                    label="Revision (Optional)"
-                    placeholder="Enter revision"
-                    value={newItem.revision}
-                    onChange={(e) => setNewItem({...newItem, revision: e.target.value})}
-                  />
-                  <Input
-                    label="Material Grade (Optional)"
-                    placeholder="Enter material grade"
-                    value={newItem.materialGrade}
-                    onChange={(e) => setNewItem({...newItem, materialGrade: e.target.value})}
-                  />
-                </FormRow>
-
-                <FormRow cols={3}>
+                <FormRow cols={2}>
                   <Input
                     label="Quantity Needed *"
                     type="number"
@@ -640,25 +664,19 @@ export default function Step3_MaterialRequirement({ readOnly = false }) {
                     min="0.001"
                     step="0.001"
                     value={newItem.quantity}
-                    onChange={(e) => setNewItem({...newItem, quantity: parseFloat(e.target.value)})}
+                    onChange={(e) => setNewItem({...newItem, quantity: e.target.value})}
                   />
                   <Input
                     label="GST %"
                     type="number"
                     value={newItem.gstPercent}
-                    onChange={(e) => setNewItem({...newItem, gstPercent: parseFloat(e.target.value)})}
-                  />
-                  <Input
-                    label="EAN/Barcode"
-                    placeholder="Enter barcode"
-                    value={newItem.eanBarcode}
-                    onChange={(e) => setNewItem({...newItem, eanBarcode: e.target.value})}
+                    onChange={(e) => setNewItem({...newItem, gstPercent: e.target.value})}
                   />
                 </FormRow>
               </div>
 
               <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
-                {editingItem && (
+                {(editingItem || editingRequirementId) && (
                   <Button 
                     type="button" 
                     variant="secondary" 
@@ -676,10 +694,6 @@ export default function Step3_MaterialRequirement({ readOnly = false }) {
                         noOfCavity: 1,
                         weightPerUnit: 0,
                         weightUom: "kg",
-                        drawingNo: "",
-                        revision: "",
-                        materialGrade: "",
-                        eanBarcode: "",
                         gstPercent: 0,
                         quantity: 1,
                       });
@@ -692,26 +706,12 @@ export default function Step3_MaterialRequirement({ readOnly = false }) {
                   type="submit" 
                   variant="primary" 
                   className="px-10 font-bold shadow-lg shadow-blue-500/20"
-                  icon={editingItem ? Edit2 : Plus}
+                  icon={(editingItem || editingRequirementId) ? Edit2 : Plus}
                 >
-                  {editingItem ? "Update Item" : "Add Material"}
+                  {(editingItem || editingRequirementId) ? "Update Item" : "Add Material"}
                 </Button>
               </div>
             </div>
-          </div>
-
-          <div className="p-6 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-3 bg-slate-50 dark:bg-slate-800/50">
-            <Button 
-              type="button" 
-              variant="secondary" 
-              onClick={() => {
-                setShowItemModal(false);
-                setEditingItem(null);
-              }}
-              className="px-6"
-            >
-              Close
-            </Button>
           </div>
         </form>
       </Modal>

@@ -113,9 +113,10 @@ exports.getBOMsByRootCard = async (req, res) => {
   try {
     const { id } = req.params;
     const boms = await ComprehensiveBOM.findAllByRootCardId(id);
-    // Filter only approved BOMs that are Finished Goods
+    // Filter BOMs that are Finished Goods and are either approved or active
     const filteredBoms = boms.filter(bom => 
-      bom.status === 'approved' && bom.itemGroup === 'Finished Goods'
+      (bom.status === 'approved' || bom.status === 'active') && 
+      (bom.itemGroup === 'Finished Goods' || bom.itemGroup === 'Finished Good')
     );
     res.json(filteredBoms);
   } catch (error) {

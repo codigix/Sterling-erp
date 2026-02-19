@@ -345,9 +345,9 @@ class ProductionPlan {
           const productDetails = typeof plan.product_details === 'string'
             ? JSON.parse(plan.product_details)
             : plan.product_details;
-          plan.product_name = productDetails.itemName || null;
+          plan.product_name = productDetails.itemName || productDetails.name || plan.project_name || null;
         } else {
-          plan.product_name = null;
+          plan.product_name = plan.project_name || null;
         }
         delete plan.product_details;
 

@@ -133,39 +133,31 @@ const normalizeStepData = (data, mappings) => {
 };
 
 const stringifyJsonField = (value) => {
-  if (!value) return null;
+  if (value === null || value === undefined) return null;
   
-  // If it's the corrupted "[object Object]" string, return it as-is (it's already bad)
-  // but log it for debugging
-  if (value === '[object Object]') {
-    console.error('Warning: Attempting to save corrupted "[object Object]" string');
-    return value;
-  }
-  
-  // If it's already a valid JSON string, verify it's actually valid
+  // If it's already a valid JSON string, return it as-is
   if (typeof value === 'string') {
+    if (value === '[object Object]') {
+      console.error('Warning: Attempting to save corrupted "[object Object]" string');
+      return null;
+    }
     try {
       JSON.parse(value);
-      return value; // It's valid JSON string
+      return value;
     } catch (error) {
-      // It's a string but not valid JSON - assume it's corrupted and needs fixing
-      console.error('Received invalid JSON string, attempting to serialize:', value);
-      return null;
-    }
-  }
-  
-  // If it's an object, properly stringify it
-  if (typeof value === 'object') {
-    try {
+      // It's a plain string, not a JSON string. 
+      // For a JSON column, we should stringify it to make it a valid JSON string.
       return JSON.stringify(value);
-    } catch (error) {
-      console.error('Failed to stringify object:', value, error);
-      return null;
     }
   }
   
-  // Fallback for other types
-  return null;
+  // If it's an object or array, stringify it
+  try {
+    return JSON.stringify(value);
+  } catch (error) {
+    console.error('Failed to stringify value:', value, error);
+    return null;
+  }
 };
 
 const generateDocumentFileName = (stepKey, projectCode, originalFileName) => {

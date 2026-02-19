@@ -4,6 +4,8 @@ import Button from '../../ui/Button';
 import Card, { CardContent } from '../../ui/Card';
 import DataTable from '../../ui/DataTable/DataTable';
 import { STATUS_LEVELS } from '../RootCardForm/constants';
+import Swal from 'sweetalert2';
+import { showSuccess, showError } from '../../../utils/toastUtils';
 import {
   Plus,
   Eye,
@@ -15,6 +17,7 @@ import {
   CheckCircle2,
   Filter,
   IndianRupee,
+  ChevronDown,
 } from 'lucide-react';
 
 const formatIndianCurrency = (value) => {
@@ -34,7 +37,6 @@ const formatIndianCurrency = (value) => {
 
 const RootCardList = ({ onCreateNew, onViewRootCard, onEditRootCard, onAssignRootCard, refreshTrigger = 0 }) => {
   const [rootCards, setRootCards] = useState([]);
-  const [success, setSuccess] = useState(null);
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(null);
@@ -62,18 +64,26 @@ const RootCardList = ({ onCreateNew, onViewRootCard, onEditRootCard, onAssignRoo
     : rootCards.filter(rootCard => rootCard.status === filter);
 
   const handleDelete = async (rootCardId) => {
-    if (!window.confirm('Are you sure you want to delete this root card?')) {
-      return;
-    }
-    try {
-      await axios.delete(`/root-cards/${rootCardId}`);
-      setRootCards(rootCards.filter(rootCard => rootCard.id !== rootCardId));
-      setSuccess('Root card deleted successfully');
-      setTimeout(() => setSuccess(null), 3000);
-    } catch (error) {
-      console.error('Error deleting root card:', error);
-      const errorMessage = error.response?.data?.message || 'Failed to delete root card';
-      alert(`Error: ${errorMessage}`);
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: "You won't be able to revert this!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, delete it!'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await axios.delete(`/root-cards/${rootCardId}`);
+        setRootCards(rootCards.filter(rootCard => rootCard.id !== rootCardId));
+        showSuccess('Root card deleted successfully');
+      } catch (error) {
+        console.error('Error deleting root card:', error);
+        const errorMessage = error.response?.data?.message || 'Failed to delete root card';
+        showError(`Error: ${errorMessage}`);
+      }
     }
   };
 
@@ -126,12 +136,11 @@ const RootCardList = ({ onCreateNew, onViewRootCard, onEditRootCard, onAssignRoo
       setRootCards(rootCards.map(rootCard => 
         rootCard.id === rootCardId ? { ...rootCard, status: newStatus } : rootCard
       ));
-      setSuccess('Status updated successfully');
-      setTimeout(() => setSuccess(null), 3000);
+      showSuccess('Status updated successfully');
     } catch (error) {
       console.error('Error updating status:', error);
       const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Failed to update status';
-      alert(`Error: ${errorMessage}`);
+      showError(`Error: ${errorMessage}`);
     } finally {
       setUpdatingStatus(null);
     }
@@ -313,7 +322,7 @@ const RootCardList = ({ onCreateNew, onViewRootCard, onEditRootCard, onAssignRoo
   ];
 
   return (
-    <div className="w-full space-y-4">
+    <div className="w-full space-y-4 p-4">
       {/* Header Section */}
       <div className="flex items-center text-xs justify-between">
         <div>
@@ -332,14 +341,6 @@ const RootCardList = ({ onCreateNew, onViewRootCard, onEditRootCard, onAssignRoo
           New Root Card
         </Button>
       </div>
-
-      {/* Alert Messages */}
-      {success && (
-        <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700/50 rounded flex items-center text-xs gap-2">
-          <CheckCircle2 className="w-3 h-3 text-green-600 flex-shrink-0" />
-          <span className="text-sm text-green-700 dark:text-green-300">{success}</span>
-        </div>
-      )}
 
       {/* Filter Pills */}
       <div className="flex items-center text-xs gap-2">

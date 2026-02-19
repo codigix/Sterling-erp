@@ -2059,10 +2059,7 @@ const ProductionPlanFormPage = () => {
                 <Package size={14} className="text-blue-500" />
                 Material Request
               </button>
-              <button className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-slate-700 dark:text-slate-300 text-xs font-bold  transition-all shadow-sm">
-                <FileText size={14} className="text-orange-500" />
-                Purchase Order
-              </button>
+             
               <button 
                 onClick={handleSubmit}
                 disabled={loading}

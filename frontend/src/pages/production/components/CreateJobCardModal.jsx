@@ -16,6 +16,7 @@ const CreateJobCardModal = ({ isOpen, onClose, onRefresh }) => {
     operationName: '',
     workstation: '',
     operatorId: '',
+    type: 'in-house',
     quantity: '',
     status: 'pending',
     plannedStartDate: new Date().toISOString().split('T')[0],
@@ -197,7 +198,15 @@ const CreateJobCardModal = ({ isOpen, onClose, onRefresh }) => {
                   <select
                     className="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-semibold text-slate-700 disabled:opacity-50"
                     value={formData.operationName}
-                    onChange={(e) => setFormData({ ...formData, operationName: e.target.value })}
+                    onChange={(e) => {
+                      const opName = e.target.value;
+                      const op = predefinedOperations.find(o => o.operation_name === opName);
+                      setFormData({ 
+                        ...formData, 
+                        operationName: opName,
+                        type: op ? (op.type || 'in-house') : formData.type
+                      });
+                    }}
                     required
                     disabled={!selectedWorkOrder}
                   >
@@ -246,6 +255,19 @@ const CreateJobCardModal = ({ isOpen, onClose, onRefresh }) => {
                   <option value="in_progress">In Progress</option>
                   <option value="completed">Completed</option>
                   <option value="on_hold">On Hold</option>
+                </select>
+              </div>
+
+              {/* Type */}
+              <div className="col-span-2 md:col-span-1">
+                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Operation Type</label>
+                <select
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-semibold text-slate-700"
+                  value={formData.type}
+                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                >
+                  <option value="in-house">In-House</option>
+                  <option value="outsource">Outsource</option>
                 </select>
               </div>
 

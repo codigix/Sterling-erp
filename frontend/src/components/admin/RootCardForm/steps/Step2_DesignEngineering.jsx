@@ -4,6 +4,7 @@ import FormSection from "../shared/FormSection";
 import AssigneeField from "../shared/AssigneeField";
 import { useRootCardContext } from "../hooks";
 import axios from "../../../../utils/api";
+import { showError } from "../../../../utils/toastUtils";
 
 export default function Step2_DesignEngineering({ readOnly = false }) {
   const { state, updateDeepNestedField, updateField, initialData } = useRootCardContext();
@@ -60,7 +61,7 @@ export default function Step2_DesignEngineering({ readOnly = false }) {
       }
     } catch (err) {
       console.error("Upload failed:", err);
-      alert("Failed to upload files. Please try again.");
+      showError("Failed to upload files. Please try again.");
     } finally {
       setUploading(false);
     }

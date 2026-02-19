@@ -2,7 +2,7 @@ const MaterialRequirementsDetail = require('../../models/MaterialRequirementsDet
 const Material = require('../../models/Material');
 const RootCardStep = require('../../models/RootCardStep');
 const { validateMaterialRequirements } = require('../../utils/rootCardValidators');
-const { formatSuccessResponse, formatErrorResponse, calculateMaterialCost } = require('../../utils/rootCardHelpers');
+const { formatSuccessResponse, formatErrorResponse } = require('../../utils/rootCardHelpers');
 
 class MaterialRequirementsController {
   static async getAllRequirements(req, res) {
@@ -33,7 +33,7 @@ class MaterialRequirementsController {
         console.warn('Material Requirements validation warnings:', validation.errors);
       }
 
-      data.totalMaterialCost = calculateMaterialCost(data.materials);
+      data.totalMaterialCost = await MaterialRequirementsDetail.calculateTotalCost(data.materials);
 
       let detail = await MaterialRequirementsDetail.findByRootCardId(rootCardId);
 
@@ -96,52 +96,8 @@ class MaterialRequirementsController {
         return res.json(formatSuccessResponse(null, 'Material requirements retrieved (empty)'));
       }
 
-      // Fetch live stock levels from inventory
-      if (detail.materials && detail.materials.length > 0) {
-        const updatedMaterials = await Promise.all(detail.materials.map(async (m) => {
-          let currentStock = m.currentStock || 0;
-          
-          try {
-            // Try by itemCode first
-            let inventoryItem = null;
-            if (m.itemCode && m.itemCode !== 'N/A') {
-              inventoryItem = await Material.findByItemCode(m.itemCode);
-            }
-            
-            // Fallback to name if code fails or not present
-            if (!inventoryItem && m.itemName) {
-              inventoryItem = await Material.findByName(m.itemName);
-            }
-
-            if (inventoryItem) {
-              return {
-                ...m,
-                currentStock: inventoryItem.quantity || 0,
-                unitCost: inventoryItem.unitCost || 0,
-                valuationRate: inventoryItem.valuationRate || 0,
-                sellingRate: inventoryItem.sellingRate || 0,
-                itemGroupId: inventoryItem.itemGroupId,
-                itemGroupName: inventoryItem.itemGroupName,
-                category: inventoryItem.category,
-                unit: inventoryItem.unit,
-                location: inventoryItem.location,
-                warehouse: inventoryItem.warehouse,
-                gstPercent: inventoryItem.gstPercent
-              };
-            }
-          } catch (err) {
-            console.warn(`Failed to fetch live stock for material ${m.itemName}:`, err);
-          }
-
-          return {
-            ...m,
-            currentStock: m.currentStock || 0
-          };
-        }));
-
-        detail.materials = updatedMaterials;
-      }
-
+      // Return data exactly as stored in the project's specific record
+      // to ensure total isolation between different root cards.
       res.json(formatSuccessResponse(detail, 'Material requirements retrieved'));
     } catch (error) {
       res.status(500).json(formatErrorResponse(error.message));
@@ -217,7 +173,7 @@ class MaterialRequirementsController {
         return res.status(400).json(formatErrorResponse('Materials list is required'));
       }
 
-      const totalCost = calculateMaterialCost(materials);
+      const totalCost = await MaterialRequirementsDetail.calculateTotalCost(materials);
 
       res.json(formatSuccessResponse({
         totalMaterialCost: totalCost,

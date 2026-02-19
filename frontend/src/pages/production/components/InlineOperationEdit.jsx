@@ -3,7 +3,7 @@ import { Calendar, Layers, User, Activity, Hash, X, Check, Trash2 } from 'lucide
 import axios from '../../../utils/api';
 import Swal from 'sweetalert2';
 
-const InlineOperationEdit = ({ operation, workOrderId, workOrderQuantity, onCancel, onSave, onDelete }) => {
+const InlineOperationEdit = ({ operation, workOrderQuantity, onCancel, onSave, onDelete }) => {
   const [loading, setLoading] = useState(false);
   const [workstations, setWorkstations] = useState([]);
   const [operators, setOperators] = useState([]);
@@ -12,6 +12,7 @@ const InlineOperationEdit = ({ operation, workOrderId, workOrderQuantity, onCanc
     operationName: operation.operation_name || '',
     workstation: operation.workstation || '',
     operatorId: operation.operator_id || '',
+    type: operation.type || 'in-house',
     status: operation.status || 'pending',
     plannedQty: workOrderQuantity || 0,
     producedQty: operation.produced_qty || 0,
@@ -124,6 +125,19 @@ const InlineOperationEdit = ({ operation, workOrderId, workOrderQuantity, onCanc
                 <option value="in_progress">In Progress</option>
                 <option value="completed">Completed</option>
                 <option value="on_hold">On Hold</option>
+              </select>
+            </div>
+
+            {/* Type */}
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Type</label>
+              <select
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                value={formData.type}
+                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+              >
+                <option value="in-house">In-House</option>
+                <option value="outsource">Outsource</option>
               </select>
             </div>
 

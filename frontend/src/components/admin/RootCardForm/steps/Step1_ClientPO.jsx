@@ -7,6 +7,7 @@ import Tabs from "../../../ui/Tabs";
 import { useFormData, useRootCardContext } from "../hooks";
 import AllDocumentsView from "../shared/AllDocumentsView";
 import axios from "../../../../utils/api";
+import { showError } from "../../../../utils/toastUtils";
 
 export default function Step1_ClientPO({ readOnly = false }) {
   const { formData, updateField } = useFormData();
@@ -36,7 +37,7 @@ export default function Step1_ClientPO({ readOnly = false }) {
     if (files.length === 0) return;
 
     if (!rootCardId) {
-      alert("Please save the basic details first before uploading documents.");
+      showError("Please save the basic details first before uploading documents.");
       return;
     }
 
@@ -57,7 +58,7 @@ export default function Step1_ClientPO({ readOnly = false }) {
       }
     } catch (err) {
       console.error("Upload failed:", err);
-      alert("Failed to upload files. Please try again.");
+      showError("Failed to upload files. Please try again.");
     } finally {
       setUploading(false);
     }

@@ -771,6 +771,7 @@ const productionPlanController = {
                   workOrderId,
                   operationName: opName,
                   workstation: op.workstation,
+                  type: op.type || 'in-house',
                   sequence: op.sequence || (i + 1),
                   status: 'pending',
                   notes: op.description || op.notes

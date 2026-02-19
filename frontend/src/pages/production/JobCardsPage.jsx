@@ -168,6 +168,14 @@ const JobCardsPage = () => {
     }
   };
 
+  const getTypeBadge = (type) => {
+    switch (type) {
+      case 'outsource': return 'bg-purple-100 text-purple-700 border-purple-200';
+      case 'in-house': return 'bg-indigo-100 text-indigo-700 border-indigo-200';
+      default: return 'bg-slate-100 text-slate-600 border-slate-200';
+    }
+  };
+
   const getPriorityBadge = (priority) => {
     switch (priority) {
       case 'high': return 'bg-red-100 text-red-700 border-red-200';
@@ -387,7 +395,6 @@ const JobCardsPage = () => {
                           {editingOperationId === op.id ? (
                             <InlineOperationEdit 
                               operation={op} 
-                              workOrderId={wo.id}
                               workOrderQuantity={wo.quantity}
                               onCancel={() => setEditingOperationId(null)}
                               onSave={() => {
@@ -403,7 +410,12 @@ const JobCardsPage = () => {
                                   <Activity size={18} />
                                 </div>
                                 <div>
-                                  <div className="text-[13px] font-bold text-slate-900 opacity-100">{op.operation_name}</div>
+                                  <div className="flex items-center gap-2">
+                                    <div className="text-[13px] font-bold text-slate-900 opacity-100">{op.operation_name}</div>
+                                    <span className={`px-1.5 py-0.5 rounded-[4px] text-[9px] font-black uppercase tracking-tight border ${getTypeBadge(op.type)}`}>
+                                      {op.type || 'in-house'}
+                                    </span>
+                                  </div>
                                   <p className="text-[10px] font-medium text-slate-400 mt-0.5 uppercase tracking-tighter">
                                     JC-{op.id}-{op.created_at ? new Date(op.created_at).getTime().toString(36) : 'new'}
                                   </p>

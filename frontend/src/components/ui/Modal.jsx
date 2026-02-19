@@ -44,7 +44,7 @@ const Modal = ({
 
   return (
     <div 
-      className="fixed inset-0 bg-black/5 backdrop-blur-md flex items-center justify-center p-4 z-50 transition-all duration-300" 
+      className="fixed inset-0 bg-black/5 backdrop-blur-[0.3px] flex items-center justify-center p-4 z-50 transition-all duration-300" 
       onClick={handleOverlayClick}
     >
       <div 

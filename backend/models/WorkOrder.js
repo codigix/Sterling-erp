@@ -38,12 +38,13 @@ class WorkOrder {
     try {
       const [result] = await connection.execute(
         `INSERT INTO work_order_operations 
-        (work_order_id, operation_name, workstation, operator_id, status, sequence, planned_start_date, planned_end_date, notes)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        (work_order_id, operation_name, workstation, type, operator_id, status, sequence, planned_start_date, planned_end_date, notes)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           data.workOrderId,
           data.operationName,
           data.workstation || null,
+          data.type || 'in-house',
           data.operatorId || null,
           data.status || 'pending',
           data.sequence,
@@ -63,13 +64,14 @@ class WorkOrder {
     try {
       const [result] = await connection.execute(
         `UPDATE work_order_operations SET 
-          operation_name = ?, workstation = ?, operator_id = ?, status = ?, 
+          operation_name = ?, workstation = ?, type = ?, operator_id = ?, status = ?, 
           planned_start_date = ?, planned_end_date = ?, 
           notes = ?, updated_at = CURRENT_TIMESTAMP
          WHERE id = ?`,
         [
           data.operationName,
           data.workstation || null,
+          data.type || 'in-house',
           data.operatorId || null,
           data.status,
           data.plannedStartDate || null,
