@@ -4,7 +4,7 @@ exports.getRootCards = async (req, res) => {
     const RootCardStep = require('../../models/RootCardStep');
     const pool = require('../../config/database');
     const userId = parseInt(req.user.id);
-    const { status, search, all } = req.query;
+    const { status, search, all, assignedOnly } = req.query;
 
     let filters = {};
     if (status && status !== 'all') {
@@ -12,6 +12,9 @@ exports.getRootCards = async (req, res) => {
     }
     if (search) {
       filters.search = search;
+    }
+    if (assignedOnly === 'true' || assignedOnly === true) {
+      filters.assignedOnly = true;
     }
 
     const allRootCards = await RootCard.findAll(filters);

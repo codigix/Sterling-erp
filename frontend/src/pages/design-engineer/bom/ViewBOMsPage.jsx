@@ -47,7 +47,9 @@ const ViewBOMsPage = () => {
       setLoading(true);
       const [bomRes, rcRes] = await Promise.all([
         axios.get("/engineering/bom/comprehensive"),
-        axios.get("/root-cards")
+        axios.get("/root-cards", {
+          params: { assignedOnly: true }
+        })
       ]);
       setBoms(bomRes.data.boms || []);
       setRootCards(rcRes.data.rootCards || rcRes.data || []);

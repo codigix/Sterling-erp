@@ -186,7 +186,9 @@ const ProjectDetailsPage = () => {
   const fetchProjects = async () => {
     try {
       setLoading(true);
-      const response = await axios.get("/root-cards");
+      const response = await axios.get("/root-cards", {
+        params: { assignedOnly: true }
+      });
       console.log("Root cards response:", response.data);
       const orders = Array.isArray(response.data)
         ? response.data

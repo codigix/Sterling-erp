@@ -30,7 +30,9 @@ const ProjectTrackingDashboard = () => {
   const fetchProjects = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/root-cards');
+      const response = await axios.get('/root-cards', {
+        params: { assignedOnly: true }
+      });
       const projectsData = Array.isArray(response.data) ? response.data : (response.data.rootCards || []);
       setProjects(projectsData);
       setError('');

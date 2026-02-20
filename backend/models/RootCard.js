@@ -44,6 +44,10 @@ class RootCard {
       params.push(like, like, like, like);
     }
 
+    if (filters.assignedOnly === true || filters.assignedOnly === 'true') {
+      conditions.push('so.assigned_to IS NOT NULL');
+    }
+
     let query = `
       SELECT so.*, p.id as project_id, p.code as project_code 
       FROM sales_orders so

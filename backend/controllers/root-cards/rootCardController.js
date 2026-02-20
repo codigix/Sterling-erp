@@ -38,11 +38,12 @@ exports.getAssignedRootCards = async (req, res) => {
 
 exports.getRootCards = async (req, res) => {
   try {
-    const { status, search, includeSteps } = req.query;
+    const { status, search, includeSteps, assignedOnly } = req.query;
     const rootCards = await RootCard.findAll({ 
       status, 
       search,
-      includeSteps: includeSteps !== 'false'
+      includeSteps: includeSteps !== 'false',
+      assignedOnly
     });
     const stats = await RootCard.getStats();
     res.json({ rootCards, stats });

@@ -58,7 +58,9 @@ const MyDesignsPage = () => {
 
   const fetchProjects = async () => {
     try {
-      const response = await axios.get("/root-cards");
+      const response = await axios.get("/root-cards", {
+        params: { assignedOnly: true }
+      });
       const orders = Array.isArray(response.data)
         ? response.data
         : response.data?.rootCards || [];
