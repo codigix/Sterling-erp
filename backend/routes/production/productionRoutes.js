@@ -42,6 +42,7 @@ router.get('/statistics', roleMiddleware('Admin', 'Management', 'Production'), p
 router.get('/drawings', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer'), drawingController.getDrawings);
 router.post('/drawings', roleMiddleware('Admin', 'Management', 'Design Engineer'), upload.single('file'), drawingController.uploadDrawing);
 router.get('/drawings/:id/download', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer'), drawingController.downloadDrawing);
+router.patch('/drawings/:id/approve', roleMiddleware('Admin', 'Management', 'Design Engineer'), drawingController.approveDrawing);
 router.delete('/drawings/:id', roleMiddleware('Admin', 'Management', 'Design Engineer'), drawingController.deleteDrawing);
 
 // Specification routes
@@ -49,6 +50,7 @@ router.get('/specifications', roleMiddleware('Admin', 'Management', 'Production'
 router.post('/specifications', roleMiddleware('Admin', 'Management', 'Design Engineer'), upload.single('file'), specificationController.createSpecification);
 router.put('/specifications/:id', roleMiddleware('Admin', 'Management', 'Design Engineer'), upload.single('file'), specificationController.updateSpecification);
 router.patch('/specifications/:id', roleMiddleware('Admin', 'Management', 'Design Engineer'), upload.single('file'), specificationController.updateSpecification);
+router.patch('/specifications/:id/approve', roleMiddleware('Admin', 'Management', 'Design Engineer'), specificationController.approveSpecification);
 router.get('/specifications/:id/download', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer'), specificationController.downloadSpecification);
 router.delete('/specifications/:id', roleMiddleware('Admin', 'Management', 'Design Engineer'), specificationController.deleteSpecification);
 

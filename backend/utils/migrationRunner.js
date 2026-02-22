@@ -1020,14 +1020,17 @@ async function runMigrations() {
       await connection.execute(`
         CREATE TABLE IF NOT EXISTS specifications (
           id INT PRIMARY KEY AUTO_INCREMENT,
+          root_card_id INT NULL,
           title VARCHAR(255) NOT NULL,
           description TEXT,
           version VARCHAR(50) DEFAULT 'v1.0',
           file_name VARCHAR(255),
           file_path VARCHAR(500) NOT NULL,
+          status ENUM('Draft', 'Approved', 'Final') DEFAULT 'Draft',
           uploaded_by INT,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          FOREIGN KEY (root_card_id) REFERENCES root_cards(id) ON DELETE CASCADE,
           FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE SET NULL
         )
       `);

@@ -1116,7 +1116,9 @@ exports.getReadyForProduction = async (req, res) => {
 
 exports.getDesigns = async (req, res) => {
   try {
-    const [designs] = await pool.execute(`
+    const { rootCardId } = req.query;
+    
+    let query = `
       SELECT 
         so.id,
         so.po_number as code,
@@ -1130,15 +1132,25 @@ exports.getDesigns = async (req, res) => {
       FROM sales_orders so
       JOIN projects p ON so.id = p.sales_order_id
       LEFT JOIN design_engineering_details ded ON so.id = ded.sales_order_id
-      WHERE ded.id IS NOT NULL OR EXISTS (
+      WHERE (ded.id IS NOT NULL OR EXISTS (
         SELECT 1 FROM sales_order_workflow_steps sows 
         WHERE sows.sales_order_id = so.id AND sows.step_number = 2 AND sows.status != 'pending'
-      )
-      ORDER BY so.created_at DESC
-    `);
+      ))
+    `;
+    
+    const params = [];
+    if (rootCardId) {
+      query += ` AND so.id = ?`;
+      params.push(rootCardId);
+    }
+    
+    query += ` ORDER BY so.created_at DESC`;
+    
+    const [designs] = await pool.execute(query, params);
 
     const formattedDesigns = designs.map(design => ({
       ...design,
+      rootCardId: design.id,
       details: typeof design.details === 'string' ? JSON.parse(design.details) : design.details || {},
       documents: typeof design.documents === 'string' ? JSON.parse(design.documents) : design.documents || []
     }));
@@ -1184,6 +1196,7 @@ exports.getDesignById = async (req, res) => {
     const design = designs[0];
     const formattedDesign = {
       ...design,
+      rootCardId: design.id,
       details: typeof design.details === 'string' ? JSON.parse(design.details) : design.details || {},
       documents: typeof design.documents === 'string' ? JSON.parse(design.documents) : design.documents || [],
       bomData: typeof design.bomData === 'string' ? JSON.parse(design.bomData) : design.bomData || [],

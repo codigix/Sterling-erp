@@ -67,6 +67,12 @@ class DesignEngineeringDetail {
     if (normalized.specifications === undefined) normalized.specifications = data.specifications || data.productSpecification;
     if (normalized.designNotes === undefined) normalized.designNotes = data.designNotes || data.commentsNotes?.internalDesignNotes;
 
+    console.log('[DesignEngineeringDetail.create] Normalized attachments:', {
+      documents: normalized.documents ? `${normalized.documents.length} items` : 'empty',
+      drawings3D: normalized.drawings3D ? `${normalized.drawings3D.length} items` : 'empty',
+      designStatus: normalized.designStatus
+    });
+
     const params = [
       data.rootCardId || data.salesOrderId || data.sales_order_id || null,
       stringifyJsonField(ensureArray(normalized.documents)) || '[]',
@@ -114,6 +120,11 @@ class DesignEngineeringDetail {
     const designNotes = data.designNotes || 
                         data.designEngineering?.designNotes || 
                         data.commentsNotes?.internalDesignNotes || null;
+
+    console.log('[DesignEngineeringDetail.update] Processing attachments for Root Card:', rootCardId, {
+      documents: documents ? `${documents.length} items` : 'empty',
+      drawings3D: drawings3D ? `${drawings3D.length} items` : 'empty'
+    });
 
     const params = [
       stringifyJsonField(ensureArray(documents)) || '[]',
@@ -218,6 +229,28 @@ class DesignEngineeringDetail {
     return documents.find(doc => doc.id === parseInt(documentId)) || null;
   }
 
+  static async getDrawings(rootCardId) {
+    const [rows] = await pool.execute(
+      `SELECT drawings_3d FROM design_engineering_details WHERE sales_order_id = ?`,
+      [rootCardId]
+    );
+
+    if (rows.length === 0) {
+      return [];
+    }
+
+    try {
+      return JSON.parse(rows[0].drawings_3d || '[]');
+    } catch (err) {
+      return [];
+    }
+  }
+
+  static async getDrawing(rootCardId, drawingId) {
+    const drawings = await this.getDrawings(rootCardId);
+    return drawings.find(d => d.id === parseInt(drawingId)) || null;
+  }
+
   static async removeDocument(rootCardId, documentId) {
     const [existing] = await pool.execute(
       `SELECT documents FROM design_engineering_details WHERE sales_order_id = ?`,
@@ -240,6 +273,33 @@ class DesignEngineeringDetail {
     await pool.execute(
       `UPDATE design_engineering_details SET documents = ?, updated_at = CURRENT_TIMESTAMP WHERE sales_order_id = ?`,
       [JSON.stringify(documents), rootCardId]
+    );
+
+    return true;
+  }
+
+  static async removeDrawing(rootCardId, drawingId) {
+    const [existing] = await pool.execute(
+      `SELECT drawings_3d FROM design_engineering_details WHERE sales_order_id = ?`,
+      [rootCardId]
+    );
+
+    if (existing.length === 0) {
+      throw new Error('Design engineering details not found');
+    }
+
+    let drawings = [];
+    try {
+      drawings = JSON.parse(existing[0].drawings_3d || '[]');
+    } catch (err) {
+      drawings = [];
+    }
+
+    drawings = drawings.filter(d => d.id !== parseInt(drawingId));
+
+    await pool.execute(
+      `UPDATE design_engineering_details SET drawings_3d = ?, updated_at = CURRENT_TIMESTAMP WHERE sales_order_id = ?`,
+      [JSON.stringify(drawings), rootCardId]
     );
 
     return true;

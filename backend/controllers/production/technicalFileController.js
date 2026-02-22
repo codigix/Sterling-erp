@@ -4,8 +4,8 @@ const TechnicalFile = require('../../models/TechnicalFile');
 
 exports.getTechnicalFiles = async (req, res) => {
   try {
-    const { search, category } = req.query;
-    const technicalFiles = await TechnicalFile.findAll({ search, category });
+    const { search, category, rootCardId } = req.query;
+    const technicalFiles = await TechnicalFile.findAll({ search, category, rootCardId });
     
     const formattedFiles = technicalFiles.map(f => ({
       id: f.id,
@@ -17,7 +17,9 @@ exports.getTechnicalFiles = async (req, res) => {
       type: path.extname(f.file_name).toLowerCase(),
       createdAt: f.created_at,
       date: new Date(f.created_at).toLocaleDateString(),
-      uploadedBy: f.uploaded_by_name || 'Unknown'
+      uploadedBy: f.uploaded_by_name || 'Unknown',
+      rootCardId: f.root_card_id,
+      status: f.status || 'Draft'
     }));
 
     res.json(formattedFiles);
@@ -32,7 +34,8 @@ exports.createTechnicalFile = async (req, res) => {
     const { 
       name, 
       category, 
-      description
+      description,
+      rootCardId
     } = req.body;
 
     const file = req.file;
@@ -52,6 +55,7 @@ exports.createTechnicalFile = async (req, res) => {
       name,
       category,
       description: description || '',
+      rootCardId,
       filePath: file.path,
       fileName: file.originalname,
       uploadedBy: req.user.id

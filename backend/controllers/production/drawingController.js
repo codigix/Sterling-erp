@@ -5,8 +5,8 @@ const fs = require('fs');
 
 exports.getDrawings = async (req, res) => {
   try {
-    const { search } = req.query;
-    const drawings = await Drawing.findAll({ search });
+    const { search, rootCardId } = req.query;
+    const drawings = await Drawing.findAll({ search, rootCardId });
     
     // Format for frontend
     const formattedDrawings = drawings.map(d => ({
@@ -20,7 +20,9 @@ exports.getDrawings = async (req, res) => {
       status: d.status,
       designTitle: d.design_title,
       version: d.version,
-      filePath: d.file_path
+      filePath: d.file_path,
+      rootCardId: d.root_card_id,
+      createdAt: d.created_at
     }));
 
     res.json({ drawings: formattedDrawings });
@@ -39,7 +41,8 @@ exports.uploadDrawing = async (req, res) => {
       drawingType, 
       version, 
       drawingStatus, 
-      remarks 
+      remarks,
+      rootCardId
     } = req.body;
 
     const file = req.file;
@@ -47,23 +50,23 @@ exports.uploadDrawing = async (req, res) => {
       return res.status(400).json({ message: 'File is required' });
     }
 
-    if (!designName) {
-      return res.status(400).json({ message: 'Design Name is required' });
+    let finalRootCardId = rootCardId;
+
+    // If rootCardId is provided, use it directly
+    if (!finalRootCardId && designName) {
+      // Otherwise, try to find RootCard by title
+      const pool = require('../../config/database');
+      const [rootCards] = await pool.execute(
+        'SELECT id FROM root_cards WHERE title = ? LIMIT 1',
+        [designName]
+      );
+
+      if (rootCards.length === 0) {
+        return res.status(404).json({ message: 'Design (Root Card) not found' });
+      }
+
+      finalRootCardId = rootCards[0].id;
     }
-
-    // Find RootCard by title (since frontend sends title)
-    // Ideally frontend should send ID, but we support the current implementation
-    const pool = require('../../config/database');
-    const [rootCards] = await pool.execute(
-      'SELECT id FROM root_cards WHERE title = ? LIMIT 1',
-      [designName]
-    );
-
-    if (rootCards.length === 0) {
-      return res.status(404).json({ message: 'Design (Root Card) not found' });
-    }
-
-    const rootCardId = rootCards[0].id;
 
     // Calculate file size string (e.g. "2.4 MB")
     const fileSizeInBytes = file.size;
@@ -80,7 +83,7 @@ exports.uploadDrawing = async (req, res) => {
     const format = path.extname(file.originalname).substring(1).toUpperCase();
 
     const drawingId = await Drawing.create({
-      rootCardId,
+      rootCardId: finalRootCardId,
       name: drawingName,
       drawingNumber,
       type: drawingType,
@@ -165,6 +168,33 @@ exports.deleteDrawing = async (req, res) => {
     res.json({ message: 'Drawing deleted successfully' });
   } catch (error) {
     console.error('Delete drawing error:', error);
+    res.status(500).json({ message: 'Internal server error', error: error.message });
+  }
+};
+
+exports.approveDrawing = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, notes } = req.body;
+    
+    const drawing = await Drawing.findById(id);
+    if (!drawing) {
+      return res.status(404).json({ message: 'Drawing not found' });
+    }
+
+    const pool = require('../../config/database');
+    const connection = await pool.getConnection();
+    try {
+      await connection.execute(
+        'UPDATE drawings SET status = ?, remarks = ? WHERE id = ?',
+        [status || 'Approved', notes || drawing.remarks, id]
+      );
+      res.json({ message: 'Drawing approved successfully' });
+    } finally {
+      connection.release();
+    }
+  } catch (error) {
+    console.error('Approve drawing error:', error);
     res.status(500).json({ message: 'Internal server error', error: error.message });
   }
 };

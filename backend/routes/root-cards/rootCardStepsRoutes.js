@@ -135,6 +135,10 @@ router.post('/:rootCardId/design-engineering/approve', designEngineeringControll
 router.post('/:rootCardId/design-engineering/reject', designEngineeringController.rejectDesign);
 router.post('/:rootCardId/design-engineering/upload', designUpload.array('documents'), designEngineeringController.uploadDesignDocuments);
 router.get('/:rootCardId/design-engineering/documents', designEngineeringController.getDesignDocuments);
+router.get('/:rootCardId/design-engineering/raw-designs', designEngineeringController.getRawDesigns);
+router.get('/:rootCardId/design-engineering/required-documents', designEngineeringController.getRequiredDocuments);
+router.delete('/:rootCardId/design-engineering/raw-designs/:drawingId', designEngineeringController.removeRawDesign);
+router.delete('/:rootCardId/design-engineering/required-documents/:documentId', designEngineeringController.removeRequiredDocument);
 router.get('/:rootCardId/design-engineering/documents/:documentId', designEngineeringController.getDesignDocument);
 router.get('/:rootCardId/design-engineering/validate', designEngineeringController.validateDesign);
 router.get('/:rootCardId/design-engineering/review-history', designEngineeringController.getReviewHistory);

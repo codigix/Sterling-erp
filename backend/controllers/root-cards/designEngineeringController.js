@@ -9,6 +9,7 @@ class DesignEngineeringController {
       const { rootCardId } = req.params;
       const data = req.body;
       const { assignedTo } = req.body;
+      const userId = req.user?.id || req.user?.userId;
 
       const RootCard = require('../../models/RootCard');
       const rootCard = await RootCard.findById(rootCardId);
@@ -28,6 +29,81 @@ class DesignEngineeringController {
       } else {
         data.rootCardId = rootCardId;
         await DesignEngineeringDetail.create(data);
+      }
+
+      // Create Drawing and Specification records from attachments
+      try {
+        if (data.attachments) {
+          const Drawing = require('../../models/Drawing');
+          const Specification = require('../../models/Specification');
+          
+          // Process drawings
+          if (Array.isArray(data.attachments.drawings) && data.attachments.drawings.length > 0) {
+            for (const drawing of data.attachments.drawings) {
+              // Check if it's a file object (has name property) or already a record
+              if (drawing.name && !drawing.id) {
+                try {
+                  const format = drawing.type ? drawing.type.toUpperCase() : 'PDF';
+                  const sizeInBytes = drawing.size || 0;
+                  let sizeString = '';
+                  if (sizeInBytes > 0) {
+                    if (sizeInBytes < 1024) {
+                      sizeString = sizeInBytes + ' B';
+                    } else if (sizeInBytes < 1024 * 1024) {
+                      sizeString = (sizeInBytes / 1024).toFixed(1) + ' KB';
+                    } else {
+                      sizeString = (sizeInBytes / (1024 * 1024)).toFixed(1) + ' MB';
+                    }
+                  }
+
+                  await Drawing.create({
+                    rootCardId: rootCardId,
+                    name: drawing.name,
+                    drawingNumber: `WIZARD_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                    type: '2D',
+                    version: 'V1.0',
+                    status: 'Draft',
+                    remarks: 'Uploaded from Root Card Wizard Step 2',
+                    filePath: drawing.path || drawing.filePath || '',
+                    format: format,
+                    size: sizeString,
+                    uploadedBy: userId
+                  });
+                  console.log(`[DesignEngineeringController] ✓ Created Drawing record from attachment: ${drawing.name}`);
+                } catch (err) {
+                  console.warn(`[DesignEngineeringController] Warning: Could not create Drawing record for ${drawing.name}:`, err.message);
+                }
+              }
+            }
+          }
+          
+          // Process documents/specifications
+          if (Array.isArray(data.attachments.documents) && data.attachments.documents.length > 0) {
+            for (const doc of data.attachments.documents) {
+              // Check if it's a file object (has name property) or already a record
+              if (doc.name && !doc.id) {
+                try {
+                  await Specification.create({
+                    rootCardId: rootCardId,
+                    title: doc.name,
+                    description: 'Uploaded from Root Card Wizard Step 2',
+                    version: 'v1.0',
+                    filePath: doc.path || doc.filePath || '',
+                    fileName: doc.name,
+                    uploadedBy: userId,
+                    status: 'Draft'
+                  });
+                  console.log(`[DesignEngineeringController] ✓ Created Specification record from attachment: ${doc.name}`);
+                } catch (err) {
+                  console.warn(`[DesignEngineeringController] Warning: Could not create Specification record for ${doc.name}:`, err.message);
+                }
+              }
+            }
+          }
+        }
+      } catch (attachmentErr) {
+        console.error('[DesignEngineeringController] Error processing attachments:', attachmentErr.message);
+        // Don't fail the entire request because of attachment processing errors
       }
 
       const updated = await DesignEngineeringDetail.findByRootCardId(rootCardId);
@@ -91,8 +167,16 @@ class DesignEngineeringController {
     try {
       const { rootCardId } = req.params;
       const design = await DesignEngineeringDetail.findByRootCardId(rootCardId);
+      console.log(`[getDesignEngineering] Root Card ${rootCardId}:`, design ? 'Found' : 'Not found');
+      if (design && design.documents) {
+        console.log(`[getDesignEngineering] Documents count: ${design.documents.length}`);
+      }
+      if (design && design.drawings3D) {
+        console.log(`[getDesignEngineering] Drawings count: ${design.drawings3D.length}`);
+      }
       res.json(formatSuccessResponse(design || null, 'Design retrieved'));
     } catch (error) {
+      console.error('[getDesignEngineering] Error:', error.message);
       res.status(500).json(formatErrorResponse(error.message));
     }
   }
@@ -142,7 +226,10 @@ class DesignEngineeringController {
       const files = req.files || [];
       const userId = req.user?.id || req.user?.userId;
 
+      console.log(`[uploadDesignDocuments] Root Card: ${rootCardId}, Type: ${type}, Files: ${files.length}, User: ${userId}`);
+
       if (!files || files.length === 0) {
+        console.warn(`[uploadDesignDocuments] No files received for root card ${rootCardId}`);
         return res.status(400).json(formatErrorResponse('No files uploaded'));
       }
 
@@ -200,6 +287,54 @@ class DesignEngineeringController {
             type: type // Keep track of type for drafts too
           });
         }
+        
+        // Create Drawing or Specification records for generic viewing - for both draft and real root cards
+        try {
+          if (type === 'drawings') {
+            const Drawing = require('../../models/Drawing');
+            const fileSizeInBytes = file.size;
+            let sizeString = '';
+            if (fileSizeInBytes < 1024) {
+              sizeString = fileSizeInBytes + ' B';
+            } else if (fileSizeInBytes < 1024 * 1024) {
+              sizeString = (fileSizeInBytes / 1024).toFixed(1) + ' KB';
+            } else {
+              sizeString = (fileSizeInBytes / (1024 * 1024)).toFixed(1) + ' MB';
+            }
+            
+            const path = require('path');
+            const format = path.extname(file.originalname).substring(1).toUpperCase();
+            
+            await Drawing.create({
+              rootCardId: rootCardId,
+              name: file.originalname,
+              drawingNumber: `UPLOAD_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+              type: '2D',
+              version: 'V1.0',
+              status: 'Draft',
+              remarks: 'Uploaded from Root Card Step 2',
+              filePath: file.path,
+              format: format,
+              size: sizeString,
+              uploadedBy: userId
+            });
+            console.log(`[DesignEngineeringController] ✓ Created Drawing record for: ${file.originalname}`);
+          } else if (type === 'documents') {
+            const Specification = require('../../models/Specification');
+            await Specification.create({
+              rootCardId: rootCardId,
+              title: file.originalname,
+              description: 'Uploaded from Root Card Step 2',
+              version: 'v1.0',
+              filePath: file.path,
+              fileName: file.originalname,
+              uploadedBy: userId
+            });
+            console.log(`[DesignEngineeringController] ✓ Created Specification record for: ${file.originalname}`);
+          }
+        } catch (err) {
+          console.error(`[DesignEngineeringController] Error: Failed to create generic record for document: ${file.originalname}`, err.message);
+        }
       }
 
       const updated = !isDraft ? await DesignEngineeringDetail.findByRootCardId(rootCardId) : null;
@@ -220,6 +355,38 @@ class DesignEngineeringController {
       const documents = await DesignEngineeringDetail.getDocuments(rootCardId);
       res.json(formatSuccessResponse(documents, 'Design documents retrieved'));
     } catch (error) {
+      res.status(500).json(formatErrorResponse(error.message));
+    }
+  }
+
+  static async getRawDesigns(req, res) {
+    try {
+      const { rootCardId } = req.params;
+
+      const drawings = await DesignEngineeringDetail.getDrawings(rootCardId);
+      console.log(`[getRawDesigns] Root Card ${rootCardId}: Found ${drawings.length} drawings`);
+      if (drawings.length > 0) {
+        console.log(`[getRawDesigns] Sample drawing:`, JSON.stringify(drawings[0], null, 2));
+      }
+      res.json(formatSuccessResponse(drawings, 'Raw design drawings retrieved'));
+    } catch (error) {
+      console.error('[getRawDesigns] Error:', error.message);
+      res.status(500).json(formatErrorResponse(error.message));
+    }
+  }
+
+  static async getRequiredDocuments(req, res) {
+    try {
+      const { rootCardId } = req.params;
+
+      const documents = await DesignEngineeringDetail.getDocuments(rootCardId);
+      console.log(`[getRequiredDocuments] Root Card ${rootCardId}: Found ${documents.length} documents`);
+      if (documents.length > 0) {
+        console.log(`[getRequiredDocuments] Sample document:`, JSON.stringify(documents[0], null, 2));
+      }
+      res.json(formatSuccessResponse(documents, 'Required documents retrieved'));
+    } catch (error) {
+      console.error('[getRequiredDocuments] Error:', error.message);
       res.status(500).json(formatErrorResponse(error.message));
     }
   }
@@ -278,6 +445,28 @@ class DesignEngineeringController {
       }
 
       res.json(formatSuccessResponse(validationResult, 'Design validation completed'));
+    } catch (error) {
+      res.status(500).json(formatErrorResponse(error.message));
+    }
+  }
+
+  static async removeRawDesign(req, res) {
+    try {
+      const { rootCardId, drawingId } = req.params;
+
+      await DesignEngineeringDetail.removeDrawing(rootCardId, drawingId);
+      res.json(formatSuccessResponse(null, 'Raw design removed successfully'));
+    } catch (error) {
+      res.status(500).json(formatErrorResponse(error.message));
+    }
+  }
+
+  static async removeRequiredDocument(req, res) {
+    try {
+      const { rootCardId, documentId } = req.params;
+
+      await DesignEngineeringDetail.removeDocument(rootCardId, documentId);
+      res.json(formatSuccessResponse(null, 'Required document removed successfully'));
     } catch (error) {
       res.status(500).json(formatErrorResponse(error.message));
     }
