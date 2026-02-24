@@ -6,9 +6,10 @@ class TechnicalFile {
     try {
       const [result] = await connection.execute(
         `INSERT INTO technical_files (
-          name, category, description, file_path, file_name, uploaded_by
-        ) VALUES (?, ?, ?, ?, ?, ?)`,
+          root_card_id, name, category, description, file_path, file_name, uploaded_by
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [
+          data.rootCardId || null,
           data.name,
           data.category,
           data.description,
@@ -42,6 +43,11 @@ class TechnicalFile {
       if (filters.category && filters.category !== 'all') {
         query += ` AND t.category = ?`;
         params.push(filters.category);
+      }
+
+      if (filters.rootCardId) {
+        query += ` AND t.root_card_id = ?`;
+        params.push(filters.rootCardId);
       }
 
       query += ` ORDER BY t.created_at DESC`;

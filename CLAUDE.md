@@ -58,6 +58,12 @@
   node backend/comprehensive-form-data-verification.js 5 2      # Check Step 2 only
   ```
 
+### File Path Recovery (for legacy uploads)
+- **Automatic Recovery**: Old files (uploaded before path storage) are automatically recovered
+- The system searches for files by name in the upload directory when fetching documents
+- No manual migration needed - old files will work immediately when viewed/downloaded
+- Backdrop blur effect enhanced for better modal appearance
+
 ### Documentation Files
 
 **Quick Start:**

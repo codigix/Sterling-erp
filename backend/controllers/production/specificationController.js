@@ -17,7 +17,8 @@ exports.getSpecifications = async (req, res) => {
       filePath: s.file_path,
       createdAt: s.created_at,
       date: new Date(s.created_at).toLocaleDateString(),
-      uploadedBy: s.uploaded_by_name || 'Unknown'
+      uploadedBy: s.uploaded_by_name || 'Unknown',
+      status: s.status || 'Draft'
     }));
 
     res.json(formattedSpecs);
@@ -173,6 +174,32 @@ exports.updateSpecification = async (req, res) => {
         console.error('Failed to delete file after error:', e);
       }
     }
+    res.status(500).json({ message: 'Internal server error', error: error.message });
+  }
+};
+
+exports.approveSpecification = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, notes } = req.body;
+    
+    const specification = await Specification.findById(id);
+    if (!specification) {
+      return res.status(404).json({ message: 'Specification not found' });
+    }
+
+    const updateData = {
+      status: status || 'Approved'
+    };
+    if (notes !== undefined) {
+      updateData.description = notes || specification.description;
+    }
+
+    await Specification.update(id, updateData);
+
+    res.json({ message: 'Specification approved successfully' });
+  } catch (error) {
+    console.error('Approve specification error:', error);
     res.status(500).json({ message: 'Internal server error', error: error.message });
   }
 };

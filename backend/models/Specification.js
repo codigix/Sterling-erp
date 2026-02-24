@@ -106,6 +106,10 @@ class Specification {
         sets.push('root_card_id = ?');
         params.push(data.rootCardId);
       }
+      if (data.status) {
+        sets.push('status = ?');
+        params.push(data.status);
+      }
 
       if (sets.length === 0) return;
 

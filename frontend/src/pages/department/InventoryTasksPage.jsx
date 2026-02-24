@@ -61,7 +61,9 @@ const InventoryTasksPage = () => {
   const fetchRootCards = async () => {
     setLoading(true);
     try {
-      const response = await axios.get("/production/root-cards");
+      const response = await axios.get("/production/root-cards", {
+        params: { assignedOnly: true }
+      });
       const data = (response.data?.rootCards || response.data || []).filter(
         (card) => card.department === "inventory" || !card.department
       );

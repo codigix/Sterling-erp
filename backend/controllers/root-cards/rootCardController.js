@@ -7,6 +7,8 @@ const ProductionRootCard = require('../../models/ProductionRootCard');
 const Material = require('../../models/Material');
 const MaterialRequirementsDetail = require('../../models/MaterialRequirementsDetail');
 const RootCardStep = require('../../models/RootCardStep');
+const Notification = require('../../models/Notification');
+const AlertsNotification = require('../../models/AlertsNotification');
 
 exports.getAssignedRootCards = async (req, res) => {
   try {
@@ -38,11 +40,15 @@ exports.getAssignedRootCards = async (req, res) => {
 
 exports.getRootCards = async (req, res) => {
   try {
-    const { status, search, includeSteps } = req.query;
+    const { status, search, includeSteps, assignedOnly } = req.query;
+    const userId = req.user?.id || req.user?.userId;
+
     const rootCards = await RootCard.findAll({ 
       status, 
       search,
-      includeSteps: includeSteps !== 'false'
+      includeSteps: includeSteps !== 'false',
+      assignedOnly,
+      userId
     });
     const stats = await RootCard.getStats();
     res.json({ rootCards, stats });
@@ -127,33 +133,9 @@ exports.createRootCard = async (req, res) => {
       await RootCardStep.initializeAllSteps(rootCardId, connection);
 
       const projectCode = `PRJ-${poNumber}-${Date.now()}`;
-      const projectId = await Project.create({
-        name: projectName || `Project for ${clientName}`,
-        code: projectCode,
-        rootCardId: rootCardId,
-        clientName,
-        poNumber,
-        status: 'draft',
-        priority: priority || 'medium',
-        expectedStart: orderDate,
-        expectedEnd: dueDate,
-        managerId: createdBy,
-        summary: notes
-      }, connection);
-
-      const productionRootCardId = await ProductionRootCard.create({
-        projectId,
-        rootCardId: rootCardId,
-        code: projectCode,
-        title: projectName || `Root Card for ${clientName}`,
-        status: 'planning',
-        priority: priority || 'medium',
-        plannedStart: orderDate,
-        plannedEnd: dueDate,
-        createdBy,
-        notes: `Auto-created from Root Card Initiation ${poNumber}`,
-        stages: []
-      }, connection);
+      // Note: We used to create Project and ProductionRootCard here, but now
+      // they are automatically created when the Sales Order is "Sent to Production"
+      // from the Admin Sales Order page to ensure Production only sees what's authorized.
 
       await connection.commit();
 
@@ -366,30 +348,11 @@ exports.sendToInventory = async (req, res) => {
       throw new Error(`Project creation failed: ${projectError.message}`);
     }
 
-    // 3. Create a root card for inventory if one doesn't exist
-    if (projectId) {
-      try {
-        const [existingRootCard] = await pool.execute(
-          'SELECT id FROM root_cards WHERE project_id = ? LIMIT 1',
-          [projectId]
-        );
-        
-        if (existingRootCard.length === 0) {
-          await RootCard.create({
-            projectId: projectId,
-            rootCardId: rootCardId,
-            code: `RC-${projectId}-${Date.now()}`,
-            title: projectName,
-            status: 'planning',
-            priority: 'medium',
-            createdBy: req.user?.id
-          });
-        }
-      } catch (rootCardError) {
-        console.error('Error creating root card:', rootCardError);
-        throw new Error(`Root card creation failed: ${rootCardError.message}`);
-      }
-    }
+    // Note: Project and Production Root Card creation moved to "Sent to Production" trigger
+    // in salesManagementController to ensure proper department separation and authorization.
+    
+    // We only create an inventory alert/task if needed here, but the core records 
+    // should follow the authorized "Sent to Production" flow.
 
     if (!designDetails) {
       return res.status(400).json({ message: 'No design details found for this project' });
@@ -509,6 +472,138 @@ exports.sendToInventory = async (req, res) => {
     res.status(500).json({ 
       message: 'Failed to send to inventory',
       error: error.message 
+    });
+  }
+};
+
+exports.getRootCardsByDepartment = async (req, res) => {
+  try {
+    const { department } = req.params;
+    const decodedDept = decodeURIComponent(department || 'Design Engineering');
+
+    const [rootCards] = await pool.execute(`
+      SELECT DISTINCT so.id, so.po_number, so.project_name, so.customer, so.order_date, so.due_date, so.status, so.priority, so.created_at
+      FROM sales_orders so
+      INNER JOIN root_cards_departments rcd ON so.id = rcd.root_card_id
+      WHERE rcd.department = ?
+      ORDER BY so.created_at DESC
+      LIMIT 100
+    `, [decodedDept]);
+
+    console.log(`[getRootCardsByDepartment] Found ${rootCards.length} root cards for ${decodedDept}`);
+
+    res.json({
+      status: 'success',
+      data: rootCards,
+      message: `Root cards for ${decodedDept} department retrieved`
+    });
+  } catch (error) {
+    console.error('Error fetching root cards by department:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch root cards',
+      error: error.message
+    });
+  }
+};
+
+exports.sendToDesignEngineering = async (req, res) => {
+  try {
+    const { rootCardId } = req.params;
+    const userId = req.user?.id;
+
+    if (!rootCardId) {
+      return res.status(400).json({ message: 'Root Card ID is required' });
+    }
+
+    const [rootCardRows] = await pool.execute(
+      'SELECT id, po_number, project_name, customer FROM sales_orders WHERE id = ?',
+      [rootCardId]
+    );
+
+    if (rootCardRows.length === 0) {
+      return res.status(404).json({ message: 'Root Card not found' });
+    }
+
+    const rootCard = rootCardRows[0];
+
+    const [designEngineers] = await pool.execute(`
+      SELECT DISTINCT u.id, u.username, u.email
+      FROM users u
+      INNER JOIN roles r ON u.role_id = r.id
+      WHERE r.name IN ('Design Engineer', 'design_engineer')
+    `);
+
+    if (designEngineers.length === 0) {
+      return res.status(400).json({ message: 'No Design Engineers found in the system' });
+    }
+
+    try {
+      await pool.execute(
+        'INSERT INTO root_cards_departments (root_card_id, department, assigned_by, status) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE status = ?',
+        [rootCardId, 'Design Engineering', userId || null, 'pending', 'pending']
+      );
+      console.log(`Root Card ${rootCardId} added to Design Engineering department`);
+
+      // Automatically generate workflow tasks
+      try {
+        const productionController = require('../production/productionController');
+        const connection = await pool.getConnection();
+        try {
+          await connection.beginTransaction();
+          // Pass userId (sender) as the initial user, it will fallback to a Design Engineer if sender is Admin
+          await productionController.internalCreateWorkflowTasks(rootCardId, userId, connection);
+          await connection.commit();
+          console.log(`[sendToDesignEngineering] ✓ Automatically generated workflow tasks for Root Card ${rootCardId}`);
+        } catch (workflowError) {
+          await connection.rollback();
+          console.error(`[sendToDesignEngineering] Workflow task generation failed:`, workflowError.message);
+        } finally {
+          connection.release();
+        }
+      } catch (err) {
+        console.error(`[sendToDesignEngineering] Error setting up workflow tasks:`, err.message);
+      }
+    } catch (dbError) {
+      console.error('Error adding root card to department:', dbError);
+    }
+
+    let notificationCount = 0;
+    for (const engineer of designEngineers) {
+      try {
+        await AlertsNotification.create({
+          userId: engineer.id,
+          fromUserId: userId,
+          alertType: 'root_card_assignment',
+          message: `Root Card ${rootCard.po_number} (${rootCard.project_name}) has been sent to Design Engineering Department`,
+          relatedTable: 'sales_orders',
+          relatedId: rootCardId,
+          priority: 'high',
+          link: `/design-engineer/root-cards`
+        });
+        notificationCount++;
+      } catch (notificationError) {
+        console.error(`Failed to send notification to engineer ${engineer.id}:`, notificationError);
+      }
+    }
+
+    res.json({
+      message: 'Root Card sent to Design Engineering Department successfully',
+      rootCard: {
+        id: rootCard.id,
+        poNumber: rootCard.po_number,
+        projectName: rootCard.project_name,
+        customer: rootCard.customer
+      },
+      notificationsSent: notificationCount,
+      designEngineersNotified: designEngineers.length
+    });
+
+  } catch (error) {
+    console.error('Send to Design Engineering error:', error);
+    res.status(500).json({
+      message: 'Failed to send to Design Engineering',
+      error: error.message
     });
   }
 };

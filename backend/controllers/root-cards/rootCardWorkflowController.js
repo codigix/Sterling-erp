@@ -366,13 +366,18 @@ exports.uploadStepDocuments = async (req, res) => {
       currentDocs = [];
     }
 
-    // Add new files
-    const newDocs = files.map((file) => ({
-      name: file.originalname,
-      path: file.path,
-      size: file.size,
-      uploadedAt: new Date().toISOString(),
-    }));
+    // Add new files - convert absolute paths to relative paths
+    const nodePath = require('path');
+    const newDocs = files.map((file) => {
+      const relativePath = nodePath.relative(nodePath.join(__dirname, '../../'), file.path)
+        .replace(/\\/g, '/');
+      return {
+        name: file.originalname,
+        path: relativePath,
+        size: file.size,
+        uploadedAt: new Date().toISOString(),
+      };
+    });
 
     const allDocs = [...currentDocs, ...newDocs];
 

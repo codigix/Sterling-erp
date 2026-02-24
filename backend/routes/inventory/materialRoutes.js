@@ -6,7 +6,7 @@ const materialController = require('../../controllers/inventory/materialControll
 
 router.use(authMiddleware);
 
-router.get('/', roleMiddleware('Admin', 'Inventory', 'Inventory Manager', 'inventory_manager', 'Design Engineer', 'design_engineer', 'Engineering', 'Production', 'production', 'production_manager'), materialController.getMaterials);
+router.get('/', roleMiddleware('Admin', 'Inventory', 'Inventory Manager', 'inventory_manager', 'Design Engineer', 'design_engineer', 'design.engineer', 'Engineering', 'engineering', 'Production', 'production', 'production_manager'), materialController.getMaterials);
 router.post('/', roleMiddleware('Admin', 'Inventory', 'Inventory Manager', 'inventory_manager'), materialController.createMaterial);
 router.get('/:id', roleMiddleware('Admin', 'Inventory', 'Inventory Manager', 'inventory_manager', 'Procurement Manager', 'procurement_manager', 'Production', 'production', 'production_manager'), materialController.getMaterialById);
 router.put('/:id', roleMiddleware('Admin', 'Inventory', 'Inventory Manager', 'inventory_manager'), materialController.updateMaterial);

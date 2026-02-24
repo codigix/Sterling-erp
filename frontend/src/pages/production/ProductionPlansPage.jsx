@@ -25,7 +25,7 @@ import {
   Bell,
   Box,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import Swal from "sweetalert2";
 import { showSuccess, showError } from "../../utils/toastUtils";
 import MaterialRequestModal from "../../components/production/MaterialRequestModal";
@@ -46,6 +46,35 @@ const ProductionPlansPage = () => {
   const [selectedPlanData, setSelectedPlanData] = useState(null);
   const [selectedPlanMaterials, setSelectedPlanMaterials] = useState([]);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const salesOrderId = params.get("salesOrderId");
+    const taskId = params.get("taskId");
+    const openMaterialRequest = params.get("openMaterialRequest");
+
+    if (salesOrderId && !openMaterialRequest) {
+      // If we have a salesOrderId in the URL, redirect to create a new plan for it
+      navigate(`/department/production/plans/new?salesOrderId=${salesOrderId}${taskId ? `&taskId=${taskId}` : ''}`);
+    }
+  }, [location.search, navigate]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const salesOrderId = params.get("salesOrderId");
+    const openMaterialRequest = params.get("openMaterialRequest");
+
+    if (openMaterialRequest === "true" && salesOrderId && plans.length > 0) {
+      // Find the plan for this sales order (it might be in root_card_id or sales_order_id field)
+      const plan = plans.find(p => p.sales_order_id == salesOrderId || p.root_card_id == salesOrderId);
+      if (plan) {
+        handleSendMaterialRequest(plan.id);
+        // Clear the query params after opening the modal
+        navigate("/department/production/plans", { replace: true });
+      }
+    }
+  }, [location.search, plans, navigate]);
 
   useEffect(() => {
     fetchPlans();

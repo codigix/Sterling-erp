@@ -19,8 +19,8 @@ const authMiddleware = async (req, res, next) => {
           SELECT u.id, u.username, r.name as role 
           FROM users u 
           JOIN roles r ON u.role_id = r.id 
-          WHERE u.username = ?
-        `, [demoUsername]);
+          WHERE u.username = ? OR u.username = ?
+        `, [demoUsername, demoUsername.replace(/\./g, '_')]);
         
         if (users.length > 0) {
           req.user = { 

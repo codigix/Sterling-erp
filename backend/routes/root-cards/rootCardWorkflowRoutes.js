@@ -4,18 +4,11 @@ const rootCardWorkflowController = require('../../controllers/root-cards/rootCar
 const authMiddleware = require('../../middleware/authMiddleware');
 const multer = require('multer');
 const path = require('path');
+const { createCustomStorage } = require('../../utils/multerStorage');
 
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, '../../uploads/root-cards/documents'));
-  },
-  filename: (req, file, cb) => {
-    cb(null, `${Date.now()}-${file.originalname}`);
-  },
+const upload = multer({ 
+  storage: createCustomStorage(path.join(__dirname, '../../uploads/root-cards/documents'))
 });
-
-const upload = multer({ storage });
 
 // Initialize workflow
 router.post('/initialize', authMiddleware, rootCardWorkflowController.initializeWorkflow);

@@ -14,10 +14,8 @@ import {
 import DesignEngineerDashboard from '../../pages/roles/DesignEngineerDashboard';
 
 // Documents
-import MyDesignsPage from '../../pages/design-engineer/documents/MyDesignsPage';
-import DrawingsPage from '../../pages/design-engineer/documents/DrawingsPage';
-import SpecificationsPage from '../../pages/design-engineer/documents/SpecificationsPage';
-import TechnicalFilesPage from '../../pages/design-engineer/documents/TechnicalFilesPage';
+import RawDesignsPage from '../../pages/design-engineer/documents/RawDesignsPage';
+import RequiredDocsPage from '../../pages/design-engineer/documents/RequiredDocsPage';
 
 // BOM
 import CreateBOMPage from '../../pages/design-engineer/bom/CreateBOMPage';
@@ -40,6 +38,7 @@ import DesignEngineerReportsPage from '../../pages/design-engineer/DesignEnginee
 
 // Project Details
 import ProjectDetailsPage from '../../pages/design-engineer/ProjectDetailsPage';
+import RootCardDetailPage from '../../pages/design-engineer/RootCardDetailPage';
 
 const navigationItems = [
   {
@@ -56,10 +55,8 @@ const navigationItems = [
     title: 'Design Documents',
     icon: FileText,
     submenu: [
-      { title: 'My Designs', path: '/design-engineer/documents/designs', icon: Wrench },
-      { title: 'Drawings', path: '/design-engineer/documents/drawings', icon: FileText },
-      { title: 'Specifications', path: '/design-engineer/documents/specs', icon: FileText },
-      { title: 'Technical Files', path: '/design-engineer/documents/technical', icon: FileText },
+      { title: 'Raw Design and Drawings', path: '/design-engineer/documents/raw-designs', icon: FileText },
+      { title: 'Required Documents for Project', path: '/design-engineer/documents/required-docs', icon: FileText },
     ]
   },
   {
@@ -105,12 +102,11 @@ const DesignEngineerLayout = () => {
       <Routes>
         <Route path="dashboard" element={<DesignEngineerDashboard />} />
         <Route path="root-cards" element={<ProjectDetailsPage />} />
+        <Route path="root-cards/:rootCardId" element={<RootCardDetailPage />} />
         
         {/* Documents Routes */}
-        <Route path="documents/designs" element={<MyDesignsPage />} />
-        <Route path="documents/drawings" element={<DrawingsPage />} />
-        <Route path="documents/specs" element={<SpecificationsPage />} />
-        <Route path="documents/technical" element={<TechnicalFilesPage />} />
+        <Route path="documents/raw-designs" element={<RawDesignsPage />} />
+        <Route path="documents/required-docs" element={<RequiredDocsPage />} />
         
         {/* BOM Routes */}
         <Route path="bom/create" element={<CreateBOMPage />} />

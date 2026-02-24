@@ -25,7 +25,7 @@ import {
   Play,
   TrendingUp
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Swal from 'sweetalert2';
 
 const WorkOrdersPage = () => {
@@ -40,14 +40,21 @@ const WorkOrdersPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const navigate = useNavigate();
+  const location = useLocation();
 
   const fetchWorkOrders = useCallback(async () => {
     try {
       setLoading(true);
+      const params = new URLSearchParams(location.search);
+      const salesOrderId = params.get('salesOrderId');
+      const rootCardId = params.get('rootCardId');
+
       const response = await axios.get('/production/work-orders', {
         params: {
           search: searchTerm,
-          status: statusFilter === 'all' ? undefined : statusFilter
+          status: statusFilter === 'all' ? undefined : statusFilter,
+          salesOrderId: salesOrderId,
+          rootCardId: rootCardId
         }
       });
       
@@ -116,6 +123,18 @@ const WorkOrdersPage = () => {
     }
   };
 
+  const handleCreateNew = () => {
+    const params = new URLSearchParams(location.search);
+    const salesOrderId = params.get('salesOrderId');
+    const rootCardId = params.get('rootCardId');
+    let url = '/department/production/work-orders/new';
+    const queryParts = [];
+    if (salesOrderId) queryParts.push(`salesOrderId=${salesOrderId}`);
+    if (rootCardId) queryParts.push(`rootCardId=${rootCardId}`);
+    if (queryParts.length > 0) url += `?${queryParts.join('&')}`;
+    navigate(url);
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 pb-10">
       <div className="max-w-[1600px] mx-auto px-6 py-6">
@@ -142,7 +161,7 @@ const WorkOrdersPage = () => {
           
           <div className="flex items-center gap-3">
             <button 
-              onClick={() => navigate('/department/production/work-orders/new')}
+              onClick={handleCreateNew}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-900 text-white font-semibold hover:bg-black transition-all text-sm shadow-sm"
             >
               <Plus size={18} />

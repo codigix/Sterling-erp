@@ -26,7 +26,10 @@ const EngineeringTasksPage = () => {
   const fetchRootCards = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await axios.get('/root-cards', { __sessionGuard: true });
+      const response = await axios.get('/root-cards', { 
+        params: { assignedOnly: true },
+        __sessionGuard: true 
+      });
       setRootCards(response.data.rootCards || []);
       if (response.data.rootCards && response.data.rootCards.length > 0) {
         setSelectedRootCard(response.data.rootCards[0].id);

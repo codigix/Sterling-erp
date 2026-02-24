@@ -438,7 +438,9 @@ const CreateBOMPage = () => {
       try {
         setLoadingMaterials(true);
         const [rootCardsRes, bomsRes] = await Promise.all([
-          axios.get("/root-cards"),
+          axios.get("/root-cards", {
+            params: { assignedOnly: true }
+          }),
           axios.get("/engineering/bom/comprehensive")
         ]);
         

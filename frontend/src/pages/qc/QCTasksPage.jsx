@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import axios from "../../utils/api";
 import {
   Plus,
@@ -16,6 +16,7 @@ import "../../styles/TaskPage.css";
 
 const QCTasksPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [grnInspections, setGrnInspections] = useState([]);
   const [stageQC, setStageQC] = useState([]);
   const [grnStats, setGrnStats] = useState({});
@@ -27,9 +28,12 @@ const QCTasksPage = () => {
     const fetchQCData = async () => {
       try {
         setLoading(true);
+        const params = new URLSearchParams(location.search);
+        const salesOrderId = params.get("salesOrderId");
+
         const [grnRes, stageRes] = await Promise.all([
-          axios.get("/qc/portal/grn-inspections"),
-          axios.get("/qc/portal/stage-qc"),
+          axios.get("/qc/portal/grn-inspections", { params: { salesOrderId } }),
+          axios.get("/qc/portal/stage-qc", { params: { salesOrderId } }),
         ]);
         setGrnInspections(grnRes.data.grnInspections || []);
         setGrnStats(grnRes.data.stats || {});

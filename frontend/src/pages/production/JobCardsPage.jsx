@@ -55,10 +55,16 @@ const JobCardsPage = () => {
   const fetchJobCards = useCallback(async () => {
     try {
       setLoading(true);
+      const params = new URLSearchParams(location.search);
+      const salesOrderId = params.get('salesOrderId');
+      const rootCardId = params.get('rootCardId');
+
       const response = await axios.get('/production/work-orders/job-cards', {
         params: {
           search: searchTerm,
-          status: statusFilter === 'all' ? undefined : statusFilter
+          status: statusFilter === 'all' ? undefined : statusFilter,
+          salesOrderId: salesOrderId,
+          rootCardId: rootCardId
         }
       });
       setWorkOrders(response.data || []);

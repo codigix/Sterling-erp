@@ -20,17 +20,19 @@ import {
   Filter,
   FileText
 } from 'lucide-react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import axios from '../../utils/api';
 import Swal from 'sweetalert2';
 
 const WorkOrderFormPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { id } = useParams();
   const isEdit = !!id;
   const [loading, setLoading] = useState(false);
   const [items, setItems] = useState([]);
   const [boms, setBoms] = useState([]);
+  const [salesOrders, setSalesOrders] = useState([]);
   const [formData, setFormData] = useState({
     workOrderNo: '',
     salesOrderId: '',
@@ -54,12 +56,14 @@ const WorkOrderFormPage = () => {
   const fetchInitialData = useCallback(async () => {
     try {
       setLoading(true);
-      const [itemsRes, bomsRes] = await Promise.all([
+      const [itemsRes, bomsRes, salesOrdersRes] = await Promise.all([
         axios.get('/inventory/materials'),
-        axios.get('/engineering/bom/comprehensive')
+        axios.get('/engineering/bom/comprehensive'),
+        axios.get('/sales/management')
       ]);
       setItems(itemsRes.data.materials || []);
       setBoms(bomsRes.data.boms || bomsRes.data || []);
+      setSalesOrders(salesOrdersRes.data || []);
 
       if (isEdit) {
         const woRes = await axios.get(`/production/work-orders/${id}`);
@@ -81,6 +85,25 @@ const WorkOrderFormPage = () => {
           operations: wo.operations || [],
           inventory: wo.inventory || []
         });
+      } else {
+        // Handle query params for auto-population
+        const params = new URLSearchParams(location.search);
+        const querySalesOrderId = params.get('salesOrderId');
+        const queryRootCardId = params.get('rootCardId');
+
+        if (querySalesOrderId) {
+          const matchedSO = (salesOrdersRes.data || []).find(so => so.id == querySalesOrderId);
+          if (matchedSO) {
+            setFormData(prev => ({
+              ...prev,
+              salesOrderId: matchedSO.id,
+              itemCode: matchedSO.item_code || '',
+              itemName: matchedSO.product_name || '',
+              bomId: matchedSO.bom_id || '',
+              quantity: matchedSO.quantity || 1
+            }));
+          }
+        }
       }
     } catch (error) {
       console.error('Error fetching form data:', error);
@@ -88,7 +111,7 @@ const WorkOrderFormPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [id, isEdit]);
+  }, [id, isEdit, location.search]);
 
   useEffect(() => {
     fetchInitialData();

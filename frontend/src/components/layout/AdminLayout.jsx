@@ -19,6 +19,7 @@ import {
   ShoppingCart,
   CheckSquare,
 } from "lucide-react";
+import NotificationBell from "../common/NotificationBell";
 
 const AdminLayout = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -148,14 +149,7 @@ const AdminLayout = () => {
           {/* Right side */}
           <div className="flex items-center text-xs space-x-4">
             {/* Notifications */}
-            <div className="relative">
-              <button className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors relative">
-                <Bell size={20} />
-                <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center text-xs justify-center">
-                  3
-                </span>
-              </button>
-            </div>
+            <NotificationBell />
 
             {/* User Menu */}
             <div className="relative">

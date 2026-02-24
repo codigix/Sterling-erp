@@ -35,14 +35,14 @@ const RootCardBuilderPage = () => {
   const fetchRootCards = useCallback(async () => {
     setLoading(true);
     try {
-      const params = { all: 'true' };
+      const params = { all: 'true', assignedOnly: true };
       if (statusFilter && statusFilter !== 'all') {
         params.status = statusFilter;
       }
       if (searchTerm) {
         params.search = searchTerm;
       }
-      const response = await axios.get('/production/portal/root-cards', {
+      const response = await axios.get('/production/root-cards', {
         params,
         __sessionGuard: true
       });

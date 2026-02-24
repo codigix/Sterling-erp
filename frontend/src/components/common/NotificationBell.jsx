@@ -89,14 +89,26 @@ const NotificationBell = () => {
   };
 
   const fetchNotifications = async () => {
-    if (!user?.id) return;
+    console.log('[NotificationBell] fetchNotifications called, user:', user);
+    if (!user?.id) {
+      console.warn('[NotificationBell] No user.id found!');
+      return;
+    }
     try {
+      console.log(`[NotificationBell] Fetching from /alerts/user/${user.id}`);
       const response = await axios.get(`/alerts/user/${user.id}`);
       const notifs = response.data || [];
+      console.log('[NotificationBell] API Response status:', response.status);
+      console.log('[NotificationBell] Fetched notifications:', notifs);
+      console.log('[NotificationBell] Response data type:', typeof response.data);
       setNotifications(notifs);
-      setUnreadCount(notifs.filter(n => !n.is_read).length);
+      const unread = notifs.filter(n => !n.is_read);
+      console.log('[NotificationBell] Unread count:', unread.length, 'Total:', notifs.length);
+      setUnreadCount(unread.length);
     } catch (error) {
-      console.error('Error fetching notifications:', error);
+      console.error('[NotificationBell] Error fetching notifications:', error);
+      console.error('[NotificationBell] Error response:', error.response?.data);
+      console.error('[NotificationBell] Error status:', error.response?.status);
     }
   };
 

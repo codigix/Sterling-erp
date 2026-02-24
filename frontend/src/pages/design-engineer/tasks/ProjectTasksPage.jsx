@@ -63,7 +63,7 @@ const ProjectTasksPage = () => {
     setLoading(true);
     try {
       const response = await axios.get("/root-cards", {
-        params: { includeSteps: true },
+        params: { includeSteps: true, assignedOnly: true },
       });
       const data = response.data.rootCards || [];
       const filteredData = data.filter(

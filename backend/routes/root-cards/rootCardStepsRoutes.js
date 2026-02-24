@@ -4,6 +4,7 @@ const authMiddleware = require('../../middleware/authMiddleware');
 const roleMiddleware = require('../../middleware/roleMiddleware');
 const multer = require('multer');
 const path = require('path');
+const { createCustomStorage } = require('../../utils/multerStorage');
 const rootCardStepController = require('../../controllers/root-cards/rootCardStepController');
 const clientPOController = require('../../controllers/root-cards/clientPOController');
 const designEngineeringController = require('../../controllers/root-cards/designEngineeringController');
@@ -14,7 +15,7 @@ const shipmentController = require('../../controllers/root-cards/shipmentControl
 const deliveryController = require('../../controllers/root-cards/deliveryController');
 
 const designUpload = multer({
-  dest: path.join(__dirname, '../../uploads/design-engineering'),
+  storage: createCustomStorage(path.join(__dirname, '../../uploads/design-engineering')),
   limits: { fileSize: 50 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowedMimes = [
@@ -70,7 +71,7 @@ const designUpload = multer({
 });
 
 const poUpload = multer({
-  dest: path.join(__dirname, '../../uploads/client-po'),
+  storage: createCustomStorage(path.join(__dirname, '../../uploads/client-po')),
   limits: { fileSize: 20 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowedMimes = [
@@ -98,6 +99,7 @@ const poUpload = multer({
 });
 
 router.use(authMiddleware);
+router.use(roleMiddleware('Admin', 'Management', 'Design Engineer', 'design_engineer', 'design.engineer', 'Sales', 'Production', 'QC', 'Inventory', 'Procurement'));
 
 router.get('/:rootCardId/steps', rootCardStepController.getSteps);
 router.get('/:rootCardId/steps/:stepKey', rootCardStepController.getStepByKey);
@@ -135,7 +137,17 @@ router.post('/:rootCardId/design-engineering/approve', designEngineeringControll
 router.post('/:rootCardId/design-engineering/reject', designEngineeringController.rejectDesign);
 router.post('/:rootCardId/design-engineering/upload', designUpload.array('documents'), designEngineeringController.uploadDesignDocuments);
 router.get('/:rootCardId/design-engineering/documents', designEngineeringController.getDesignDocuments);
+router.get('/:rootCardId/design-engineering/raw-designs', designEngineeringController.getRawDesigns);
+router.get('/:rootCardId/design-engineering/required-documents', designEngineeringController.getRequiredDocuments);
+router.delete('/:rootCardId/design-engineering/raw-designs/:drawingId', designEngineeringController.removeRawDesign);
+router.delete('/:rootCardId/design-engineering/required-documents/:documentId', designEngineeringController.removeRequiredDocument);
 router.get('/:rootCardId/design-engineering/documents/:documentId', designEngineeringController.getDesignDocument);
+router.get('/:rootCardId/design-engineering/documents/:documentId/download', designEngineeringController.downloadDocument);
+router.get('/:rootCardId/design-engineering/raw-designs/:drawingId/download', designEngineeringController.downloadDrawing);
+router.post('/:rootCardId/design-engineering/documents/:documentId/approve', designEngineeringController.approveDocument);
+router.post('/:rootCardId/design-engineering/documents/:documentId/reject', designEngineeringController.rejectDocument);
+router.post('/:rootCardId/design-engineering/raw-designs/:drawingId/approve', designEngineeringController.approveDrawing);
+router.post('/:rootCardId/design-engineering/raw-designs/:drawingId/reject', designEngineeringController.rejectDrawing);
 router.get('/:rootCardId/design-engineering/validate', designEngineeringController.validateDesign);
 router.get('/:rootCardId/design-engineering/review-history', designEngineeringController.getReviewHistory);
 

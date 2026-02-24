@@ -54,7 +54,8 @@ const ProductionDashboard = () => {
   const fetchRootCards = useCallback(async () => {
     setLoadingRootCards(true);
     try {
-      const response = await axios.get('/production/root-cards?status=planning', {
+      const response = await axios.get('/production/root-cards', {
+        params: { status: 'planning', assignedOnly: true },
         __sessionGuard: true
       });
       const cards = Array.isArray(response.data) ? response.data : response.data.rootCards || [];
