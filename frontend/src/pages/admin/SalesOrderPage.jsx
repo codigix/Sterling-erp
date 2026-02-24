@@ -11,13 +11,15 @@ import {
   ClipboardList,
   Eye,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  CheckCircle2,
+  Send
 } from 'lucide-react';
 import CreateSalesOrderModal from './CreateSalesOrderModal';
 import Swal from 'sweetalert2';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const SalesOrderPage = () => {
   const [loading, setLoading] = useState(false);
@@ -27,7 +29,9 @@ const SalesOrderPage = () => {
   const [expandedOrderId, setExpandedOrderId] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isDrawerVisible, setIsDrawerVisible] = useState(false);
+  const [preSelectedRootCardId, setPreSelectedRootCardId] = useState(null);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const fetchData = async () => {
     setLoading(true);
@@ -48,7 +52,19 @@ const SalesOrderPage = () => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+    
+    // Handle deep link from notification
+    const params = new URLSearchParams(location.search);
+    const action = params.get('action');
+    const rootCardId = params.get('rootCardId');
+    
+    if (action === 'create' && rootCardId) {
+      setPreSelectedRootCardId(rootCardId);
+      setIsModalVisible(true);
+      // Clear URL params
+      navigate('/admin/sales-order', { replace: true });
+    }
+  }, [location]);
 
   const handleEdit = (order) => {
     setEditingOrder(order);
@@ -185,6 +201,29 @@ const SalesOrderPage = () => {
     }
   };
 
+  const handleSendToProduction = async (order) => {
+    try {
+      const result = await Swal.fire({
+        title: 'Send to Production?',
+        text: `This will send Sales Order ${order.so_number} to the Production Department.`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#3b82f6',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, send it!'
+      });
+
+      if (result.isConfirmed) {
+        await axios.patch(`sales/management/${order.id}/status`, { status: 'Sent to Production' });
+        Swal.fire('Sent!', 'Sales Order has been sent to production.', 'success');
+        fetchData();
+      }
+    } catch (error) {
+      console.error('Send to production error:', error);
+      Swal.fire('Error!', 'Failed to send sales order to production.', 'error');
+    }
+  };
+
   const getStatusColor = (status) => {
     const s = status?.toLowerCase();
     switch (s) {
@@ -192,7 +231,9 @@ const SalesOrderPage = () => {
       case 'approved': return 'bg-emerald-100 text-emerald-800';
       case 'cancelled': return 'bg-red-100 text-red-800';
       case 'in progress': 
-      case 'in_progress': return 'bg-blue-100 text-blue-800';
+      case 'in_progress': 
+      case 'sent to production':
+      case 'sent_to_production': return 'bg-blue-100 text-blue-800';
       case 'pending': return 'bg-amber-100 text-amber-800';
       default: return 'bg-yellow-100 text-yellow-800';
     }
@@ -275,13 +316,13 @@ const SalesOrderPage = () => {
                       </td>
                       <td className="px-6 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex justify-end gap-1">
-                          {order.status?.toLowerCase() === 'pending' && (
+                          {order.status?.toLowerCase() === 'approved' && (
                             <button 
-                              onClick={() => navigate('/department/production/plans', { state: { createPlan: true, order: order } })}
-                              className="p-1.5 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-lg transition-colors"
-                              title="Create Production Plan"
+                              onClick={() => handleSendToProduction(order)}
+                              className="p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                              title="Send to Production"
                             >
-                              <ClipboardList size={18} />
+                              <Send size={18} />
                             </button>
                           )}
                           <button 
@@ -371,13 +412,16 @@ const SalesOrderPage = () => {
       {isModalVisible && (
         <CreateSalesOrderModal 
           editData={editingOrder}
+          preSelectedRootCardId={preSelectedRootCardId}
           onCancel={() => {
             setIsModalVisible(false);
             setEditingOrder(null);
+            setPreSelectedRootCardId(null);
           }}
           onSuccess={() => {
             setIsModalVisible(false);
             setEditingOrder(null);
+            setPreSelectedRootCardId(null);
             fetchData();
           }}
         />

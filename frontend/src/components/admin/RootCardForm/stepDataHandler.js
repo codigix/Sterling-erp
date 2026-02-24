@@ -1,7 +1,6 @@
 import axios from "../../../utils/api";
 
 export const buildStepPayload = (stepNumber, formData, poDocuments = []) => {
-  // Helper function to clean up attachments by removing non-serializable file objects
   const cleanAttachments = (attachments) => {
     if (!attachments) return attachments;
     const cleaned = { ...attachments };
@@ -11,8 +10,9 @@ export const buildStepPayload = (stepNumber, formData, poDocuments = []) => {
         size: d.size,
         type: d.type,
         isLocal: d.isLocal,
-        // Exclude the 'file' property since it's not serializable
+        path: d.path,
       }));
+      console.log(`[cleanAttachments] Cleaned ${cleaned.drawings.length} drawings:`, JSON.stringify(cleaned.drawings, null, 2));
     }
     if (cleaned.documents) {
       cleaned.documents = cleaned.documents.map(doc => ({
@@ -20,8 +20,9 @@ export const buildStepPayload = (stepNumber, formData, poDocuments = []) => {
         size: doc.size,
         type: doc.type,
         isLocal: doc.isLocal,
-        // Exclude the 'file' property since it's not serializable
+        path: doc.path,
       }));
+      console.log(`[cleanAttachments] Cleaned ${cleaned.documents.length} documents:`, JSON.stringify(cleaned.documents, null, 2));
     }
     return cleaned;
   };
@@ -170,6 +171,10 @@ export const saveStepDataToAPI = async (stepNumber, rootCardId, formData, poDocu
       throw new Error(`No endpoint configured for step ${stepNumber}`);
     }
 
+    if (stepNumber === 2) {
+      console.log(`[saveStepDataToAPI] Step 2 payload being sent:`, JSON.stringify(payload, null, 2));
+    }
+
     const response = await axios.post(endpoint, payload);
     console.log(`Step ${stepNumber} data saved successfully`, response.data);
     return response.data;
@@ -188,12 +193,21 @@ export const uploadWizardAttachments = async (rootCardId, formData) => {
     const designEng = formData.designEngineering || {};
     const attachments = designEng.attachments || {};
     
-    console.log(`[uploadWizardAttachments] Root Card: ${rootCardId}, Attachments:`, attachments);
+    console.log(`[uploadWizardAttachments] ===== START =====`);
+    console.log(`[uploadWizardAttachments] Root Card ID: ${rootCardId}`);
+    console.log(`[uploadWizardAttachments] designEng:`, designEng);
+    console.log(`[uploadWizardAttachments] attachments:`, attachments);
+    console.log(`[uploadWizardAttachments] attachments.drawings:`, attachments.drawings);
+    console.log(`[uploadWizardAttachments] attachments.documents:`, attachments.documents);
     
     const uploadPromises = [];
     
     // Upload drawings
     if (Array.isArray(attachments.drawings) && attachments.drawings.length > 0) {
+      console.log(`[uploadWizardAttachments] Processing ${attachments.drawings.length} drawings`);
+      attachments.drawings.forEach((d, i) => {
+        console.log(`[uploadWizardAttachments] Drawing ${i}:`, { name: d.name, isLocal: d.isLocal, hasFile: !!d.file });
+      });
       const localDrawings = attachments.drawings.filter(d => d.isLocal && d.file);
       console.log(`[uploadWizardAttachments] Found ${localDrawings.length} local drawings out of ${attachments.drawings.length}`);
       if (localDrawings.length > 0) {
@@ -220,6 +234,10 @@ export const uploadWizardAttachments = async (rootCardId, formData) => {
     
     // Upload documents
     if (Array.isArray(attachments.documents) && attachments.documents.length > 0) {
+      console.log(`[uploadWizardAttachments] Processing ${attachments.documents.length} documents`);
+      attachments.documents.forEach((d, i) => {
+        console.log(`[uploadWizardAttachments] Document ${i}:`, { name: d.name, isLocal: d.isLocal, hasFile: !!d.file });
+      });
       const localDocs = attachments.documents.filter(d => d.isLocal && d.file);
       console.log(`[uploadWizardAttachments] Found ${localDocs.length} local documents out of ${attachments.documents.length}`);
       if (localDocs.length > 0) {
@@ -245,14 +263,19 @@ export const uploadWizardAttachments = async (rootCardId, formData) => {
     }
     
     if (uploadPromises.length > 0) {
+      console.log(`[uploadWizardAttachments] Starting upload of ${uploadPromises.length} batches`);
       const results = await Promise.all(uploadPromises);
-      console.log('Wizard attachments uploaded successfully:', results);
+      console.log('[uploadWizardAttachments] ✓ All uploads completed:', results);
       return results;
+    } else {
+      console.log(`[uploadWizardAttachments] No files to upload (uploadPromises.length = 0)`);
     }
     
+    console.log(`[uploadWizardAttachments] ===== END =====`);
     return [];
   } catch (err) {
-    console.error('Error uploading wizard attachments:', err);
+    console.error('[uploadWizardAttachments] ✗ FATAL ERROR:', err.message);
+    console.error('[uploadWizardAttachments] Error:', err);
     throw err;
   }
 };

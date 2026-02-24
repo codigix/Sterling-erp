@@ -3,7 +3,6 @@ import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import {
   Menu,
-  Bell,
   Search,
   User,
   LogOut,
@@ -12,6 +11,7 @@ import {
   BarChart3,
   ChevronRight,
 } from "lucide-react";
+import NotificationBell from "../common/NotificationBell";
 import "./RoleDashboardLayout.css";
 
 const RoleDashboardLayout = ({
@@ -94,15 +94,7 @@ const RoleDashboardLayout = ({
           {/* Right side */}
           <div className="flex items-center text-xs space-x-4">
             {/* Notifications */}
-            <Link
-              to="/notifications"
-              className="relative p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-            >
-              <Bell size={20} />
-              <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center text-xs justify-center">
-                2
-              </span>
-            </Link>
+            <NotificationBell />
 
             {/* User Menu */}
             <div className="relative">

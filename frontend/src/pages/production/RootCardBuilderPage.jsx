@@ -42,7 +42,7 @@ const RootCardBuilderPage = () => {
       if (searchTerm) {
         params.search = searchTerm;
       }
-      const response = await axios.get('/production/portal/root-cards', {
+      const response = await axios.get('/production/root-cards', {
         params,
         __sessionGuard: true
       });

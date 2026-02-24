@@ -56,6 +56,28 @@ class AlertsNotification {
   }
 
   static async findByUserId(userId, filters = {}) {
+    let resolvedUserId = userId;
+    
+    if (String(userId).startsWith('demo-')) {
+      let demoUsername = String(userId).replace('demo-', '');
+      try {
+        const [users] = await pool.execute("SELECT id FROM users WHERE username = ?", [demoUsername]);
+        if (users.length > 0) {
+          resolvedUserId = users[0].id;
+          console.log(`[AlertsNotification.findByUserId] Resolved demo user ${userId} to database user ${resolvedUserId}`);
+        } else {
+          const normalizedUsername = demoUsername.replace(/\./g, '_');
+          const [users2] = await pool.execute("SELECT id FROM users WHERE username = ?", [normalizedUsername]);
+          if (users2.length > 0) {
+            resolvedUserId = users2[0].id;
+            console.log(`[AlertsNotification.findByUserId] Resolved demo user ${userId} to database user ${resolvedUserId} (normalized username)`);
+          }
+        }
+      } catch (err) {
+        console.warn(`[AlertsNotification.findByUserId] Failed to resolve demo user ${userId}:`, err.message);
+      }
+    }
+
     let query = `
       SELECT an.*, u.username AS recipient_name, fu.username AS sender_name
       FROM alerts_notifications an
@@ -63,7 +85,7 @@ class AlertsNotification {
       LEFT JOIN users fu ON fu.id = an.from_user_id
       WHERE an.user_id = ?
     `;
-    const params = [userId];
+    const params = [resolvedUserId];
 
     if (filters.isRead !== undefined) {
       query += ' AND an.is_read = ?';
@@ -99,9 +121,31 @@ class AlertsNotification {
   }
 
   static async markAllAsRead(userId) {
+    let resolvedUserId = userId;
+    
+    if (String(userId).startsWith('demo-')) {
+      let demoUsername = String(userId).replace('demo-', '');
+      try {
+        const [users] = await pool.execute("SELECT id FROM users WHERE username = ?", [demoUsername]);
+        if (users.length > 0) {
+          resolvedUserId = users[0].id;
+          console.log(`[AlertsNotification.markAllAsRead] Resolved demo user ${userId} to database user ${resolvedUserId}`);
+        } else {
+          const normalizedUsername = demoUsername.replace(/\./g, '_');
+          const [users2] = await pool.execute("SELECT id FROM users WHERE username = ?", [normalizedUsername]);
+          if (users2.length > 0) {
+            resolvedUserId = users2[0].id;
+            console.log(`[AlertsNotification.markAllAsRead] Resolved demo user ${userId} to database user ${resolvedUserId} (normalized username)`);
+          }
+        }
+      } catch (err) {
+        console.warn(`[AlertsNotification.markAllAsRead] Failed to resolve demo user ${userId}:`, err.message);
+      }
+    }
+
     await pool.execute(
       'UPDATE alerts_notifications SET is_read = TRUE, read_at = NOW() WHERE user_id = ? AND is_read = FALSE',
-      [userId]
+      [resolvedUserId]
     );
   }
 
@@ -117,14 +161,58 @@ class AlertsNotification {
   }
 
   static async getUnreadCount(userId) {
+    let resolvedUserId = userId;
+    
+    if (String(userId).startsWith('demo-')) {
+      let demoUsername = String(userId).replace('demo-', '');
+      try {
+        const [users] = await pool.execute("SELECT id FROM users WHERE username = ?", [demoUsername]);
+        if (users.length > 0) {
+          resolvedUserId = users[0].id;
+          console.log(`[AlertsNotification.getUnreadCount] Resolved demo user ${userId} to database user ${resolvedUserId}`);
+        } else {
+          const normalizedUsername = demoUsername.replace(/\./g, '_');
+          const [users2] = await pool.execute("SELECT id FROM users WHERE username = ?", [normalizedUsername]);
+          if (users2.length > 0) {
+            resolvedUserId = users2[0].id;
+            console.log(`[AlertsNotification.getUnreadCount] Resolved demo user ${userId} to database user ${resolvedUserId} (normalized username)`);
+          }
+        }
+      } catch (err) {
+        console.warn(`[AlertsNotification.getUnreadCount] Failed to resolve demo user ${userId}:`, err.message);
+      }
+    }
+
     const [rows] = await pool.execute(
       'SELECT COUNT(*) AS unread_count FROM alerts_notifications WHERE user_id = ? AND is_read = FALSE',
-      [userId]
+      [resolvedUserId]
     );
     return rows[0].unread_count;
   }
 
   static async getStats(userId) {
+    let resolvedUserId = userId;
+    
+    if (String(userId).startsWith('demo-')) {
+      let demoUsername = String(userId).replace('demo-', '');
+      try {
+        const [users] = await pool.execute("SELECT id FROM users WHERE username = ?", [demoUsername]);
+        if (users.length > 0) {
+          resolvedUserId = users[0].id;
+          console.log(`[AlertsNotification.getStats] Resolved demo user ${userId} to database user ${resolvedUserId}`);
+        } else {
+          const normalizedUsername = demoUsername.replace(/\./g, '_');
+          const [users2] = await pool.execute("SELECT id FROM users WHERE username = ?", [normalizedUsername]);
+          if (users2.length > 0) {
+            resolvedUserId = users2[0].id;
+            console.log(`[AlertsNotification.getStats] Resolved demo user ${userId} to database user ${resolvedUserId} (normalized username)`);
+          }
+        }
+      } catch (err) {
+        console.warn(`[AlertsNotification.getStats] Failed to resolve demo user ${userId}:`, err.message);
+      }
+    }
+
     const [rows] = await pool.execute(
       `
         SELECT 
@@ -138,7 +226,7 @@ class AlertsNotification {
         FROM alerts_notifications
         WHERE user_id = ?
       `,
-      [userId]
+      [resolvedUserId]
     );
     return rows[0];
   }

@@ -45,7 +45,42 @@ class RootCard {
     }
 
     if (filters.assignedOnly === true || filters.assignedOnly === 'true') {
-      conditions.push('so.assigned_to IS NOT NULL');
+      if (filters.userId) {
+        // Find orders where:
+        // 1. Explicitly assigned to this user
+        // 2. Assigned to a department where this user belongs (based on their role)
+        // 3. User is assigned to a specific step in that root card
+        // Use more flexible role matching (Design Engineer, design_engineer, design.engineer)
+        conditions.push(`(
+          so.assigned_to = ? 
+          OR EXISTS (
+            SELECT 1 FROM root_cards_departments rcd
+            JOIN users u ON u.id = ?
+            JOIN roles r ON u.role_id = r.id
+            WHERE rcd.root_card_id = so.id 
+            AND (
+              (rcd.department LIKE '%Design Engineering%' AND (r.name LIKE '%Design Engineer%' OR r.name LIKE '%design_engineer%' OR r.name LIKE '%design.engineer%'))
+              OR (rcd.department LIKE '%Inventory%' AND (r.name LIKE '%Inventory%' OR r.name LIKE '%inventory%' OR r.name LIKE '%inventory_manager%'))
+              OR (rcd.department LIKE '%Production%' AND (r.name LIKE '%Production%' OR r.name LIKE '%production%' OR r.name LIKE '%production_manager%'))
+            )
+          )
+          OR EXISTS (
+            SELECT 1 FROM sales_order_steps sos
+            WHERE sos.sales_order_id = so.id AND sos.assigned_to = ?
+          )
+          OR EXISTS (
+            SELECT 1 FROM sales_orders_management som
+            JOIN users u ON u.id = ?
+            JOIN roles r ON u.role_id = r.id
+            WHERE som.root_card_id = so.id 
+            AND som.status = 'Sent to Production'
+            AND (r.name LIKE '%Production%' OR r.name LIKE '%production%' OR r.name LIKE '%production_manager%')
+          )
+        )`);
+        params.push(filters.userId, filters.userId, filters.userId, filters.userId);
+      } else {
+        conditions.push('so.assigned_to IS NOT NULL');
+      }
     }
 
     let query = `

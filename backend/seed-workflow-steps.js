@@ -9,67 +9,36 @@ async function seedWorkflowSteps() {
 
     const workflowSteps = [
       {
-        step_name: 'Initial Review',
+        step_name: 'Approve Designs',
         step_order: 1,
-        description: 'Review initial design requirements and documentation',
-        task_template_title: 'Initial Design Review',
-        task_template_description: 'Review and validate initial design requirements and project scope',
-        auto_create_on_trigger: 'design_assigned',
+        description: 'Review and approve technical designs and 3D CAD drawings',
+        task_template_title: 'Approve Designs',
+        task_template_description: 'Review and approve technical designs and 3D CAD drawings for this root card',
         priority: 'high'
       },
       {
-        step_name: 'BOM Analysis',
+        step_name: 'Approve Documents',
         step_order: 2,
-        description: 'Analyze Bill of Materials and component specifications',
-        task_template_title: 'Analyze Bill of Materials',
-        task_template_description: 'Review and analyze BOM data. Ensure all components are available and specifications match design requirements',
-        auto_create_on_trigger: 'bom_uploaded',
+        description: 'Review and approve all supporting documents and specifications',
+        task_template_title: 'Approve Documents',
+        task_template_description: 'Review and approve all documents and drawings uploaded for this root card',
         priority: 'high'
       },
       {
-        step_name: '3D Drawing Review',
+        step_name: 'Create BOM',
         step_order: 3,
-        description: 'Review 3D CAD drawings and design files',
-        task_template_title: 'Review 3D Design Drawings',
-        task_template_description: 'Review and validate 3D drawings and CAD files. Check dimensions, tolerances, and manufacturing feasibility',
-        auto_create_on_trigger: 'drawings_uploaded',
+        description: 'Create the Bill of Materials for the finished good',
+        task_template_title: 'Create BOM',
+        task_template_description: 'Create the Bill of Materials for the finished good associated with this root card',
         priority: 'high'
       },
       {
-        step_name: 'Specifications Validation',
+        step_name: 'Send BOM to Admin',
         step_order: 4,
-        description: 'Validate design specifications and technical requirements',
-        task_template_title: 'Validate Design Specifications',
-        task_template_description: 'Validate all design specifications including materials, dimensions, tolerances, and quality standards',
-        auto_create_on_trigger: 'specs_uploaded',
+        description: 'Finalize and send the created BOM to admin for processing',
+        task_template_title: 'Send BOM of finish good to admin',
+        task_template_description: 'After creating and validating the BOM, send it to the admin for final review and processing',
         priority: 'medium'
-      },
-      {
-        step_name: 'Documentation Review',
-        step_order: 5,
-        description: 'Review design documentation and reference materials',
-        task_template_title: 'Review Design Documentation',
-        task_template_description: 'Review all uploaded design documents and ensure completeness. Check for any missing specifications or requirements',
-        auto_create_on_trigger: 'docs_uploaded',
-        priority: 'medium'
-      },
-      {
-        step_name: 'Design Notes Review',
-        step_order: 6,
-        description: 'Review design notes and additional requirements',
-        task_template_title: 'Review Design Notes & Requirements',
-        task_template_description: 'Review design notes and any additional requirements provided by the client or design team',
-        auto_create_on_trigger: 'notes_added',
-        priority: 'medium'
-      },
-      {
-        step_name: 'Final Approval',
-        step_order: 7,
-        description: 'Final approval and sign-off for design',
-        task_template_title: 'Final Design Approval',
-        task_template_description: 'Final review and approval of complete design package. Ready for production',
-        auto_create_on_trigger: 'approval_requested',
-        priority: 'critical'
       }
     ];
 

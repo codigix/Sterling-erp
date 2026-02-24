@@ -48,6 +48,8 @@ const salesManagementRoutes = require('./routes/sales/salesManagementRoutes');
 const customerRoutes = require('./routes/sales/customerRoutes');
 const warehouseRoutes = require('./routes/inventory/warehouseRoutes');
 const stockEntryRoutes = require('./routes/inventory/stockEntryRoutes');
+const designEngineerDocumentsRoutes = require('./routes/design-engineer/designEngineerDocumentsRoutes');
+const fileDownloadRoutes = require('./routes/files/fileDownloadRoutes');
 
 const app = express();
 
@@ -124,6 +126,8 @@ app.use('/api/sales/management', salesManagementRoutes);
 app.use('/api/sales/customers', customerRoutes);
 app.use('/api/inventory/warehouses', warehouseRoutes);
 app.use('/api/inventory/stock-entries', stockEntryRoutes);
+app.use('/api/design-engineer/documents', designEngineerDocumentsRoutes);
+app.use('/api/files', fileDownloadRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });

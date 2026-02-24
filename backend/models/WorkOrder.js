@@ -132,6 +132,14 @@ class WorkOrder {
       conditions.push("wo.status = ?");
       params.push(filters.status);
     }
+    if (filters.salesOrderId) {
+      conditions.push("wo.sales_order_id = ?");
+      params.push(filters.salesOrderId);
+    }
+    if (filters.rootCardId) {
+      conditions.push("wo.root_card_id = ?");
+      params.push(filters.rootCardId);
+    }
     if (filters.search) {
       conditions.push("(wo.work_order_no LIKE ? OR wo.item_name LIKE ? OR wo.item_code LIKE ?)");
       const search = `%${filters.search}%`;

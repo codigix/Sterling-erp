@@ -81,8 +81,19 @@ const ProjectCard = ({
     const taskTitle = (task.task_title || task.title || "").toLowerCase();
 
     // Map specific task titles to their respective pages
-    // Step 1: Enter Project Details
-    if (
+    // Step 1: Approve Designs
+    if (taskTitle.includes("approve design")) {
+      return `/design-engineer/documents/raw-designs?${baseParams}`;
+    }
+    // Step 2: Approve Documents
+    else if (
+      taskTitle.includes("approve document") ||
+      taskTitle.includes("document approval") ||
+      taskTitle.includes("review and approve")
+    ) {
+      return `/design-engineer/documents/required-docs?${baseParams}`;
+    }
+    else if (
       taskTitle.includes("project details") ||
       taskTitle.includes("enter project") ||
       taskTitle.includes("requirement analysis")
@@ -113,10 +124,17 @@ const ProjectCard = ({
     }
     // Step 3: Create and Validate BOM
     else if (
-      taskTitle.includes("bom") ||
+      taskTitle.includes("create bom") ||
       taskTitle.includes("bill of materials")
     ) {
       return `/design-engineer/bom/create?${baseParams}`;
+    }
+    // Step 4: Send BOM to Admin
+    else if (
+      taskTitle.includes("send bom") ||
+      taskTitle.includes("submit bom")
+    ) {
+      return `/design-engineer/bom/view?${baseParams}`;
     }
     // Step 4: Submit Design for Review
     else if (

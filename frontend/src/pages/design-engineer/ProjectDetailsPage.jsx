@@ -186,13 +186,11 @@ const ProjectDetailsPage = () => {
   const fetchProjects = async () => {
     try {
       setLoading(true);
-      const response = await axios.get("/root-cards", {
-        params: { assignedOnly: true }
-      });
+      const response = await axios.get("/root-cards/by-department/Design%20Engineering");
       console.log("Root cards response:", response.data);
       const orders = Array.isArray(response.data)
         ? response.data
-        : response.data.rootCards || [];
+        : response.data.data || response.data.rootCards || [];
       setProjects(orders);
     } catch (error) {
       console.error("Error fetching projects:", error);
@@ -310,9 +308,7 @@ const ProjectDetailsPage = () => {
   };
 
   const handleViewProject = (project) => {
-    navigate(
-      `/design-engineer/root-cards?projectId=${project.id}&mode=view`
-    );
+    navigate(`/design-engineer/root-cards/${project.id}`);
   };
 
   const loadProjectFromUrl = async () => {

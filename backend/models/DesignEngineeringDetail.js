@@ -1,5 +1,6 @@
 const pool = require('../config/database');
 const { parseJsonField, stringifyJsonField, normalizeStepData, ensureArray } = require('../utils/rootCardHelpers');
+const { enrichDocumentWithPath } = require('../utils/filePathRecovery');
 
 class DesignEngineeringDetail {
   static async createTable() {
@@ -125,6 +126,16 @@ class DesignEngineeringDetail {
       documents: documents ? `${documents.length} items` : 'empty',
       drawings3D: drawings3D ? `${drawings3D.length} items` : 'empty'
     });
+    
+    if (documents && documents.length > 0) {
+      console.log('[DesignEngineeringDetail.update] Sample document:', JSON.stringify(documents[0], null, 2));
+      console.log('[DesignEngineeringDetail.update] All documents:', JSON.stringify(documents, null, 2));
+    }
+    
+    if (drawings3D && drawings3D.length > 0) {
+      console.log('[DesignEngineeringDetail.update] Sample drawing:', JSON.stringify(drawings3D[0], null, 2));
+      console.log('[DesignEngineeringDetail.update] All drawings:', JSON.stringify(drawings3D, null, 2));
+    }
 
     const params = [
       stringifyJsonField(ensureArray(documents)) || '[]',
@@ -197,6 +208,9 @@ class DesignEngineeringDetail {
       uploadedBy: documentData.uploadedBy
     };
 
+    console.log(`[DesignEngineeringDetail.addDocument] Adding ${type} for root card ${rootCardId}`);
+    console.log(`[DesignEngineeringDetail.addDocument] Document data:`, JSON.stringify(newItem, null, 2));
+
     currentItems.push(newItem);
 
     await pool.execute(
@@ -204,51 +218,137 @@ class DesignEngineeringDetail {
       [JSON.stringify(currentItems), rootCardId]
     );
 
+    console.log(`[DesignEngineeringDetail.addDocument] Successfully saved. Total items now: ${currentItems.length}`);
+
     return newItem;
   }
 
   static async getDocuments(rootCardId) {
+    console.log(`[DesignEngineeringDetail.getDocuments] Fetching for Root Card: ${rootCardId}`);
     const [rows] = await pool.execute(
       `SELECT documents FROM design_engineering_details WHERE sales_order_id = ?`,
       [rootCardId]
     );
+
+    console.log(`[DesignEngineeringDetail.getDocuments] Rows found: ${rows.length}`);
 
     if (rows.length === 0) {
       return [];
     }
 
     try {
-      return JSON.parse(rows[0].documents || '[]');
+      const rawDocsFromDB = rows[0].documents;
+      console.log(`[DesignEngineeringDetail.getDocuments] Raw docs from DB type:`, typeof rawDocsFromDB);
+      const docs = ensureArray(parseJsonField(rawDocsFromDB, []));
+      
+      console.log(`[DesignEngineeringDetail.getDocuments] Parsed ${docs.length} documents for root card ${rootCardId}`);
+      
+      return docs.map((doc, idx) => {
+        try {
+          const enriched = enrichDocumentWithPath(doc, 'design-engineering');
+          
+          // Generate a stable ID if missing (critical for approval workflow)
+          // We use a simple numeric hash of the path if ID is not present
+          let stableId = enriched.id;
+          if (!stableId && enriched.path) {
+            let hash = 0;
+            const str = enriched.path;
+            for (let i = 0; i < str.length; i++) {
+              hash = ((hash << 5) - hash) + str.charCodeAt(i);
+              hash |= 0; 
+            }
+            stableId = Math.abs(hash) + 1000000; // Offset to avoid collisions with timestamps
+          }
+
+          // Normalize field names for frontend compatibility
+          const normalized = {
+            ...enriched,
+            id: stableId || (Date.now() + idx), // Last resort fallback
+            name: enriched.name || enriched.fileName || enriched.file_name || 'Unknown',
+            mimeType: enriched.mimeType || 'application/octet-stream',
+            uploadedAt: enriched.uploadedAt || new Date().toISOString(),
+            size: enriched.size || enriched.fileSize || 0,
+            format: enriched.format || (enriched.name ? enriched.name.split('.').pop()?.toUpperCase() : 'Unknown')
+          };
+          return normalized;
+        } catch (enrichError) {
+          console.error(`[DesignEngineeringDetail.getDocuments] Error enriching doc at index ${idx}:`, enrichError.message);
+          return doc;
+        }
+      });
     } catch (err) {
+      console.error('[DesignEngineeringDetail.getDocuments] Error:', err.message);
       return [];
     }
   }
 
   static async getDocument(rootCardId, documentId) {
     const documents = await this.getDocuments(rootCardId);
-    return documents.find(doc => doc.id === parseInt(documentId)) || null;
+    // Use loose equality for ID comparison as it might be string/number mismatch from params
+    return documents.find(doc => String(doc.id) === String(documentId)) || null;
   }
 
   static async getDrawings(rootCardId) {
+    console.log(`[DesignEngineeringDetail.getDrawings] Fetching for Root Card: ${rootCardId}`);
     const [rows] = await pool.execute(
       `SELECT drawings_3d FROM design_engineering_details WHERE sales_order_id = ?`,
       [rootCardId]
     );
+
+    console.log(`[DesignEngineeringDetail.getDrawings] Rows found: ${rows.length}`);
 
     if (rows.length === 0) {
       return [];
     }
 
     try {
-      return JSON.parse(rows[0].drawings_3d || '[]');
+      const rawDrawingsFromDB = rows[0].drawings_3d;
+      console.log(`[DesignEngineeringDetail.getDrawings] Raw drawings from DB type:`, typeof rawDrawingsFromDB);
+      const drawings = ensureArray(parseJsonField(rawDrawingsFromDB, []));
+      
+      console.log(`[DesignEngineeringDetail.getDrawings] Parsed ${drawings.length} drawings for root card ${rootCardId}`);
+      
+      return drawings.map((drawing, idx) => {
+        try {
+          const enriched = enrichDocumentWithPath(drawing, 'design-engineering');
+          
+          // Generate a stable ID if missing (critical for approval workflow)
+          let stableId = enriched.id;
+          if (!stableId && enriched.path) {
+            let hash = 0;
+            const str = enriched.path;
+            for (let i = 0; i < str.length; i++) {
+              hash = ((hash << 5) - hash) + str.charCodeAt(i);
+              hash |= 0; 
+            }
+            stableId = Math.abs(hash) + 2000000; // Use different offset for drawings
+          }
+
+          // Normalize field names for frontend compatibility
+          const normalized = {
+            ...enriched,
+            id: stableId || (Date.now() + idx),
+            name: enriched.name || enriched.fileName || enriched.file_name || 'Unknown',
+            mimeType: enriched.mimeType || 'application/octet-stream',
+            uploadedAt: enriched.uploadedAt || new Date().toISOString(),
+            size: enriched.size || enriched.fileSize || 0,
+            format: enriched.format || (enriched.name ? enriched.name.split('.').pop()?.toUpperCase() : 'Unknown')
+          };
+          return normalized;
+        } catch (enrichError) {
+          console.error(`[DesignEngineeringDetail.getDrawings] Error enriching drawing at index ${idx}:`, enrichError.message);
+          return drawing;
+        }
+      });
     } catch (err) {
+      console.error('[DesignEngineeringDetail.getDrawings] Error:', err.message);
       return [];
     }
   }
 
   static async getDrawing(rootCardId, drawingId) {
     const drawings = await this.getDrawings(rootCardId);
-    return drawings.find(d => d.id === parseInt(drawingId)) || null;
+    return drawings.find(d => String(d.id) === String(drawingId)) || null;
   }
 
   static async removeDocument(rootCardId, documentId) {
@@ -303,6 +403,20 @@ class DesignEngineeringDetail {
     );
 
     return true;
+  }
+
+  static async updateDocuments(rootCardId, documents) {
+    await pool.execute(
+      `UPDATE design_engineering_details SET documents = ?, updated_at = CURRENT_TIMESTAMP WHERE sales_order_id = ?`,
+      [JSON.stringify(documents), rootCardId]
+    );
+  }
+
+  static async updateDrawings(rootCardId, drawings) {
+    await pool.execute(
+      `UPDATE design_engineering_details SET drawings_3d = ?, updated_at = CURRENT_TIMESTAMP WHERE sales_order_id = ?`,
+      [JSON.stringify(drawings), rootCardId]
+    );
   }
 
   static async getApprovalHistory(rootCardId) {

@@ -3,9 +3,10 @@ const pool = require('../../config/database');
 
 exports.getGRNInspections = async (req, res) => {
   try {
+    const { salesOrderId } = req.query;
     const conn = await pool.getConnection();
-    // Fetch all GRNs with their PO and Vendor details, and any existing QC inspection
-    const [rows] = await conn.query(`
+    
+    let query = `
         SELECT 
             grn.id as grn_id, 
             grn.items, 
@@ -18,11 +19,21 @@ exports.getGRNInspections = async (req, res) => {
             qi.items_results
         FROM grn
         LEFT JOIN purchase_orders po ON grn.po_id = po.id
+        LEFT JOIN material_requests mr ON po.material_request_id = mr.id
         LEFT JOIN quotations q ON po.quotation_id = q.id
         LEFT JOIN vendors v ON q.vendor_id = v.id
         LEFT JOIN qc_inspections qi ON qi.grn_id = grn.id
-        ORDER BY grn.created_at DESC
-    `);
+    `;
+
+    const queryParams = [];
+    if (salesOrderId) {
+        query += ` WHERE mr.sales_order_id = ? OR q.sales_order_id = ? `;
+        queryParams.push(salesOrderId, salesOrderId);
+    }
+
+    query += ` ORDER BY grn.created_at DESC`;
+
+    const [rows] = await conn.query(query, queryParams);
     conn.release();
 
     const grnInspections = rows.map(row => {
@@ -103,10 +114,10 @@ exports.getGRNInspections = async (req, res) => {
 
 exports.getStageQC = async (req, res) => {
   try {
+    const { salesOrderId } = req.query;
     const conn = await pool.getConnection();
-    // Fetch production stages that might need QC (usually when completed or in progress)
-    // and join with their plan and project details
-    const [rows] = await conn.query(`
+    
+    let query = `
         SELECT 
             ps.id as stage_id, 
             ps.stage_name,
@@ -123,8 +134,17 @@ exports.getStageQC = async (req, res) => {
         LEFT JOIN projects p ON pp.project_id = p.id
         LEFT JOIN qc_inspections qi ON qi.production_stage_id = ps.id AND qi.inspection_type = 'stage'
         WHERE ps.status IN ('in_progress', 'completed')
-        ORDER BY ps.updated_at DESC
-    `);
+    `;
+
+    const queryParams = [];
+    if (salesOrderId) {
+        query += ` AND (so.id = ? OR pp.sales_order_id = ?) `;
+        queryParams.push(salesOrderId, salesOrderId);
+    }
+
+    query += ` ORDER BY ps.updated_at DESC `;
+
+    const [rows] = await conn.query(query, queryParams);
     conn.release();
 
     const stageQC = rows.map(row => ({

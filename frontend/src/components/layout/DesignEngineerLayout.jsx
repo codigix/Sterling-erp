@@ -38,6 +38,7 @@ import DesignEngineerReportsPage from '../../pages/design-engineer/DesignEnginee
 
 // Project Details
 import ProjectDetailsPage from '../../pages/design-engineer/ProjectDetailsPage';
+import RootCardDetailPage from '../../pages/design-engineer/RootCardDetailPage';
 
 const navigationItems = [
   {
@@ -101,6 +102,7 @@ const DesignEngineerLayout = () => {
       <Routes>
         <Route path="dashboard" element={<DesignEngineerDashboard />} />
         <Route path="root-cards" element={<ProjectDetailsPage />} />
+        <Route path="root-cards/:rootCardId" element={<RootCardDetailPage />} />
         
         {/* Documents Routes */}
         <Route path="documents/raw-designs" element={<RawDesignsPage />} />

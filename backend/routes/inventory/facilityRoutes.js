@@ -9,9 +9,9 @@ const router = express.Router();
 router.use(authMiddleware);
 
 router.post('/', roleMiddleware('Admin', 'Inventory Manager'), facilityController.createFacility);
-router.get('/', roleMiddleware('Admin', 'Inventory Manager', 'Design Engineer', 'Engineering', 'Production'), facilityController.getAllFacilities);
-router.get('/available', roleMiddleware('Admin', 'Inventory Manager', 'Design Engineer', 'Engineering', 'Production'), facilityController.getAvailableFacilities);
-router.get('/:id', roleMiddleware('Admin', 'Inventory Manager', 'Design Engineer', 'Engineering', 'Production'), facilityController.getFacility);
+router.get('/', roleMiddleware('Admin', 'Inventory Manager', 'Design Engineer', 'design_engineer', 'design.engineer', 'Engineering', 'engineering', 'Production'), facilityController.getAllFacilities);
+router.get('/available', roleMiddleware('Admin', 'Inventory Manager', 'Design Engineer', 'design_engineer', 'design.engineer', 'Engineering', 'engineering', 'Production'), facilityController.getAvailableFacilities);
+router.get('/:id', roleMiddleware('Admin', 'Inventory Manager', 'Design Engineer', 'design_engineer', 'design.engineer', 'Engineering', 'engineering', 'Production'), facilityController.getFacility);
 router.put('/:id', roleMiddleware('Admin', 'Inventory Manager'), facilityController.updateFacility);
 router.delete('/:id', roleMiddleware('Admin', 'Inventory Manager'), facilityController.deleteFacility);
 

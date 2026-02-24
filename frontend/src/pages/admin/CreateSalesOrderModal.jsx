@@ -3,14 +3,14 @@ import axios from '../../utils/api';
 import { X, Loader2, AlertCircle } from 'lucide-react';
 import Swal from 'sweetalert2';
 
-const CreateSalesOrderModal = ({ onCancel, onSuccess, editData }) => {
+const CreateSalesOrderModal = ({ onCancel, onSuccess, editData, preSelectedRootCardId }) => {
   const [loading, setLoading] = useState(false);
   const [boms, setBoms] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
   const [rootCards, setRootCards] = useState([]);
   const [formData, setFormData] = useState({
-    rootCardId: editData?.root_card_id || '',
+    rootCardId: editData?.root_card_id || preSelectedRootCardId || '',
     bomId: editData?.bom_id || '',
     soNumber: editData?.so_number || '',
     customerId: editData?.customer_id || '',
@@ -62,6 +62,9 @@ const CreateSalesOrderModal = ({ onCancel, onSuccess, editData }) => {
             setFormData(prev => ({ ...prev, profitMargin: margin }));
           }
         }
+      } else if (preSelectedRootCardId) {
+        // Trigger root card change logic for pre-selected ID
+        handleRootCardChange({ target: { value: preSelectedRootCardId } }, customerRes.data);
       }
     } catch (error) {
       console.error('Fetch error:', error);
@@ -93,8 +96,10 @@ const CreateSalesOrderModal = ({ onCancel, onSuccess, editData }) => {
     });
   };
 
-  const handleRootCardChange = async (e) => {
+  const handleRootCardChange = async (e, customerList = null) => {
     const rootCardId = e.target.value;
+    const currentCustomers = customerList || customers;
+    
     if (!rootCardId) {
       setBoms([]);
       setSelectedBOMData(null);
@@ -119,7 +124,7 @@ const CreateSalesOrderModal = ({ onCancel, onSuccess, editData }) => {
       const clientName = details.poDetails?.clientName || details.customer;
       
       if (clientName) {
-        const matchedCustomer = customers.find(c => 
+        const matchedCustomer = currentCustomers.find(c => 
           c.name.toLowerCase().includes(clientName.toLowerCase()) ||
           clientName.toLowerCase().includes(c.name.toLowerCase())
         );

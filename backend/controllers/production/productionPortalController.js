@@ -6,7 +6,7 @@ exports.getRootCards = async (req, res) => {
     const userId = parseInt(req.user.id);
     const { status, search, all, assignedOnly } = req.query;
 
-    let filters = {};
+    let filters = { userId };
     if (status && status !== 'all') {
       filters.status = status;
     }
@@ -19,8 +19,26 @@ exports.getRootCards = async (req, res) => {
 
     const allRootCards = await RootCard.findAll(filters);
 
+    // Filter to only show root cards that have been "Sent to Production" in sales_orders_management
+    const [sentOrders] = await pool.execute(
+      "SELECT id, root_card_id FROM sales_orders_management WHERE status = 'Sent to Production'"
+    );
+    
+    // Create a map for quick lookup
+    const sentOrderMap = {};
+    sentOrders.forEach(o => {
+      sentOrderMap[o.root_card_id] = o.id;
+    });
+
+    const authorizedRootCards = allRootCards.filter(card => 
+      sentOrderMap[card.id] !== undefined
+    ).map(card => ({
+      ...card,
+      sales_management_id: sentOrderMap[card.id]
+    }));
+
     if (all === 'true' || req.user.role === 'Admin' || req.user.role === 'Production') {
-      const rootCardsWithStats = allRootCards.map(card => ({
+      const rootCardsWithStats = authorizedRootCards.map(card => ({
         ...card,
         assignedSteps: []
       }));
@@ -53,7 +71,7 @@ exports.getRootCards = async (req, res) => {
 
     const assignedSalesOrderIds = assignedSteps.map(s => s.sales_order_id);
     
-    const filteredCards = allRootCards.filter(card => 
+    const filteredCards = authorizedRootCards.filter(card => 
       card.rootCardId && assignedSalesOrderIds.includes(card.rootCardId)
     );
 
@@ -341,8 +359,26 @@ exports.getProductionFormRootCards = async (req, res) => {
 
     const allRootCards = await RootCard.findAll(filters);
 
+    // Filter to only show root cards that have been "Sent to Production" in sales_orders_management
+    const [sentOrders] = await pool.execute(
+      "SELECT id, root_card_id FROM sales_orders_management WHERE status = 'Sent to Production'"
+    );
+    
+    // Create a map for quick lookup
+    const sentOrderMap = {};
+    sentOrders.forEach(o => {
+      sentOrderMap[o.root_card_id] = o.id;
+    });
+
+    const authorizedRootCards = allRootCards.filter(card => 
+      sentOrderMap[card.id] !== undefined
+    ).map(card => ({
+      ...card,
+      sales_management_id: sentOrderMap[card.id]
+    }));
+
     if (all === 'true' || req.user.role === 'Admin' || req.user.role === 'Production') {
-      return res.json({ rootCards: allRootCards });
+      return res.json({ rootCards: authorizedRootCards });
     }
 
     const [assignedSteps] = await pool.execute(
@@ -356,7 +392,7 @@ exports.getProductionFormRootCards = async (req, res) => {
 
     const assignedSalesOrderIds = assignedSteps.map(s => s.sales_order_id);
     
-    const filteredCards = allRootCards.filter(card => 
+    const filteredCards = authorizedRootCards.filter(card => 
       card.sales_order_id && assignedSalesOrderIds.includes(card.sales_order_id)
     );
 

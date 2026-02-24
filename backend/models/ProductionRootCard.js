@@ -80,6 +80,7 @@ class ProductionRootCard {
       FROM root_cards rc
       INNER JOIN projects p ON p.id = rc.project_id
       INNER JOIN sales_orders so ON so.id = p.sales_order_id
+      LEFT JOIN sales_orders_management som ON som.root_card_id = so.id
       LEFT JOIN design_engineering_details ded ON ded.sales_order_id = so.id
       LEFT JOIN sales_order_details sod ON sod.sales_order_id = so.id
       LEFT JOIN users u ON u.id = rc.assigned_supervisor
@@ -143,6 +144,7 @@ class ProductionRootCard {
         FROM root_cards rc
         INNER JOIN projects p ON p.id = rc.project_id
         INNER JOIN sales_orders so ON so.id = p.sales_order_id
+        LEFT JOIN sales_orders_management som ON som.root_card_id = so.id
         LEFT JOIN design_engineering_details ded ON ded.sales_order_id = so.id
         LEFT JOIN sales_order_details sod ON sod.sales_order_id = so.id
         LEFT JOIN users u ON u.id = rc.assigned_supervisor
@@ -178,6 +180,7 @@ class ProductionRootCard {
         FROM root_cards rc
         INNER JOIN projects p ON p.id = rc.project_id
         INNER JOIN sales_orders so ON so.id = p.sales_order_id
+        LEFT JOIN sales_orders_management som ON som.root_card_id = so.id
         LEFT JOIN design_engineering_details ded ON ded.sales_order_id = so.id
         LEFT JOIN sales_order_details sod ON sod.sales_order_id = so.id
         LEFT JOIN users u ON u.id = rc.assigned_supervisor

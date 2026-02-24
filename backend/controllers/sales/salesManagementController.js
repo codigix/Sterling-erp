@@ -3,6 +3,11 @@ const ComprehensiveBOM = require('../../models/ComprehensiveBOM');
 const RootCardReal = require('../../models/RootCardReal');
 const ClientPODetail = require('../../models/ClientPODetail');
 const DesignEngineeringDetail = require('../../models/DesignEngineeringDetail');
+const Project = require('../../models/Project');
+const ProductionRootCard = require('../../models/ProductionRootCard');
+const productionController = require('../production/productionController');
+const pool = require('../../config/database');
+const AlertsNotification = require('../../models/AlertsNotification');
 
 exports.createSalesOrder = async (req, res) => {
   try {
@@ -187,11 +192,117 @@ exports.updateStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
+    const userId = req.user?.id || 1; // Fallback to 1 if req.user is missing
+
+    console.log(`[SalesManagementController] Updating status for SO ${id} to ${status}`);
+
     await SalesManagement.updateStatus(id, status);
+
+    // If sent to production, notify production managers and automate workflow
+    if (status === 'Sent to Production') {
+      try {
+        const order = await SalesManagement.findById(id);
+        if (order) {
+          const rootCardId = order.root_card_id; // legacy sales_orders.id
+
+          // 1. Ensure Project exists
+          const [projects] = await pool.execute(
+            'SELECT id FROM projects WHERE sales_order_id = ?',
+            [rootCardId]
+          );
+          
+          let projectId;
+          if (projects.length === 0) {
+            console.log(`[SalesManagementController] Creating project for SO ${id}`);
+            projectId = await Project.create({
+              name: order.root_card_title || `Project for SO ${order.so_number}`,
+              code: order.root_card_code || `PRJ-${order.so_number}`,
+              rootCardId: rootCardId,
+              clientName: order.customer_name,
+              poNumber: order.root_card_code,
+              status: 'in_progress',
+              priority: 'high'
+            });
+          } else {
+            projectId = projects[0].id;
+          }
+
+          // 2. Ensure Production Root Card exists
+          let prodRootCard = await ProductionRootCard.findBySalesOrderId(rootCardId);
+          let prodRootCardId;
+
+          if (!prodRootCard) {
+            console.log(`[SalesManagementController] Creating production root card for SO ${id}`);
+            prodRootCardId = await ProductionRootCard.create({
+              projectId: projectId,
+              rootCardId: rootCardId,
+              code: order.root_card_code || `RC-${order.so_number}`,
+              title: order.root_card_title || `Root Card for SO ${order.so_number}`,
+              status: 'planning',
+              priority: 'high',
+              createdBy: userId
+            });
+          } else {
+            prodRootCardId = prodRootCard.id;
+          }
+
+          // 3. Automate Production Workflow Tasks
+          console.log(`[SalesManagementController] Automating production workflow tasks for RC ${prodRootCardId}`);
+          try {
+            // Check if workflow tasks already exist to avoid duplicates
+            // We check for tasks linked to this production root card with production workflow type in notes
+            const [existingTasks] = await pool.execute(
+              'SELECT id FROM department_tasks WHERE root_card_id = ? AND JSON_EXTRACT(notes, "$.workflow_type") = ?',
+              [prodRootCardId, 'production']
+            );
+
+            if (existingTasks.length === 0) {
+              await productionController.internalCreateWorkflowTasks(
+                prodRootCardId,
+                userId,
+                pool,
+                'production'
+              );
+              console.log(`[SalesManagementController] Production workflow tasks created successfully`);
+            } else {
+              console.log(`[SalesManagementController] Production workflow tasks already exist, skipping creation`);
+            }
+          } catch (wfError) {
+            console.error('[SalesManagementController] Error automating production workflow:', wfError.message);
+          }
+
+          // 4. Find production managers or relevant production roles to notify
+          const [productionManagers] = await pool.execute(`
+            SELECT DISTINCT u.id 
+            FROM users u
+            INNER JOIN roles r ON u.role_id = r.id
+            WHERE r.name IN ('Production', 'production_manager', 'Production Manager')
+          `);
+
+          console.log(`[SalesManagementController] Found ${productionManagers.length} production managers to notify`);
+
+          for (const manager of productionManagers) {
+            await AlertsNotification.create({
+              userId: manager.id,
+              fromUserId: userId,
+              alertType: 'sales_order_received',
+              message: `New Sales Order ${order.so_number} received from Admin. Root Card and Workflow Tasks have been automatically created.`,
+              relatedTable: 'sales_orders_management',
+              relatedId: id,
+              priority: 'high',
+              link: '/department/production/workflow-tasks'
+            });
+          }
+        }
+      } catch (automationError) {
+        console.error('[SalesManagementController] Error in production automation flow:', automationError.message);
+      }
+    }
+
     res.json({ message: 'Status updated successfully' });
   } catch (error) {
-    console.error('Update status error:', error.message);
-    res.status(500).json({ message: 'Failed to update status' });
+    console.error('[SalesManagementController] Update status error:', error.message);
+    res.status(500).json({ message: 'Failed to update status', error: error.message });
   }
 };
 

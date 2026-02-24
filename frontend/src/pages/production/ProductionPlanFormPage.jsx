@@ -1216,8 +1216,17 @@ const ProductionPlanFormPage = () => {
       return;
     }
 
-    const selectedSO = salesOrders.find(so => so.id == salesOrderId);
-    if (!selectedSO) return;
+    let selectedSO = salesOrders.find(so => so.id == salesOrderId);
+    
+    // Fallback: try matching by root_card_id if salesOrderId might be a root card ID
+    if (!selectedSO) {
+      selectedSO = salesOrders.find(so => so.root_card_id == salesOrderId);
+    }
+
+    if (!selectedSO) {
+      console.warn(`[handleSalesOrderSelect] Could not find Sales Order with ID or Root Card ID: ${salesOrderId}`);
+      return;
+    }
 
     try {
       setLoading(true);
@@ -1621,9 +1630,16 @@ const ProductionPlanFormPage = () => {
       setIsViewMode(true);
     }
     
-    // Only handle state-based selection if we're not editing an existing plan (no id)
+    // Only handle state-based or query-based selection if we're not editing an existing plan (no id)
     if (!id) {
-      if (location.state?.order?.id) {
+      // Check query parameters first
+      const params = new URLSearchParams(location.search);
+      const querySalesOrderId = params.get("salesOrderId");
+      const queryTaskId = params.get("taskId");
+
+      if (querySalesOrderId) {
+        handleSalesOrderSelect(querySalesOrderId);
+      } else if (location.state?.order?.id) {
         handleSalesOrderSelect(location.state.order.id.toString());
       } else if (location.state?.rootCardId) {
         // Find SO for this root card if possible
@@ -1635,7 +1651,7 @@ const ProductionPlanFormPage = () => {
         }
       }
     }
-  }, [id, location.state, salesOrders, handleSalesOrderSelect, handleRootCardSelect]);
+  }, [id, location.state, location.search, salesOrders, handleSalesOrderSelect, handleRootCardSelect]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;

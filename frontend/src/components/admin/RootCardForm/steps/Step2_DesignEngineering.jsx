@@ -52,10 +52,17 @@ export default function Step2_DesignEngineering({ readOnly = false }) {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
+      console.log(`[Step2] Upload response for type "${type}":`, JSON.stringify(response.data, null, 2));
+
       if (response.data?.success) {
         const newlyUploaded = response.data.data.uploaded;
+        console.log(`[Step2] Newly uploaded files (${type}):`, JSON.stringify(newlyUploaded, null, 2));
+        
         const currentFiles = type === "drawings" ? (designEng.attachments?.drawings || []) : (designEng.attachments?.documents || []);
+        console.log(`[Step2] Current files before update:`, JSON.stringify(currentFiles, null, 2));
+        
         const updatedFiles = [...currentFiles, ...newlyUploaded];
+        console.log(`[Step2] Updated files after merge:`, JSON.stringify(updatedFiles, null, 2));
 
         updateDesignField("attachments", type, updatedFiles);
       }

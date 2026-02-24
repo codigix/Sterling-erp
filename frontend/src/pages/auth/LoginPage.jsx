@@ -28,7 +28,7 @@ const ROLE_MAP = {
 const DEPARTMENT_USERS = {
   admin: { username: "admin", password: "password", label: "Admin" },
   inventory: { username: "inventory.manager", password: "password", label: "Inventory" },
-  design_engineer: { username: "design.engineer", password: "password", label: "Design Engineer" },
+  design_engineer: { username: "design_engineer", password: "password", label: "Design Engineer" },
   production: { username: "production", password: "password", label: "Production" },
   engineering: { username: "john.doe", password: "password", label: "Engineering" },
   qc: { username: "qc.manager", password: "password", label: "QC" },

@@ -12,7 +12,7 @@ import {
   Edit2,
   Trash2,
   Download,
-  UserPlus,
+  Send,
   AlertCircle,
   CheckCircle2,
   Filter,
@@ -35,7 +35,7 @@ const formatIndianCurrency = (value) => {
   return `${cr}Cr`;
 };
 
-const RootCardList = ({ onCreateNew, onViewRootCard, onEditRootCard, onAssignRootCard, refreshTrigger = 0 }) => {
+const RootCardList = ({ onCreateNew, onViewRootCard, onEditRootCard, onSendToDesignEngineering, refreshTrigger = 0 }) => {
   const [rootCards, setRootCards] = useState([]);
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(false);
@@ -299,12 +299,12 @@ const RootCardList = ({ onCreateNew, onViewRootCard, onEditRootCard, onAssignRoo
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onAssignRootCard(row);
+              onSendToDesignEngineering(row);
             }}
-            title="Assign"
-            className="p-1 hover:bg-orange-100 dark:hover:bg-orange-900/30 rounded transition"
+            title="Send to Design Engineering"
+            className="p-1 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded transition"
           >
-            <UserPlus className="w-3 h-3 text-orange-600" />
+            <Send className="w-3 h-3 text-purple-600" />
           </button>
           <button
             onClick={(e) => {

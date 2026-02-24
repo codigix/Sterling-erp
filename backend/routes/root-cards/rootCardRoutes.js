@@ -17,9 +17,10 @@ router.get('/config/all', systemConfigController.getAllConfig);
 router.get('/config/:configType', systemConfigController.getConfigByType);
 
 router.use(authMiddleware);
-router.use(roleMiddleware('Admin', 'Management', 'Sales', 'Production', 'Design Engineer', 'Inventory', 'inventory_manager', 'Inventory Manager', 'Procurement', 'Procurement Manager'));
+router.use(roleMiddleware('Admin', 'Management', 'Sales', 'Production', 'Design Engineer', 'design_engineer', 'design.engineer', 'Engineering', 'engineering', 'Inventory', 'inventory_manager', 'Inventory Manager', 'Procurement', 'Procurement Manager'));
 
 router.get('/assigned', rootCardController.getAssignedRootCards);
+router.get('/by-department/:department', rootCardController.getRootCardsByDepartment);
 router.get('/', rootCardController.getRootCards);
 
 // Move fixed paths ABOVE parameterized routes
@@ -40,8 +41,10 @@ router.delete('/:id', rootCardController.deleteRootCard);
 router.post('/:id/assign', rootCardController.assignRootCard);
 
 router.post('/:rootCardId/design-details', designEngineeringController.createOrUpdate);
-router.post('/:rootCardId/workflow-tasks', roleMiddleware('Admin', 'Management', 'Design Engineer'), productionController.createWorkflowBasedTasks);
+router.post('/:rootCardId/workflow-tasks', roleMiddleware('Admin', 'Management', 'Design Engineer', 'design_engineer', 'design.engineer', 'Engineering', 'engineering'), productionController.createWorkflowBasedTasks);
+router.post('/:rootCardId/production-workflow-tasks', roleMiddleware('Admin', 'Management', 'Production', 'production', 'Production Manager'), productionController.createProductionWorkflowTasks);
 router.post('/:rootCardId/send-to-inventory', rootCardController.sendToInventory);
+router.post('/:rootCardId/send-to-design-engineering', rootCardController.sendToDesignEngineering);
 router.get('/:rootCardId/design-details', designEngineeringController.getDesignEngineering);
 
 module.exports = router;

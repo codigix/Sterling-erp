@@ -2,6 +2,8 @@ const ComprehensiveBOM = require('../../models/ComprehensiveBOM');
 const pool = require('../../config/database');
 const DepartmentTask = require('../../models/DepartmentTask');
 const Role = require('../../models/Role');
+const WorkflowTaskHelper = require('../../utils/workflowTaskHelper');
+const AlertsNotification = require('../../models/AlertsNotification');
 
 // Helper to trigger procurement tasks and workflow updates
 const triggerActivationTasks = async (bomId, productInfo, userId) => {
@@ -14,6 +16,31 @@ const triggerActivationTasks = async (bomId, productInfo, userId) => {
       await RootCardStep.completeStep(rootCardId, 3);
       // 2. Start Production Plan step (Step 4)
       await RootCardStep.startStep(rootCardId, 4);
+
+      // 3. Notify Admin to create Sales Order
+      try {
+        const [admins] = await pool.execute(`
+          SELECT DISTINCT u.id 
+          FROM users u
+          INNER JOIN roles r ON u.role_id = r.id
+          WHERE r.name IN ('Admin', 'administrator')
+        `);
+
+        for (const admin of admins) {
+          await AlertsNotification.create({
+            userId: admin.id,
+            fromUserId: userId,
+            alertType: 'bom_activated',
+            message: `Finished Good BOM for ${productInfo.productName} has been sent by Design Engineering. Please create Sales Order.`,
+            relatedTable: 'comprehensive_boms',
+            relatedId: bomId,
+            priority: 'high',
+            link: `/admin/sales-order?action=create&rootCardId=${rootCardId}`
+          });
+        }
+      } catch (adminError) {
+        console.error('Error notifying admins about activated BOM:', adminError.message);
+      }
     }
 
     const procurementRole = await Role.findByName('Procurement Manager') || await Role.findByName('Inventory Manager');
@@ -109,6 +136,16 @@ exports.createComprehensiveBOM = async (req, res) => {
     }
 
     await connection.commit();
+
+    // Complete "Create BOM" workflow task
+    if (productInfo.rootCardId) {
+      await WorkflowTaskHelper.completeAndOpenNext(productInfo.rootCardId, 'Create BOM');
+      
+      // If created as active, also complete "Send BOM of finish good to admin"
+      if (productInfo.status === 'active') {
+        await WorkflowTaskHelper.completeAndOpenNext(productInfo.rootCardId, 'Send BOM of finish good to admin');
+      }
+    }
 
     const costs = await ComprehensiveBOM.calculateCosts(bomId);
 
@@ -224,7 +261,7 @@ exports.updateComprehensiveBOM = async (req, res) => {
     }
 
     // Trigger Procurement tasks if status changed to active (Point 152)
-    if (oldBOM.status === 'draft' && productInfo.status === 'active') {
+    if (oldBOM.status !== 'active' && productInfo.status === 'active') {
       await triggerActivationTasks(id, {
         ...productInfo,
         rootCardId: productInfo.rootCardId || oldBOM.rootCardId,
@@ -234,6 +271,14 @@ exports.updateComprehensiveBOM = async (req, res) => {
     }
 
     await connection.commit();
+
+    // If status changed to active, complete "Send BOM of finish good to admin"
+    if (productInfo.status === 'active') {
+      const rootCardId = productInfo.rootCardId || oldBOM.rootCardId;
+      if (rootCardId) {
+        await WorkflowTaskHelper.completeAndOpenNext(rootCardId, 'Send BOM of finish good to admin');
+      }
+    }
 
     const costs = await ComprehensiveBOM.calculateCosts(id);
 
@@ -290,12 +335,17 @@ exports.updateBOMStatus = async (req, res) => {
     await ComprehensiveBOM.updateStatus(id, status);
 
     // Trigger Procurement tasks if status changed to active
-    if (oldBOM.status === 'draft' && status === 'active') {
+    if (oldBOM.status !== 'active' && status === 'active') {
       await triggerActivationTasks(id, {
         rootCardId: oldBOM.rootCardId,
         productName: oldBOM.productName,
         revision: oldBOM.revision
       }, req.user?.id);
+      
+      // Also complete "Send BOM of finish good to admin" workflow task
+      if (oldBOM.rootCardId) {
+        await WorkflowTaskHelper.completeAndOpenNext(oldBOM.rootCardId, 'Send BOM of finish good to admin');
+      }
     }
 
     res.json({ message: 'BOM status updated successfully' });

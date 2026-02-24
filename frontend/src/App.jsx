@@ -80,6 +80,7 @@ import WorkstationsPage from "./pages/production/WorkstationsPage";
 import WorkstationFormPage from "./pages/production/WorkstationFormPage";
 import ProductionEntryPage from "./pages/production/ProductionEntryPage";
 import ProductionDepartmentTasksPage from "./pages/production/ProductionDepartmentTasksPage";
+import ProductionWorkflowTasksPage from "./pages/production/ProductionWorkflowTasksPage";
 
 // Employee Portal
 import EmployeePortalPage from "./pages/employee/EmployeePortalPage";
@@ -203,6 +204,7 @@ function App() {
               <Route path="production/performance/metrics" element={<PerformanceMetricsPage />} />
               <Route path="production/outsource-tasks" element={<OutsourceTasksPage />} />
               <Route path="production/department-tasks" element={<ProductionDepartmentTasksPage />} />
+              <Route path="production/workflow-tasks" element={<ProductionWorkflowTasksPage />} />
               <Route path="production/operations/:id/entry" element={<ProductionEntryPage />} />
             </Route>
 

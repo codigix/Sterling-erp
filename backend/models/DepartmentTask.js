@@ -157,7 +157,7 @@ class DepartmentTask {
 
     // Get current task details for synchronization before update
     const [currentTaskRows] = await pool.execute(
-      'SELECT root_card_id, task_title, sales_order_id, work_order_operation_id FROM department_tasks WHERE id = ?',
+      'SELECT id, root_card_id, task_title, status, notes, sales_order_id, work_order_operation_id FROM department_tasks WHERE id = ?',
       [taskId]
     );
 
@@ -208,6 +208,19 @@ class DepartmentTask {
 
         await pool.execute(syncQuery, syncParams);
         console.log(`[DepartmentTask] Synchronized ${updates.status ? 'status' : ''} ${updates.priority ? 'priority' : ''} with employee_tasks for task: ${task.task_title}`);
+      }
+
+      // Handle sequential workflow if status changed to completed
+      if (updates.status === 'completed') {
+        try {
+          const notes = typeof task.notes === 'string' ? JSON.parse(task.notes) : task.notes;
+          if (notes && notes.workflow_step && task.root_card_id) {
+            const WorkflowTaskHelper = require('../utils/workflowTaskHelper');
+            await WorkflowTaskHelper.completeAndOpenNext(task.root_card_id, task.task_title);
+          }
+        } catch (e) {
+          console.error(`[DepartmentTask] Error checking workflow for task completion:`, e.message);
+        }
       }
 
       // Special handling for production_entry completion

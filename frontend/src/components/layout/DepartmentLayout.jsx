@@ -83,8 +83,17 @@ const DepartmentLayout = () => {
   };
 
   const getDepartmentRole = () => {
-    const userRole = user?.role?.toLowerCase() || "sales";
-    return departmentModules[userRole] || departmentModules.sales;
+    const rawRole = user?.role?.toLowerCase() || "sales";
+    
+    // Handle role variations
+    if (rawRole.includes("production")) return departmentModules.production;
+    if (rawRole.includes("inventory")) return departmentModules.inventory;
+    if (rawRole.includes("procurement")) return departmentModules.procurement;
+    if (rawRole.includes("qc") || rawRole.includes("quality")) return departmentModules.qc;
+    if (rawRole.includes("engineering") || rawRole.includes("design")) return departmentModules.engineering;
+    if (rawRole.includes("sales")) return departmentModules.sales;
+    
+    return departmentModules[rawRole] || departmentModules.sales;
   };
 
   const isActive = (path) => {
@@ -359,6 +368,19 @@ const DepartmentLayout = () => {
                     >
                       <CheckSquare size={18} className="flex-shrink-0" />
                       {!sidebarCollapsed && <span className="ml-3">Assign Tasks</span>}
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      to="/department/production/workflow-tasks"
+                      className={`flex items-center text-xs px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                        isActive("/department/production/workflow-tasks")
+                          ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"
+                          : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+                      }`}
+                    >
+                      <Zap size={18} className="flex-shrink-0" />
+                      {!sidebarCollapsed && <span className="ml-3">Workflow Tasks</span>}
                     </Link>
                   </li>
                   <li>

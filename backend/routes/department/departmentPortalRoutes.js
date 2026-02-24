@@ -11,8 +11,8 @@ router.get('/tasks/:roleId', authMiddleware, departmentPortalController.getTasks
 router.get('/tasks/:taskId/detail', authMiddleware, departmentPortalController.getTaskById);
 router.get('/role/:roleId/stats', authMiddleware, departmentPortalController.getRoleStats);
 
-router.post('/tasks', authMiddleware, roleMiddleware('Admin', 'Management', 'Design Engineer', 'Engineering', 'Production', 'production_manager', 'Inventory', 'inventory_manager', 'Inventory Manager'), departmentPortalController.createTask);
-router.patch('/tasks/:taskId', authMiddleware, roleMiddleware('Admin', 'Management', 'Design Engineer', 'Engineering', 'Production', 'production_manager', 'Inventory', 'inventory_manager', 'Inventory Manager'), departmentPortalController.updateTask);
-router.delete('/tasks/:taskId', authMiddleware, roleMiddleware('Admin', 'Management', 'Design Engineer', 'Engineering', 'Production', 'production_manager', 'Inventory', 'inventory_manager', 'Inventory Manager'), departmentPortalController.deleteTask);
+router.post('/tasks', authMiddleware, roleMiddleware('Admin', 'Management', 'Design Engineer', 'design_engineer', 'design.engineer', 'Engineering', 'Production', 'production_manager', 'Inventory', 'inventory_manager', 'Inventory Manager'), departmentPortalController.createTask);
+router.patch('/tasks/:taskId', authMiddleware, roleMiddleware('Admin', 'Management', 'Design Engineer', 'design_engineer', 'design.engineer', 'Engineering', 'Production', 'production_manager', 'Inventory', 'inventory_manager', 'Inventory Manager'), departmentPortalController.updateTask);
+router.delete('/tasks/:taskId', authMiddleware, roleMiddleware('Admin', 'Management', 'Design Engineer', 'design_engineer', 'design.engineer', 'Engineering', 'Production', 'production_manager', 'Inventory', 'inventory_manager', 'Inventory Manager'), departmentPortalController.deleteTask);
 
 module.exports = router;
