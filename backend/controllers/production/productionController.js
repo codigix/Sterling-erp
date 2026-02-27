@@ -7,17 +7,27 @@ const Role = require('../../models/Role');
 
 exports.getProductionRootCards = async (req, res) => {
   try {
-    const { status, projectId, search, rootCardId } = req.query;
+    const { status, projectId, search, rootCardId, hasMaterialRequests } = req.query;
     
     // Authorization: Only show root cards that have been "Sent to Production" in sales_orders_management
+    // OR have material requests (for inventory managers)
     const [sentOrders] = await pool.execute(
       "SELECT root_card_id FROM sales_orders_management WHERE status = 'Sent to Production'"
     );
     const sentRootCardIds = sentOrders.map(o => o.root_card_id);
 
+    // Get root card IDs that have material requests
+    const [mrRows] = await pool.execute(
+      "SELECT DISTINCT sales_order_id as root_card_id FROM material_requests"
+    );
+    const mrRootCardIds = mrRows.map(mr => mr.root_card_id);
+
+    // Combine both sets of IDs
+    const authorizedRootCardIds = [...new Set([...sentRootCardIds, ...mrRootCardIds])];
+
     if (rootCardId) {
       const rootCard = await ProductionRootCard.findByRootCardId(rootCardId);
-      if (rootCard && sentRootCardIds.includes(rootCard.sales_order_id)) {
+      if (rootCard && authorizedRootCardIds.includes(rootCard.sales_order_id)) {
         return res.json([rootCard]);
       }
       return res.json([]);
@@ -29,12 +39,19 @@ exports.getProductionRootCards = async (req, res) => {
     if (projectId) filters.projectId = projectId;
     if (search) filters.search = search;
 
-    const allRootCards = await ProductionRootCard.findAll(filters);
+    let allRootCards = await ProductionRootCard.findAll(filters);
     
     // Filter by authorized sales_order_ids
-    const authorizedRootCards = allRootCards.filter(rc => 
-      rc.sales_order_id && sentRootCardIds.includes(rc.sales_order_id)
+    let authorizedRootCards = allRootCards.filter(rc => 
+      rc.sales_order_id && authorizedRootCardIds.includes(rc.sales_order_id)
     );
+
+    // Filter: only root cards with material requests if specifically requested
+    if (hasMaterialRequests === 'true') {
+      authorizedRootCards = authorizedRootCards.filter(rc => 
+        mrRootCardIds.includes(rc.sales_order_id)
+      );
+    }
 
     res.json({ rootCards: authorizedRootCards, total: authorizedRootCards.length });
   } catch (error) {
@@ -521,72 +538,23 @@ exports.internalCreateWorkflowTasks = async (rootCardId, userId, connection, typ
     throw new Error('Root card ID and user ID are required');
   }
 
-  // Verify if the userId exists in the employees table
-  const [employees] = await connection.execute(
-    'SELECT id FROM employees WHERE id = ?',
-    [userId]
-  );
-
-  let effectiveEmployeeId = userId;
-
-  if (employees.length === 0) {
-    const [userRecords] = await connection.execute(
-      'SELECT username FROM users WHERE id = ?',
-      [userId]
-    );
-
-    if (userRecords.length > 0) {
-      const username = userRecords[0].username;
-      const [matchingEmployees] = await connection.execute(
-        'SELECT id FROM employees WHERE login_id = ? OR email = ?',
-        [username, username]
-      );
-      
-      if (matchingEmployees.length > 0) {
-        effectiveEmployeeId = matchingEmployees[0].id;
-      } else {
-        // Fallback: Find the first active employee for the relevant department
-        const deptName = type === 'production' ? 'Production' : 'Design Engineer';
-        const [deptEmployees] = await connection.execute(
-          `SELECT e.id FROM employees e 
-           JOIN roles r ON e.role_id = r.id 
-           WHERE r.name = ? OR r.name = ?
-           LIMIT 1`,
-          [deptName, deptName.toLowerCase().replace(' ', '_')]
-        );
-        
-        if (deptEmployees.length > 0) {
-          effectiveEmployeeId = deptEmployees[0].id;
-        } else {
-          const [anyEmployee] = await connection.execute(
-            'SELECT id FROM employees LIMIT 1'
-          );
-          if (anyEmployee.length > 0) {
-            effectiveEmployeeId = anyEmployee[0].id;
-          } else {
-            throw new Error('No valid employee found to assign workflow tasks to.');
-          }
-        }
-      }
-    } else {
-      const [anyEmployee] = await connection.execute(
-        'SELECT id FROM employees LIMIT 1'
-      );
-      if (anyEmployee.length > 0) {
-        effectiveEmployeeId = anyEmployee[0].id;
-      } else {
-        throw new Error('User not found and no alternative employee available.');
-      }
-    }
-  }
+  // No longer strictly requiring an employee record to exist,
+  // since tasks are assigned to roles, and assigned_by is users.id.
+  // The effectiveEmployeeId was previously assigned but unused.
 
   const createdTasks = [];
 
   // Get appropriate role ID
   let roleId = null;
-  const roleSearchNames = type === 'production' 
-    ? ['Production', 'production', 'Production Manager']
-    : ['Design Engineer', 'design_engineer', 'Design Engineering'];
+  let roleSearchNames = [];
+  
+  if (type === 'production') {
+    roleSearchNames = ['Production', 'production', 'Production Manager'];
+  } else if (type === 'inventory') {
+    roleSearchNames = ['Inventory', 'inventory', 'inventory_manager', 'Inventory Manager'];
+  } else {
+    roleSearchNames = ['Design Engineer', 'design_engineer', 'Design Engineering'];
+  }
 
   const rolePlaceholders = roleSearchNames.map(() => '?').join(',');
   
@@ -628,13 +596,30 @@ exports.internalCreateWorkflowTasks = async (rootCardId, userId, connection, typ
     }
     
     const so = salesOrders[0];
+    let projectId = so.project_id;
+    
+    // Ensure a project exists as project_id is NOT NULL in root_cards
+    if (!projectId) {
+      const [projectResult] = await connection.execute(
+        `INSERT INTO projects (name, sales_order_id, client_name, po_number, status)
+         VALUES (?, ?, ?, ?, ?)`,
+        [
+          so.project_name || `Project for SO ${so.id}`,
+          so.id,
+          so.customer || null,
+          so.po_number || null,
+          'draft'
+        ]
+      );
+      projectId = projectResult.insertId;
+    }
     
     const [result] = await connection.execute(
       `INSERT INTO root_cards
        (project_id, sales_order_id, code, title, status, priority, planned_end, created_by, notes, stages)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        so.project_id || null,
+        projectId,
         so.id,
         so.po_number || null,
         so.project_name || `${type === 'production' ? 'Production' : 'Design'} Project`,
@@ -655,7 +640,12 @@ exports.internalCreateWorkflowTasks = async (rootCardId, userId, connection, typ
     baseSalesOrderId = rootCard.sales_order_id;
   }
 
-  const workflowTable = type === 'production' ? 'production_workflow_steps' : 'design_workflow_steps';
+  const workflowTables = {
+    'production': 'production_workflow_steps',
+    'design': 'design_workflow_steps',
+    'inventory': 'inventory_workflow_steps'
+  };
+  const workflowTable = workflowTables[type] || 'design_workflow_steps';
   
   // Cleanup existing workflow tasks of this type
   await connection.execute(
@@ -668,6 +658,26 @@ exports.internalCreateWorkflowTasks = async (rootCardId, userId, connection, typ
      FROM ${workflowTable} WHERE is_active = TRUE ORDER BY step_order ASC`
   );
 
+  // Check if a production plan already exists for this root card
+  let planExists = false;
+  if (type === 'production') {
+    const [plans] = await connection.execute(
+      'SELECT id FROM production_plans WHERE root_card_id = ? LIMIT 1',
+      [effectiveRootCardId]
+    );
+    planExists = plans.length > 0;
+  }
+
+  // Check if material request already exists for inventory workflow
+  let mrExists = false;
+  if (type === 'inventory') {
+    const [mrs] = await connection.execute(
+      'SELECT id FROM material_requests WHERE sales_order_id = ? LIMIT 1',
+      [baseSalesOrderId]
+    );
+    mrExists = mrs.length > 0;
+  }
+
   if (workflowSteps.length === 0) {
     console.warn(`No active ${type} workflow steps defined`);
     return [];
@@ -678,7 +688,25 @@ exports.internalCreateWorkflowTasks = async (rootCardId, userId, connection, typ
     const taskDesc = step.task_template_description || step.description || null;
     
     if (roleId) {
-      const initialStatus = step.step_order === 1 ? 'pending' : 'on_hold';
+      let initialStatus = step.step_order === 1 ? 'pending' : 'on_hold';
+      
+      // If it's a production workflow and a plan already exists
+      if (type === 'production' && planExists) {
+        if (step.step_order === 1) {
+          initialStatus = 'completed';
+        } else if (step.step_order === 2) {
+          initialStatus = 'pending';
+        }
+      }
+
+      // If it's an inventory workflow and a material request already exists
+      if (type === 'inventory' && mrExists) {
+        if (step.step_order === 1) {
+          initialStatus = 'completed';
+        } else if (step.step_order === 2) {
+          initialStatus = 'pending';
+        }
+      }
       
       const [result] = await connection.execute(
         `INSERT INTO department_tasks 
@@ -854,6 +882,13 @@ exports.createProductionPlan = async (req, res) => {
 
     if (rootCardId) {
       try {
+        // Mark the "Create Production Plan" task as completed if it exists
+        // and automatically open the next task in sequence
+        const WorkflowTaskHelper = require('../../utils/workflowTaskHelper');
+        await WorkflowTaskHelper.completeAndOpenNext(rootCardId, 'Create Production Plan', connection);
+        
+        console.log(`[Production Plan] Automatically completed workflow task for root card ${rootCardId}`);
+
         const [productionPlanDetail] = await connection.execute(
           'SELECT selected_phases FROM production_plan_details WHERE sales_order_id = ? LIMIT 1',
           [rootCardId]

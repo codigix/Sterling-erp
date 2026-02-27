@@ -7,6 +7,7 @@ const DocumentSelector = ({ documentType, title, description }) => {
   const [searchParams] = useSearchParams();
   const rootCardIdFromUrl = searchParams.get('rootCardId');
   const taskIdFromUrl = searchParams.get('taskId');
+  const taskTitleFromUrl = searchParams.get('taskTitle');
 
   const [rootCards, setRootCards] = useState([]);
   const [documents, setDocuments] = useState([]);
@@ -26,12 +27,19 @@ const DocumentSelector = ({ documentType, title, description }) => {
     fetchAssignedRootCards();
   }, []);
 
-  // Handle auto-selection when rootCards are loaded
+  // Handle auto-selection when rootCards are loaded or URL changes
   useEffect(() => {
-    if (rootCardIdFromUrl && rootCards.length > 0 && !selectedRootCard) {
-      const card = rootCards.find(c => String(c.id) === String(rootCardIdFromUrl));
-      if (card) {
-        handleRootCardSelect(rootCardIdFromUrl);
+    if (rootCardIdFromUrl && rootCards.length > 0) {
+      const isAlreadySelected = selectedRootCard && String(selectedRootCard.id) === String(rootCardIdFromUrl);
+      
+      if (!isAlreadySelected) {
+        const card = rootCards.find(c => String(c.id) === String(rootCardIdFromUrl));
+        if (card) {
+          console.log(`[DocumentSelector] Auto-selecting root card from URL: ${rootCardIdFromUrl}`);
+          handleRootCardSelect(rootCardIdFromUrl);
+        } else {
+          console.warn(`[DocumentSelector] Root card ${rootCardIdFromUrl} from URL not found in list`);
+        }
       }
     }
   }, [rootCardIdFromUrl, rootCards, selectedRootCard]);
@@ -191,7 +199,7 @@ const DocumentSelector = ({ documentType, title, description }) => {
               await axios.patch(`/department/portal/tasks/${taskIdFromUrl}`, {
                 status: 'completed'
               });
-              alert('Task "Approve Documents" completed automatically as all documents are approved!');
+              alert(`Task "${taskTitleFromUrl || 'Approve Documents'}" completed automatically as all documents are approved!`);
             } catch (taskErr) {
               console.error('Error completing task:', taskErr);
             }

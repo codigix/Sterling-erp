@@ -44,6 +44,13 @@ class RootCard {
       params.push(like, like, like, like);
     }
 
+    if (filters.hasMaterialRequests === true || filters.hasMaterialRequests === 'true') {
+      conditions.push(`EXISTS (
+        SELECT 1 FROM material_requests mr 
+        WHERE mr.sales_order_id = so.id OR mr.root_card_id = so.id
+      )`);
+    }
+
     if (filters.assignedOnly === true || filters.assignedOnly === 'true') {
       if (filters.userId) {
         // Find orders where:

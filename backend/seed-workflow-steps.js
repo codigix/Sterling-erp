@@ -9,36 +9,40 @@ async function seedWorkflowSteps() {
 
     const workflowSteps = [
       {
-        step_name: 'Approve Designs',
+        step_name: 'Verify and approve design',
         step_order: 1,
-        description: 'Review and approve technical designs and 3D CAD drawings',
-        task_template_title: 'Approve Designs',
-        task_template_description: 'Review and approve technical designs and 3D CAD drawings for this root card',
-        priority: 'high'
+        description: 'Verify and approve all raw designs for this root card',
+        task_template_title: 'Verify and approve design',
+        task_template_description: 'Check raw designs at /design-engineer/documents/raw-designs and approve them.',
+        priority: 'high',
+        link: '/design-engineer/documents/raw-designs'
       },
       {
-        step_name: 'Approve Documents',
+        step_name: 'Verify and approve the document',
         step_order: 2,
-        description: 'Review and approve all supporting documents and specifications',
-        task_template_title: 'Approve Documents',
-        task_template_description: 'Review and approve all documents and drawings uploaded for this root card',
-        priority: 'high'
+        description: 'Verify and approve all required documents for this root card',
+        task_template_title: 'Verify and approve the document',
+        task_template_description: 'Check required documents at /design-engineer/documents/required-docs and approve them.',
+        priority: 'high',
+        link: '/design-engineer/documents/required-docs'
       },
       {
         step_name: 'Create BOM',
         step_order: 3,
-        description: 'Create the Bill of Materials for the finished good',
+        description: 'Create Bill of Materials (BOM) for this root card',
         task_template_title: 'Create BOM',
-        task_template_description: 'Create the Bill of Materials for the finished good associated with this root card',
-        priority: 'high'
+        task_template_description: 'Create and validate the Bill of Materials for this root card.',
+        priority: 'high',
+        link: '/design-engineer/bom/create'
       },
       {
-        step_name: 'Send BOM to Admin',
+        step_name: 'Send BOM to admin',
         step_order: 4,
-        description: 'Finalize and send the created BOM to admin for processing',
-        task_template_title: 'Send BOM of finish good to admin',
-        task_template_description: 'After creating and validating the BOM, send it to the admin for final review and processing',
-        priority: 'medium'
+        description: 'Send finalized BOM to admin',
+        task_template_title: 'Send BOM to admin',
+        task_template_description: 'Finalize and send the BOM to admin for further processing.',
+        priority: 'medium',
+        link: '/design-engineer/bom/view'
       }
     ];
 
@@ -51,13 +55,19 @@ async function seedWorkflowSteps() {
         );
 
         if (existing.length > 0) {
-          console.log(`⏭️  Step ${step.step_order}: ${step.step_name} already exists`);
+          await connection.execute(
+            `UPDATE design_workflow_steps SET 
+             step_name = ?, description = ?, task_template_title = ?, task_template_description = ?, priority = ?, link = ?, is_active = TRUE 
+             WHERE id = ?`,
+            [step.step_name, step.description, step.task_template_title, step.task_template_description, step.priority, step.link, existing[0].id]
+          );
+          console.log(`✅ Updated Step ${step.step_order}: ${step.step_name}`);
           continue;
         }
 
         await connection.execute(
           `INSERT INTO design_workflow_steps 
-           (step_name, step_order, description, task_template_title, task_template_description, auto_create_on_trigger, priority, is_active)
+           (step_name, step_order, description, task_template_title, task_template_description, priority, link, is_active)
            VALUES (?, ?, ?, ?, ?, ?, ?, TRUE)`,
           [
             step.step_name,
@@ -65,8 +75,8 @@ async function seedWorkflowSteps() {
             step.description,
             step.task_template_title,
             step.task_template_description,
-            step.auto_create_on_trigger,
-            step.priority
+            step.priority,
+            step.link
           ]
         );
 

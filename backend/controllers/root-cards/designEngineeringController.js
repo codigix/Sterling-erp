@@ -209,8 +209,8 @@ class DesignEngineeringController {
       await DesignEngineeringDetail.approveDesign(rootCardId, reviewedBy, comments);
       await RootCardStep.update(rootCardId, 2, { status: 'approved' });
 
-      // Complete "Approve Designs" workflow task
-      await WorkflowTaskHelper.completeAndOpenNext(rootCardId, 'Approve Designs');
+      // Complete "Verify and approve design" workflow task
+      await WorkflowTaskHelper.completeAndOpenNext(rootCardId, 'Verify and approve design');
 
       const updated = await DesignEngineeringDetail.findByRootCardId(rootCardId);
       res.json(formatSuccessResponse(updated, 'Design approved'));

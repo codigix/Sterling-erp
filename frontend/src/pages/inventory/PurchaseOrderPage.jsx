@@ -104,10 +104,15 @@ const KanbanView = ({ data, navigate, handleEditPO, handleMonitorPO, handleSendP
                         )}
                         <button
                           onClick={() => handleMonitorPO(po)}
-                          className="p-1 text-slate-400 hover:text-purple-600 rounded transition-all"
+                          className="p-1 text-slate-400 hover:text-purple-600 rounded transition-all relative group/msg"
                           title="Monitor"
                         >
-                          <MessageSquare size={14} />
+                          <MessageSquare size={14} className={po.unread_communication_count > 0 ? "text-purple-600 animate-pulse" : ""} />
+                          {po.unread_communication_count > 0 && (
+                            <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[8px] flex items-center justify-center rounded-full border-2 border-white dark:border-slate-900 font-bold">
+                              {po.unread_communication_count}
+                            </span>
+                          )}
                         </button>
                         <button
                           onClick={() => handleSendPO(po)}
@@ -338,6 +343,13 @@ const PurchaseOrderPage = () => {
     setCommunications([]); // Clear previous communications
     setShowMonitorModal(true);
     fetchCommunications(po.id);
+  };
+
+  const closeMonitorModal = () => {
+    setShowMonitorModal(false);
+    setSelectedPOForMonitor(null);
+    fetchPurchaseOrders(); // Refresh to update unread counts
+    fetchStats();
   };
 
   const fetchCommunications = async (poId) => {
@@ -773,10 +785,15 @@ const PurchaseOrderPage = () => {
                           )}
                           <button
                             onClick={() => handleMonitorReplies(po)}
-                            className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-all relative"
+                            className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-all relative group/msg"
                             title="Monitor Replies"
                           >
-                            <MessageSquare size={14} />
+                            <MessageSquare size={14} className={po.unread_communication_count > 0 ? "text-blue-600 animate-pulse" : ""} />
+                            {po.unread_communication_count > 0 && (
+                              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[8px] flex items-center justify-center rounded-full border-2 border-white dark:border-slate-900 font-bold">
+                                {po.unread_communication_count}
+                              </span>
+                            )}
                           </button>
                           {(po.status === 'approved' || po.status === 'delivered') && (
                             <button
@@ -890,7 +907,7 @@ const PurchaseOrderPage = () => {
                 >
                   <RefreshCw size={18} className={fetchingCommunications ? "animate-spin" : ""} />
                 </button>
-                <button onClick={() => setShowMonitorModal(false)} className="p-2 hover:bg-white dark:hover:bg-slate-700 rounded-xl transition-all shadow-sm">
+                <button onClick={closeMonitorModal} className="p-2 hover:bg-white dark:hover:bg-slate-700 rounded-xl transition-all shadow-sm">
                   <X size={20} className="text-slate-400" />
                 </button>
               </div>
@@ -916,15 +933,20 @@ const PurchaseOrderPage = () => {
                     <div key={comm.id} className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
                       <div className="p-4 border-b border-slate-50 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-800/30 flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-600">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${comm.is_outgoing ? 'bg-indigo-100 text-indigo-600' : 'bg-blue-100 text-blue-600'}`}>
                             <User size={16} />
                           </div>
                           <div>
-                            <p className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-tight">{comm.sender_email}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-tight">{comm.sender_email}</p>
+                              {comm.is_outgoing && (
+                                <span className="px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 text-[8px] font-bold uppercase tracking-widest border border-indigo-100">SENT</span>
+                              )}
+                            </div>
                             <div className="flex items-center gap-2 mt-0.5">
                               <Clock size={10} className="text-slate-400" />
                               <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-                                {new Date(comm.created_at).toLocaleString('en-GB', { 
+                                {new Date(comm.created_at || comm.received_at).toLocaleString('en-GB', { 
                                   day: 'numeric', 
                                   month: 'short', 
                                   year: 'numeric',
@@ -981,7 +1003,7 @@ const PurchaseOrderPage = () => {
 
             <div className="p-6 border-t border-slate-50 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 flex justify-end">
               <button
-                onClick={() => setShowMonitorModal(false)}
+                onClick={closeMonitorModal}
                 className="px-8 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm"
               >
                 Close

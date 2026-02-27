@@ -2,6 +2,10 @@ const MaterialRequest = require('../../models/MaterialRequest');
 const Vendor = require('../../models/Vendor');
 const Material = require('../../models/Material');
 const StockEntry = require('../../models/StockEntry');
+const AlertsNotification = require('../../models/AlertsNotification');
+const productionController = require('../production/productionController');
+const RootCardInventoryTask = require('../../models/RootCardInventoryTask');
+const WorkflowTaskHelper = require('../../utils/workflowTaskHelper');
 const pool = require('../../config/database');
 
 exports.createMaterialRequest = async (req, res) => {
@@ -44,6 +48,16 @@ exports.createMaterialRequest = async (req, res) => {
   try {
     const createdBy = typeof req.user?.id === 'number' ? req.user.id : null;
 
+    // Format date for MySQL
+    let formattedRequiredDate = null;
+    if (requiredDate) {
+      try {
+        formattedRequiredDate = new Date(requiredDate).toISOString().slice(0, 10);
+      } catch (e) {
+        console.error('Invalid requiredDate:', requiredDate);
+      }
+    }
+
     const materialRequestId = await MaterialRequest.create({
       rootCardId,
       productionPlanId,
@@ -51,14 +65,74 @@ exports.createMaterialRequest = async (req, res) => {
       department,
       purpose,
       targetWarehouseId,
-      requiredDate: requiredDate || null,
+      requiredDate: formattedRequiredDate,
       priority,
       status: 'approved',
-      createdBy,
+      createdBy: createdBy || (req.user ? req.user.id : null),
       remarks
     });
 
     const createdRequest = await MaterialRequest.findById(materialRequestId);
+
+    // Notify Inventory Managers
+    try {
+      await notifyInventoryManagers(createdRequest);
+      
+      const effectiveCreatedBy = createdBy || (req.user ? req.user.id : null);
+
+      // Automatically create inventory workflow tasks for this material request
+      if (materialRequestId) {
+        const conn = await pool.getConnection();
+        try {
+          // 1. Create standard department tasks if root card exists (optional/legacy)
+          if (rootCardId && effectiveCreatedBy) {
+            try {
+              await productionController.internalCreateWorkflowTasks(
+                rootCardId, 
+                effectiveCreatedBy, 
+                conn, 
+                'inventory'
+              );
+            } catch (wfErr) {
+              console.warn(`[MR-Single] Standard workflow task creation skipped/failed: ${wfErr.message}`);
+            }
+          }
+
+          // 2. Initialize RootCardInventoryTask for InventoryTasksPage
+          let actualRootCardId = rootCardId;
+
+          if (rootCardId) {
+            let [rcRows] = await conn.execute(
+              'SELECT id, project_id, project_name, po_number FROM root_cards WHERE id = ? OR sales_order_id = ? LIMIT 1',
+              [rootCardId, rootCardId]
+            );
+
+            if (rcRows.length > 0) {
+              actualRootCardId = rcRows[0].id;
+              let projectId = rcRows[0].project_id;
+              
+              if (!projectId) {
+                const projectName = rcRows[0].project_name || `Project-${rcRows[0].po_number || actualRootCardId}`;
+                const [projectResult] = await conn.execute(
+                  'INSERT INTO projects (name, sales_order_id, status) VALUES (?, ?, ?)',
+                  [projectName, actualRootCardId, 'draft']
+                );
+                projectId = projectResult.insertId;
+                await conn.execute('UPDATE root_cards SET project_id = ? WHERE id = ?', [projectId, actualRootCardId]);
+              }
+            }
+          }
+          
+          console.log(`[MR-Single] Initializing RootCardInventoryTask for MR: ${materialRequestId}, RootCard: ${actualRootCardId}`);
+          await RootCardInventoryTask.initializeRootCardTasks(actualRootCardId || null, null, conn, materialRequestId);
+        } finally {
+          conn.release();
+        }
+      }
+    } catch (notifError) {
+      console.error('Failed to notify inventory managers or create workflow:', notifError.message);
+      // Don't fail the request if notification or workflow creation fails
+    }
 
     res.status(201).json({
       message: 'Material request created successfully',
@@ -93,13 +167,23 @@ exports.bulkCreateMaterialRequests = async (req, res) => {
     
     const firstReq = requests[0];
     if (!firstReq.items && firstReq.materialName) {
+      // Format date for MySQL
+      let formattedRequiredDate = null;
+      if (firstReq.requiredDate) {
+        try {
+          formattedRequiredDate = new Date(firstReq.requiredDate).toISOString().slice(0, 10);
+        } catch (e) {
+          console.error('Invalid requiredDate in bulk:', firstReq.requiredDate);
+        }
+      }
+
       // Consolidate old format requests into one multi-item request
       const consolidated = {
         rootCardId: firstReq.rootCardId,
         productionPlanId: firstReq.productionPlanId,
         department: firstReq.department || 'Production',
         purpose: firstReq.purpose || 'Material Issue',
-        requiredDate: firstReq.requiredDate,
+        requiredDate: formattedRequiredDate,
         priority: firstReq.priority || 'medium',
         remarks: firstReq.remarks,
         createdBy,
@@ -113,14 +197,83 @@ exports.bulkCreateMaterialRequests = async (req, res) => {
       };
       processedRequests = [consolidated];
     } else {
-      processedRequests = requests.map(req => ({
-        ...req,
-        createdBy,
-        status: 'approved'
-      }));
+      processedRequests = requests.map(req => {
+        let formattedDate = null;
+        if (req.requiredDate) {
+          try {
+            formattedDate = new Date(req.requiredDate).toISOString().slice(0, 10);
+          } catch (e) {
+            console.error('Invalid requiredDate in bulk item:', req.requiredDate);
+          }
+        }
+        
+        return {
+          ...req,
+          requiredDate: formattedDate,
+          createdBy,
+          status: 'approved'
+        };
+      });
     }
 
     const ids = await MaterialRequest.bulkCreate(processedRequests);
+
+    // Notify Inventory Managers and initialize workflows for all created requests
+    try {
+      if (ids && ids.length > 0) {
+        const firstRequest = await MaterialRequest.findById(ids[0]);
+        if (firstRequest) {
+          await notifyInventoryManagers(firstRequest, ids.length);
+        }
+
+        const conn = await pool.getConnection();
+        try {
+          const effectiveCreatedBy = createdBy || (req.user ? req.user.id : null);
+          
+          for (const mrId of ids) {
+            const mr = await MaterialRequest.findById(mrId);
+            if (!mr) continue;
+
+            const targetRootCardId = mr.sales_order_id || mr.root_card_id;
+            
+            console.log(`[MR-Bulk] Processing workflow for MR: ${mr.id} (MR Number: ${mr.mr_number}), Root Card: ${targetRootCardId}`);
+            
+            // 1. Create standard department tasks if root card exists (optional/legacy)
+            if (targetRootCardId && effectiveCreatedBy) {
+              try {
+                await productionController.internalCreateWorkflowTasks(
+                  targetRootCardId, 
+                  effectiveCreatedBy, 
+                  conn, 
+                  'inventory'
+                );
+              } catch (wfErr) {
+                console.warn(`[MR-Bulk] Standard workflow task creation skipped/failed: ${wfErr.message}`);
+              }
+            }
+
+            // 2. Initialize RootCardInventoryTask for InventoryTasksPage
+            let actualRootCardId = targetRootCardId;
+            if (targetRootCardId) {
+              let [rcRows] = await conn.execute(
+                'SELECT id FROM root_cards WHERE id = ? OR sales_order_id = ? LIMIT 1',
+                [targetRootCardId, targetRootCardId]
+              );
+              if (rcRows.length > 0) {
+                actualRootCardId = rcRows[0].id;
+              }
+            }
+            
+            console.log(`[MR-Bulk] Initializing RootCardInventoryTask for MR: ${mr.id}, RootCard: ${actualRootCardId}`);
+            await RootCardInventoryTask.initializeRootCardTasks(actualRootCardId || null, null, conn, mr.id);
+          }
+        } finally {
+          conn.release();
+        }
+      }
+    } catch (notifError) {
+      console.error('Failed to notify inventory managers or create workflow for bulk request:', notifError.message);
+    }
 
     res.status(201).json({
       message: `${ids.length} material requests created successfully`,
@@ -239,6 +392,55 @@ exports.updateMaterialRequestStatus = async (req, res) => {
     
     // Use the model method for consistency
     await MaterialRequest.updateStatus(id, status);
+
+    // If status is approved, trigger workflow creation if not already created
+    if (status === 'approved') {
+      const materialRequest = await MaterialRequest.findById(id);
+      if (materialRequest) {
+        const conn = await pool.getConnection();
+        try {
+          // Check if tasks already exist for this MR
+          const [existingTasks] = await conn.execute(
+            'SELECT id FROM root_card_inventory_tasks WHERE material_request_id = ? LIMIT 1',
+            [id]
+          );
+
+          if (existingTasks.length === 0) {
+            console.log(`[MR-Status-Trigger] Initializing workflow for approved MR: ${id}`);
+            
+            const targetRootCardId = materialRequest.sales_order_id || materialRequest.root_card_id;
+            let actualRootCardId = targetRootCardId;
+
+            if (targetRootCardId) {
+              // Get root card details to ensure project exists
+              const [rcRows] = await conn.execute(
+                'SELECT id, project_id, project_name, po_number FROM root_cards WHERE id = ? OR sales_order_id = ? LIMIT 1',
+                [targetRootCardId, targetRootCardId]
+              );
+
+              if (rcRows.length > 0) {
+                actualRootCardId = rcRows[0].id;
+                let projectId = rcRows[0].project_id;
+                
+                if (!projectId) {
+                  const projectName = rcRows[0].project_name || `Project-${rcRows[0].po_number || actualRootCardId}`;
+                  const [projectResult] = await conn.execute(
+                    'INSERT INTO projects (name, sales_order_id, status) VALUES (?, ?, ?)',
+                    [projectName, actualRootCardId, 'draft']
+                  );
+                  projectId = projectResult.insertId;
+                  await conn.execute('UPDATE root_cards SET project_id = ? WHERE id = ?', [projectId, actualRootCardId]);
+                }
+              }
+            }
+            
+            await RootCardInventoryTask.initializeRootCardTasks(actualRootCardId || null, null, conn, id);
+          }
+        } finally {
+          conn.release();
+        }
+      }
+    }
 
     res.json({ message: 'Material request status updated successfully' });
   } catch (error) {
@@ -414,6 +616,15 @@ exports.releaseMaterial = async (req, res) => {
       [id]
     );
 
+    // Complete the final workflow task if it exists
+    if (materialRequest.sales_order_id) {
+      try {
+        await WorkflowTaskHelper.completeAndOpenNext(materialRequest.sales_order_id, 'Add to Stock & Release Material', connection);
+      } catch (wfError) {
+        console.warn('Could not complete workflow task:', wfError.message);
+      }
+    }
+
     await connection.commit();
     res.json({ message: 'Materials released and stock deducted successfully' });
 
@@ -431,3 +642,47 @@ exports.releaseMaterial = async (req, res) => {
 exports.addVendorQuote = async (req, res) => { res.status(501).json({ message: 'Not implemented for new structure yet' }); };
 exports.getVendorQuotes = async (req, res) => { res.status(501).json({ message: 'Not implemented for new structure yet' }); };
 exports.selectVendor = async (req, res) => { res.status(501).json({ message: 'Not implemented for new structure yet' }); };
+
+/**
+ * Helper to notify inventory managers and inventory team
+ */
+async function notifyInventoryManagers(materialRequest, bulkCount = 0) {
+  try {
+    // Find users with inventory-related roles
+    const [managers] = await pool.execute(`
+      SELECT u.id 
+      FROM users u 
+      JOIN roles r ON u.role_id = r.id 
+      WHERE LOWER(r.name) IN ('inventory_manager', 'inventory')
+    `);
+
+    if (!managers || managers.length === 0) {
+      console.log('No inventory managers found to notify');
+      return;
+    }
+
+    const mrNumber = materialRequest.mr_number || materialRequest.id;
+    const department = materialRequest.department || 'Production';
+    
+    // Customize message for bulk vs single
+    const message = bulkCount > 1 
+      ? `New bulk material request (${bulkCount} items) from ${department} department`
+      : `New Material Request ${mrNumber} from ${department} department`;
+
+    for (const manager of managers) {
+      await AlertsNotification.create({
+        userId: manager.id,
+        fromUserId: materialRequest.created_by || null,
+        message: message,
+        alertType: 'info',
+        relatedTable: 'material_requests',
+        relatedId: materialRequest.id,
+        priority: 'medium',
+        link: '/inventory-manager/material-requests'
+      });
+    }
+  } catch (error) {
+    console.error('Error in notifyInventoryManagers:', error);
+    throw error;
+  }
+}

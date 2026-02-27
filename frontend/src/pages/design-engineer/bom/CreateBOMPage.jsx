@@ -256,24 +256,37 @@ const CreateBOMPage = () => {
 
       // Stages
       let combinedStages = [];
-      if (rootCard.stages && Array.isArray(rootCard.stages)) combinedStages = [...rootCard.stages];
+      if (rootCard.stages && Array.isArray(rootCard.stages)) {
+        combinedStages = [...rootCard.stages];
+      }
       
-      if (planRes.data?.success && planRes.data?.data) {
-        const phases = planRes.data.data.selectedPhases || planRes.data.data.phaseDetails || planRes.data.data.phases || {};
-        const planStages = Array.isArray(phases) 
-          ? phases.map(p => ({ 
-              stage_name: p.phase || p.stageName || p.name || p.stage_name,
+      // Try to get phases from step 4 data if it exists in the root card
+      const step4 = rootCard.steps?.step4_production || rootCard.steps?.production_plan;
+      const step4Phases = step4?.selectedPhases || step4?.selected_phases || step4?.data?.selectedPhases || step4?.data?.selected_phases || {};
+      
+      const planData = planRes.data?.data || {};
+      const planPhases = planData.selectedPhases || planData.selected_phases || planData.phaseDetails || planData.phases || {};
+      
+      // Combine all potential sources of phases
+      const allPhases = { ...step4Phases, ...planPhases };
+      
+      if (Object.keys(allPhases).length > 0) {
+        const planStages = Array.isArray(allPhases) 
+          ? allPhases.map(p => ({ 
+              stage_name: p.phase || p.stageName || p.name || p.stage_name || p.phase_name,
               stage_type: p.type || p.stage_type || 'in-house',
               assigned_worker: p.assignee || p.assigned_worker || ""
             }))
-          : Object.entries(phases).map(([key, phase]) => ({ 
-              stage_name: phase.phase || phase.stageName || phase.name || key,
-              stage_type: phase.type || phase.stage_type || 'in-house',
-              assigned_worker: phase.assignee || phase.assigned_worker || ""
+          : Object.entries(allPhases).map(([key, phase]) => ({ 
+              stage_name: (typeof phase === 'object' && phase !== null) ? (phase.phase || phase.stageName || phase.name || phase.phase_name || key) : key,
+              stage_type: (typeof phase === 'object' && phase !== null) ? (phase.type || phase.stage_type || 'in-house') : 'in-house',
+              assigned_worker: (typeof phase === 'object' && phase !== null) ? (phase.assignee || phase.assigned_worker || "") : ""
             }));
 
         planStages.forEach(ps => {
-          if (!combinedStages.some(cs => cs.stage_name === ps.stage_name)) combinedStages.push(ps);
+          if (ps.stage_name && !combinedStages.some(cs => cs.stage_name === ps.stage_name)) {
+            combinedStages.push(ps);
+          }
         });
       }
       setRootCardStages(combinedStages);
@@ -532,6 +545,17 @@ const CreateBOMPage = () => {
         }
       });
       
+      // 3. Add Consumable materials from general inventory
+      const consumableItems = allMaterials.filter(m => 
+        m.category === "Consumable" || m.category === "Consumables"
+      );
+      
+      consumableItems.forEach(item => {
+        if (!combined.some(m => m.itemCode === item.itemCode)) {
+          combined.push(item);
+        }
+      });
+      
       return combined;
     }
 
@@ -560,17 +584,35 @@ const CreateBOMPage = () => {
   const subAssemblyOptions = useMemo(() => {
     if (!bomData.productInfo.rootCardId) return [];
 
-    return (existingBoms || [])
+    // 1. Get sub-assemblies for this root card
+    const projectSubAssemblies = (existingBoms || [])
       .filter(bom => 
         String(bom.rootCardId) === String(bomData.productInfo.rootCardId) && 
-        bom.id !== parseInt(bomId) &&
-        (bom.itemGroup === "Sub Assemblies" || bom.itemGroup === "Sub-assembly" || bom.itemGroup === "Finished Goods" || bom.itemGroup === "Finished Good")
+        bom.id !== parseInt(bomId)
       )
       .map(bom => ({
-        label: `${bom.itemCode} - ${bom.productName}`,
+        label: bom.productName,
         value: bom.itemCode
       }));
-  }, [existingBoms, bomData.productInfo.rootCardId, bomId]);
+
+    // 2. Get Consumable materials from available materials
+    const consumableMaterials = allAvailableMaterials
+      .filter(m => m.category === "Consumable" || m.category === "Consumables")
+      .map(m => ({
+        label: m.itemName,
+        value: m.itemCode
+      }));
+
+    // Combine and remove duplicates based on itemCode
+    const combined = [...projectSubAssemblies];
+    consumableMaterials.forEach(item => {
+      if (!combined.some(c => c.value === item.value)) {
+        combined.push(item);
+      }
+    });
+
+    return combined;
+  }, [existingBoms, bomData.productInfo.rootCardId, bomId, allAvailableMaterials]);
 
   const itemGroupSelectOptions = useMemo(() => ItemGroupOptions.map((group) => ({
     label: group,
@@ -610,19 +652,14 @@ const CreateBOMPage = () => {
 
   const operationSelectOptions = useMemo(() => {
     // Start with stages from the production plan (Root Card / Project)
+    // These are the phases selected in Step 4 of the wizard
     const options = rootCardStages.map(stage => ({
       label: stage.stage_name,
       value: stage.stage_name
     })).filter(opt => opt.label);
 
-    // If root card is selected, we ONLY show project stages + standard options 
-    // to prevent seeing stages from previous root cards in the state
+    // If root card is selected, we return ONLY project stages
     if (bomData.productInfo.rootCardId) {
-      OperationOptions.forEach(op => {
-        if (!options.some(opt => opt.label === op)) {
-          options.push({ label: op, value: op });
-        }
-      });
       return options;
     }
 

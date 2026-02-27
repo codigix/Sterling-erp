@@ -141,9 +141,9 @@ exports.createComprehensiveBOM = async (req, res) => {
     if (productInfo.rootCardId) {
       await WorkflowTaskHelper.completeAndOpenNext(productInfo.rootCardId, 'Create BOM');
       
-      // If created as active, also complete "Send BOM of finish good to admin"
+      // If created as active, also complete "Send BOM to admin"
       if (productInfo.status === 'active') {
-        await WorkflowTaskHelper.completeAndOpenNext(productInfo.rootCardId, 'Send BOM of finish good to admin');
+        await WorkflowTaskHelper.completeAndOpenNext(productInfo.rootCardId, 'Send BOM to admin');
       }
     }
 

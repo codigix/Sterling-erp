@@ -2,19 +2,11 @@ import React, { useState, useEffect, useCallback } from "react";
 import axios from "@/utils/api";
 import { useNavigate } from "react-router-dom";
 import {
-  Clock,
-  CheckCircle,
   Plus,
   Loader2,
-  AlertCircle,
   X,
-  Truck,
   Package,
   Zap,
-  Mail,
-  Eye,
-  TrendingDown,
-  Boxes,
   RefreshCw,
   FileText,
   Trash2,
@@ -25,27 +17,21 @@ import {
   INVENTORY_WORKFLOW,
 } from "@/constants/inventoryWorkflow";
 import { taskService } from "@/utils/taskService";
-import CheckProjectMaterialRequirementsModal from "@/components/inventory/CheckProjectMaterialRequirementsModal";
 
 const InventoryTasksPage = () => {
   const navigate = useNavigate();
-  const [rootCards, setRootCards] = useState([]);
-  const [selectedRootCard, setSelectedRootCard] = useState(null);
+  const [materialRequests, setMaterialRequests] = useState([]);
+  const [selectedMR, setSelectedMR] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
-  const [isCreatingWorkflow, setIsCreatingWorkflow] = useState(false);
-  const [workflowProgress, setWorkflowProgress] = useState(0);
-  const [selectedPhase, setSelectedPhase] = useState(null);
   const [selectedTasks, setSelectedTasks] = useState(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
-  const [workflowJustCreated, setWorkflowJustCreated] = useState(false);
   const [isInitiatingWorkflow, setIsInitiatingWorkflow] = useState(false);
   const [currentTaskIndex, setCurrentTaskIndex] = useState(0);
-  const [isDeletingRootCard, setIsDeletingRootCard] = useState(false);
-  const [showMaterialCheckModal, setShowMaterialCheckModal] = useState(false);
+  const [isDeletingMR, setIsDeletingMR] = useState(false);
   const [currentTaskForModal, setCurrentTaskForModal] = useState(null);
   const [formData, setFormData] = useState({
     title: "",
@@ -55,45 +41,37 @@ const InventoryTasksPage = () => {
   });
 
   useEffect(() => {
-    fetchRootCards();
+    fetchMaterialRequests();
   }, []);
 
-  const fetchRootCards = async () => {
+  const fetchMaterialRequests = async () => {
     setLoading(true);
     try {
-      const response = await axios.get("/production/root-cards", {
-        params: { assignedOnly: true }
-      });
-      const data = (response.data?.rootCards || response.data || []).filter(
-        (card) => card.department === "inventory" || !card.department
-      );
-      setRootCards(data);
+      const response = await axios.get("/inventory/material-requests");
+      const data = response.data?.materialRequests || response.data || [];
+      setMaterialRequests(data);
       if (data && data.length > 0) {
-        setSelectedRootCard(data[0]);
+        setSelectedMR(data[0]);
       }
-    } catch {
-      console.error("Error fetching root cards");
-      setError("Error loading root cards");
+    } catch (err) {
+      console.error("Error fetching material requests:", err);
+      setError("Error loading material requests");
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchTasksForRootCard = useCallback(
-    async (rootCard) => {
+  const fetchTasksForMR = useCallback(
+    async (mr) => {
       try {
-        if (!rootCard?.project?.id) {
-          console.log("[InventoryTasksPage] No project ID found");
+        if (!mr?.id) {
           setTasks([]);
           return;
         }
-        console.log(`[InventoryTasksPage] Fetching tasks for root card ${rootCard.id}`);
-        const response = await axios.get(`/inventory/root-card-tasks/root-card/${rootCard.id}/tasks`);
-        const tasksData = response.data.tasks || [];
-        console.log(`[InventoryTasksPage] Fetched ${tasksData.length} backend tasks`, tasksData);
-        setTasks(tasksData);
+        const response = await axios.get(`/inventory/root-card-tasks/mr/${mr.id}/tasks`);
+        setTasks(response.data.tasks || []);
       } catch (err) {
-        console.error("[InventoryTasksPage] Error fetching tasks:", err);
+        console.error("Error fetching tasks:", err);
         setTasks([]);
       }
     },
@@ -101,16 +79,16 @@ const InventoryTasksPage = () => {
   );
 
   useEffect(() => {
-    if (selectedRootCard) {
-      fetchTasksForRootCard(selectedRootCard);
+    if (selectedMR) {
+      fetchTasksForMR(selectedMR);
     }
-  }, [selectedRootCard, fetchTasksForRootCard]);
+  }, [selectedMR, fetchTasksForMR]);
 
   const handleCreateTask = async (e) => {
     e.preventDefault();
     setIsCreating(true);
     try {
-      alert("Tasks are auto-initialized for each project. Use the workflow to manage inventory tasks.");
+      alert("Workflow tasks are auto-initialized for each Material Request.");
     } finally {
       setIsCreating(false);
       setShowCreateModal(false);
@@ -122,23 +100,22 @@ const InventoryTasksPage = () => {
     const taskIdForUrl = task.backend_id || task.id;
     const baseParams = `taskId=${taskIdForUrl}&taskTitle=${encodeURIComponent(
       task.title || task.step_name
-    )}&rootCardId=${selectedRootCard?.id}&projectId=${selectedRootCard?.project?.id}`;
+    )}&materialRequestId=${selectedMR?.id}&projectId=${selectedMR?.project_id || selectedMR?.sales_order_id || selectedMR?.root_card_id || selectedMR?.root_card?.project_id}`;
 
     if (taskTitle.includes("material") && taskTitle.includes("requirement")) {
-      setCurrentTaskForModal(task);
-      setShowMaterialCheckModal(true);
+      navigate(`/inventory-manager/material-requests?${baseParams}`);
     } else if (
       taskTitle.includes("rfq") ||
       (taskTitle.includes("quotation") && taskTitle.includes("create"))
     ) {
-      navigate(`/inventory-manager/quotations/sent?${baseParams}`);
+      navigate(`/inventory-manager/quotations/sent?${baseParams}&action=create`);
     } else if (taskTitle.includes("send") && taskTitle.includes("quotation")) {
       navigate(`/inventory-manager/quotations/sent?${baseParams}`);
     } else if (
       taskTitle.includes("receive") &&
       taskTitle.includes("quotation")
     ) {
-      navigate(`/inventory-manager/quotations/received?${baseParams}`);
+      navigate(`/inventory-manager/quotations/sent?${baseParams}&action=record`);
     } else if (
       taskTitle.includes("create") &&
       taskTitle.includes("purchase order")
@@ -175,17 +152,6 @@ const InventoryTasksPage = () => {
     }
   };
 
-  const handleCreateWorkflowTasks = async () => {
-    setIsCreatingWorkflow(true);
-    setWorkflowProgress(0);
-    try {
-      alert("Inventory workflow tasks are automatically created for each project. Please select a root card to view its workflow tasks.");
-    } finally {
-      setIsCreatingWorkflow(false);
-      setWorkflowProgress(0);
-    }
-  };
-
   const handleInitiateWorkflow = async () => {
     const sortedTasks = [...tasks].sort((a, b) => {
       const taskTitleA = a.title || a.step_name;
@@ -211,7 +177,7 @@ const InventoryTasksPage = () => {
         setCurrentTaskIndex(i);
 
         await taskService.markTaskInProgress(task.id);
-        await fetchTasksForRootCard(selectedRootCard);
+        await fetchTasksForMR(selectedMR);
 
         await new Promise((resolve) => setTimeout(resolve, 1500));
 
@@ -219,7 +185,6 @@ const InventoryTasksPage = () => {
         await new Promise((resolve) => setTimeout(resolve, 500));
       }
 
-      setWorkflowJustCreated(false);
       alert("Workflow initiation completed!");
     } catch (err) {
       console.error("Error initiating workflow:", err);
@@ -233,27 +198,27 @@ const InventoryTasksPage = () => {
     }
   };
 
-  const handleDeleteRootCard = async (rootCardId, rootCardName) => {
+  const handleDeleteMR = async (mrId, mrNumber) => {
     if (
       !confirm(
-        `Delete root card "${rootCardName}"? This will also delete all associated tasks. This action cannot be undone.`
+        `Delete material request "${mrNumber}"? This will also delete all associated tasks. This action cannot be undone.`
       )
     ) {
       return;
     }
 
-    setIsDeletingRootCard(true);
+    setIsDeletingMR(true);
     try {
-      await taskService.deleteRootCard(rootCardId);
-      await fetchRootCards();
-      alert("Root card and all associated tasks deleted successfully");
+      await axios.delete(`/inventory/material-requests/${mrId}`);
+      await fetchMaterialRequests();
+      alert("Material request and all associated tasks deleted successfully");
     } catch (err) {
       const errorMessage =
-        err.message || "Failed to delete root card. Please try again.";
-      console.error("Error deleting root card:", err);
+        err.response?.data?.message || err.message || "Failed to delete material request. Please try again.";
+      console.error("Error deleting material request:", err);
       alert(errorMessage);
     } finally {
-      setIsDeletingRootCard(false);
+      setIsDeletingMR(false);
     }
   };
 
@@ -291,7 +256,7 @@ const InventoryTasksPage = () => {
     setIsDeleting(true);
     try {
       await taskService.deleteTask(taskId);
-      await fetchTasksForRootCard(selectedRootCard);
+      await fetchTasksForMR(selectedMR);
       const newSelected = new Set(selectedTasks);
       newSelected.delete(taskId);
       setSelectedTasks(newSelected);
@@ -323,7 +288,7 @@ const InventoryTasksPage = () => {
     try {
       const taskIds = Array.from(selectedTasks);
       const result = await taskService.deleteTasks(taskIds);
-      await fetchTasksForRootCard(selectedRootCard);
+      await fetchTasksForMR(selectedMR);
       setSelectedTasks(new Set());
       alert(
         result.message ||
@@ -339,9 +304,22 @@ const InventoryTasksPage = () => {
     }
   };
 
-  const getRootCardInfo = (rootCard) => {
-    if (rootCard.code) return rootCard.code;
-    return `RC-${String(rootCard.id).padStart(4, "0")}`;
+  const handleInitializeWorkflow = async () => {
+    if (!selectedMR) return;
+
+    setIsInitiatingWorkflow(true);
+    try {
+      const result = await taskService.initializeMRWorkflow(selectedMR.id);
+      await fetchTasksForMR(selectedMR);
+      alert(result.message || "Workflow initialized successfully");
+    } catch (err) {
+      const errorMessage =
+        err.message || "Failed to initialize workflow. Please try again.";
+      console.error("Error initiating workflow:", err);
+      alert(errorMessage);
+    } finally {
+      setIsInitiatingWorkflow(false);
+    }
   };
 
   const getStatusColor = (status) => {
@@ -401,51 +379,58 @@ const InventoryTasksPage = () => {
   const getTasksByPhase = () => {
     const grouped = {};
     
-    const backendStepMap = {
-      'Create RFQ': { phase: 'quotation', workflowSteps: ['Create RFQ Quotation'] },
-      'Send RFQ to Vendor': { phase: 'quotation', workflowSteps: ['Send Quotation to Vendor', 'Receive Vendor Quotation'] },
-      'Receive & Record Quotes': { phase: 'quotation', workflowSteps: [] },
-      'Create PO': { phase: 'purchase', workflowSteps: ['Create Purchase Order'] },
-      'Approve PO': { phase: 'receipt', workflowSteps: ['Send PO to Vendor', 'Receive Material', 'Approve Purchase Order'] },
-      'GRN Processing & QC': { phase: 'quality', workflowSteps: ['GRN Processing', 'QC Inspection'] },
-      'Add to Stock': { phase: 'storage', workflowSteps: ['Stock Addition', 'Batch & Location Management', 'View Stock'] }
-    };
-    
     INVENTORY_WORKFLOW.phases.forEach((phase) => {
       grouped[phase.id] = [];
     });
     
     if (tasks && tasks.length > 0) {
-      console.log(`[getTasksByPhase] Processing ${tasks.length} backend tasks`);
-      let totalMapped = 0;
       tasks.forEach((task) => {
         const stepName = task.step_name || task.title;
-        const mapping = backendStepMap[stepName];
+        // Find the matching step from INVENTORY_WORKFLOW
+        const workflowStep = INVENTORY_WORKFLOW.steps.find(s => s.title === stepName);
         
-        if (mapping) {
-          const phaseGroup = grouped[mapping.phase];
+        if (workflowStep) {
+          const phaseGroup = grouped[workflowStep.phase];
           if (phaseGroup) {
-            mapping.workflowSteps.forEach((workflowStepTitle) => {
-              const workflowStep = INVENTORY_WORKFLOW.steps.find(s => s.title === workflowStepTitle);
-              if (workflowStep) {
+            phaseGroup.push({
+              ...workflowStep,
+              backend_id: task.id,
+              backend_status: task.status,
+              backend_step_number: task.step_number,
+              step_name: stepName
+            });
+          }
+        } else {
+          // Fallback mapping for older task names if any
+          const legacyMapping = {
+            'Create RFQ': 'Create RFQ Quotation',
+            'Send RFQ to Vendor': 'Send Quotation to Vendor',
+            'Receive & Record Quotes': 'Receive Vendor Quotation',
+            'Create PO': 'Create Purchase Order',
+            'Approve PO': 'Approve Purchase Order',
+            'GRN Processing & QC': 'GRN Processing',
+            'Add to Stock': 'Stock Addition'
+          };
+          
+          const mappedName = legacyMapping[stepName];
+          if (mappedName) {
+            const legacyStep = INVENTORY_WORKFLOW.steps.find(s => s.title === mappedName);
+            if (legacyStep) {
+              const phaseGroup = grouped[legacyStep.phase];
+              if (phaseGroup) {
                 phaseGroup.push({
-                  ...workflowStep,
+                  ...legacyStep,
                   backend_id: task.id,
                   backend_status: task.status,
                   backend_step_number: task.step_number,
                   step_name: stepName
                 });
-                totalMapped++;
               }
-            });
+            }
           }
-        } else {
-          console.warn(`[getTasksByPhase] Unknown backend step: ${stepName}`);
         }
       });
-      console.log(`[getTasksByPhase] Mapped ${totalMapped} workflow steps from backend tasks`);
     } else {
-      console.log(`[getTasksByPhase] No backend tasks, using default workflow (${INVENTORY_WORKFLOW.steps.length} steps)`);
       INVENTORY_WORKFLOW.phases.forEach((phase) => {
         grouped[phase.id] = INVENTORY_WORKFLOW.steps.filter(s => s.phase === phase.id);
       });
@@ -479,127 +464,124 @@ const InventoryTasksPage = () => {
           Inventory Task Management
         </h2>
         <p className="text-slate-600 dark:text-slate-400 text-xs mt-1">
-          Create and manage tasks for GRN root cards
+          Create and manage tasks for Material Requests
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4 max-h-96 overflow-y-auto">
-          <h3 className="font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-            <Package size={18} />
-            Root Cards
-          </h3>
-          <div className="space-y-2">
-            {rootCards.length === 0 ? (
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                No root cards available
-              </p>
-            ) : (
-              rootCards.map((card) => (
+        {/* Sidebar - Material Requests */}
+        <div className="lg:col-span-1 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col h-[calc(100vh-200px)]">
+          <div className="p-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex justify-between items-center">
+            <h2 className="font-bold text-slate-900 dark:text-white flex items-center gap-2 text-sm uppercase tracking-wider">
+              <Package size={18} className="text-blue-600" />
+              Material Requests
+            </h2>
+            <button
+              onClick={fetchMaterialRequests}
+              className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors"
+              title="Refresh requests"
+            >
+              <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+            </button>
+          </div>
+
+          <div className="overflow-y-auto flex-1 p-2 space-y-2">
+            {materialRequests.length > 0 ? (
+              materialRequests.map((mr) => (
                 <div
-                  key={card.id}
-                  className={`group flex items-start gap-2 p-3 rounded-lg transition-colors text-sm ${
-                    selectedRootCard?.id === card.id
-                      ? "bg-blue-100 dark:bg-blue-900 border border-blue-300"
-                      : "hover:bg-slate-100 dark:hover:bg-slate-700 border border-transparent"
+                  key={mr.id}
+                  onClick={() => setSelectedMR(mr)}
+                  className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                    selectedMR?.id === mr.id
+                      ? "bg-blue-50 dark:bg-blue-900/30 border-blue-500 shadow-sm"
+                      : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-blue-300"
                   }`}
                 >
-                  <button
-                    onClick={() => setSelectedRootCard(card)}
-                    className={`flex-1 text-left ${
-                      selectedRootCard?.id === card.id
-                        ? "text-blue-700 dark:text-blue-300"
-                        : "text-slate-700 dark:text-slate-300"
-                    }`}
-                  >
-                    <p className="font-medium">{card.project?.name || getRootCardInfo(card)}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                      {getRootCardInfo(card)}
-                    </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      {card.project?.code || "No code"}
-                    </p>
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteRootCard(
-                        card.id,
-                        card.project?.name || getRootCardInfo(card)
-                      );
-                    }}
-                    disabled={isDeletingRootCard}
-                    className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 transition-colors flex-shrink-0 disabled:opacity-50 opacity-0 group-hover:opacity-100"
-                    title="Delete root card and all tasks"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                  <div className="flex justify-between items-start mb-1">
+                    <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
+                      {mr.mr_number}
+                    </span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteMR(mr.id, mr.mr_number);
+                      }}
+                      className="p-1 text-slate-400 hover:text-red-500 transition-colors"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                  <p className="text-xs font-semibold text-slate-900 dark:text-white line-clamp-1">
+                    {mr.purpose || "Material Request"}
+                  </p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-tight bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">
+                      {mr.department}
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-400">
+                      {new Date(mr.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
                 </div>
               ))
+            ) : (
+              <div className="text-center py-12">
+                <Package className="mx-auto text-slate-300 mb-2" size={32} />
+                <p className="text-xs text-slate-500">No requests found</p>
+              </div>
             )}
           </div>
         </div>
 
+        {/* Main Content - Tasks */}
         <div className="lg:col-span-3">
-          {selectedRootCard ? (
-            <div className="space-y-4">
-              <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-                      {selectedRootCard.project?.name || getRootCardInfo(selectedRootCard)}
-                    </h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-                      {selectedRootCard.project?.code || "N/A"}
-                    </p>
+          {selectedMR ? (
+            <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
+              <div className="p-6">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                      <FileText size={24} className="text-blue-600" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+                          {selectedMR.mr_number}
+                        </h2>
+                        <span className={`px-2 py-0.5 text-[10px] font-bold rounded uppercase ${
+                          selectedMR.priority === 'critical' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
+                        }`}>
+                          {selectedMR.priority}
+                        </span>
+                      </div>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
+                        {selectedMR.purpose} • {selectedMR.department} Department
+                      </p>
+                    </div>
                   </div>
-
-                  <div className="flex gap-2 flex-wrap">
-                    {!workflowJustCreated ? (
-                      <>
-                        <Button
-                          onClick={handleCreateWorkflowTasks}
-                          disabled={isCreatingWorkflow}
-                          className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors whitespace-nowrap ${
-                            isCreatingWorkflow
-                              ? "bg-amber-500 text-white opacity-75"
-                              : "bg-amber-500 hover:bg-amber-600 text-white"
-                          }`}
-                        >
-                          {isCreatingWorkflow ? (
-                            <>
-                              <Loader2 size={16} className="animate-spin" />
-                              Creating... ({workflowProgress}%)
-                            </>
-                          ) : (
-                            <>
-                              <Zap size={16} />
-                              Create Workflow
-                            </>
-                          )}
-                        </Button>
-                        <Button
-                          onClick={() => setShowCreateModal(true)}
-                          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors whitespace-nowrap"
-                        >
-                          <Plus size={16} />
-                          Custom Task
-                        </Button>
-                      </>
-                    ) : (
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowCreateModal(true)}
+                      className="flex items-center gap-2 font-bold text-xs uppercase"
+                    >
+                      <Plus size={16} />
+                      Add Task
+                    </Button>
+                    
+                    {tasks.length > 0 && (
                       <Button
+                        variant="primary"
+                        size="sm"
                         onClick={handleInitiateWorkflow}
                         disabled={isInitiatingWorkflow}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors whitespace-nowrap ${
-                          isInitiatingWorkflow
-                            ? "bg-green-500 text-white opacity-75"
-                            : "bg-green-500 hover:bg-green-600 text-white"
-                        }`}
+                        className="flex items-center gap-2 font-bold text-xs uppercase bg-blue-600 hover:bg-blue-700"
                       >
                         {isInitiatingWorkflow ? (
                           <>
                             <Loader2 size={16} className="animate-spin" />
-                            Starting... (Task {currentTaskIndex + 1}/{tasks.length})
+                            Starting...
                           </>
                         ) : (
                           <>
@@ -613,41 +595,41 @@ const InventoryTasksPage = () => {
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                  <div className="p-3 bg-slate-50 dark:bg-slate-700 rounded-lg">
-                    <p className="text-xs text-slate-600 dark:text-slate-400">
-                      Root Card ID
+                  <div className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg border border-slate-100 dark:border-slate-700">
+                    <p className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400">
+                      Request Date
                     </p>
-                    <p className="text-sm font-bold text-slate-900 dark:text-white text-xs mt-1">
-                      {getRootCardInfo(selectedRootCard)}
-                    </p>
-                  </div>
-                  <div className="p-3 bg-slate-50 dark:bg-slate-700 rounded-lg">
-                    <p className="text-xs text-slate-600 dark:text-slate-400">
-                      Department
-                    </p>
-                    <p className="text-sm font-bold text-slate-900 dark:text-white text-xs mt-1">
-                      {selectedRootCard.department || "Inventory"}
+                    <p className="text-sm font-bold text-slate-900 dark:text-white mt-1">
+                      {new Date(selectedMR.created_at).toLocaleDateString()}
                     </p>
                   </div>
-                  <div className="p-3 bg-slate-50 dark:bg-slate-700 rounded-lg">
-                    <p className="text-xs text-slate-600 dark:text-slate-400">
-                      Tasks Created
+                  <div className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg border border-slate-100 dark:border-slate-700">
+                    <p className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400">
+                      Workflow Steps
                     </p>
-                    <p className="text-sm font-bold text-slate-900 dark:text-white text-xs mt-1">
-                      {tasks.length}
+                    <p className="text-sm font-bold text-slate-900 dark:text-white mt-1">
+                      {tasks.length} Created
                     </p>
                   </div>
-                  <div className="p-3 bg-slate-50 dark:bg-slate-700 rounded-lg">
-                    <p className="text-xs text-slate-600 dark:text-slate-400">
-                      Status
+                  <div className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg border border-slate-100 dark:border-slate-700">
+                    <p className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400">
+                      Completion
+                    </p>
+                    <p className="text-sm font-bold text-slate-900 dark:text-white mt-1">
+                      {tasks.length > 0 ? Math.round((tasks.filter(t => t.status === 'completed').length / tasks.length) * 100) : 0}%
+                    </p>
+                  </div>
+                  <div className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg border border-slate-100 dark:border-slate-700">
+                    <p className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400">
+                      Workflow Status
                     </p>
                     <p
-                      className={`text-xs font-bold mt-1 capitalize ${
-                        tasks.every((t) => t.status === "completed")
+                      className={`text-sm font-bold mt-1 uppercase ${
+                        tasks.every((t) => t.status === "completed") && tasks.length > 0
                           ? "text-green-600"
                           : tasks.some((t) => t.status === "in_progress")
                           ? "text-blue-600"
-                          : "text-yellow-600"
+                          : "text-amber-600"
                       }`}
                     >
                       {tasks.length === 0
@@ -659,200 +641,114 @@ const InventoryTasksPage = () => {
                   </div>
                 </div>
 
-                {selectedRootCard.project && (
-                  <div className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 rounded-lg border border-blue-200 dark:border-blue-700 p-6 mb-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex-1">
-                        <h3 className="text-2xl font-bold text-slate-900 dark:text-white">
-                          {selectedRootCard.project.name}
-                        </h3>
-                        {selectedRootCard.project?.code && (
-                          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-                            {selectedRootCard.project.code}
-                          </p>
-                        )}
-                      </div>
-                      <div className="text-right">
-                        <span className="inline-block px-3 py-1 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded-full text-xs font-semibold">
-                          Project
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
                 {tasks.length > 0 && (
                   <div>
-                    <h4 className="font-semibold text-slate-900 dark:text-white mb-4">
-                      Workflow Progress ({tasks.length} tasks)
-                    </h4>
-
-                    <div className="mb-4 flex gap-2 flex-wrap justify-between items-center">
-                      <div className="flex gap-2 flex-wrap">
-                        {INVENTORY_WORKFLOW.phases.map((phase) => {
-                          const phaseTasks = getTasksByPhase()[phase.id] || [];
-                          const isSelected =
-                            selectedPhase === null || selectedPhase === phase.id;
-                          return (
-                            <button
-                              key={phase.id}
-                              onClick={() =>
-                                setSelectedPhase(
-                                  selectedPhase === phase.id ? null : phase.id
-                                )
-                              }
-                              className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
-                                isSelected
-                                  ? getPhaseColor(phase.id) +
-                                    " border " +
-                                    getPhaseTextColor(phase.id)
-                                  : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400 border border-transparent"
-                              }`}
-                            >
-                              {phase.name.split(" ")[0]} ({phaseTasks.length})
-                            </button>
-                          );
-                        })}
+                    <div className="flex items-center justify-between mb-6">
+                      <h4 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <Zap size={18} className="text-amber-500" />
+                        Execution Workflow
+                      </h4>
+                      <div className="flex gap-2">
                         <button
-                          onClick={() => setSelectedPhase(null)}
-                          className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-600 transition-all"
+                          onClick={handleInitializeWorkflow}
+                          disabled={isInitiatingWorkflow}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase bg-amber-50 text-amber-600 border border-amber-100 hover:bg-amber-100 transition-all disabled:opacity-50"
+                          title="Initialize or missing workflow tasks"
                         >
-                          All Phases
+                          <RefreshCw size={12} className={isInitiatingWorkflow ? "animate-spin" : ""} />
+                          Sync Workflow
                         </button>
+                        {selectedTasks.size > 0 && (
+                          <button
+                            onClick={handleBulkDelete}
+                            disabled={isDeleting}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase bg-red-50 text-red-600 border border-red-100 hover:bg-red-100 transition-all disabled:opacity-50"
+                          >
+                            <Trash2 size={12} />
+                            Delete ({selectedTasks.size})
+                          </button>
+                        )}
                       </div>
-                      {selectedTasks.size > 0 && (
-                        <button
-                          onClick={handleBulkDelete}
-                          disabled={isDeleting}
-                          className="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-600 hover:bg-red-200 dark:hover:bg-red-900 transition-all disabled:opacity-50"
-                        >
-                          <Trash2 size={14} />
-                          Delete ({selectedTasks.size})
-                        </button>
-                      )}
                     </div>
 
                     <div className="space-y-6">
                       {INVENTORY_WORKFLOW.phases.map((phase) => {
-                        if (selectedPhase && selectedPhase !== phase.id) {
-                          return null;
-                        }
-
                         const phaseTasks = getTasksByPhase()[phase.id] || [];
                         if (phaseTasks.length === 0) return null;
 
                         return (
                           <div
                             key={phase.id}
-                            className={`rounded-lg border p-4 ${getPhaseColor(
-                              phase.id
-                            )}`}
+                            className="space-y-3"
                           >
-                            <div className="flex items-center justify-between mb-3">
-                              <h5
-                                className={`font-bold text-sm ${getPhaseTextColor(
-                                  phase.id
-                                )}`}
-                              >
-                                {phase.name}
-                              </h5>
-                              {phaseTasks.length > 0 && (
-                                <input
-                                  type="checkbox"
-                                  checked={
-                                    phaseTasks.length > 0 &&
-                                    phaseTasks.every((t) =>
-                                      selectedTasks.has(t.id)
-                                    )
-                                  }
-                                  onChange={() =>
-                                    toggleSelectAll(phaseTasks.map((t) => t.id))
-                                  }
-                                  className="w-4 h-4 cursor-pointer"
-                                  title="Select all tasks in this phase"
-                                />
-                              )}
+                            <div className="flex items-center justify-between px-1">
+                              <div className="flex items-center gap-2">
+                                <div className={`w-1.5 h-1.5 rounded-full ${getPhaseColor(phase.id).replace('bg-', 'bg-').split(' ')[0]}`} />
+                                <h5 className={`font-bold text-[10px] uppercase tracking-wider ${getPhaseTextColor(phase.id)}`}>
+                                  {phase.name}
+                                </h5>
+                              </div>
+                              <input
+                                type="checkbox"
+                                checked={phaseTasks.every((t) => selectedTasks.has(t.id))}
+                                onChange={() => toggleSelectAll(phaseTasks.map((t) => t.id))}
+                                className="w-3.5 h-3.5 rounded border-slate-300"
+                              />
                             </div>
-                            <div className="space-y-2">
+                            
+                            <div className="grid grid-cols-1 gap-3">
                               {phaseTasks
-                                .sort((a, b) => {
-                                  const taskTitleA = a.title || a.step_name;
-                                  const taskTitleB = b.title || b.step_name;
-                                  const stepA = INVENTORY_WORKFLOW.steps.find(
-                                    (s) => s.title === taskTitleA
-                                  );
-                                  const stepB = INVENTORY_WORKFLOW.steps.find(
-                                    (s) => s.title === taskTitleB
-                                  );
-                                  return (
-                                    (stepA?.order || a.step_number || 0) - (stepB?.order || b.step_number || 0)
-                                  );
-                                })
+                                .sort((a, b) => (a.step_number || 0) - (b.step_number || 0))
                                 .map((task) => (
                                   <div
                                     key={task.id}
-                                    className={`rounded-lg p-3 hover:shadow-md dark:hover:shadow-slate-900/50 transition-all border ${
+                                    className={`group rounded-xl p-4 transition-all border ${
                                       selectedTasks.has(task.id)
-                                        ? "bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-600"
-                                        : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                                        ? "bg-blue-50/50 dark:bg-blue-900/20 border-blue-300"
+                                        : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-blue-200 dark:hover:border-blue-900 hover:shadow-sm"
                                     }`}
                                   >
-                                    <div className="flex items-start gap-3">
+                                    <div className="flex items-start gap-4">
                                       <input
                                         type="checkbox"
                                         checked={selectedTasks.has(task.id)}
-                                        onChange={() =>
-                                          toggleTaskSelection(task.id)
-                                        }
-                                        onClick={(e) => e.stopPropagation()}
-                                        className="w-4 h-4 mt-1 cursor-pointer flex-shrink-0"
+                                        onChange={() => toggleTaskSelection(task.id)}
+                                        className="w-4 h-4 mt-1 rounded border-slate-300"
                                       />
                                       <div
                                         className="flex-1 cursor-pointer"
-                                        onClick={() =>
-                                          handleTaskNavigation(task)
-                                        }
+                                        onClick={() => handleTaskNavigation(task)}
                                       >
-                                        <div className="flex items-start justify-between mb-1">
-                                          <div className="flex-1">
-                                            <h6 className="font-semibold text-slate-900 dark:text-white text-xs">
+                                        <div className="flex items-start justify-between">
+                                          <div>
+                                            <h6 className="font-bold text-slate-900 dark:text-white text-sm">
                                               {task.title || task.step_name}
                                             </h6>
-                                            {task.description && (
-                                              <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-                                                {task.description}
-                                              </p>
-                                            )}
+                                            <div className="flex items-center gap-3 mt-1.5">
+                                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${getStatusColor(task.backend_status || task.status)}`}>
+                                                {task.backend_status || task.status}
+                                              </span>
+                                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${getPriorityBadge(task.priority)}`}>
+                                                {task.priority}
+                                              </span>
+                                            </div>
                                           </div>
-                                          <span
-                                            className={`px-2 py-1 text-xs font-semibold rounded-full flex-shrink-0 ${getStatusColor(
-                                              task.backend_status || task.status
-                                            )}`}
-                                          >
-                                            {task.backend_status || task.status}
-                                          </span>
-                                        </div>
-                                        <div className="flex gap-2 mt-2">
-                                          <span
-                                            className={`px-2 py-0.5 text-xs font-medium rounded ${getPriorityBadge(
-                                              task.priority
-                                            )}`}
-                                          >
-                                            {task.priority}
-                                          </span>
+                                          <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDeleteTask(task.id);
+                                              }}
+                                              className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                                            >
+                                              <Trash2 size={14} />
+                                            </button>
+                                            <div className="p-1.5 text-blue-600 bg-blue-50 rounded-lg">
+                                              <Play size={14} />
+                                            </div>
+                                          </div>
                                         </div>
                                       </div>
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleDeleteTask(task.id);
-                                        }}
-                                        disabled={isDeleting}
-                                        className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 transition-colors flex-shrink-0 disabled:opacity-50"
-                                        title="Delete task"
-                                      >
-                                        <Trash2 size={16} />
-                                      </button>
                                     </div>
                                   </div>
                                 ))}
@@ -865,48 +761,56 @@ const InventoryTasksPage = () => {
                 )}
 
                 {tasks.length === 0 && (
-                  <div className="text-center py-8">
-                    <AlertCircle
-                      size={32}
-                      className="text-slate-400 mx-auto mb-2"
-                    />
-                    <p className="text-slate-600 dark:text-slate-400">
-                      No tasks created for this root card yet
+                  <div className="text-center py-16 bg-slate-50/50 dark:bg-slate-900/20 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700">
+                    <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+                      <Zap size={32} className="text-slate-300" />
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">Initialize Workflow</h3>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-xs mx-auto">
+                      No active workflow tasks found for this request. Click the button below to automatically generate all required inventory workflow steps.
                     </p>
-                    <p className="text-xs text-slate-500 mt-1">
-                      Click "Create Task" to get started
-                    </p>
+                    <div className="mt-6">
+                      <Button
+                        onClick={handleInitializeWorkflow}
+                        loading={isInitiatingWorkflow}
+                        icon={Play}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl shadow-lg shadow-blue-200 dark:shadow-none transition-all active:scale-95"
+                      >
+                        {isInitiatingWorkflow ? "Initializing..." : "Initialize Workflow Tasks"}
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>
             </div>
           ) : (
-            <div className="text-center py-12 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
-              <Package size={40} className="text-slate-400 mx-auto mb-3" />
-              <p className="text-slate-600 dark:text-slate-400">
-                Select a root card to view and create inventory workflow tasks
+            <div className="h-[calc(100vh-200px)] flex flex-col items-center justify-center bg-white dark:bg-slate-800 rounded-lg border-2 border-dashed border-slate-200 dark:border-slate-700 p-12">
+              <div className="w-20 h-20 bg-slate-50 dark:bg-slate-900/50 rounded-full flex items-center justify-center mb-6">
+                <Package size={40} className="text-slate-300" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white">Workflow Management</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 text-center max-w-sm">
+                Select a material request from the left panel to manage its acquisition and fulfillment workflow tasks.
               </p>
             </div>
           )}
         </div>
       </div>
 
+      {/* Create Custom Task Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-md w-full p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
-                Create Task
-              </h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-md overflow-hidden">
+            <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
+              <h3 className="font-bold text-slate-900 dark:text-white">Create Custom Task</h3>
               <button
                 onClick={() => setShowCreateModal(false)}
-                className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full"
               >
-                <X size={24} />
+                <X size={20} />
               </button>
             </div>
-
-            <form onSubmit={handleCreateTask} className="space-y-4">
+            <form onSubmit={handleCreateTask} className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Task Title *
@@ -999,19 +903,6 @@ const InventoryTasksPage = () => {
           </div>
         </div>
       )}
-
-      {/* Material Requirements Check Modal */}
-      <CheckProjectMaterialRequirementsModal
-        isOpen={showMaterialCheckModal}
-        onClose={() => {
-          setShowMaterialCheckModal(false);
-          setCurrentTaskForModal(null);
-        }}
-        projectId={selectedRootCard?.project?.id || selectedRootCard?.id}
-        taskId={currentTaskForModal?.id}
-        rootCardId={selectedRootCard?.id}
-        rootCard={selectedRootCard}
-      />
     </div>
   );
 };

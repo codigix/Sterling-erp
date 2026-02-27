@@ -89,7 +89,8 @@ const ProjectCard = ({
     else if (
       taskTitle.includes("approve document") ||
       taskTitle.includes("document approval") ||
-      taskTitle.includes("review and approve")
+      taskTitle.includes("review and approve") ||
+      (taskTitle.includes("verify") && taskTitle.includes("approve") && taskTitle.includes("document"))
     ) {
       return `/design-engineer/documents/required-docs?${baseParams}`;
     }
@@ -511,21 +512,7 @@ const ProjectCard = ({
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2 mb-3">
-                    {task.priority && (
-                      <span
-                        className={`inline-block px-2 py-1 text-xs font-medium rounded-full capitalize ${
-                          task.priority === "critical"
-                            ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-                            : task.priority === "high"
-                            ? "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200"
-                            : task.priority === "medium"
-                            ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-                            : "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                        }`}
-                      >
-                        {task.priority}
-                      </span>
-                    )}
+
                     {project?.code && (
                       <span className="inline-block px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded">
                         {project.code}
@@ -547,29 +534,7 @@ const ProjectCard = ({
                       })()}
                   </div>
 
-                  {project && (
-                    <div className="grid grid-cols-2 gap-3 text-xs">
-                      <div>
-                        <p className="text-slate-600 dark:text-slate-400">
-                          Customer
-                        </p>
-                        <p className="font-medium text-slate-900 dark:text-white text-xs">
-                          {project.customer ||
-                            project.customer_name ||
-                            project.client_name ||
-                            "N/A"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-slate-600 dark:text-slate-400">
-                          PO Number
-                        </p>
-                        <p className="font-medium text-slate-900 dark:text-white text-xs">
-                          {project.po_number || project.poNumber || "N/A"}
-                        </p>
-                      </div>
-                    </div>
-                  )}
+
                 </div>
               ))}
             </div>

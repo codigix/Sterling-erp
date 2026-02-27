@@ -286,6 +286,20 @@ class Material {
     );
     return (rows || []).map(Material.formatRow);
   }
+
+  static async getStats() {
+    const [rows] = await pool.execute(`
+      SELECT 
+        COUNT(*) as total_items,
+        SUM(CASE WHEN quantity < reorder_level THEN 1 ELSE 0 END) as low_stock_count,
+        SUM(quantity * unit_cost) as total_value
+      FROM inventory
+    `);
+    
+    // Also get recent movements (simulated from stock entries if table exists)
+    // For now just return the main stats
+    return rows[0] || { total_items: 0, low_stock_count: 0, total_value: 0 };
+  }
 }
 
 module.exports = Material;

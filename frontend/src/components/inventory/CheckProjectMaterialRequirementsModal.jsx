@@ -10,8 +10,8 @@ const CheckProjectMaterialRequirementsModal = ({
   onClose,
   projectId,
   taskId,
-  rootCardId,
-  rootCard,
+  materialRequestId,
+  materialRequest,
 }) => {
   const navigate = useNavigate();
   const [materials, setMaterials] = useState([]);
@@ -21,33 +21,22 @@ const CheckProjectMaterialRequirementsModal = ({
   const [projectDetails, setProjectDetails] = useState(null);
 
   useEffect(() => {
-    if (isOpen && projectId) {
+    if (isOpen && (projectId || materialRequestId)) {
       fetchMaterialRequirements();
     }
-  }, [isOpen, projectId]);
+  }, [isOpen, projectId, materialRequestId]);
 
   const fetchMaterialRequirements = async () => {
     setLoading(true);
     try {
       let response;
-      const effectiveRootCardId = rootCard?.root_card_id || rootCard?.rootCardId || rootCard?.project?.id || rootCardId || projectId;
+      const effectiveMRId = materialRequest?.id || materialRequestId;
+      const effectiveRootCardId = materialRequest?.root_card_id || materialRequest?.rootCardId;
       
       const attempts = [
-        () => axios.get(`/root-cards/requirements/${effectiveRootCardId}`),
-        () => axios.get(`/root-cards/requirements/${projectId}`),
-        () => axios.get(`/root-cards/requirements`).then(res => {
-          const all = res.data;
-          if (Array.isArray(all)) {
-            const matched = all.find(req => 
-              req.rootCardId === effectiveRootCardId || 
-              req.id === projectId ||
-              req.rootCardId === rootCardId
-            );
-            if (matched) return { data: matched };
-            throw new Error('No matching requirements found');
-          }
-          return res;
-        })
+        () => effectiveMRId ? axios.get(`/inventory/material-requests/${effectiveMRId}/items`) : Promise.reject(),
+        () => effectiveRootCardId ? axios.get(`/root-cards/requirements/${effectiveRootCardId}`) : Promise.reject(),
+        () => projectId ? axios.get(`/root-cards/requirements/${projectId}`) : Promise.reject(),
       ];
 
       let lastError;
@@ -123,7 +112,7 @@ const CheckProjectMaterialRequirementsModal = ({
 
       const currentTaskId = taskService.getTaskIdFromParams();
       const rootId = new URLSearchParams(window.location.search).get(
-        "rootCardId"
+        "materialRequestId"
       );
 
       if (currentTaskId) {
@@ -131,8 +120,8 @@ const CheckProjectMaterialRequirementsModal = ({
       }
 
       const navigationParams = new URLSearchParams();
-      if (projectId) navigationParams.append("rootCardId", projectId);
-      if (rootId) navigationParams.append("rootCardId", rootId);
+      if (projectId) navigationParams.append("projectId", projectId);
+      if (effectiveMRId) navigationParams.append("materialRequestId", effectiveMRId);
       navigationParams.append("fromMaterialCheck", "true");
 
       Swal.fire(
@@ -149,7 +138,7 @@ const CheckProjectMaterialRequirementsModal = ({
           state: {
             selectedMaterials: selectedMaterialsList,
             projectId,
-            rootCardId: rootId,
+            materialRequestId: effectiveMRId,
             fromMaterialCheck: true,
           },
         }
@@ -178,7 +167,7 @@ const CheckProjectMaterialRequirementsModal = ({
         <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
           <div>
             <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
-              Check Root Card Material Requirements
+              Check Material Request Requirements
             </h2>
             <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
               Review and select materials for RFQ quotation
@@ -215,15 +204,15 @@ const CheckProjectMaterialRequirementsModal = ({
               {projectDetails && (
                 <div className="mb-6 p-4 bg-blue-50 dark:bg-slate-700 rounded-lg border border-blue-200 dark:border-slate-600">
                   <h3 className="font-semibold text-slate-900 dark:text-white mb-2">
-                    Root Card Details
+                    Material Request Details
                   </h3>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                     <div>
                       <p className="text-slate-600 dark:text-slate-400">
-                        Root Card Name
+                        Request ID
                       </p>
                       <p className="font-medium text-slate-900 dark:text-white">
-                        {projectDetails.projectName || "N/A"}
+                        {materialRequest?.mr_number || "N/A"}
                       </p>
                     </div>
                     <div>

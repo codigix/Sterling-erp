@@ -3,7 +3,8 @@ const pool = require('../config/database');
 class Quotation {
   static async findAll(filters = {}) {
     let query = `
-      SELECT q.*, v.name as vendor_name, ref.quotation_number as reference_number, mr.mr_number
+      SELECT q.*, v.name as vendor_name, ref.quotation_number as reference_number, mr.mr_number,
+      (SELECT COUNT(*) FROM quotation_communications qc WHERE qc.quotation_id = q.id AND qc.is_read = FALSE) as unread_communication_count
       FROM quotations q 
       LEFT JOIN vendors v ON q.vendor_id = v.id 
       LEFT JOIN quotations ref ON q.reference_id = ref.id
@@ -36,6 +37,11 @@ class Quotation {
     if (filters.sales_order_id) {
       query += ' AND q.sales_order_id = ?';
       params.push(filters.sales_order_id);
+    }
+
+    if (filters.material_request_id) {
+      query += ' AND q.material_request_id = ?';
+      params.push(filters.material_request_id);
     }
 
     query += ' ORDER BY q.created_at DESC';
@@ -113,8 +119,8 @@ class Quotation {
     
     const [result] = await pool.execute(
       `INSERT INTO quotations (
-        vendor_id, quotation_number, total_amount, valid_until, status, items, notes, type, reference_id, sales_order_id, material_request_id, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+        vendor_id, quotation_number, total_amount, valid_until, status, items, notes, type, reference_id, sales_order_id, material_request_id, document_path, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
       [
         data.vendor_id,
         quotationNumber,
@@ -126,7 +132,8 @@ class Quotation {
         data.type || 'outbound',
         data.reference_id || null,
         data.sales_order_id || null,
-        data.material_request_id || null
+        data.material_request_id || null,
+        data.document_path || null
       ]
     );
     return result.insertId;
@@ -136,7 +143,7 @@ class Quotation {
     const updates = [];
     const params = [];
 
-    const fields = ['vendor_id', 'total_amount', 'valid_until', 'status', 'notes', 'type', 'reference_id', 'sales_order_id', 'material_request_id'];
+    const fields = ['vendor_id', 'total_amount', 'valid_until', 'status', 'notes', 'type', 'reference_id', 'sales_order_id', 'material_request_id', 'document_path'];
     
     for (const field of fields) {
       if (data[field] !== undefined) {
@@ -205,7 +212,7 @@ class Quotation {
   }
 
   static async changeStatus(id, status) {
-    const validStatuses = ['pending', 'approved', 'rejected', 'sent'];
+    const validStatuses = ['pending', 'approved', 'rejected', 'sent', 'responded'];
     if (!validStatuses.includes(status)) {
       throw new Error('Invalid status');
     }

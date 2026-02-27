@@ -70,15 +70,23 @@ class EmailMonitorService {
         authTimeout: 20000
       }
     };
-    this.checkInterval = 60 * 1000; // Check every 1 minute
-    this.isRunnning = false;
+    this.checkInterval = 30 * 1000; // Check every 30 seconds
+    this.isRunning = false;
     this.timer = null;
   }
 
   start() {
-    if (this.isRunnning) return;
+    if (this.isRunning) return;
+    
+    // Check if email credentials are set
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS || 
+        process.env.EMAIL_USER === 'undefined' || process.env.EMAIL_PASS === 'undefined') {
+      console.warn('📧 Email Monitor Service: EMAIL_USER or EMAIL_PASS not configured. Skipping start.');
+      return;
+    }
+
     console.log('📧 Starting Email Monitor Service...');
-    this.isRunnning = true;
+    this.isRunning = true;
     
     // Run initial check without awaiting it so it doesn't block server startup
     this.checkEmails().catch(err => {
@@ -90,7 +98,7 @@ class EmailMonitorService {
 
   stop() {
     if (this.timer) clearInterval(this.timer);
-    this.isRunnning = false;
+    this.isRunning = false;
     console.log('📧 Email Monitor Service stopped');
   }
 
@@ -99,49 +107,80 @@ class EmailMonitorService {
     try {
       connection = await imaps.connect(this.config);
 
-      // Handle connection errors to prevent crash
+      // Handle underlying IMAP object errors to prevent process crash (unhandled 'error' event)
+      if (connection && connection.imap) {
+        // Remove any existing listeners to be safe (though this is a new connection)
+        connection.imap.removeAllListeners('error');
+        
+        connection.imap.on('error', (err) => {
+          // Just log the error, don't crash. 
+          // Socket closed by peer (EPIPE, ECONNRESET, etc.) will emit 'error'
+          console.error('📧 Underlying IMAP Connection Error:', err.message);
+        });
+      }
+
+      // Handle connection-level errors (from imap-simple wrapper)
       connection.on('error', (err) => {
-        console.error('❌ IMAP Connection Error:', err);
+        console.error('❌ IMAP Connection Error:', err.message);
       });
 
       await connection.openBox('INBOX');
 
-      // Check messages from the last 24 hours to be safe
-      const twentyFourHoursAgo = Date.now() - (24 * 60 * 60 * 1000);
+      // Check messages from the last 7 days to be safe
+      const searchPeriod = 7 * 24 * 60 * 60 * 1000;
+      const twentyFourHoursAgo = Date.now() - searchPeriod;
       
-      const searchCriteria = [
-        ['OR', ['SUBJECT', 'QT-'], ['SUBJECT', 'PO-']]
-      ];
+      // Search separately for POs and Quotations to ensure both are processed
+      const poCriteria = [['SUBJECT', 'PO']];
+      const qtCriteria = [['SUBJECT', 'QT']];
       const fetchOptions = {
         bodies: ['HEADER', 'TEXT'],
         markSeen: false
       };
 
-      const messages = await connection.search(searchCriteria, fetchOptions);
+      const poMessages = await connection.search(poCriteria, fetchOptions);
+      const qtMessages = await connection.search(qtCriteria, fetchOptions);
+      const messages = [...poMessages, ...qtMessages];
 
       const recentMessages = messages.filter(item => {
         try {
           const headerPart = item.parts.find(p => p.which === 'HEADER');
           const date = new Date(headerPart.body.date[0]).getTime();
-          return date >= twentyFourHoursAgo;
+          const isRecent = date >= twentyFourHoursAgo;
+          return isRecent;
         } catch (e) {
           return false;
         }
       });
 
-      console.log(`📬 Found ${recentMessages.length} recent emails with QT/PO in subject`);
+      console.log(`📬 Total matching emails: ${messages.length}, Recent: ${recentMessages.length}`);
 
       for (const item of recentMessages) {
         const subject = item.parts.find(p => p.which === 'HEADER').body.subject[0];
         // console.log(`📧 Processing email: "${subject}"`);
         
         // Look for PO number in subject: PO-timestamp-random or PO-MR-timestamp-random
-        const poMatch = subject.match(/PO-(MR-)?\d+-\d+/);
+        const poMatch = subject.match(/PO-(?:MR-)?[A-Z0-9-]+/i);
         // Look for QT number in subject: QT-timestamp-random or QT-MRS-timestamp-random
-        const qtMatch = subject.match(/QT-(MRS-)?\d+-\d+/);
+        const qtMatch = subject.match(/QT-(?:MRS-)?[A-Z0-9-]+/i);
         
-        if (poMatch) {
-          const poNumber = poMatch[0];
+        if (poMatch && !subject.toUpperCase().includes('QUOTATION')) {
+          const poNumber = poMatch[0].toUpperCase();
+          
+          // Before processing, check if this message already exists in either table
+          // to prevent processing a message twice if it hits both PO and QT checks
+          const fullMessageSearch = await connection.search([['UID', item.attributes.uid]], { bodies: ['HEADER'], markSeen: false });
+          if (fullMessageSearch.length > 0) {
+            const headerPart = fullMessageSearch[0].parts.find(p => p.which === 'HEADER');
+            const messageId = headerPart.body['message-id'][0];
+            const existsInPO = await PurchaseOrderCommunication.exists(messageId);
+            const existsInQT = await QuotationCommunication.exists(messageId);
+            if (existsInPO || existsInQT) {
+              console.log(`⚠️ Message ${messageId} already exists in DB. Skipping.`);
+              continue;
+            }
+          }
+
           console.log(`🔍 Matched PO Number: ${poNumber} in subject`);
           
           const po = await PurchaseOrder.findByPoNumber(poNumber);
@@ -232,7 +271,21 @@ class EmailMonitorService {
             }
           }
         } else if (qtMatch) {
-          const qtNumber = qtMatch[0];
+          const qtNumber = qtMatch[0].toUpperCase();
+
+          // Check if message already exists in either table
+          const fullMessageSearch = await connection.search([['UID', item.attributes.uid]], { bodies: ['HEADER'], markSeen: false });
+          if (fullMessageSearch.length > 0) {
+            const headerPart = fullMessageSearch[0].parts.find(p => p.which === 'HEADER');
+            const messageId = headerPart.body['message-id'][0];
+            const existsInPO = await PurchaseOrderCommunication.exists(messageId);
+            const existsInQT = await QuotationCommunication.exists(messageId);
+            if (existsInPO || existsInQT) {
+              console.log(`⚠️ Message ${messageId} already exists in DB. Skipping.`);
+              continue;
+            }
+          }
+
           console.log(`🔎 Found potential Quotation reply for ${qtNumber}`);
           
           const quotation = await Quotation.findByQuotationNumber(qtNumber);
@@ -327,9 +380,16 @@ class EmailMonitorService {
     } finally {
       if (connection) {
         try {
-          connection.end(); 
+          // Check if connection and underlying imap object exist
+          if (connection.imap && connection.imap.state !== 'disconnected') {
+            // Remove listeners before closing to avoid 'error' events during disconnect
+            connection.imap.removeAllListeners('error');
+            connection.imap.on('error', () => {}); // Null handler
+            
+            await connection.end();
+          }
         } catch (e) {
-          console.error('Error closing connection:', e);
+          // Already ended or in error state, safe to ignore
         }
       }
     }

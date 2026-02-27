@@ -1,21 +1,21 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
-import RootCardForm from '@/components/admin/RootCardForm';
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
+import RootCardForm from "@/components/admin/RootCardForm";
 
 const NewRootCardPage = () => {
   const navigate = useNavigate();
 
   const handleBackToList = () => {
-    navigate('/admin/root-cards');
+    navigate("/admin/root-cards");
   };
 
   const handleCreateSuccess = () => {
-    navigate('/admin/root-cards');
+    navigate("/admin/root-cards");
   };
 
   return (
-    <div className="w-full">
+    <div className="w-full p-4">
       <div className="mb-4">
         <button
           onClick={handleBackToList}
@@ -25,8 +25,8 @@ const NewRootCardPage = () => {
           Back to Root Cards
         </button>
       </div>
-      <RootCardForm 
-        mode="create" 
+      <RootCardForm
+        mode="create"
         onSubmit={handleCreateSuccess}
         onCancel={handleBackToList}
       />

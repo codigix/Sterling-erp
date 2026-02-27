@@ -13,7 +13,7 @@ require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
     const [quotations] = await connection.execute(
       'SELECT id, quotation_number FROM quotations WHERE quotation_number = ?',
-      ['QT-1767246670422-997']
+      ['QT-20260226-001-Q02']
     );
     
     console.log('📋 Quotation found:', quotations[0]);

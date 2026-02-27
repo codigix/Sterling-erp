@@ -3,6 +3,8 @@ const PurchaseOrder = require('../../models/PurchaseOrder');
 const PurchaseOrderCommunication = require('../../models/PurchaseOrderCommunication');
 const GRN = require('../../models/GRN');
 const emailService = require('../../services/emailService');
+const WorkflowTaskHelper = require('../../utils/workflowTaskHelper');
+const MaterialRequest = require('../../models/MaterialRequest');
 const path = require('path');
 const fs = require('fs');
 
@@ -82,6 +84,20 @@ exports.createPurchaseOrder = async (req, res) => {
       notes,
       status: 'draft'
     });
+
+    // Handle workflow task transition
+    if (material_request_id) {
+      try {
+        const mr = await MaterialRequest.findById(material_request_id);
+        if (mr && mr.sales_order_id) {
+          // If a PO is created, we transition from RFQ/Quotation steps to PO creation
+          // Step 4 is 'Create & Send Purchase Order'
+          await WorkflowTaskHelper.completeAndOpenNext(mr.sales_order_id, 'Record & Approve Vendor Quotation', null);
+        }
+      } catch (wfError) {
+        console.warn('Workflow transition error:', wfError.message);
+      }
+    }
     
     const newPurchaseOrder = await PurchaseOrder.findById(purchaseOrderId);
     if (newPurchaseOrder && newPurchaseOrder.items && typeof newPurchaseOrder.items === 'string') {
@@ -219,7 +235,7 @@ exports.sendPurchaseOrderEmail = async (req, res) => {
     const base64Data = pdfBase64.includes(',') ? pdfBase64.split(',')[1] : pdfBase64;
     const pdfBuffer = Buffer.from(base64Data, 'base64');
 
-    await emailService.sendMail({
+    const result = await emailService.sendMail({
       to: email,
       subject: subject || `Purchase Order ${purchaseOrder.po_number}`,
       text: message || `Please find attached Purchase Order ${purchaseOrder.po_number}.`,
@@ -230,6 +246,46 @@ exports.sendPurchaseOrderEmail = async (req, res) => {
         }
       ]
     });
+
+    if (result.success) {
+      // Save outgoing communication
+      try {
+        const communicationId = await PurchaseOrderCommunication.create({
+          po_id: id,
+          sender_email: process.env.EMAIL_USER,
+          subject: subject || `Purchase Order ${purchaseOrder.po_number}`,
+          content_text: message || `Please find attached Purchase Order ${purchaseOrder.po_number}.`,
+          content_html: null,
+          message_id: result.messageId,
+          has_attachments: true
+        });
+
+        // Save PDF as attachment
+        const uploadDir = path.join(__dirname, '../../uploads/po_attachments');
+        if (!fs.existsSync(uploadDir)) {
+          fs.mkdirSync(uploadDir, { recursive: true });
+        }
+
+        const fileName = `${purchaseOrder.po_number}.pdf`;
+        const uniqueFileName = `${Date.now()}-${fileName}`;
+        const filePath = path.join(uploadDir, uniqueFileName);
+        
+        fs.writeFileSync(filePath, pdfBuffer);
+        
+        await PurchaseOrderCommunication.addAttachment(communicationId, {
+          fileName: fileName,
+          filePath: `uploads/po_attachments/${uniqueFileName}`,
+          fileSize: pdfBuffer.length,
+          mimeType: 'application/pdf'
+        });
+        
+        // Mark as read since we sent it
+        await PurchaseOrderCommunication.markAsRead(communicationId);
+      } catch (dbError) {
+        console.error('Error saving outgoing PO communication:', dbError);
+        // Don't fail the request if just saving to history fails
+      }
+    }
 
     res.json({ message: 'Email sent successfully' });
   } catch (error) {
@@ -243,14 +299,19 @@ exports.getPurchaseOrderCommunications = async (req, res) => {
     const { id } = req.params;
     const communications = await PurchaseOrderCommunication.findByPoId(id);
     
-    // Mark as read
-    for (const comm of communications) {
-      if (!comm.is_read) {
+    // Mark as read and add is_outgoing flag
+    const processedComms = communications.map(comm => ({
+      ...comm,
+      is_outgoing: comm.sender_email === process.env.EMAIL_USER
+    }));
+
+    for (const comm of processedComms) {
+      if (!comm.is_read && !comm.is_outgoing) {
          PurchaseOrderCommunication.markAsRead(comm.id).catch(err => console.error('Error marking read:', err));
       }
     }
     
-    res.json(communications);
+    res.json(processedComms);
   } catch (error) {
     console.error('Get PO communications error:', error);
     res.status(500).json({ message: 'Internal server error' });

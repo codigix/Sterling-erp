@@ -33,8 +33,9 @@ class PurchaseOrder {
 
   static async findById(id) {
     const [rows] = await pool.execute(
-      `SELECT po.*, q.vendor_id as q_vendor_id, v.name as vendor_name, v.email as vendor_email,
-       mr.mr_number
+      `SELECT po.*, v.name as vendor_name, v.email as vendor_email,
+       mr.mr_number,
+       (SELECT COUNT(*) FROM purchase_order_communications poc WHERE poc.po_id = po.id AND poc.is_read = FALSE) as unread_communication_count
        FROM purchase_orders po
        LEFT JOIN quotations q ON po.quotation_id = q.id
        LEFT JOIN material_requests mr ON po.material_request_id = mr.id
@@ -47,10 +48,10 @@ class PurchaseOrder {
 
   static async findByPoNumber(poNumber) {
     const [rows] = await pool.execute(
-      `SELECT po.*, q.vendor_id, v.name as vendor_name, v.email as vendor_email
+      `SELECT po.*, v.name as vendor_name, v.email as vendor_email
        FROM purchase_orders po
        LEFT JOIN quotations q ON po.quotation_id = q.id
-       LEFT JOIN vendors v ON q.vendor_id = v.id
+       LEFT JOIN vendors v ON (q.vendor_id = v.id OR po.vendor_id = v.id)
        WHERE po.po_number = ?`,
       [poNumber]
     );

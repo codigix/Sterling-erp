@@ -95,7 +95,7 @@ class WorkflowTaskHelper {
       const allApproved = drawings.every(d => d.status === 'approved');
       
       if (allApproved) {
-        await this.completeAndOpenNext(rootCardId, 'Approve Designs', conn);
+        await this.completeAndOpenNext(rootCardId, 'Verify and approve design', conn);
       }
     } catch (error) {
       console.error(`[WorkflowTaskHelper] Error checking designs:`, error.message);
@@ -122,7 +122,7 @@ class WorkflowTaskHelper {
       const allApproved = docs.every(d => d.status === 'approved');
       
       if (allApproved) {
-        await this.completeAndOpenNext(rootCardId, 'Approve Documents', conn);
+        await this.completeAndOpenNext(rootCardId, 'Verify and approve the document', conn);
       }
     } catch (error) {
       console.error(`[WorkflowTaskHelper] Error checking documents:`, error.message);

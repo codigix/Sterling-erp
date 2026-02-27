@@ -10,7 +10,7 @@ exports.getRootCardInventoryTasks = async (req, res) => {
     }
 
     const [rootCardRows] = await pool.execute(
-      'SELECT project_id FROM root_cards WHERE id = ? LIMIT 1',
+      'SELECT id, project_id, project_name, po_number FROM root_cards WHERE id = ? LIMIT 1',
       [rootCardId]
     );
 
@@ -19,35 +19,70 @@ exports.getRootCardInventoryTasks = async (req, res) => {
     }
 
     const projectId = rootCardRows[0].project_id;
+    const rc = rootCardRows[0];
+
+    // If projectId is missing, we use rootCardId as fallback for tasks 
+    // but ideally we should have a projectId.
+    // Let's try to fetch tasks using projectId if available, otherwise rootCardId
+    const taskQueryId = projectId || rootCardId;
 
     const [projectRows] = await pool.execute(
       'SELECT id, name, code FROM projects WHERE id = ? LIMIT 1',
-      [projectId]
+      [projectId || -1] // -1 to ensure no match if projectId is null
     );
 
-    if (!projectRows.length) {
-      return res.status(404).json({ message: 'Project not found' });
-    }
+    const projectData = projectRows.length > 0 ? projectRows[0] : {
+      id: projectId || rootCardId,
+      name: rc.project_name || `RC-${rc.po_number || rc.id}`,
+      code: rc.po_number || `RC-${rc.id}`
+    };
 
-    let tasks = await RootCardInventoryTask.getRootCardInventoryTasks(projectId, true);
+    let tasks = await RootCardInventoryTask.getRootCardInventoryTasks(taskQueryId, true);
     
-    if (tasks.length === 0) {
-      console.log(`[getRootCardInventoryTasks] No tasks found for project ${projectId} (Root Card ${rootCardId}), auto-initializing...`);
-      const result = await RootCardInventoryTask.initializeRootCardTasks(projectId, rootCardId, null);
-      console.log(`[getRootCardInventoryTasks] Auto-initialization result:`, result);
-      tasks = await RootCardInventoryTask.getRootCardInventoryTasks(projectId, true);
-    }
-    
-    const progress = await RootCardInventoryTask.getRootCardWorkflowProgress(projectId);
+    const progress = await RootCardInventoryTask.getRootCardWorkflowProgress(taskQueryId);
 
     res.json({
-      rootCard: projectRows[0],
+      rootCard: projectData,
       tasks,
       progress,
       totalSteps: RootCardInventoryTask.WORKFLOW_STEPS.length
     });
   } catch (error) {
     console.error('Get root card inventory tasks error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+exports.getMRInventoryTasks = async (req, res) => {
+  try {
+    const { mrId } = req.params;
+
+    if (!mrId) {
+      return res.status(400).json({ message: 'Material Request ID is required' });
+    }
+
+    const [mrRows] = await pool.execute(
+      'SELECT id, mr_number, purpose, department FROM material_requests WHERE id = ? LIMIT 1',
+      [mrId]
+    );
+
+    if (!mrRows.length) {
+      return res.status(404).json({ message: 'Material Request not found' });
+    }
+
+    const mr = mrRows[0];
+
+    let tasks = await RootCardInventoryTask.getTasksByMaterialRequestId(mrId, true);
+    const progress = await RootCardInventoryTask.getMRWorkflowProgress(mrId);
+
+    res.json({
+      materialRequest: mr,
+      tasks,
+      progress,
+      totalSteps: RootCardInventoryTask.WORKFLOW_STEPS.length
+    });
+  } catch (error) {
+    console.error('Get MR inventory tasks error:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -113,13 +148,9 @@ exports.completeTask = async (req, res) => {
       return res.status(404).json({ message: 'Task not found' });
     }
 
-    const [rootCardRows] = await pool.execute(
-      'SELECT project_id FROM root_cards WHERE id = ? LIMIT 1',
-      [rootCardId]
-    );
-    const projectId = rootCardRows.length ? rootCardRows[0].project_id : null;
-
-    if (task.root_card_id !== projectId) {
+    // Check if task belongs to the root card
+    // Use task.root_card_id directly as it refers to root_cards.id in this model
+    if (task.root_card_id !== parseInt(rootCardId)) {
       return res.status(403).json({ message: 'Unauthorized: Root Card ID does not match' });
     }
 
@@ -170,13 +201,8 @@ exports.updateTaskStatus = async (req, res) => {
       return res.status(404).json({ message: 'Task not found' });
     }
 
-    const [rootCardRows] = await pool.execute(
-      'SELECT project_id FROM root_cards WHERE id = ? LIMIT 1',
-      [rootCardId]
-    );
-    const projectId = rootCardRows.length ? rootCardRows[0].project_id : null;
-
-    if (task.root_card_id !== projectId) {
+    // Check if task belongs to the root card
+    if (task.root_card_id !== parseInt(rootCardId)) {
       return res.status(403).json({ message: 'Unauthorized: Root Card ID does not match' });
     }
 
@@ -219,6 +245,23 @@ exports.getWorkflowProgress = async (req, res) => {
     res.json(progress);
   } catch (error) {
     console.error('Get workflow progress error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+exports.getMRWorkflowProgress = async (req, res) => {
+  try {
+    const { mrId } = req.params;
+
+    if (!mrId) {
+      return res.status(400).json({ message: 'Material Request ID is required' });
+    }
+
+    const progress = await RootCardInventoryTask.getMRWorkflowProgress(mrId);
+
+    res.json(progress);
+  } catch (error) {
+    console.error('Get MR workflow progress error:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -271,6 +314,55 @@ exports.linkReferenceToTask = async (req, res) => {
     });
   } catch (error) {
     console.error('Link reference to task error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+exports.initializeMRWorkflow = async (req, res) => {
+  try {
+    const { mrId } = req.params;
+    const userId = req.user?.id;
+
+    if (!mrId) {
+      return res.status(400).json({ message: 'Material Request ID is required' });
+    }
+
+    const [mrRows] = await pool.execute(
+      'SELECT id, sales_order_id FROM material_requests WHERE id = ? LIMIT 1',
+      [mrId]
+    );
+
+    if (!mrRows.length) {
+      return res.status(404).json({ message: 'Material Request not found' });
+    }
+
+    const mr = mrRows[0];
+    const rootCardId = mr.sales_order_id;
+    
+    // Resolve project and production root card IDs
+    let projectId = null;
+    let productionRootCardId = null;
+
+    if (rootCardId) {
+      const [rcRows] = await pool.execute(
+        'SELECT id, project_id FROM root_cards WHERE id = ? OR sales_order_id = ? LIMIT 1',
+        [rootCardId, rootCardId]
+      );
+      if (rcRows.length > 0) {
+        projectId = rcRows[0].project_id;
+        productionRootCardId = rcRows[0].id;
+      }
+    }
+
+    const result = await RootCardInventoryTask.initializeRootCardTasks(projectId, productionRootCardId, null, mrId);
+
+    res.json({
+      message: 'Workflow initialized successfully',
+      tasksCreated: result.tasksCreated,
+      tasks: result.tasks
+    });
+  } catch (error) {
+    console.error('Initialize MR workflow error:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 };

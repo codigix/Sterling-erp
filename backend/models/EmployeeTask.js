@@ -104,25 +104,29 @@ class EmployeeTask {
                     ms.root_card_id,
                     rc.code as root_card_code,
                     rc.title as root_card_name,
-                    COALESCE(qcd.job_card_no, rc.code, so.po_number, 'N/A') as root_card_title, 
+                    COALESCE(qcd_so_rc.job_card_no, qcd_so_p.job_card_no, qcd_rc.job_card_no, rc.code, so_rc.po_number, so_p.po_number, 'N/A') as root_card_title, 
                     rc.priority,
                     rc.project_id,
                     p.code as project_code,
-                    so.id as sales_order_id,
-                    so.po_number,
-                    so.total,
-                    so.order_date,
-                    so.due_date,
+                    COALESCE(so_rc.id, so_p.id) as sales_order_id,
+                    COALESCE(so_rc.po_number, so_p.po_number) as po_number,
+                    COALESCE(so_rc.total, so_p.total) as total,
+                    COALESCE(so_rc.order_date, so_p.order_date) as order_date,
+                    COALESCE(so_rc.due_date, so_p.due_date) as due_date,
                     e.first_name,
                     e.last_name,
                     e.email,
-                    qcd.job_card_no
+                    COALESCE(qcd_so_rc.job_card_no, qcd_so_p.job_card_no, qcd_rc.job_card_no) as job_card_no
                  FROM worker_tasks wt
                  LEFT JOIN manufacturing_stages ms ON wt.stage_id = ms.id
                  LEFT JOIN root_cards rc ON ms.root_card_id = rc.id
                  LEFT JOIN projects p ON rc.project_id = p.id
-                 LEFT JOIN sales_orders so ON (p.sales_order_id = so.id OR rc.sales_order_id = so.id)
-                 LEFT JOIN quality_check_details qcd ON (so.id = qcd.sales_order_id OR rc.sales_order_id = qcd.sales_order_id)
+                 -- Optimized joins (removing OR conditions)
+                 LEFT JOIN sales_orders so_p ON p.sales_order_id = so_p.id
+                 LEFT JOIN sales_orders so_rc ON rc.sales_order_id = so_rc.id
+                 LEFT JOIN quality_check_details qcd_so_p ON so_p.id = qcd_so_p.sales_order_id
+                 LEFT JOIN quality_check_details qcd_so_rc ON so_rc.id = qcd_so_rc.sales_order_id
+                 LEFT JOIN quality_check_details qcd_rc ON rc.sales_order_id = qcd_rc.sales_order_id
                  LEFT JOIN users u ON wt.worker_id = u.id
                  LEFT JOIN employees e ON (u.email = e.email AND u.email IS NOT NULL)
                  WHERE wt.worker_id = ?`;
@@ -268,25 +272,36 @@ class EmployeeTask {
                         et.assigned_by, et.due_date, et.notes, et.started_at, et.completed_at, 
                         et.created_at, et.updated_at, et.production_plan_stage_id, et.work_order_operation_id, et.sales_order_id,
                         pps.stage_name, woo.operation_name, woo.created_at as operation_created_at, wo.work_order_no, wo.item_name,
-                        COALESCE(qcd.job_card_no, rc.code, so.po_number, wo.work_order_no, 'N/A') as root_card_title,
-                        rc.code as root_card_code,
-                        rc.title as root_card_name,
+                        COALESCE(qcd1.job_card_no, qcd2.job_card_no, qcd_rc1.job_card_no, qcd_rc2.job_card_no, qcd_rc3.job_card_no, rc1.code, rc2.code, rc3.code, so.po_number, wo.work_order_no, 'N/A') as root_card_title,
+                        COALESCE(rc1.code, rc2.code, rc3.code) as root_card_code,
+                        COALESCE(rc1.title, rc2.title, rc3.title) as root_card_name,
                         COALESCE(p.id, p2.id, p3.id) as project_id, 
                         COALESCE(p.code, p2.code, p3.code) as project_code,
-                        qcd.job_card_no
+                        COALESCE(qcd1.job_card_no, qcd2.job_card_no, qcd_rc1.job_card_no, qcd_rc2.job_card_no, qcd_rc3.job_card_no) as job_card_no
                  FROM employee_tasks et
                  LEFT JOIN production_plan_stages pps ON et.production_plan_stage_id = pps.id
                  LEFT JOIN production_plans pp ON pps.production_plan_id = pp.id
                  LEFT JOIN work_order_operations woo ON et.work_order_operation_id = woo.id
                  LEFT JOIN work_orders wo ON woo.work_order_id = wo.id
-                 LEFT JOIN root_cards rc ON (pp.root_card_id = rc.id OR wo.root_card_id = rc.id OR et.root_card_id = rc.id)
-                 LEFT JOIN projects p ON rc.project_id = p.id
+                 
+                 -- Optimized root card joins
+                 LEFT JOIN root_cards rc1 ON pp.root_card_id = rc1.id
+                 LEFT JOIN root_cards rc2 ON wo.root_card_id = rc2.id
+                 LEFT JOIN root_cards rc3 ON et.root_card_id = rc3.id
+                 
+                 LEFT JOIN projects p ON rc1.project_id = p.id
                  LEFT JOIN sales_orders so ON et.sales_order_id = so.id
                  LEFT JOIN projects p2 ON so.id = p2.sales_order_id
-                 LEFT JOIN sales_order_details sod ON sod.sales_order_id = pp.sales_order_id
                  LEFT JOIN sales_orders so2 ON wo.sales_order_id = so2.id
                  LEFT JOIN projects p3 ON wo.project_id = p3.id
-                 LEFT JOIN quality_check_details qcd ON (so.id = qcd.sales_order_id OR so2.id = qcd.sales_order_id OR rc.sales_order_id = qcd.sales_order_id)
+                 
+                 -- Optimized QC details joins (fully removing OR conditions)
+                 LEFT JOIN quality_check_details qcd1 ON so.id = qcd1.sales_order_id
+                 LEFT JOIN quality_check_details qcd2 ON so2.id = qcd2.sales_order_id
+                 LEFT JOIN quality_check_details qcd_rc1 ON rc1.sales_order_id = qcd_rc1.sales_order_id
+                 LEFT JOIN quality_check_details qcd_rc2 ON rc2.sales_order_id = qcd_rc2.sales_order_id
+                 LEFT JOIN quality_check_details qcd_rc3 ON rc3.sales_order_id = qcd_rc3.sales_order_id
+                 
                  WHERE et.employee_id = ? AND (pps.id IS NULL OR pps.is_blocked = FALSE)`;
     const params = [employeeId];
 
@@ -296,8 +311,13 @@ class EmployeeTask {
     }
 
     if (filters.type && filters.type !== 'all') {
-      query += ' AND et.type = ?';
-      params.push(filters.type);
+      if (Array.isArray(filters.type)) {
+        query += ` AND et.type IN (${filters.type.map(() => '?').join(',')})`;
+        params.push(...filters.type);
+      } else {
+        query += ' AND et.type = ?';
+        params.push(filters.type);
+      }
     }
 
     if (filters.priority && filters.priority !== 'all') {
@@ -306,6 +326,17 @@ class EmployeeTask {
     }
 
     query += ' ORDER BY et.priority DESC, et.due_date ASC, et.created_at DESC';
+    
+    if (filters.limit) {
+      query += ' LIMIT ?';
+      params.push(Number(filters.limit));
+    }
+    
+    if (filters.offset) {
+      query += ' OFFSET ?';
+      params.push(Number(filters.offset));
+    }
+
     const [rows] = await pool.execute(query, params);
     
     return (rows || []).map(row => {
@@ -329,23 +360,30 @@ class EmployeeTask {
               et.assigned_by, et.due_date, et.notes, et.started_at, et.completed_at, 
               et.created_at, et.updated_at, et.production_plan_stage_id, et.work_order_operation_id, et.sales_order_id,
               pps.stage_name, woo.operation_name, woo.created_at as operation_created_at, wo.work_order_no, wo.item_name,
-              COALESCE(qcd.job_card_no, rc.code, so.po_number, wo.work_order_no, 'N/A') as root_card_title,
-              rc.code as root_card_code,
-              rc.title as root_card_name,
+              COALESCE(qcd_pp.job_card_no, qcd_wo.job_card_no, qcd_et.job_card_no, rc_pp.code, rc_wo.code, rc_et.code, so.po_number, wo.work_order_no, 'N/A') as root_card_title,
+              COALESCE(rc_pp.code, rc_wo.code, rc_et.code) as root_card_code,
+              COALESCE(rc_pp.title, rc_wo.title, rc_et.title) as root_card_name,
               COALESCE(p.id, p2.id, p3.id) as project_id, 
               COALESCE(p.code, p2.code, p3.code) as project_code,
-              qcd.job_card_no
+              COALESCE(qcd_pp.job_card_no, qcd_wo.job_card_no, qcd_et.job_card_no) as job_card_no
        FROM employee_tasks et
        LEFT JOIN production_plan_stages pps ON et.production_plan_stage_id = pps.id
        LEFT JOIN production_plans pp ON pps.production_plan_id = pp.id
        LEFT JOIN work_order_operations woo ON et.work_order_operation_id = woo.id
        LEFT JOIN work_orders wo ON woo.work_order_id = wo.id
-       LEFT JOIN root_cards rc ON (pp.root_card_id = rc.id OR wo.root_card_id = rc.id OR et.root_card_id = rc.id)
-       LEFT JOIN quality_check_details qcd ON (rc.id = qcd.sales_order_id OR rc.sales_order_id = qcd.sales_order_id)
-       LEFT JOIN projects p ON rc.project_id = p.id
+       
+       -- Optimized joins (removing OR conditions)
+       LEFT JOIN root_cards rc_pp ON pp.root_card_id = rc_pp.id
+       LEFT JOIN root_cards rc_wo ON wo.root_card_id = rc_wo.id
+       LEFT JOIN root_cards rc_et ON et.root_card_id = rc_et.id
+       
+       LEFT JOIN quality_check_details qcd_pp ON rc_pp.sales_order_id = qcd_pp.sales_order_id
+       LEFT JOIN quality_check_details qcd_wo ON rc_wo.sales_order_id = qcd_wo.sales_order_id
+       LEFT JOIN quality_check_details qcd_et ON rc_et.sales_order_id = qcd_et.sales_order_id
+       
+       LEFT JOIN projects p ON rc_pp.project_id = p.id
        LEFT JOIN sales_orders so ON et.sales_order_id = so.id
        LEFT JOIN projects p2 ON so.id = p2.sales_order_id
-       LEFT JOIN sales_order_details sod ON sod.sales_order_id = pp.sales_order_id
        LEFT JOIN sales_orders so2 ON wo.sales_order_id = so2.id
        LEFT JOIN projects p3 ON wo.project_id = p3.id
        WHERE et.id = ?`,

@@ -186,7 +186,9 @@ const ProjectDetailsPage = () => {
   const fetchProjects = async () => {
     try {
       setLoading(true);
-      const response = await axios.get("/root-cards/by-department/Design%20Engineering");
+      const response = await axios.get(
+        "/root-cards/by-department/Design%20Engineering",
+      );
       console.log("Root cards response:", response.data);
       const orders = Array.isArray(response.data)
         ? response.data
@@ -203,17 +205,23 @@ const ProjectDetailsPage = () => {
   const handleOpenDocModal = async (project) => {
     try {
       // Aggregate all documents from different sources
-      const projectDocs = Array.isArray(project.documents) ? project.documents : [];
-      
-      const poAttachments = Array.isArray(project.steps?.step1_clientPO?.attachments) 
-        ? project.steps.step1_clientPO.attachments 
+      const projectDocs = Array.isArray(project.documents)
+        ? project.documents
         : [];
-        
+
+      const poAttachments = Array.isArray(
+        project.steps?.step1_clientPO?.attachments,
+      )
+        ? project.steps.step1_clientPO.attachments
+        : [];
+
       const designDocs = Array.isArray(project.steps?.step2_design?.documents)
         ? project.steps.step2_design.documents
         : [];
-        
-      const designDrawings = Array.isArray(project.steps?.step2_design?.drawings3D)
+
+      const designDrawings = Array.isArray(
+        project.steps?.step2_design?.drawings3D,
+      )
         ? project.steps.step2_design.drawings3D
         : [];
 
@@ -221,25 +229,35 @@ const ProjectDetailsPage = () => {
       let technicalSpecs = [];
       try {
         const specsResponse = await axios.get("/production/specifications", {
-          params: { rootCardId: project.id }
+          params: { rootCardId: project.id },
         });
-        technicalSpecs = (Array.isArray(specsResponse.data) ? specsResponse.data : []).map(s => ({
+        technicalSpecs = (
+          Array.isArray(specsResponse.data) ? specsResponse.data : []
+        ).map((s) => ({
           name: s.title,
           fileName: s.fileName,
           version: s.version,
           id: s.id,
-          type: 'specification'
+          type: "specification",
         }));
       } catch (err) {
-        console.error("Error fetching technical specifications for modal:", err);
+        console.error(
+          "Error fetching technical specifications for modal:",
+          err,
+        );
       }
 
-      const allDocuments = [...projectDocs, ...poAttachments, ...designDocs, ...designDrawings, ...technicalSpecs];
-      
-      const uniqueDocuments = allDocuments.filter((doc, index, self) => 
-        index === self.findIndex((d) => (
-          (d.name || d) === (doc.name || doc)
-        ))
+      const allDocuments = [
+        ...projectDocs,
+        ...poAttachments,
+        ...designDocs,
+        ...designDrawings,
+        ...technicalSpecs,
+      ];
+
+      const uniqueDocuments = allDocuments.filter(
+        (doc, index, self) =>
+          index === self.findIndex((d) => (d.name || d) === (doc.name || doc)),
       );
 
       setModalDocs(uniqueDocuments);
@@ -252,17 +270,20 @@ const ProjectDetailsPage = () => {
 
   const handleDownload = async (doc) => {
     try {
-      const docName = doc.name || (typeof doc === 'string' ? doc : 'document');
-      
+      const docName = doc.name || (typeof doc === "string" ? doc : "document");
+
       // Handle technical specifications
-      if (doc.type === 'specification') {
-        const response = await axios.get(`/production/specifications/${doc.id}/download`, {
-          responseType: 'blob',
-        });
+      if (doc.type === "specification") {
+        const response = await axios.get(
+          `/production/specifications/${doc.id}/download`,
+          {
+            responseType: "blob",
+          },
+        );
         const url = window.URL.createObjectURL(new Blob([response.data]));
-        const link = document.createElement('a');
+        const link = document.createElement("a");
         link.href = url;
-        link.setAttribute('download', doc.fileName || `${docName}.pdf`);
+        link.setAttribute("download", doc.fileName || `${docName}.pdf`);
         document.body.appendChild(link);
         link.click();
         link.parentNode.removeChild(link);
@@ -274,10 +295,9 @@ const ProjectDetailsPage = () => {
       // For now, if it's just a string or has a name, we try to download if it's a known URL
       // If we don't have a direct download endpoint for these yet, we show a message
       alert(`Downloading ${docName}...`);
-      
     } catch (err) {
-      console.error('Failed to download document:', err);
-      alert('Failed to download document. Please try again.');
+      console.error("Failed to download document:", err);
+      alert("Failed to download document. Please try again.");
     }
   };
 
@@ -302,9 +322,7 @@ const ProjectDetailsPage = () => {
   };
 
   const handleSelectProject = (project) => {
-    navigate(
-      `/design-engineer/root-cards?projectId=${project.id}&mode=edit`
-    );
+    navigate(`/design-engineer/root-cards?projectId=${project.id}&mode=edit`);
   };
 
   const handleViewProject = (project) => {
@@ -337,7 +355,7 @@ const ProjectDetailsPage = () => {
       let designDetails = null;
       try {
         const savedResponse = await axios.get(
-          `/root-cards/${rootCard.id}/design-details`
+          `/root-cards/${rootCard.id}/design-details`,
         );
         designDetails = savedResponse.data?.data;
         console.log("Saved design details:", designDetails);
@@ -347,12 +365,9 @@ const ProjectDetailsPage = () => {
 
       const dataToSet = {
         designId: designDetails?.designId || rootCard.po_number || "",
-        projectName:
-          designDetails?.projectName || rootCard.project_name || "",
-        productName:
-          designDetails?.productName || rootCard.project_name || "",
-        designStatus:
-          designDetails?.designStatus || rootCard.status || "draft",
+        projectName: designDetails?.projectName || rootCard.project_name || "",
+        productName: designDetails?.productName || rootCard.project_name || "",
+        designStatus: designDetails?.designStatus || rootCard.status || "draft",
         designEngineerName: designDetails?.designEngineerName || "",
         systemLength: designDetails?.systemLength || "",
         systemWidth: designDetails?.systemWidth || "",
@@ -380,45 +395,59 @@ const ProjectDetailsPage = () => {
       let technicalSpecs = [];
       try {
         const specsResponse = await axios.get("/production/specifications", {
-          params: { rootCardId: projectId }
+          params: { rootCardId: projectId },
         });
-        technicalSpecs = Array.isArray(specsResponse.data) ? specsResponse.data : [];
+        technicalSpecs = Array.isArray(specsResponse.data)
+          ? specsResponse.data
+          : [];
       } catch (err) {
         console.error("Error fetching technical specifications:", err);
       }
 
       // Aggregate all documents from different sources for the detail view
-      const projectDocs = Array.isArray(rootCard.documents) ? rootCard.documents : [];
-      const poAttachments = Array.isArray(rootCard.steps?.step1_clientPO?.attachments) 
-        ? rootCard.steps.step1_clientPO.attachments 
+      const projectDocs = Array.isArray(rootCard.documents)
+        ? rootCard.documents
+        : [];
+      const poAttachments = Array.isArray(
+        rootCard.steps?.step1_clientPO?.attachments,
+      )
+        ? rootCard.steps.step1_clientPO.attachments
         : [];
       const designDocs = Array.isArray(rootCard.steps?.step2_design?.documents)
         ? rootCard.steps.step2_design.documents
         : [];
-      const designDrawings = Array.isArray(rootCard.steps?.step2_design?.drawings3D)
+      const designDrawings = Array.isArray(
+        rootCard.steps?.step2_design?.drawings3D,
+      )
         ? rootCard.steps.step2_design.drawings3D
         : [];
       const referenceDocs = Array.isArray(designDetails?.referenceDocuments)
         ? designDetails.referenceDocuments
         : [];
-      const specDocs = technicalSpecs.map(s => ({
+      const specDocs = technicalSpecs.map((s) => ({
         name: s.title,
         fileName: s.fileName,
         version: s.version,
         id: s.id,
-        type: 'specification'
+        type: "specification",
       }));
 
       // Combine and remove duplicates based on name
-      const allDocuments = [...projectDocs, ...poAttachments, ...designDocs, ...designDrawings, ...referenceDocs, ...specDocs];
-      const uniqueDocuments = allDocuments.filter((doc, index, self) => 
-        index === self.findIndex((d) => (
-          (d.name || d) === (doc.name || doc)
-        ))
+      const allDocuments = [
+        ...projectDocs,
+        ...poAttachments,
+        ...designDocs,
+        ...designDrawings,
+        ...referenceDocs,
+        ...specDocs,
+      ];
+      const uniqueDocuments = allDocuments.filter(
+        (doc, index, self) =>
+          index === self.findIndex((d) => (d.name || d) === (doc.name || doc)),
       );
 
       setUploadedFiles({
-        references: uniqueDocuments
+        references: uniqueDocuments,
       });
 
       setEditMode(viewMode === "edit");
@@ -476,7 +505,7 @@ const ProjectDetailsPage = () => {
       const rootCardId = selectedProject?.id;
       if (!rootCardId) {
         alert(
-          "No root card selected. Please ensure the task is properly linked to a root card. If the issue persists, please contact your administrator."
+          "No root card selected. Please ensure the task is properly linked to a root card. If the issue persists, please contact your administrator.",
         );
         console.error("Selected project has no ID:", selectedProject);
         return;
@@ -518,10 +547,7 @@ const ProjectDetailsPage = () => {
       };
 
       if (rootCardId && !isNaN(rootCardId)) {
-        await axios.post(
-          `/root-cards/${rootCardId}/design-details`,
-          payload
-        );
+        await axios.post(`/root-cards/${rootCardId}/design-details`, payload);
 
         if (taskId) {
           try {
@@ -545,7 +571,7 @@ const ProjectDetailsPage = () => {
       console.error("Error saving project:", error);
       alert(
         "Failed to save project details: " +
-          (error.response?.data?.message || error.message)
+          (error.response?.data?.message || error.message),
       );
     } finally {
       setSaving(false);
@@ -687,27 +713,42 @@ const ProjectDetailsPage = () => {
                   ) : (
                     filteredProjects.map((project) => {
                       // Aggregate all documents from different sources
-                      const projectDocs = Array.isArray(project.documents) ? project.documents : [];
-                      
-                      const poAttachments = Array.isArray(project.steps?.step1_clientPO?.attachments) 
-                        ? project.steps.step1_clientPO.attachments 
+                      const projectDocs = Array.isArray(project.documents)
+                        ? project.documents
                         : [];
-                        
-                      const designDocs = Array.isArray(project.steps?.step2_design?.documents)
+
+                      const poAttachments = Array.isArray(
+                        project.steps?.step1_clientPO?.attachments,
+                      )
+                        ? project.steps.step1_clientPO.attachments
+                        : [];
+
+                      const designDocs = Array.isArray(
+                        project.steps?.step2_design?.documents,
+                      )
                         ? project.steps.step2_design.documents
                         : [];
-                        
-                      const designDrawings = Array.isArray(project.steps?.step2_design?.drawings3D)
+
+                      const designDrawings = Array.isArray(
+                        project.steps?.step2_design?.drawings3D,
+                      )
                         ? project.steps.step2_design.drawings3D
                         : [];
 
                       // Combine and remove duplicates based on name if necessary
-                      const allDocuments = [...projectDocs, ...poAttachments, ...designDocs, ...designDrawings];
-                      
-                      const projectDocuments = allDocuments.filter((doc, index, self) => 
-                        index === self.findIndex((d) => (
-                          (d.name || d) === (doc.name || doc)
-                        ))
+                      const allDocuments = [
+                        ...projectDocs,
+                        ...poAttachments,
+                        ...designDocs,
+                        ...designDrawings,
+                      ];
+
+                      const projectDocuments = allDocuments.filter(
+                        (doc, index, self) =>
+                          index ===
+                          self.findIndex(
+                            (d) => (d.name || d) === (doc.name || doc),
+                          ),
                       );
 
                       return (
@@ -739,7 +780,7 @@ const ProjectDetailsPage = () => {
                             <span className="text-xs text-slate-600 dark:text-slate-400">
                               {project.order_date
                                 ? new Date(
-                                    project.order_date
+                                    project.order_date,
                                   ).toLocaleDateString("en-US", {
                                     month: "short",
                                     day: "numeric",
@@ -757,7 +798,7 @@ const ProjectDetailsPage = () => {
                                       month: "short",
                                       day: "numeric",
                                       year: "2-digit",
-                                    }
+                                    },
                                   )
                                 : "N/A"}
                             </span>
@@ -813,7 +854,10 @@ const ProjectDetailsPage = () => {
               <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
-                    <FileText className="text-blue-600 dark:text-blue-400" size={18} />
+                    <FileText
+                      className="text-blue-600 dark:text-blue-400"
+                      size={18}
+                    />
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-slate-900 dark:text-white">
@@ -831,21 +875,26 @@ const ProjectDetailsPage = () => {
                   <X size={18} />
                 </button>
               </div>
-              
+
               <div className="p-4 max-h-[60vh] overflow-y-auto">
                 {modalDocs.length > 0 ? (
                   <div className="space-y-2">
                     {modalDocs.map((doc, idx) => {
-                      const name = doc.name || (typeof doc === 'string' ? doc : 'Document');
+                      const name =
+                        doc.name ||
+                        (typeof doc === "string" ? doc : "Document");
                       return (
-                        <div 
-                          key={idx} 
+                        <div
+                          key={idx}
                           className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-100 dark:border-slate-800 group hover:border-blue-200 dark:hover:border-blue-800 transition-colors"
                         >
                           <div className="flex items-center gap-3 min-w-0">
-                            <File size={16} className="text-blue-500 flex-shrink-0" />
-                            <span 
-                              className="text-xs text-slate-700 dark:text-slate-300 truncate font-medium" 
+                            <File
+                              size={16}
+                              className="text-blue-500 flex-shrink-0"
+                            />
+                            <span
+                              className="text-xs text-slate-700 dark:text-slate-300 truncate font-medium"
                               title={name}
                             >
                               {name}
@@ -869,7 +918,7 @@ const ProjectDetailsPage = () => {
                   </div>
                 )}
               </div>
-              
+
               <div className="p-4 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-700 flex justify-end">
                 <button
                   onClick={() => setShowDocModal(false)}
@@ -887,7 +936,7 @@ const ProjectDetailsPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-      <div className="max-w-5xl mx-auto">
+      <div className="w-full mx-auto p-4">
         {/* Header */}
         <div className="sticky top-0 z-40 bg-white dark:bg-slate-800 shadow-sm rounded border-b border-slate-200 dark:border-slate-700">
           <div className="flex items-center  justify-between p-3">
@@ -897,8 +946,8 @@ const ProjectDetailsPage = () => {
               </div>
               <div>
                 <h1 className="text-md font-bold text-slate-900 dark:text-white text-xs">
-                  {selectedProject ? (editMode ? "Edit" : "View") : "View"}{" "}
-                  Root Card Details
+                  {selectedProject ? (editMode ? "Edit" : "View") : "View"} Root
+                  Card Details
                 </h1>
                 <p className="text-xs text-slate-600 dark:text-slate-400">
                   {selectedProject?.title || "Root Card"}
@@ -925,7 +974,9 @@ const ProjectDetailsPage = () => {
                     Customer / Client
                   </p>
                   <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                    {selectedProject?.customer || selectedProject?.client_name || "N/A"}
+                    {selectedProject?.customer ||
+                      selectedProject?.client_name ||
+                      "N/A"}
                   </p>
                 </div>
                 <div>
@@ -941,7 +992,11 @@ const ProjectDetailsPage = () => {
                     Order Date
                   </p>
                   <p className="text-sm text-slate-700 dark:text-slate-300">
-                    {selectedProject?.order_date ? new Date(selectedProject.order_date).toLocaleDateString() : "N/A"}
+                    {selectedProject?.order_date
+                      ? new Date(
+                          selectedProject.order_date,
+                        ).toLocaleDateString()
+                      : "N/A"}
                   </p>
                 </div>
                 <div>
@@ -949,7 +1004,9 @@ const ProjectDetailsPage = () => {
                     Due Date
                   </p>
                   <p className="text-sm text-slate-700 dark:text-slate-300 font-medium">
-                    {selectedProject?.due_date ? new Date(selectedProject.due_date).toLocaleDateString() : "N/A"}
+                    {selectedProject?.due_date
+                      ? new Date(selectedProject.due_date).toLocaleDateString()
+                      : "N/A"}
                   </p>
                 </div>
               </div>
@@ -1443,7 +1500,7 @@ const ProjectDetailsPage = () => {
                   onChange={(e) =>
                     handleInputChange(
                       "manufacturingInstructions",
-                      e.target.value
+                      e.target.value,
                     )
                   }
                   placeholder="Special instructions for fabrication, assembly, and testing"
@@ -1528,7 +1585,7 @@ const ProjectDetailsPage = () => {
               <Button
                 onClick={() =>
                   navigate(
-                    `/design-engineer/root-cards?projectId=${selectedProject.id}&mode=edit`
+                    `/design-engineer/root-cards?projectId=${selectedProject.id}&mode=edit`,
                   )
                 }
                 className="flex items-center gap-2"

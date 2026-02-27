@@ -4,20 +4,33 @@ const Notification = require('../../models/Notification');
 
 exports.getEmployeeTasks = async (req, res) => {
   try {
-    const { dateFilter, status, type } = req.query;
+    const { dateFilter, status, type, limit, offset } = req.query;
     const employeeId = req.user.id;
     
+    // Parse type if it's a comma-separated string or array
+    const typeFilter = type && typeof type === 'string' && type.includes(',') ? type.split(',') : type;
+    const typesArray = typeFilter ? (Array.isArray(typeFilter) ? typeFilter : [typeFilter]) : null;
+
     // Fetch tasks from both tables
     let workerTasks = [];
-    if (dateFilter === 'today') {
-      const today = new Date().toISOString().split('T')[0];
-      workerTasks = await EmployeeTask.getEmployeeTasks(employeeId, today);
-    } else {
-      workerTasks = await EmployeeTask.findByWorkerId(employeeId);
+    
+    // Only fetch worker tasks if no type filter is applied OR if 'worker_task' is in the requested types
+    if (!typesArray || typesArray.includes('worker_task')) {
+      if (dateFilter === 'today') {
+        const today = new Date().toISOString().split('T')[0];
+        workerTasks = await EmployeeTask.getEmployeeTasks(employeeId, today);
+      } else {
+        workerTasks = await EmployeeTask.findByWorkerId(employeeId);
+      }
     }
 
     // Fetch assigned tasks (from employee_tasks table)
-    const assignedTasks = await EmployeeTask.getAssignedTasks(employeeId, { status, type });
+    const assignedTasks = await EmployeeTask.getAssignedTasks(employeeId, { 
+      status, 
+      type: typeFilter,
+      limit: limit || null,
+      offset: offset || null
+    });
     
     // Normalize worker tasks to match the format
     const normalizedWorkerTasks = workerTasks.map(t => ({
@@ -32,12 +45,19 @@ exports.getEmployeeTasks = async (req, res) => {
     let allTasks = [...normalizedWorkerTasks, ...assignedTasks];
     
     // Apply filters if not already applied by model
-    if (status) {
+    if (status && status !== 'all') {
       allTasks = allTasks.filter(t => t.status === status);
     }
     
-    if (type) {
-      allTasks = allTasks.filter(t => t.type === type);
+    // Additional safety check for type filtering
+    if (typesArray) {
+      allTasks = allTasks.filter(t => typesArray.includes(t.type));
+    }
+
+    // If limit was applied at database level for assigned tasks, 
+    // we might still need to truncate if we combined with worker tasks
+    if (limit && allTasks.length > Number(limit)) {
+      allTasks = allTasks.slice(0, Number(limit));
     }
     
     res.json({ tasks: allTasks, total: allTasks.length });

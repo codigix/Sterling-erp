@@ -112,10 +112,32 @@ export const taskService = {
   },
 
   completeRootCardTaskIfPresent: async (taskId, notes = "") => {
-    const rootCardId = taskService.getRootCardIdFromParams();
-    if (rootCardId && taskId) {
+    const params = new URLSearchParams(window.location.search);
+    const rootCardId = params.get("rootCardId") || params.get("projectId");
+    const mrId = params.get("materialRequestId") || params.get("mrId");
+    
+    if (taskId) {
       try {
-        return await taskService.completeRootCardInventoryTask(taskId, rootCardId, notes);
+        let finalRootCardId = rootCardId;
+        
+        // If we have taskId but no rootCardId in URL, we might need to find it 
+        // from the task details or MR if this is an MR-based workflow
+        if (!finalRootCardId && mrId) {
+          try {
+            const response = await axios.get(`/inventory/material-requests/${mrId}`);
+            const mr = response.data.materialRequest;
+            finalRootCardId = mr?.sales_order_id || mr?.root_card_id;
+          } catch (e) {
+            console.error("Error resolving rootCardId from MR:", e);
+          }
+        }
+        
+        if (finalRootCardId) {
+          return await taskService.completeRootCardInventoryTask(taskId, finalRootCardId, notes);
+        } else {
+          // Fallback to generic task completion if no root card is linked
+          return await taskService.completeTask(taskId);
+        }
       } catch (error) {
         console.error("Error completing root card task:", error);
         return null;
@@ -236,6 +258,25 @@ export const taskService = {
         error.message ||
         "Failed to delete root card";
       console.error("Error deleting root card:", message);
+      throw new Error(message);
+    }
+  },
+
+  initializeMRWorkflow: async (mrId) => {
+    try {
+      if (!mrId) {
+        throw new Error("Material Request ID is required");
+      }
+      const response = await axios.post(
+        `/inventory/root-card-tasks/mr/${mrId}/initialize`
+      );
+      return response.data;
+    } catch (error) {
+      const message =
+        error.response?.data?.message ||
+        error.message ||
+        "Failed to initialize workflow";
+      console.error("Error initializing MR workflow:", message);
       throw new Error(message);
     }
   },

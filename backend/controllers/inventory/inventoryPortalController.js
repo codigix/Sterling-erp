@@ -1,40 +1,26 @@
+const Material = require('../../models/Material');
+
 exports.getInventoryStock = async (req, res) => {
   try {
-    const stock = [
-      {
-        id: 'SKU-001',
-        name: 'Steel Shaft',
-        batch: 'BATCH-2025-001',
-        quantity: 50,
-        rack: 'A-1-01',
-        location: 'Warehouse A',
-        status: 'available'
-      },
-      {
-        id: 'SKU-002',
-        name: 'Bearing Assembly',
-        batch: 'BATCH-2025-002',
-        quantity: 30,
-        rack: 'B-2-03',
-        location: 'Warehouse A',
-        status: 'available'
-      },
-      {
-        id: 'SKU-003',
-        name: 'Motor Coupling',
-        batch: 'BATCH-2025-001',
-        quantity: 5,
-        rack: 'C-3-05',
-        location: 'Warehouse B',
-        status: 'low-stock'
-      }
-    ];
+    const materials = await Material.getAll();
+    const statsData = await Material.getStats();
+
+    const stock = (materials || []).map(m => ({
+      id: m.item_code,
+      name: m.description,
+      batch: 'N/A', // Batch management could be added later
+      quantity: m.quantity || 0,
+      reorder_level: m.reorder_level || 0,
+      rack: m.rack_location || 'N/A',
+      location: m.warehouse_name || 'Main',
+      status: (m.quantity || 0) < (m.reorder_level || 0) ? 'low-stock' : 'available'
+    }));
 
     const stats = {
-      totalSKUs: stock.length,
+      totalSKUs: statsData.total_items || 0,
       totalQuantity: stock.reduce((sum, item) => sum + item.quantity, 0),
-      lowStock: stock.filter(item => item.status === 'low-stock').length,
-      pendingIssuance: 1
+      lowStock: statsData.low_stock_count || 0,
+      pendingIssuance: 0 // Placeholder
     };
 
     res.json({ stock, stats });

@@ -2,23 +2,49 @@ const pool = require('../config/database');
 
 class RootCardInventoryTask {
   static WORKFLOW_STEPS = [
-    { step: 1, name: 'Create RFQ' },
-    { step: 2, name: 'Send RFQ to Vendor' },
-    { step: 3, name: 'Receive & Record Quotes' },
-    { step: 4, name: 'Create PO' },
-    { step: 5, name: 'Approve PO' },
-    { step: 6, name: 'GRN Processing & QC' },
-    { step: 7, name: 'Add to Stock' }
+    { step: 1, name: 'Check Project Material Requirements' },
+    { step: 2, name: 'Create RFQ Quotation' },
+    { step: 3, name: 'Send Quotation to Vendor' },
+    { step: 4, name: 'Receive Vendor Quotation' },
+    { step: 5, name: 'Create Purchase Order' },
+    { step: 6, name: 'Send PO to Vendor' },
+    { step: 7, name: 'Receive Material' },
+    { step: 8, name: 'Approve Purchase Order' },
+    { step: 9, name: 'GRN Processing' },
+    { step: 10, name: 'QC Inspection' },
+    { step: 11, name: 'Stock Addition' },
+    { step: 12, name: 'Batch & Location Management' },
+    { step: 13, name: 'View Stock' },
+    { step: 14, name: 'Stock Movements' },
+    { step: 15, name: 'Reorder Levels Review' }
   ];
 
   static async getRootCardInventoryTasks(rootCardId, withDetails = false) {
     const [tasks] = await pool.execute(
-      `SELECT pit.*, u.username as completed_by_name
+      `SELECT pit.*, u.username as completed_by_name, mr.mr_number, mr.purpose as mr_purpose
        FROM root_card_inventory_tasks pit
        LEFT JOIN users u ON u.id = pit.completed_by
+       LEFT JOIN material_requests mr ON mr.id = pit.material_request_id
        WHERE pit.root_card_id = ?
-       ORDER BY pit.step_number ASC`,
+       ORDER BY pit.created_at DESC, pit.step_number ASC`,
       [rootCardId]
+    );
+    
+    return withDetails ? tasks.map(task => ({
+      ...task,
+      stepName: RootCardInventoryTask.WORKFLOW_STEPS.find(s => s.step === task.step_number)?.name
+    })) : tasks;
+  }
+
+  static async getTasksByMaterialRequestId(mrId, withDetails = false) {
+    const [tasks] = await pool.execute(
+      `SELECT pit.*, u.username as completed_by_name, mr.mr_number, mr.purpose as mr_purpose
+       FROM root_card_inventory_tasks pit
+       LEFT JOIN users u ON u.id = pit.completed_by
+       LEFT JOIN material_requests mr ON mr.id = pit.material_request_id
+       WHERE pit.material_request_id = ?
+       ORDER BY pit.step_number ASC`,
+      [mrId]
     );
     
     return withDetails ? tasks.map(task => ({
@@ -53,26 +79,34 @@ class RootCardInventoryTask {
     return tasks.length > 0 ? tasks[0] : null;
   }
 
-  static async initializeRootCardTasks(rootCardId, productionRootCardId = null, externalConnection = null) {
-    console.log(`[RootCardInventoryTask] Initializing tasks for rootCard ${rootCardId}, productionRootCard ${productionRootCardId}`);
+  static async initializeRootCardTasks(rootCardId, productionRootCardId = null, externalConnection = null, materialRequestId = null) {
+    console.log(`[RootCardInventoryTask] Initializing tasks for rootCard ${rootCardId}, productionRootCard ${productionRootCardId}, MR ${materialRequestId}`);
     const conn = externalConnection || (await pool.getConnection());
     const createdTasks = [];
     const shouldRelease = !externalConnection;
     
     try {
       for (const step of RootCardInventoryTask.WORKFLOW_STEPS) {
-        const [existingTasks] = await conn.execute(
-          `SELECT id FROM root_card_inventory_tasks 
-           WHERE root_card_id = ? AND step_number = ? LIMIT 1`,
-          [rootCardId, step.step]
-        );
+        // Use material_request_id as the primary lookup if available
+        let query;
+        let queryParams;
+
+        if (materialRequestId) {
+          query = `SELECT id FROM root_card_inventory_tasks WHERE material_request_id = ? AND step_number = ? LIMIT 1`;
+          queryParams = [materialRequestId, step.step];
+        } else {
+          query = `SELECT id FROM root_card_inventory_tasks WHERE root_card_id = ? AND step_number = ? AND material_request_id IS NULL LIMIT 1`;
+          queryParams = [rootCardId, step.step];
+        }
+
+        const [existingTasks] = await conn.execute(query, queryParams);
         
         if (existingTasks.length === 0) {
           const [result] = await conn.execute(
             `INSERT INTO root_card_inventory_tasks 
-             (root_card_id, production_root_card_id, step_number, step_name, status)
-             VALUES (?, ?, ?, ?, 'pending')`,
-            [rootCardId, productionRootCardId, step.step, step.name]
+             (root_card_id, production_root_card_id, material_request_id, step_number, step_name, status)
+             VALUES (?, ?, ?, ?, ?, 'pending')`,
+            [rootCardId || null, productionRootCardId, materialRequestId || null, step.step, step.name]
           );
           
           console.log(`[RootCardInventoryTask] Created task: step ${step.step} (${step.name}), taskId=${result.insertId}`);
@@ -132,6 +166,31 @@ class RootCardInventoryTask {
     
     const progress = {
       rootCardId,
+      totalSteps: RootCardInventoryTask.WORKFLOW_STEPS.length,
+      completed: tasks.filter(t => t.status === 'completed').length,
+      inProgress: tasks.filter(t => t.status === 'in_progress').length,
+      pending: tasks.filter(t => t.status === 'pending').length,
+      completionPercentage: Math.round((tasks.filter(t => t.status === 'completed').length / RootCardInventoryTask.WORKFLOW_STEPS.length) * 100),
+      steps: tasks.map(task => ({
+        id: task.id,
+        stepNumber: task.step_number,
+        stepName: task.step_name,
+        status: task.status,
+        referenceId: task.reference_id,
+        referenceType: task.reference_type,
+        completedBy: task.completed_by_name,
+        completedAt: task.completed_at
+      }))
+    };
+    
+    return progress;
+  }
+
+  static async getMRWorkflowProgress(mrId) {
+    const tasks = await RootCardInventoryTask.getTasksByMaterialRequestId(mrId);
+    
+    const progress = {
+      mrId,
       totalSteps: RootCardInventoryTask.WORKFLOW_STEPS.length,
       completed: tasks.filter(t => t.status === 'completed').length,
       inProgress: tasks.filter(t => t.status === 'in_progress').length,

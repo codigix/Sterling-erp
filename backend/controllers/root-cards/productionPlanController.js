@@ -159,6 +159,32 @@ class ProductionPlanController {
       };
       
       res.json(formatSuccessResponse(responseData, 'Production plan saved'));
+
+      // 3. Automatically complete the "Create Production Plan" workflow task if it exists
+      try {
+        const WorkflowTaskHelper = require('../../utils/workflowTaskHelper');
+        
+        // Determine the effective production root card ID
+        let effectiveRootCardId = isRootCard ? parseInt(rootCardId) : null;
+        
+        if (!effectiveRootCardId) {
+          // If we only have sales order ID, try to find the linked production root card
+          const [rcSearch] = await pool.execute(
+            'SELECT id FROM root_cards WHERE sales_order_id = ? LIMIT 1',
+            [rootCardId]
+          );
+          if (rcSearch.length > 0) {
+            effectiveRootCardId = rcSearch[0].id;
+          }
+        }
+
+        if (effectiveRootCardId) {
+          await WorkflowTaskHelper.completeAndOpenNext(effectiveRootCardId, 'Create Production Plan');
+          console.log(`[ProductionPlanController] Automated workflow task completion for RC ${effectiveRootCardId}`);
+        }
+      } catch (workflowError) {
+        console.warn(`[ProductionPlanController] Non-critical workflow sync error:`, workflowError.message);
+      }
     } catch (error) {
       console.error(`[ProductionPlanController] Error:`, error);
       res.status(500).json(formatErrorResponse(error.message));

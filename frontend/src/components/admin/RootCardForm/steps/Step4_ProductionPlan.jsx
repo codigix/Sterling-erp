@@ -1,49 +1,19 @@
-import React, { useCallback, useMemo } from "react";
-import { Zap, AlertCircle } from "lucide-react";
+import React, { useCallback, useMemo, useState } from "react";
+import { Zap, AlertCircle, Plus } from "lucide-react";
 import Input from "../../../ui/Input";
 import FormSection from "../shared/FormSection";
 import FormRow from "../shared/FormRow";
 import AssigneeField from "../shared/AssigneeField";
+import Button from "../../../ui/Button";
 import { useFormData, useRootCardContext } from "../hooks";
-
-const PRODUCTION_PHASES = {
-  "Material Prep": [
-    { value: "marking", label: "Marking" },
-    { value: "cutting_laser", label: "Cutting (laser/plasma/bandsaw)" },
-  ],
-  Fabrication: [
-    { value: "edge_prep", label: "Edge prep" },
-    { value: "mig_welding", label: "MIG/SMAW/TIG welding" },
-    { value: "fit_up", label: "Fit-up" },
-    { value: "structure_fabrication", label: "Structure fabrication" },
-    { value: "heat_treatment", label: "Heat treatment (optional)" },
-  ],
-  Machining: [
-    { value: "drilling", label: "Drilling" },
-    { value: "turning", label: "Turning" },
-    { value: "milling", label: "Milling" },
-    { value: "boring", label: "Boring" },
-  ],
-  "Surface Prep": [
-    { value: "grinding", label: "Grinding" },
-    { value: "shot_blasting", label: "Shot blasting" },
-    { value: "painting", label: "Painting" },
-  ],
-  Assembly: [
-    { value: "mechanical_assembly", label: "Mechanical assembly" },
-    { value: "shaft_bearing_assembly", label: "Shaft/bearing assembly" },
-    { value: "alignment", label: "Alignment" },
-  ],
-  Electrical: [
-    { value: "panel_wiring", label: "Panel wiring" },
-    { value: "motor_wiring", label: "Motor wiring" },
-    { value: "sensor_installation", label: "Sensor installation" },
-  ],
-};
+import { useProductionPhaseMaster } from "../hooks/useProductionPhaseMaster";
+import AddProductionPhaseModal from "./AddProductionPhaseModal";
 
 export default function Step4_ProductionPlan({ readOnly = false }) {
   const { formData, updateField } = useFormData();
   const { state } = useRootCardContext();
+  const { phases, loading: phasesLoading, addPhase: addPhaseToState } = useProductionPhaseMaster();
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const selectedPhases = useMemo(() => formData.selectedPhases || {}, [formData.selectedPhases]);
 
@@ -56,6 +26,12 @@ export default function Step4_ProductionPlan({ readOnly = false }) {
     }
     updateField("selectedPhases", newPhases);
   }, [selectedPhases, updateField]);
+
+  const handleAddPhaseSuccess = (newPhase) => {
+    addPhaseToState(newPhase);
+    // Optionally auto-select the new phase
+    handlePhaseToggle(newPhase.name);
+  };
 
   const content = useMemo(() => (
     <div className="space-y-6">
@@ -127,31 +103,52 @@ export default function Step4_ProductionPlan({ readOnly = false }) {
 
           {/* Production Phases */}
           <div className="pt-4 border-t border-slate-200">
-            <h5 className="text-sm font-semibold text-slate-900 mb-3 text-left">
-              Production Phases
-            </h5>
-            <p className="text-sm text-slate-600 mb-4">
-              Select the production phases required for this project
-            </p>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {Object.keys(PRODUCTION_PHASES).map((phase) => (
-                <label
-                  key={phase}
-                  className={`flex items-center text-xs gap-2 p-3 border border-slate-200 rounded-lg bg-white cursor-pointer hover:bg-purple-50 hover:border-purple-400 transition-colors ${readOnly ? 'pointer-events-none opacity-80' : ''}`}
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h5 className="text-sm font-semibold text-slate-900 text-left">
+                  Production Phases
+                </h5>
+                <p className="text-sm text-slate-600">
+                  Select the production phases required for this project
+                </p>
+              </div>
+              {!readOnly && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setIsModalOpen(true)}
+                  className="flex items-center gap-1"
                 >
-                  <input
-                    type="checkbox"
-                    checked={selectedPhases[phase] || false}
-                    onChange={() => !readOnly && handlePhaseToggle(phase)}
-                    disabled={readOnly}
-                    className="w-4 h-4 text-purple-600 bg-white border-slate-300 rounded focus:ring-2 focus:ring-purple-500 cursor-pointer disabled:cursor-not-allowed"
-                  />
-                  <span className="text-sm font-medium text-slate-900 text-left">
-                    {phase}
-                  </span>
-                </label>
-              ))}
+                  <Plus className="w-4 h-4" />
+                  Add Phase
+                </Button>
+              )}
             </div>
+            
+            {phasesLoading ? (
+              <div className="py-8 text-center text-slate-500">Loading phases...</div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {phases.map((phase) => (
+                  <label
+                    key={phase.id}
+                    className={`flex items-center text-xs gap-2 p-3 border border-slate-200 rounded-lg bg-white cursor-pointer hover:bg-purple-50 hover:border-purple-400 transition-colors ${readOnly ? 'pointer-events-none opacity-80' : ''}`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedPhases[phase.name] || false}
+                      onChange={() => !readOnly && handlePhaseToggle(phase.name)}
+                      disabled={readOnly}
+                      className="w-4 h-4 text-purple-600 bg-white border-slate-300 rounded focus:ring-2 focus:ring-purple-500 cursor-pointer disabled:cursor-not-allowed"
+                    />
+                    <span className="text-sm font-medium text-slate-900 text-left">
+                      {phase.name}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Production Dashboard Banner */}
@@ -168,6 +165,12 @@ export default function Step4_ProductionPlan({ readOnly = false }) {
           </div>
         </div>
       </FormSection>
+
+      <AddProductionPhaseModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={handleAddPhaseSuccess}
+      />
     </div>
   ), [
     state.formData,
@@ -178,8 +181,12 @@ export default function Step4_ProductionPlan({ readOnly = false }) {
     selectedPhases,
     readOnly,
     handlePhaseToggle,
-    updateField
+    updateField,
+    phases,
+    phasesLoading,
+    isModalOpen
   ]);
 
   return content;
 }
+

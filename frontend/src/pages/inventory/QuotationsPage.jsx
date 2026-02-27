@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import Swal from "sweetalert2";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -25,6 +25,7 @@ import {
   MessageSquare,
   Paperclip,
   PlusCircle,
+  ChevronDown,
 } from "lucide-react";
 import axios from "../../utils/api";
 import useRootCardInventoryTask from "../../hooks/useRootCardInventoryTask";
@@ -33,9 +34,11 @@ import CreateQuotationModal from "../../components/inventory/CreateQuotationModa
 const QuotationsPage = ({ defaultTab }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { completeCurrentTask, isFromDepartmentTasks } = useRootCardInventoryTask();
   const [quotations, setQuotations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [updatingStatusId, setUpdatingStatusId] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [activeTab, setActiveTab] = useState(defaultTab || location.state?.activeTab || "outbound");
@@ -50,8 +53,68 @@ const QuotationsPage = ({ defaultTab }) => {
   useEffect(() => {
     if (location.state?.openModal && location.state?.preFilledMaterials) {
       setShowAddModal(true);
+    } else {
+      const mrId = searchParams.get("materialRequestId") || searchParams.get("mrId");
+      if (mrId && activeTab === "outbound") {
+        const action = searchParams.get("action");
+        
+        if (action === "send") {
+          // Find existing quotation for this MR and open send modal
+          axios.get(`/inventory/quotations?material_request_id=${mrId}&type=outbound`).then(response => {
+            const existingQuotes = response.data;
+            if (existingQuotes && existingQuotes.length > 0) {
+              const quote = existingQuotes[0]; // Take the latest or first
+              handleSendEmail(quote);
+            } else {
+              // No quote found, fallback to add mode
+              fetchMRAndOpenAddModal(mrId, "outbound");
+            }
+          }).catch(err => console.error("Error finding quote for send action:", err));
+        } else if (action === "record") {
+          // Find existing quotation for this MR and open record response modal
+          // We filter for outbound (RFQs) that are either 'pending' or 'sent'
+          axios.get(`/inventory/quotations?material_request_id=${mrId}&type=outbound`).then(response => {
+            const existingQuotes = response.data;
+            if (existingQuotes && existingQuotes.length > 0) {
+              // Try to find the first one that is 'sent', otherwise take the latest
+              const quote = existingQuotes.find(q => q.status === "sent") || existingQuotes[0];
+              handleRecordResponse(quote);
+            } else {
+              // No quote found, fallback to record mode directly from MR
+              fetchMRAndOpenAddModal(mrId, "inbound");
+            }
+          }).catch(err => console.error("Error finding quote for record action:", err));
+        } else if (action === "create") {
+          fetchMRAndOpenAddModal(mrId, "outbound");
+        }
+      }
     }
-  }, [location.state]);
+  }, [location.state, searchParams, activeTab]);
+
+  const fetchMRAndOpenAddModal = (mrId, type = "outbound") => {
+    axios.get(`/inventory/material-requests/${mrId}`).then(response => {
+      const mr = response.data.materialRequest;
+      if (mr && mr.items) {
+        const items = Array.isArray(mr.items) ? mr.items : JSON.parse(mr.items || "[]");
+        
+        const preFilled = items.map(item => ({
+          item_code: item.item_code || item.material_code || "",
+          description: item.item_name || item.material_name || item.description || "",
+          quantity: item.quantity || 0,
+          unit: item.unit || "",
+          unit_price: 0,
+        }));
+
+        setInitialData({
+          material_request_id: mr.id,
+          root_card_id: mr.sales_order_id || mr.root_card_id || "",
+          items: preFilled,
+          type: type
+        });
+        setShowAddModal(true);
+      }
+    }).catch(err => console.error("Error fetching MR for Quotation:", err));
+  };
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
@@ -146,6 +209,53 @@ const QuotationsPage = ({ defaultTab }) => {
     fetchRootCards();
     fetchMaterialRequests();
   }, [fetchQuotations, fetchStats, fetchVendors, fetchRootCards, fetchMaterialRequests]);
+
+  // Auto-refresh notifications and stats every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // We only refresh quotations and stats to check for new replies/updates
+      // without showing the full loader to avoid flickering
+      const silentFetch = async () => {
+        try {
+          const params = new URLSearchParams();
+          if (searchQuery) params.append("search", searchQuery);
+          if (statusFilter !== "all") params.append("status", statusFilter);
+          params.append("type", activeTab);
+
+          const [qRes, sRes] = await Promise.all([
+            axios.get(`/inventory/quotations?${params}`),
+            axios.get("/inventory/quotations/stats")
+          ]);
+          setQuotations(qRes.data);
+          setStats(sRes.data);
+        } catch (err) {
+          console.error("Silent refresh failed:", err);
+        }
+      };
+      silentFetch();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [searchQuery, statusFilter, activeTab]);
+
+  // Auto-refresh communications when modal is open
+  useEffect(() => {
+    let interval;
+    if (showCommunicationsModal && selectedQuotationForComms) {
+      interval = setInterval(async () => {
+        try {
+          const response = await axios.get(
+            `/inventory/quotations/${selectedQuotationForComms.id}/communications`
+          );
+          setCommunications(response.data || []);
+        } catch (error) {
+          console.error("Error refreshing communications:", error);
+        }
+      }, 30000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [showCommunicationsModal, selectedQuotationForComms]);
 
   const handleQuotationCreated = () => {
     fetchQuotations();
@@ -401,37 +511,34 @@ const QuotationsPage = ({ defaultTab }) => {
     }
   };
 
-  const handleUpdateStatus = async (quote) => {
-    const { value: newStatus } = await Swal.fire({
-      title: "Update Status",
-      input: "select",
-      inputOptions: {
-        pending: "Pending",
-        approved: "Approved",
-        rejected: "Rejected",
-      },
-      inputValue: quote.status,
-      showCancelButton: true,
-      confirmButtonText: "Update",
-      inputValidator: (value) => {
-        if (!value) {
-          return "You need to select a status!";
-        }
-      },
-    });
-
-    if (newStatus && newStatus !== quote.status) {
-      try {
-        await axios.patch(`/inventory/quotations/${quote.id}/status`, {
-          status: newStatus,
+  const handleInlineStatusUpdate = async (quoteId, newStatus) => {
+    try {
+      setUpdatingStatusId(quoteId);
+      await axios.patch(`/inventory/quotations/${quoteId}/status`, {
+        status: newStatus,
+      });
+      
+      // Update local state immediately for better UX
+      setQuotations(prev => prev.map(q => q.id === quoteId ? { ...q, status: newStatus } : q));
+      
+      // Refresh stats in background
+      fetchStats();
+      
+      if (newStatus === "approved") {
+        Swal.fire({
+          icon: "success",
+          title: "Quotation Approved",
+          text: "The quotation has been approved successfully.",
+          timer: 1500,
+          showConfirmButton: false
         });
-        Swal.fire("Success", "Status updated successfully", "success");
-        fetchQuotations();
-        fetchStats();
-      } catch (error) {
-        console.error("Error updating status:", error);
-        Swal.fire("Error", "Failed to update status", "error");
       }
+    } catch (error) {
+      console.error("Error updating status:", error);
+      Swal.fire("Error", "Failed to update status", "error");
+      fetchQuotations(); // Revert on error
+    } finally {
+      setUpdatingStatusId(null);
     }
   };
 
@@ -526,6 +633,10 @@ const QuotationsPage = ({ defaultTab }) => {
         return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
       case "rejected":
         return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
+      case "sent":
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
+      case "responded":
+        return "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200";
       default:
         return "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200";
     }
@@ -786,14 +897,38 @@ const QuotationsPage = ({ defaultTab }) => {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span
-                        className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(
-                          quote.status
-                        )}`}
-                      >
-                        {quote.status.charAt(0).toUpperCase() +
-                          quote.status.slice(1)}
-                      </span>
+                      {activeTab === "inbound" ? (
+                        <div className="relative inline-block">
+                          <select
+                            value={quote.status}
+                            disabled={updatingStatusId === quote.id}
+                            onChange={(e) => handleInlineStatusUpdate(quote.id, e.target.value)}
+                            className={`appearance-none pl-3 pr-8 py-1 rounded-full text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer border-none ${getStatusColor(
+                              quote.status
+                            )}`}
+                          >
+                            <option value="pending" className="bg-white text-slate-900">Pending</option>
+                            <option value="approved" className="bg-white text-slate-900">Approved</option>
+                            <option value="rejected" className="bg-white text-slate-900">Rejected</option>
+                          </select>
+                          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500">
+                            {updatingStatusId === quote.id ? (
+                              <Loader2 size={12} className="animate-spin" />
+                            ) : (
+                              <ChevronDown size={14} />
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <span
+                          className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(
+                            quote.status
+                          )}`}
+                        >
+                          {quote.status.charAt(0).toUpperCase() +
+                            quote.status.slice(1)}
+                        </span>
+                      )}
                     </td>
                     <td className="px-6 py-4 text-center">
                       <div className="flex justify-center gap-2">
@@ -818,21 +953,35 @@ const QuotationsPage = ({ defaultTab }) => {
                         {activeTab === "outbound" && quote.status === "sent" && (
                           <button
                             onClick={() => handleViewCommunications(quote)}
-                            className="p-2 hover:bg-purple-100 dark:hover:bg-purple-900 text-purple-600 dark:text-purple-400 rounded-lg transition-colors relative"
+                            className={`p-2 rounded-lg transition-colors relative ${
+                              quote.unread_communication_count > 0 
+                                ? "bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400 animate-pulse" 
+                                : "hover:bg-purple-100 dark:hover:bg-purple-900 text-purple-600 dark:text-purple-400"
+                            }`}
                             title="View Communications"
                           >
                             <MessageSquare size={16} />
+                            {quote.unread_communication_count > 0 && (
+                              <>
+                                <span className="absolute -top-1 -right-1 flex h-4 w-4 animate-ping rounded-full bg-red-400 opacity-75"></span>
+                                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white border-2 border-white dark:border-slate-800 shadow-sm">
+                                  {quote.unread_communication_count}
+                                </span>
+                              </>
+                            )}
+                          </button>
+                        )}
+                        {activeTab === "inbound" && quote.status === "pending" && (
+                          <button
+                            onClick={() => handleInlineStatusUpdate(quote.id, "approved")}
+                            className="p-2 hover:bg-green-100 dark:hover:bg-green-900 text-green-600 dark:text-green-400 rounded-lg transition-colors"
+                            title="Quick Approve"
+                          >
+                            <CheckCircle size={16} />
                           </button>
                         )}
                         {activeTab === "inbound" && (
                           <>
-                            <button
-                              onClick={() => handleUpdateStatus(quote)}
-                              className="p-2 hover:bg-emerald-100 dark:hover:bg-emerald-900 text-emerald-600 dark:text-emerald-400 rounded-lg transition-colors"
-                              title="Update Status"
-                            >
-                              <CheckCircle size={16} />
-                            </button>
                             {quote.status === "approved" && (
                               <button
                                 onClick={() => handleCreatePOFromQuote(quote)}
@@ -1223,6 +1372,9 @@ const QuotationsPage = ({ defaultTab }) => {
                     Replies to emails with subject "{selectedQuotationForComms?.quotation_number}"
                     will appear here.
                   </p>
+                  <p className="text-[10px] mt-4 opacity-75 italic">
+                    Note: The system checks for new vendor replies every 30 seconds.
+                  </p>
                 </div>
               ) : (
                 communications.map((comm) => (
@@ -1275,7 +1427,7 @@ const QuotationsPage = ({ defaultTab }) => {
 
             <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
               <p className="text-xs text-center text-slate-500">
-                The system automatically checks for replies every minute.
+                The system automatically checks for replies every 30 seconds.
               </p>
             </div>
           </div>

@@ -74,6 +74,11 @@ class QuotationCommunication {
     const query = `UPDATE quotation_communications SET is_read = TRUE WHERE id = ?`;
     await db.execute(query, [id]);
   }
+
+  static async markAllAsReadForQuotation(quotationId) {
+    const query = `UPDATE quotation_communications SET is_read = TRUE WHERE quotation_id = ? AND is_read = FALSE`;
+    await db.execute(query, [quotationId]);
+  }
   
   static async exists(messageId) {
     const query = `SELECT id FROM quotation_communications WHERE message_id = ?`;

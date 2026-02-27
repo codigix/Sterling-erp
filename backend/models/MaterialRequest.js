@@ -39,6 +39,10 @@ class MaterialRequest {
       }
 
       // 1. Insert Header
+      const formattedRequiredDate = data.requiredDate && data.requiredDate !== '' 
+        ? new Date(data.requiredDate).toISOString().slice(0, 10) 
+        : null;
+
       const [headerResult] = await conn.execute(
         `INSERT INTO material_requests 
          (mr_number, sales_order_id, production_plan_id, department, purpose, 
@@ -56,7 +60,7 @@ class MaterialRequest {
           data.createdBy || null,
           data.requestedBy || data.createdBy || null,
           data.remarks || null,
-          (data.requiredDate && data.requiredDate !== '') ? data.requiredDate : null
+          formattedRequiredDate
         ]
       );
 
@@ -242,7 +246,15 @@ class MaterialRequest {
     for (const field of fields) {
       if (data[field] !== undefined) {
         updates.push(`${field} = ?`);
-        params.push(data[field]);
+        let value = data[field];
+        if (field === 'required_date' && value && value !== '') {
+          try {
+            value = new Date(value).toISOString().slice(0, 10);
+          } catch (e) {
+            console.error('Date formatting error in MR update:', e);
+          }
+        }
+        params.push(value);
       }
     }
 

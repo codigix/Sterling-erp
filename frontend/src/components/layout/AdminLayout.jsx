@@ -36,9 +36,9 @@ const AdminLayout = () => {
   const [expandedSections, setExpandedSections] = useState({});
 
   const toggleSection = (section) => {
-    setExpandedSections(prev => ({
+    setExpandedSections((prev) => ({
       ...prev,
-      [section]: !prev[section]
+      [section]: !prev[section],
     }));
   };
 
@@ -250,10 +250,15 @@ const AdminLayout = () => {
                                 : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
                             }`}
                           >
-                            <IconComponent size={18} className="flex-shrink-0" />
+                            <IconComponent
+                              size={18}
+                              className="flex-shrink-0"
+                            />
                             {!sidebarCollapsed && (
                               <>
-                                <span className="ml-3 flex-1 text-left">{item.title}</span>
+                                <span className="ml-3 flex-1 text-left">
+                                  {item.title}
+                                </span>
                                 <ChevronDown
                                   size={16}
                                   className={`transition-transform ${isExpanded ? "rotate-180" : ""}`}
@@ -275,8 +280,13 @@ const AdminLayout = () => {
                                           : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
                                       }`}
                                     >
-                                      <SubIconComponent size={16} className="flex-shrink-0" />
-                                      <span className="ml-3">{subitem.title}</span>
+                                      <SubIconComponent
+                                        size={16}
+                                        className="flex-shrink-0"
+                                      />
+                                      <span className="ml-3">
+                                        {subitem.title}
+                                      </span>
                                     </Link>
                                   </li>
                                 );
@@ -341,7 +351,7 @@ const AdminLayout = () => {
         <div className="">
           {/* Breadcrumbs */}
           <div className="mb-6">
-            <nav className="flex items-center text-xs space-x-2 text-xs text-slate-600 dark:text-slate-400">
+            <nav className=" p-4 flex items-center text-xs space-x-2 text-xs text-slate-600 dark:text-slate-400">
               <Link
                 to="/admin/dashboard"
                 className="hover: dark:hover: transition-colors"
@@ -353,7 +363,6 @@ const AdminLayout = () => {
                 {getCurrentPageTitle()}
               </span>
             </nav>
-            
           </div>
 
           {/* Page Content */}

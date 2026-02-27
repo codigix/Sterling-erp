@@ -59,7 +59,7 @@ const initialState = {
       poValue: "",
     },
     productDetails: {
-      itemName: "CCIS – Container Canister Integration Stand",
+      itemName: "",
       itemDescription: "",
       componentsList: "",
       certification: "",
@@ -132,7 +132,7 @@ const initialState = {
         designStatus: "draft",
       },
       productSpecification: {
-        productName: "CCIS – Container Canister Integration Stand",
+        productName: "",
         systemLength: "",
         systemWidth: "",
         systemHeight: "",
@@ -381,7 +381,9 @@ function reducer(state, action) {
         ...state,
         materialDetailsTable: {
           ...state.materialDetailsTable,
-          [materialType]: state.materialDetailsTable[materialType].filter((_, i) => i !== index),
+          [materialType]: state.materialDetailsTable[materialType].filter(
+            (_, i) => i !== index,
+          ),
         },
       };
     }
@@ -444,8 +446,10 @@ function reducer(state, action) {
           ...state.formData,
           ...action.payload.formData,
         },
-        materialDetailsTable: action.payload.materialDetailsTable || state.materialDetailsTable,
-        productionPhaseDetails: action.payload.productionPhaseDetails || state.productionPhaseDetails,
+        materialDetailsTable:
+          action.payload.materialDetailsTable || state.materialDetailsTable,
+        productionPhaseDetails:
+          action.payload.productionPhaseDetails || state.productionPhaseDetails,
         poDocuments: action.payload.poDocuments || state.poDocuments,
       };
     case ACTION_TYPES.RESET:
@@ -455,104 +459,149 @@ function reducer(state, action) {
   }
 }
 
-export function RootCardProvider({ children, mode = 'create', initialData = null, assigneeData = null }) {
+export function RootCardProvider({
+  children,
+  mode = "create",
+  initialData = null,
+  assigneeData = null,
+}) {
   const [state, dispatch] = useReducer(reducer, {
     ...initialState,
-    createdOrderId: initialData?.id || initialData?._id || null
+    createdOrderId: initialData?.id || initialData?._id || null,
   });
 
   // Keep createdOrderId in sync with initialData if it arrives later
   useEffect(() => {
     if (initialData?.id || initialData?._id) {
-      dispatch({ 
-        type: ACTION_TYPES.SET_ORDER_ID, 
-        payload: initialData.id || initialData._id 
+      dispatch({
+        type: ACTION_TYPES.SET_ORDER_ID,
+        payload: initialData.id || initialData._id,
       });
     }
   }, [initialData]);
 
-  const actions = useMemo(() => ({
-    setStep: (step) => {
-      dispatch({ type: ACTION_TYPES.SET_STEP, payload: step });
-    },
-    updateField: (field, value) => {
-      dispatch({ type: ACTION_TYPES.UPDATE_FIELD, field, value });
-    },
-    setNestedField: (section, field, value) => {
-      dispatch({ type: ACTION_TYPES.SET_NESTED_FIELD, section, field, value });
-    },
-    updateDeepNestedField: (section, subsection, field, value) => {
-      dispatch({ type: ACTION_TYPES.UPDATE_DEEP_NESTED_FIELD, section, subsection, field, value });
-    },
-    setLoading: (loading) => {
-      dispatch({ type: ACTION_TYPES.SET_LOADING, payload: loading });
-    },
-    setError: (error) => {
-      dispatch({ type: ACTION_TYPES.SET_ERROR, payload: error });
-    },
-    setSuccess: (msg) => {
-      dispatch({ type: ACTION_TYPES.SET_SUCCESS, payload: msg });
-    },
-    setOrderId: (id) => {
-      dispatch({ type: ACTION_TYPES.SET_ORDER_ID, payload: id });
-    },
-    setOrderSubmitted: (submitted) => {
-      dispatch({ type: ACTION_TYPES.SET_ORDER_SUBMITTED, payload: submitted });
-    },
-    updateMaterialDetail: (materialType, index, details) => {
-      dispatch({ type: ACTION_TYPES.UPDATE_MATERIAL_DETAIL, materialType, index, details });
-    },
-    deleteMaterialDetail: (materialType, index) => {
-      dispatch({ type: ACTION_TYPES.DELETE_MATERIAL_DETAIL, materialType, index });
-    },
-    toggleMaterialType: (materialType) => {
-      dispatch({ type: ACTION_TYPES.TOGGLE_MATERIAL_TYPE, materialType });
-    },
-    setConfigData: (projectCategories, materialUnits, materialSources, priorityLevels) => {
-      dispatch({
-        type: ACTION_TYPES.SET_CONFIG_DATA,
+  const actions = useMemo(
+    () => ({
+      setStep: (step) => {
+        dispatch({ type: ACTION_TYPES.SET_STEP, payload: step });
+      },
+      updateField: (field, value) => {
+        dispatch({ type: ACTION_TYPES.UPDATE_FIELD, field, value });
+      },
+      setNestedField: (section, field, value) => {
+        dispatch({
+          type: ACTION_TYPES.SET_NESTED_FIELD,
+          section,
+          field,
+          value,
+        });
+      },
+      updateDeepNestedField: (section, subsection, field, value) => {
+        dispatch({
+          type: ACTION_TYPES.UPDATE_DEEP_NESTED_FIELD,
+          section,
+          subsection,
+          field,
+          value,
+        });
+      },
+      setLoading: (loading) => {
+        dispatch({ type: ACTION_TYPES.SET_LOADING, payload: loading });
+      },
+      setError: (error) => {
+        dispatch({ type: ACTION_TYPES.SET_ERROR, payload: error });
+      },
+      setSuccess: (msg) => {
+        dispatch({ type: ACTION_TYPES.SET_SUCCESS, payload: msg });
+      },
+      setOrderId: (id) => {
+        dispatch({ type: ACTION_TYPES.SET_ORDER_ID, payload: id });
+      },
+      setOrderSubmitted: (submitted) => {
+        dispatch({
+          type: ACTION_TYPES.SET_ORDER_SUBMITTED,
+          payload: submitted,
+        });
+      },
+      updateMaterialDetail: (materialType, index, details) => {
+        dispatch({
+          type: ACTION_TYPES.UPDATE_MATERIAL_DETAIL,
+          materialType,
+          index,
+          details,
+        });
+      },
+      deleteMaterialDetail: (materialType, index) => {
+        dispatch({
+          type: ACTION_TYPES.DELETE_MATERIAL_DETAIL,
+          materialType,
+          index,
+        });
+      },
+      toggleMaterialType: (materialType) => {
+        dispatch({ type: ACTION_TYPES.TOGGLE_MATERIAL_TYPE, materialType });
+      },
+      setConfigData: (
         projectCategories,
         materialUnits,
         materialSources,
         priorityLevels,
-      });
-    },
-    setEmployees: (employees) => {
-      dispatch({ type: ACTION_TYPES.SET_EMPLOYEES, payload: employees });
-    },
-    setPoDocuments: (documents) => {
-      dispatch({ type: ACTION_TYPES.SET_PO_DOCUMENTS, payload: documents });
-    },
-    setStepAssignee: (step, value) => {
-      dispatch({ type: ACTION_TYPES.SET_STEP_ASSIGNEE, step, value });
-    },
-    setStepNote: (step, value) => {
-      dispatch({ type: ACTION_TYPES.SET_STEP_NOTE, step, value });
-    },
-    setMaterialDetailsTable: (table) => {
-      dispatch({ type: ACTION_TYPES.SET_MATERIAL_DETAILS_TABLE, payload: table });
-    },
-    setProductionPhaseDetails: (details) => {
-      dispatch({ type: ACTION_TYPES.SET_PRODUCTION_PHASE_DETAILS, payload: details });
-    },
-    setFormData: (formData) => {
-      dispatch({ type: ACTION_TYPES.SET_FORM_DATA, payload: formData });
-    },
-    setDraftData: (draftData) => {
-      dispatch({ type: ACTION_TYPES.SET_DRAFT_DATA, payload: draftData });
-    },
-    reset: () => {
-      dispatch({ type: ACTION_TYPES.RESET });
-    },
-  }), []);
+      ) => {
+        dispatch({
+          type: ACTION_TYPES.SET_CONFIG_DATA,
+          projectCategories,
+          materialUnits,
+          materialSources,
+          priorityLevels,
+        });
+      },
+      setEmployees: (employees) => {
+        dispatch({ type: ACTION_TYPES.SET_EMPLOYEES, payload: employees });
+      },
+      setPoDocuments: (documents) => {
+        dispatch({ type: ACTION_TYPES.SET_PO_DOCUMENTS, payload: documents });
+      },
+      setStepAssignee: (step, value) => {
+        dispatch({ type: ACTION_TYPES.SET_STEP_ASSIGNEE, step, value });
+      },
+      setStepNote: (step, value) => {
+        dispatch({ type: ACTION_TYPES.SET_STEP_NOTE, step, value });
+      },
+      setMaterialDetailsTable: (table) => {
+        dispatch({
+          type: ACTION_TYPES.SET_MATERIAL_DETAILS_TABLE,
+          payload: table,
+        });
+      },
+      setProductionPhaseDetails: (details) => {
+        dispatch({
+          type: ACTION_TYPES.SET_PRODUCTION_PHASE_DETAILS,
+          payload: details,
+        });
+      },
+      setFormData: (formData) => {
+        dispatch({ type: ACTION_TYPES.SET_FORM_DATA, payload: formData });
+      },
+      setDraftData: (draftData) => {
+        dispatch({ type: ACTION_TYPES.SET_DRAFT_DATA, payload: draftData });
+      },
+      reset: () => {
+        dispatch({ type: ACTION_TYPES.RESET });
+      },
+    }),
+    [],
+  );
 
-  const value = useMemo(() => ({
-    state,
-    ...actions,
-    mode,
-    initialData,
-    assigneeData
-  }), [state, actions, mode, initialData, assigneeData]);
+  const value = useMemo(
+    () => ({
+      state,
+      ...actions,
+      mode,
+      initialData,
+      assigneeData,
+    }),
+    [state, actions, mode, initialData, assigneeData],
+  );
 
   return (
     <RootCardContext.Provider value={value}>

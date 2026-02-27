@@ -40,7 +40,7 @@ exports.getAssignedRootCards = async (req, res) => {
 
 exports.getRootCards = async (req, res) => {
   try {
-    const { status, search, includeSteps, assignedOnly } = req.query;
+    const { status, search, includeSteps, assignedOnly, hasMaterialRequests } = req.query;
     const userId = req.user?.id || req.user?.userId;
 
     const rootCards = await RootCard.findAll({ 
@@ -48,6 +48,7 @@ exports.getRootCards = async (req, res) => {
       search,
       includeSteps: includeSteps !== 'false',
       assignedOnly,
+      hasMaterialRequests,
       userId
     });
     const stats = await RootCard.getStats();
@@ -143,9 +144,7 @@ exports.createRootCard = async (req, res) => {
 
       res.status(201).json({
         message: 'Root card created successfully',
-        rootCard: createdRootCard,
-        projectId,
-        productionRootCardId: productionRootCardId
+        rootCard: createdRootCard
       });
     } catch (error) {
       await connection.rollback();
@@ -531,7 +530,11 @@ exports.sendToDesignEngineering = async (req, res) => {
       SELECT DISTINCT u.id, u.username, u.email
       FROM users u
       INNER JOIN roles r ON u.role_id = r.id
-      WHERE r.name IN ('Design Engineer', 'design_engineer')
+      WHERE r.name IN (
+        'Design Engineer', 'design_engineer', 'design.engineer',
+        'Engineering', 'engineering', 
+        'Design Engineering', 'design_engineering', 'design.engineering'
+      )
     `);
 
     if (designEngineers.length === 0) {

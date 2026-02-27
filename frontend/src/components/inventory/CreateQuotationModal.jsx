@@ -10,9 +10,14 @@ import {
   Check,
   Send,
   Calendar,
+  Upload,
+  FileCheck,
+  File,
+  Search,
 } from "lucide-react";
 import axios from "../../utils/api";
 import Swal from "sweetalert2";
+import { useRootCardInventoryTask } from "../../hooks/useRootCardInventoryTask";
 
 const CreateQuotationModal = ({
   isOpen,
@@ -24,12 +29,15 @@ const CreateQuotationModal = ({
   rootCards = [],
   materialRequests = [],
 }) => {
+  const { completeCurrentTask } = useRootCardInventoryTask();
   const [submitting, setSubmitting] = useState(false);
   const [analysisMode, setAnalysisMode] = useState(false);
   const [rootCardMaterials, setRootCardMaterials] = useState([]);
   const [loadingMaterials, setLoadingMaterials] = useState(false);
   const [savingRequirements, setSavingRequirements] = useState(false);
   const [rootCardQuotations, setRootCardQuotations] = useState([]);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [uploadedFileName, setUploadedFileName] = useState("");
 
   const [formData, setFormData] = useState({
     vendor_id: "",
@@ -41,6 +49,7 @@ const CreateQuotationModal = ({
     type: "outbound",
     reference_id: null,
     material_request_id: null,
+    document_path: "",
   });
 
   useEffect(() => {
@@ -50,6 +59,11 @@ const CreateQuotationModal = ({
           ...prev,
           ...initialData,
         }));
+
+        // If material_request_id is provided, automatically load its items
+        if (initialData.material_request_id && (!initialData.items || initialData.items.length === 0)) {
+          handleMaterialRequestChange({ target: { value: initialData.material_request_id } });
+        }
       }
 
       if (preFilledMaterials) {
@@ -119,6 +133,60 @@ const CreateQuotationModal = ({
         total_amount: newTotal,
       };
     });
+  };
+
+  const handleAnalyzeFile = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploadedFileName(file.name);
+
+    if (formData.items.length === 0) {
+      Swal.fire("Warning", "Please load items from a Material Request first", "warning");
+      e.target.value = ''; // Reset file input
+      return;
+    }
+
+    const analysisFormData = new FormData();
+    analysisFormData.append("file", file);
+    analysisFormData.append("items", JSON.stringify(formData.items));
+
+    try {
+      setAnalyzing(true);
+      const response = await axios.post("/inventory/quotations/analyze", analysisFormData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      setFormData((prev) => ({
+        ...prev,
+        items: response.data.items,
+        total_amount: response.data.total_amount,
+        // We don't set document_path because we aren't storing the file permanently 
+        // until the user actually records the quote, but since the user said 
+        // "dont store the uploaded file", we might skip storing it entirely if requested.
+        // For now, we just fill the prices.
+      }));
+
+      const missingPrices = response.data.items.filter(item => item.unit_price === 0).length;
+      if (missingPrices > 0) {
+        Swal.fire({
+          title: "Analysis Complete",
+          text: `Prices extracted for most items, but ${missingPrices} items could not be automatically matched. Please enter them manually.`,
+          icon: "info",
+          confirmButtonText: "Ok"
+        });
+      } else {
+        Swal.fire("Success", "Prices fetched successfully from the document!", "success");
+      }
+    } catch (error) {
+      console.error("Error analyzing quotation:", error);
+      Swal.fire("Error", error.response?.data?.message || "Failed to analyze document", "error");
+    } finally {
+      setAnalyzing(false);
+      // e.target.value = ''; // Keep it if we want to show it's "selected"
+    }
   };
 
   const handleRootCardChange = async (e) => {
@@ -331,6 +399,10 @@ const CreateQuotationModal = ({
       };
 
       await axios.post("/inventory/quotations", payload);
+
+      if (formData.type === "inbound") {
+        await completeCurrentTask("Vendor quotation response recorded");
+      }
 
       if (onQuotationCreated) {
         onQuotationCreated();
@@ -558,6 +630,7 @@ const CreateQuotationModal = ({
                         />
                       )}
                       <select
+                        value={formData.material_request_id || ""}
                         onChange={handleMaterialRequestChange}
                         disabled={loadingMaterials}
                         className="w-full px-4 py-3 pl-11 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
@@ -669,24 +742,69 @@ const CreateQuotationModal = ({
                 )}
 
                 {formData.type === "inbound" && (
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                      Total Amount (₹)
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-4 top-3 text-slate-500 dark:text-slate-400 font-medium">
-                        ₹
-                      </span>
-                      <input
-                        type="number"
-                        name="total_amount"
-                        value={formData.total_amount}
-                        onChange={handleFormChange}
-                        placeholder="0.00"
-                        step="0.01"
-                        disabled
-                        className="w-full pl-8 pr-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition opacity-75 cursor-not-allowed"
-                      />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                        Total Amount (₹)
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-4 top-3 text-slate-500 dark:text-slate-400 font-medium">
+                          ₹
+                        </span>
+                        <input
+                          type="number"
+                          name="total_amount"
+                          value={formData.total_amount}
+                          onChange={handleFormChange}
+                          placeholder="0.00"
+                          step="0.01"
+                          disabled
+                          className="w-full pl-8 pr-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition opacity-75 cursor-not-allowed"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col">
+                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                        Quotation Document (PDF/Image)
+                      </label>
+                      <div className="relative w-full h-full">
+                        <input
+                          type="file"
+                          id="quotation-upload"
+                          className="hidden"
+                          accept=".pdf,image/*"
+                          onChange={handleAnalyzeFile}
+                          disabled={analyzing}
+                        />
+                        <label
+                          htmlFor="quotation-upload"
+                          className={`flex items-center justify-center gap-3 px-4 py-3 border-2 border-dashed rounded-xl cursor-pointer transition-all w-full h-[50px] ${
+                            uploadedFileName
+                              ? "border-green-500 bg-green-50 dark:bg-green-900/10 text-green-700 dark:text-green-400"
+                              : "border-slate-300 dark:border-slate-600 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10 text-slate-600 dark:text-slate-400"
+                          }`}
+                        >
+                          {analyzing ? (
+                            <>
+                              <Loader2 size={18} className="animate-spin" />
+                              <span className="text-xs font-medium">Analyzing...</span>
+                            </>
+                          ) : uploadedFileName ? (
+                            <>
+                              <FileCheck size={18} />
+                              <span className="text-xs font-medium truncate max-w-[200px]">
+                                {uploadedFileName}
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <Upload size={18} />
+                              <span className="text-xs font-medium">Click to upload for auto-fill</span>
+                            </>
+                          )}
+                        </label>
+                      </div>
                     </div>
                   </div>
                 )}
