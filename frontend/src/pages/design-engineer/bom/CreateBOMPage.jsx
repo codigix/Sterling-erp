@@ -108,6 +108,7 @@ const CreateBOMPage = () => {
   const [editMode] = useState(!!searchParams.get("bomId"));
   const [bomId] = useState(searchParams.get("bomId"));
   const [workstations, setWorkstations] = useState([]);
+  const [vendors, setVendors] = useState([]);
   const [rootCardStages, setRootCardStages] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
   const [expandedSections, setExpandedSections] = useState({
@@ -126,7 +127,19 @@ const CreateBOMPage = () => {
   // Entry form states for "Quick Add"
   const [newComponent, setNewComponent] = useState({ componentCode: "", quantity: 1, uom: "Kg", rate: 0, lossPercent: 0, notes: "" });
   const [newMaterial, setNewMaterial] = useState({ itemCode: "", itemName: "", quantity: 1, uom: "Kg", itemGroup: "", rate: 0, warehouse: "", operation: "" });
-  const [newOperation, setNewOperation] = useState({ operationName: "", workstation: "", cycleTime: 0, setupTime: 0, hourlyRate: 0, cost: 0, type: "in-house", targetWarehouse: "" });
+  const [newOperation, setNewOperation] = useState({ 
+    operationName: "", 
+    workstation: "", 
+    cycleTime: 0, 
+    setupTime: 0, 
+    hourlyRate: 0, 
+    cost: 0, 
+    type: "in-house", 
+    targetWarehouse: "",
+    vendorName: "",
+    vendorRatePerUnit: 0,
+    subcontractWarehouse: ""
+  });
   const [newScrap, setNewScrap] = useState({ itemCode: "", name: "", inputQty: 0, lossPercent: 0, rate: 0 });
 
   const [bomData, setBomData] = useState({
@@ -164,6 +177,9 @@ const CreateBOMPage = () => {
   }, []);
 
   const updateOperationCost = (row) => {
+    if (row.type === 'outsource') {
+      return parseFloat(row.vendorRatePerUnit) || 0;
+    }
     const cycleTime = parseFloat(row.cycleTime) || 0;
     const setupTime = parseFloat(row.setupTime) || 0;
     const hourlyRate = parseFloat(row.hourlyRate) || 0;
@@ -216,7 +232,19 @@ const CreateBOMPage = () => {
     } else if (section === "operations") {
       if (!newOperation.operationName) return;
       newItem = { ...newOperation, id: Date.now() };
-      resetState = () => setNewOperation({ operationName: "", workstation: "", cycleTime: 0, setupTime: 0, hourlyRate: 0, cost: 0, type: "in-house", targetWarehouse: "" });
+      resetState = () => setNewOperation({ 
+        operationName: "", 
+        workstation: "", 
+        cycleTime: 0, 
+        setupTime: 0, 
+        hourlyRate: 0, 
+        cost: 0, 
+        type: "in-house", 
+        targetWarehouse: "",
+        vendorName: "",
+        vendorRatePerUnit: 0,
+        subcontractWarehouse: ""
+      });
     } else if (section === "scrapLoss") {
       if (!newScrap.itemCode) return;
       newItem = { ...newScrap, id: Date.now() };
@@ -234,20 +262,22 @@ const CreateBOMPage = () => {
 
   const loadRootCardContext = useCallback(async (rootCardId) => {
     try {
-      const [rcRes, planRes, reqRes, facilitiesRes, materialsRes] = await Promise.all([
+      const [rcRes, planRes, reqRes, facilitiesRes, materialsRes, vendorsRes] = await Promise.all([
         axios.get(`/root-cards/${rootCardId}`),
         axios.get(`/root-cards/steps/${rootCardId}/production-plan`).catch(() => ({ data: { success: false } })),
         axios.get(`/root-cards/requirements/${rootCardId}`).catch(() => ({ data: { success: false } })),
         axios.get("/inventory/facilities").catch(() => ({ data: { facilities: [] } })),
-        axios.get("/inventory/materials").catch(() => ({ data: { materials: [] } }))
+        axios.get("/inventory/materials").catch(() => ({ data: { materials: [] } })),
+        axios.get("/inventory/vendors").catch(() => ({ data: [] }))
       ]);
 
       const rootCard = rcRes.data.rootCard || rcRes.data;
       if (!rootCard) throw new Error("Root card not found");
 
-      // Set global materials and workstations
+      // Set global materials, workstations and vendors
       setMaterials(materialsRes.data.materials || []);
       setWorkstations(facilitiesRes.data.facilities || []);
+      setVendors(Array.isArray(vendorsRes.data) ? vendorsRes.data : []);
 
       // Warehouses
       const fetchedMaterials = materialsRes.data.materials || [];
@@ -639,6 +669,11 @@ const CreateBOMPage = () => {
 
     return options;
   }, [workstations, rootCardStages, bomData.productInfo.rootCardId]);
+
+  const vendorOptions = useMemo(() => vendors.map((v) => ({
+    label: v.name,
+    value: v.name,
+  })), [vendors]);
 
   const warehouseOptions = useMemo(() => warehouses.map((w) => ({
     label: w,
@@ -1793,160 +1828,233 @@ const CreateBOMPage = () => {
               <div className="space-y-6">
                 {/* Quick Add Form */}
                 <div className="p-5 bg-purple-50/30 dark:bg-purple-900/10 rounded-2xl border border-purple-100/50 dark:border-purple-900/20">
-                  <div className="flex items-center gap-2 mb-4 text-purple-700 dark:text-purple-400 font-bold text-[11px] uppercase tracking-wider">
+                  <div className="flex items-center gap-2 mb-4 text-purple-700 dark:text-purple-400 font-bold text-[10px] uppercase tracking-wider">
                     <div className="w-5 h-5 rounded-full bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center">
                       <Plus size={12} />
                     </div>
                     Add Manufacturing Operation
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-                    <div className="md:col-span-2">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-x-6 gap-y-5 items-end">
+                    {/* Row 1: Primary identifiers */}
+                    <div className="md:col-span-3">
                       <SearchableSelect
                         label="Operation *"
                         options={operationSelectOptions}
                         value={newOperation.operationName}
                         onChange={(val) => setNewOperation(prev => ({ ...prev, operationName: val }))}
-                        placeholder="Select"
+                        placeholder="Search operator"
                         allowCustom={true}
                       />
                     </div>
-                    <div className="md:col-span-2">
+                    <div className="md:col-span-3">
                       <SearchableSelect
-                        label="Workstation"
-                        options={workstationOptions}
-                        value={newOperation.workstation}
-                        onChange={(val) => setNewOperation(prev => ({ ...prev, workstation: val }))}
-                        placeholder="Select"
-                        allowCustom={true}
-                      />
-                    </div>
-                    <div className="md:col-span-1">
-                      <label className="block text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider mb-1.5 ml-1 whitespace-nowrap">Cycle (Min)</label>
-                      <input
-                        type="number"
-                        value={newOperation.cycleTime}
-                        onChange={(e) => {
-                          const val = e.target.value === "" ? "" : parseFloat(e.target.value);
-                          setNewOperation(prev => {
-                            const updated = { ...prev, cycleTime: val };
-                            updated.cost = updateOperationCost(updated);
-                            return updated;
-                          });
-                        }}
-                        onBlur={(e) => {
-                          if (e.target.value === "") {
-                            setNewOperation(prev => ({ ...prev, cycleTime: 0 }));
-                          }
-                        }}
-                        onFocus={(e) => e.target.select()}
-                        className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all outline-none"
-                      />
-                    </div>
-                    <div className="md:col-span-1">
-                      <label className="block text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider mb-1.5 ml-1 whitespace-nowrap">Setup (Min)</label>
-                      <input
-                        type="number"
-                        value={newOperation.setupTime}
-                        onChange={(e) => {
-                          const val = e.target.value === "" ? "" : parseFloat(e.target.value);
-                          setNewOperation(prev => {
-                            const updated = { ...prev, setupTime: val };
-                            updated.cost = updateOperationCost(updated);
-                            return updated;
-                          });
-                        }}
-                        onBlur={(e) => {
-                          if (e.target.value === "") {
-                            setNewOperation(prev => ({ ...prev, setupTime: 0 }));
-                          }
-                        }}
-                        onFocus={(e) => e.target.select()}
-                        className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all outline-none"
-                      />
-                    </div>
-                    <div className="md:col-span-1">
-                      <label className="block text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider mb-1.5 ml-1">Rate/Hr</label>
-                      <input
-                        type="number"
-                        value={newOperation.hourlyRate}
-                        onChange={(e) => {
-                          const val = e.target.value === "" ? "" : parseFloat(e.target.value);
-                          setNewOperation(prev => {
-                            const updated = { ...prev, hourlyRate: val };
-                            updated.cost = updateOperationCost(updated);
-                            return updated;
-                          });
-                        }}
-                        onBlur={(e) => {
-                          if (e.target.value === "") {
-                            setNewOperation(prev => ({ ...prev, hourlyRate: 0 }));
-                          }
-                        }}
-                        onFocus={(e) => e.target.select()}
-                        className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all outline-none"
-                      />
-                    </div>
-                    <div className="md:col-span-1">
-                      <label className="block text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider mb-1.5 ml-1">Cost (₹)</label>
-                      <input
-                        type="number"
-                        value={newOperation.cost}
-                        onChange={(e) => setNewOperation(prev => ({ ...prev, cost: e.target.value === "" ? "" : parseFloat(e.target.value) }))}
-                        onBlur={(e) => {
-                          if (e.target.value === "") {
-                            setNewOperation(prev => ({ ...prev, cost: 0 }));
-                          }
-                        }}
-                        onFocus={(e) => e.target.select()}
-                        className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all outline-none"
-                      />
-                    </div>
-                    <div className="md:col-span-2">
-                      <SearchableSelect
-                        label="Type"
+                        label="Execution Mode"
                         options={operationTypeOptions}
                         value={newOperation.type}
-                        onChange={(val) => setNewOperation(prev => ({ ...prev, type: val }))}
+                        onChange={(val) => setNewOperation(prev => {
+                          const updated = { ...prev, type: val };
+                          updated.cost = updateOperationCost(updated);
+                          return updated;
+                        })}
                       />
                     </div>
-                    <div className="md:col-span-1">
-                      <SearchableSelect
-                        label="Target Warehouse"
-                        options={warehouseOptions}
-                        value={newOperation.targetWarehouse}
-                        onChange={(val) => setNewOperation(prev => ({ ...prev, targetWarehouse: val }))}
-                        placeholder="Select"
-                        allowCustom={true}
-                      />
-                    </div>
-                    <div className="md:col-span-1">
-                      <button 
-                        onClick={() => handleAddItem("operations")}
-                        className="w-full py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold flex items-center justify-center gap-1.5 transition shadow-sm active:scale-95"
-                      >
-                        <Plus size={14} /> Add
-                      </button>
-                    </div>
+
+                    {newOperation.type === "in-house" ? (
+                      <>
+                        <div className="md:col-span-3">
+                          <SearchableSelect
+                            label="Workstation"
+                            options={workstationOptions}
+                            value={newOperation.workstation}
+                            onChange={(val) => setNewOperation(prev => ({ ...prev, workstation: val }))}
+                            placeholder="Select"
+                            allowCustom={true}
+                          />
+                        </div>
+                        <div className="md:col-span-3">
+                          <SearchableSelect
+                            label="Target Warehouse"
+                            options={warehouseOptions}
+                            value={newOperation.targetWarehouse}
+                            onChange={(val) => setNewOperation(prev => ({ ...prev, targetWarehouse: val }))}
+                            placeholder="Select"
+                            allowCustom={true}
+                          />
+                        </div>
+
+                        {/* Row 2: Quantities and Costs */}
+                        <div className="md:col-span-2">
+                          <label className="block text-[10px] font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider mb-1.5 ml-1 whitespace-nowrap">Cycle Time (min)</label>
+                          <input
+                            type="number"
+                            value={newOperation.cycleTime}
+                            onChange={(e) => {
+                              const val = e.target.value === "" ? "" : parseFloat(e.target.value);
+                              setNewOperation(prev => {
+                                const updated = { ...prev, cycleTime: val };
+                                updated.cost = updateOperationCost(updated);
+                                return updated;
+                              });
+                            }}
+                            onBlur={(e) => {
+                              if (e.target.value === "") {
+                                setNewOperation(prev => ({ ...prev, cycleTime: 0 }));
+                              }
+                            }}
+                            onFocus={(e) => e.target.select()}
+                            className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all outline-none shadow-sm"
+                          />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="block text-[10px] font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider mb-1.5 ml-1 whitespace-nowrap">Setup Time (min)</label>
+                          <input
+                            type="number"
+                            value={newOperation.setupTime}
+                            onChange={(e) => {
+                              const val = e.target.value === "" ? "" : parseFloat(e.target.value);
+                              setNewOperation(prev => {
+                                const updated = { ...prev, setupTime: val };
+                                updated.cost = updateOperationCost(updated);
+                                return updated;
+                              });
+                            }}
+                            onBlur={(e) => {
+                              if (e.target.value === "") {
+                                setNewOperation(prev => ({ ...prev, setupTime: 0 }));
+                              }
+                            }}
+                            onFocus={(e) => e.target.select()}
+                            className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all outline-none shadow-sm"
+                          />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="block text-[10px] font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider mb-1.5 ml-1">Hourly Rate (₹)</label>
+                          <input
+                            type="number"
+                            value={newOperation.hourlyRate}
+                            onChange={(e) => {
+                              const val = e.target.value === "" ? "" : parseFloat(e.target.value);
+                              setNewOperation(prev => {
+                                const updated = { ...prev, hourlyRate: val };
+                                updated.cost = updateOperationCost(updated);
+                                return updated;
+                              });
+                            }}
+                            onBlur={(e) => {
+                              if (e.target.value === "") {
+                                setNewOperation(prev => ({ ...prev, hourlyRate: 0 }));
+                              }
+                            }}
+                            onFocus={(e) => e.target.select()}
+                            className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all outline-none shadow-sm"
+                          />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="block text-[10px] font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider mb-1.5 ml-1">Cost (₹)</label>
+                          <input
+                            type="number"
+                            value={newOperation.cost}
+                            readOnly
+                            className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-500 dark:text-slate-400 text-xs outline-none cursor-not-allowed"
+                          />
+                        </div>
+                        <div className="md:col-span-4">
+                          <button 
+                            onClick={() => handleAddItem("operations")}
+                            className="w-full py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition shadow-md active:scale-[0.98]"
+                          >
+                            <Plus size={18} /> Add
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="md:col-span-3">
+                          <SearchableSelect
+                            label="Vendor Name"
+                            options={vendorOptions}
+                            value={newOperation.vendorName}
+                            onChange={(val) => setNewOperation(prev => ({ ...prev, vendorName: val }))}
+                            placeholder="Select Vendor"
+                            allowCustom={true}
+                          />
+                        </div>
+                        <div className="md:col-span-3">
+                          <SearchableSelect
+                            label="Subcontract Warehouse"
+                            options={warehouseOptions}
+                            value={newOperation.subcontractWarehouse}
+                            onChange={(val) => setNewOperation(prev => ({ ...prev, subcontractWarehouse: val }))}
+                            placeholder="Select"
+                            allowCustom={true}
+                          />
+                        </div>
+
+                        {/* Row 2: Rates and Costs */}
+                        <div className="md:col-span-3">
+                          <label className="block text-[10px] font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider mb-1.5 ml-1 whitespace-nowrap">Vendor Rate / Unit (₹)</label>
+                          <input
+                            type="number"
+                            value={newOperation.vendorRatePerUnit}
+                            onChange={(e) => {
+                              const val = e.target.value === "" ? "" : parseFloat(e.target.value);
+                              setNewOperation(prev => {
+                                const updated = { ...prev, vendorRatePerUnit: val };
+                                updated.cost = updateOperationCost(updated);
+                                return updated;
+                              });
+                            }}
+                            onBlur={(e) => {
+                              if (e.target.value === "") {
+                                setNewOperation(prev => ({ ...prev, vendorRatePerUnit: 0 }));
+                              }
+                            }}
+                            onFocus={(e) => e.target.select()}
+                            className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all outline-none shadow-sm"
+                          />
+                        </div>
+                        <div className="md:col-span-3">
+                          <label className="block text-[10px] font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider mb-1.5 ml-1">Cost (₹)</label>
+                          <input
+                            type="number"
+                            value={newOperation.cost}
+                            readOnly
+                            className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-500 dark:text-slate-400 text-xs outline-none cursor-not-allowed"
+                          />
+                        </div>
+                        <div className="md:col-span-6">
+                          <button 
+                            onClick={() => handleAddItem("operations")}
+                            className="w-full py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition shadow-md active:scale-[0.98]"
+                          >
+                            <Plus size={18} /> Add
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
 
                 <div className="overflow-hidden border border-slate-100 dark:border-slate-800 rounded-2xl shadow-sm">
-                  <table className="w-full text-xs text-left border-collapse">
+                  <table className="w-full text-[10px] text-left border-collapse">
                     <thead>
                       <tr className="bg-slate-50/80 dark:bg-slate-800/50">
-                        <th className="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider w-10">#</th>
-                        <th className="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Operation</th>
-                        <th className="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Workstation</th>
-                        <th className="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider text-center">Cycle Time</th>
-                        <th className="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider text-center">Setup Time</th>
-                        <th className="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider text-right">Rate</th>
-                        <th className="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider text-right">Cost</th>
-                        <th className="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider text-center">Actions</th>
+                        <th className="px-4 py-2.5 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider w-10">#</th>
+                        <th className="px-4 py-2.5 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Operation</th>
+                        <th className="px-4 py-2.5 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Mode</th>
+                        <th className="px-4 py-2.5 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Workstation/Vendor</th>
+                        <th className="px-4 py-2.5 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider text-center">Cycle (min)</th>
+                        <th className="px-4 py-2.5 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider text-center">Setup (min)</th>
+                        <th className="px-4 py-2.5 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider text-right">Rate (₹)</th>
+                        <th className="px-4 py-2.5 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider text-right">Cost (₹)</th>
+                        <th className="px-4 py-2.5 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Warehouse</th>
+                        <th className="px-4 py-2.5 font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider text-center">Del</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                       {bomData.operations.map((row, index) => {
                         const isEditing = editingOperationId === row.id;
+                        const isInHouse = row.type === "in-house";
                         
                         return (
                           <tr key={row.id} className="bg-white dark:bg-slate-900 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
@@ -1964,89 +2072,156 @@ const CreateBOMPage = () => {
                                   allowCustom={true}
                                 />
                               ) : (
-                                <div className="flex flex-col">
-                                  <span className="font-bold text-slate-700 dark:text-slate-200">{row.operationName}</span>
-                                  <span className="text-[10px] font-bold text-blue-500 dark:text-blue-400 uppercase tracking-tight">{row.type?.replace("-", " ")}</span>
-                                </div>
+                                <span className="font-bold text-slate-700 dark:text-slate-200">{row.operationName}</span>
                               )}
                             </td>
                             <td className="px-4 py-3">
                               {isEditing ? (
                                 <SearchableSelect
-                                  name={`op-work-${row.id}`}
-                                  id={`op-work-${row.id}`}
-                                  aria-label="Workstation"
-                                  options={workstationOptions}
-                                  value={row.workstation}
-                                  onChange={(value) => updateTableRow("operations", row.id, "workstation", value)}
-                                  placeholder="Select workstation"
-                                  allowCustom={true}
+                                  name={`op-type-${row.id}`}
+                                  id={`op-type-${row.id}`}
+                                  aria-label="Execution Mode"
+                                  options={operationTypeOptions}
+                                  value={row.type}
+                                  onChange={(value) => {
+                                    updateTableRow("operations", row.id, "type", value);
+                                    // Trigger cost update for type change
+                                    const updatedRow = { ...row, type: value };
+                                    updateTableRow("operations", row.id, "cost", updateOperationCost(updatedRow));
+                                  }}
                                 />
                               ) : (
-                                <span className="text-slate-600 dark:text-slate-400 font-medium">{row.workstation || "-"}</span>
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-tight ${isInHouse ? "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400" : "bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400"}`}>
+                                  {row.type?.replace("-", " ")}
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              {isEditing ? (
+                                isInHouse ? (
+                                  <SearchableSelect
+                                    name={`op-work-${row.id}`}
+                                    id={`op-work-${row.id}`}
+                                    aria-label="Workstation"
+                                    options={workstationOptions}
+                                    value={row.workstation}
+                                    onChange={(value) => updateTableRow("operations", row.id, "workstation", value)}
+                                    placeholder="Select workstation"
+                                    allowCustom={true}
+                                  />
+                                ) : (
+                                  <SearchableSelect
+                                    name={`op-vendor-${row.id}`}
+                                    id={`op-vendor-${row.id}`}
+                                    aria-label="Vendor"
+                                    options={vendorOptions}
+                                    value={row.vendorName}
+                                    onChange={(value) => updateTableRow("operations", row.id, "vendorName", value)}
+                                    placeholder="Select vendor"
+                                    allowCustom={true}
+                                  />
+                                )
+                              ) : (
+                                <span className="text-slate-600 dark:text-slate-400 font-medium">
+                                  {isInHouse ? (row.workstation || "-") : (row.vendorName || "-")}
+                                </span>
                               )}
                             </td>
                             <td className="px-4 py-3 text-center">
-                              {isEditing ? (
-                                <input
-                                  type="number"
-                                  name={`op-cycle-${row.id}`}
-                                  id={`op-cycle-${row.id}`}
-                                  aria-label="Cycle Time"
-                                  value={row.cycleTime}
-                                  onChange={(e) => updateOperationRow(row.id, "cycleTime", e.target.value === "" ? "" : parseFloat(e.target.value))}
-                                  onBlur={(e) => {
-                                    if (e.target.value === "") {
-                                      updateOperationRow(row.id, "cycleTime", 0);
-                                    }
-                                  }}
-                                  onFocus={(e) => e.target.select()}
-                                  className="w-16 px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 text-xs text-center focus:ring-2 focus:ring-purple-500/20 outline-none"
-                                />
+                              {isInHouse ? (
+                                isEditing ? (
+                                  <input
+                                    type="number"
+                                    name={`op-cycle-${row.id}`}
+                                    id={`op-cycle-${row.id}`}
+                                    aria-label="Cycle Time"
+                                    value={row.cycleTime}
+                                    onChange={(e) => updateOperationRow(row.id, "cycleTime", e.target.value === "" ? "" : parseFloat(e.target.value))}
+                                    onBlur={(e) => {
+                                      if (e.target.value === "") {
+                                        updateOperationRow(row.id, "cycleTime", 0);
+                                      }
+                                    }}
+                                    onFocus={(e) => e.target.select()}
+                                    className="w-16 px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 text-xs text-center focus:ring-2 focus:ring-purple-500/20 outline-none"
+                                  />
+                                ) : (
+                                  <span className="text-slate-600 dark:text-slate-400">{row.cycleTime}</span>
+                                )
                               ) : (
-                                <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-[10px] font-bold text-slate-600 dark:text-slate-400">{row.cycleTime} Min</span>
+                                <span className="text-slate-300 dark:text-slate-600">-</span>
                               )}
                             </td>
                             <td className="px-4 py-3 text-center">
-                              {isEditing ? (
-                                <input
-                                  type="number"
-                                  name={`op-setup-${row.id}`}
-                                  id={`op-setup-${row.id}`}
-                                  aria-label="Setup Time"
-                                  value={row.setupTime}
-                                  onChange={(e) => updateOperationRow(row.id, "setupTime", e.target.value === "" ? "" : parseFloat(e.target.value))}
-                                  onBlur={(e) => {
-                                    if (e.target.value === "") {
-                                      updateOperationRow(row.id, "setupTime", 0);
-                                    }
-                                  }}
-                                  onFocus={(e) => e.target.select()}
-                                  className="w-16 px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 text-xs text-center focus:ring-2 focus:ring-purple-500/20 outline-none"
-                                />
+                              {isInHouse ? (
+                                isEditing ? (
+                                  <input
+                                    type="number"
+                                    name={`op-setup-${row.id}`}
+                                    id={`op-setup-${row.id}`}
+                                    aria-label="Setup Time"
+                                    value={row.setupTime}
+                                    onChange={(e) => updateOperationRow(row.id, "setupTime", e.target.value === "" ? "" : parseFloat(e.target.value))}
+                                    onBlur={(e) => {
+                                      if (e.target.value === "") {
+                                        updateOperationRow(row.id, "setupTime", 0);
+                                      }
+                                    }}
+                                    onFocus={(e) => e.target.select()}
+                                    className="w-16 px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 text-xs text-center focus:ring-2 focus:ring-purple-500/20 outline-none"
+                                  />
+                                ) : (
+                                  <span className="text-slate-600 dark:text-slate-400">{row.setupTime}</span>
+                                )
                               ) : (
-                                <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-[10px] font-bold text-slate-600 dark:text-slate-400">{row.setupTime} Min</span>
+                                <span className="text-slate-300 dark:text-slate-600">-</span>
                               )}
                             </td>
                             <td className="px-4 py-3 text-right">
                               {isEditing ? (
-                                <input
-                                  type="number"
-                                  name={`op-rate-${row.id}`}
-                                  id={`op-rate-${row.id}`}
-                                  aria-label="Hourly Rate"
-                                  value={row.hourlyRate}
-                                  onChange={(e) => updateOperationRow(row.id, "hourlyRate", e.target.value === "" ? "" : parseFloat(e.target.value))}
-                                  onBlur={(e) => {
-                                    if (e.target.value === "") {
-                                      updateOperationRow(row.id, "hourlyRate", 0);
-                                    }
-                                  }}
-                                  onFocus={(e) => e.target.select()}
-                                  className="w-20 px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 text-xs text-right focus:ring-2 focus:ring-purple-500/20 outline-none"
-                                />
+                                isInHouse ? (
+                                  <input
+                                    type="number"
+                                    name={`op-rate-${row.id}`}
+                                    id={`op-rate-${row.id}`}
+                                    aria-label="Hourly Rate"
+                                    value={row.hourlyRate}
+                                    onChange={(e) => updateOperationRow(row.id, "hourlyRate", e.target.value === "" ? "" : parseFloat(e.target.value))}
+                                    onBlur={(e) => {
+                                      if (e.target.value === "") {
+                                        updateOperationRow(row.id, "hourlyRate", 0);
+                                      }
+                                    }}
+                                    onFocus={(e) => e.target.select()}
+                                    className="w-20 px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 text-xs text-right focus:ring-2 focus:ring-purple-500/20 outline-none"
+                                  />
+                                ) : (
+                                  <input
+                                    type="number"
+                                    name={`op-vendor-rate-${row.id}`}
+                                    id={`op-vendor-rate-${row.id}`}
+                                    aria-label="Vendor Rate"
+                                    value={row.vendorRatePerUnit}
+                                    onChange={(e) => {
+                                      const val = e.target.value === "" ? "" : parseFloat(e.target.value);
+                                      updateTableRow("operations", row.id, "vendorRatePerUnit", val);
+                                      // Trigger cost update
+                                      const updatedRow = { ...row, vendorRatePerUnit: val };
+                                      updateTableRow("operations", row.id, "cost", updateOperationCost(updatedRow));
+                                    }}
+                                    onBlur={(e) => {
+                                      if (e.target.value === "") {
+                                        updateTableRow("operations", row.id, "vendorRatePerUnit", 0);
+                                      }
+                                    }}
+                                    onFocus={(e) => e.target.select()}
+                                    className="w-20 px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 text-xs text-right focus:ring-2 focus:ring-purple-500/20 outline-none"
+                                  />
+                                )
                               ) : (
-                                <span className="font-medium text-slate-600 dark:text-slate-400">₹{(parseFloat(row.hourlyRate) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                <span className="font-medium text-slate-600 dark:text-slate-400">
+                                  ₹{(parseFloat(isInHouse ? row.hourlyRate : row.vendorRatePerUnit) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                </span>
                               )}
                             </td>
                             <td className="px-4 py-3 text-right">
@@ -2057,11 +2232,29 @@ const CreateBOMPage = () => {
                                   id={`op-cost-${row.id}`}
                                   aria-label="Operation Cost"
                                   value={row.cost}
-                                  onChange={(e) => updateOperationRow(row.id, "cost", parseFloat(e.target.value))}
+                                  onChange={(e) => updateTableRow("operations", row.id, "cost", parseFloat(e.target.value) || 0)}
                                   className="w-24 px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 text-xs text-right focus:ring-2 focus:ring-purple-500/20 outline-none"
                                 />
                               ) : (
                                 <span className="font-bold text-slate-900 dark:text-white">₹{(parseFloat(row.cost) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              {isEditing ? (
+                                <SearchableSelect
+                                  name={`op-wh-${row.id}`}
+                                  id={`op-wh-${row.id}`}
+                                  aria-label="Warehouse"
+                                  options={warehouseOptions}
+                                  value={isInHouse ? row.targetWarehouse : row.subcontractWarehouse}
+                                  onChange={(value) => updateTableRow("operations", row.id, isInHouse ? "targetWarehouse" : "subcontractWarehouse", value)}
+                                  placeholder="Select WH"
+                                  allowCustom={true}
+                                />
+                              ) : (
+                                <span className="text-slate-600 dark:text-slate-400 font-medium">
+                                  {(isInHouse ? row.targetWarehouse : row.subcontractWarehouse) || "-"}
+                                </span>
                               )}
                             </td>
                             <td className="px-4 py-3">

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Send, Activity, X, FileText, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import axios from '../../utils/api';
@@ -9,6 +9,30 @@ const MaterialRequestModal = ({ isOpen, onClose, data, materials, planId, onSave
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
+
+  // Consolidate materials: group by specification/itemCode and sum quantities
+  const consolidatedMaterials = useMemo(() => {
+    if (!materials || !Array.isArray(materials)) return [];
+
+    const map = new Map();
+
+    materials.forEach(item => {
+      const key = item.itemCode || item.materialCode || item.specification || item.itemName;
+      if (map.has(key)) {
+        const existing = map.get(key);
+        existing.requiredQty = Number(existing.requiredQty) + Number(item.requiredQty || 0);
+        
+        // Combine source names if they are different
+        if (item.sourceAssembly && !existing.sourceAssembly.includes(item.sourceAssembly)) {
+          existing.sourceAssembly += `, ${item.sourceAssembly}`;
+        }
+      } else {
+        map.set(key, { ...item, requiredQty: Number(item.requiredQty || 0) });
+      }
+    });
+
+    return Array.from(map.values());
+  }, [materials]);
 
   if (!isOpen) return null;
 
@@ -34,7 +58,7 @@ const MaterialRequestModal = ({ isOpen, onClose, data, materials, planId, onSave
       return;
     }
 
-    if (!materials || !Array.isArray(materials) || materials.length === 0) {
+    if (!consolidatedMaterials || consolidatedMaterials.length === 0) {
       Swal.fire({
         icon: 'error',
         title: 'No Items',
@@ -55,7 +79,7 @@ const MaterialRequestModal = ({ isOpen, onClose, data, materials, planId, onSave
         requiredDate: data.estimatedCompletionDate,
         priority: 'medium',
         remarks: `Generated from Production Plan: ${data.planName}`,
-        items: materials.map(m => ({
+        items: consolidatedMaterials.map(m => ({
           materialName: m.itemName || m.specification || 'Unknown Material',
           materialCode: m.itemCode || m.materialCode || m.specification || null,
           materialType: m.materialType || null,
@@ -140,24 +164,12 @@ const MaterialRequestModal = ({ isOpen, onClose, data, materials, planId, onSave
             </div>
           </div>
 
-          {/* Strategy Notes */}
-          <div className="p-5 bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-xl flex gap-4">
-            <div className="mt-1">
-              <FileText size={16} className="text-blue-600" />
-            </div>
-            <div className="space-y-1 text-xs text-blue-700 dark:text-blue-400 leading-relaxed font-medium">
-              <p className="font-bold">Intelligence Strategy Notes</p>
-              <p>Material Request for Production Plan: {data.planName || 'N/A'}</p>
-              <p>BOM Reference: {materials[0]?.bomRef || 'Consolidated'}</p>
-              <p>Includes raw materials from all sub-assemblies calculated for procurement cycle.</p>
-            </div>
-          </div>
 
           {/* Components List */}
           <div>
             <div className="flex items-center gap-2 mb-4 px-1">
               <div className="w-1 h-4 bg-green-500 rounded-full" />
-              <h3 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">Requested Components ({materials?.length || 0})</h3>
+              <h3 className="text-xs font-bold text-black dark:text-slate-200 uppercase tracking-wider">Requested Components ({consolidatedMaterials?.length || 0})</h3>
             </div>
             <div className="border border-slate-100 dark:border-slate-800 rounded-xl overflow-hidden">
               <table className="w-full text-sm">
@@ -169,12 +181,18 @@ const MaterialRequestModal = ({ isOpen, onClose, data, materials, planId, onSave
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
-                  {materials && materials.map((m, idx) => (
+                  {consolidatedMaterials && consolidatedMaterials.map((m, idx) => (
                     <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
                       <td className="px-6 py-4">
                         <div>
-                          <p className="font-bold text-slate-900 dark:text-white uppercase text-xs">{m.specification}</p>
-                          <p className="text-[10px] text-slate-500 font-medium mt-0.5 uppercase">Source: {m.sourceAssembly || 'Production Inventory'}</p>
+                          <p className="font-bold text-slate-900 dark:text-white text-xs">
+                            {m.itemName || m.specification}
+                            {(m.itemCode || m.materialCode) && (
+                              <span className="ml-1 text-slate-400 font-medium">
+                                ({m.itemCode || m.materialCode})
+                              </span>
+                            )}
+                          </p>
                         </div>
                       </td>
                       <td className="px-6 py-4 text-center">

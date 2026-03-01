@@ -15,11 +15,12 @@ class OutwardChallan {
     
     const [result] = await pool.execute(
       `INSERT INTO outward_challans 
-       (outsourcing_task_id, challan_number, vendor_id, material_sent_date, 
+       (outsourcing_task_id, work_order_operation_id, challan_number, vendor_id, material_sent_date, 
         expected_return_date, notes, created_by, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 'issued')`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'issued')`,
       [
-        data.outsourcingTaskId,
+        data.outsourcingTaskId || null,
+        data.workOrderOperationId || null,
         challanNumber,
         data.vendorId,
         data.materialSentDate || null,

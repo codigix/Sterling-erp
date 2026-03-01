@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Layers, User, Activity, Hash, X, Check, Trash2 } from 'lucide-react';
 import axios from '../../../utils/api';
-import Swal from 'sweetalert2';
+import { toast } from '../../../utils/toastUtils';
 
 const InlineOperationEdit = ({ operation, workOrderQuantity, onCancel, onSave, onDelete }) => {
   const [loading, setLoading] = useState(false);
   const [workstations, setWorkstations] = useState([]);
   const [operators, setOperators] = useState([]);
+  const [vendors, setVendors] = useState([]);
   
   const [formData, setFormData] = useState({
     operationName: operation.operation_name || '',
     workstation: operation.workstation || '',
     operatorId: operation.operator_id || '',
+    vendorId: operation.vendor_id || '',
     type: operation.type || 'in-house',
     status: operation.status || 'pending',
     plannedQty: workOrderQuantity || 0,
@@ -27,12 +29,14 @@ const InlineOperationEdit = ({ operation, workOrderQuantity, onCancel, onSave, o
 
   const fetchData = async () => {
     try {
-      const [wsRes, opRes] = await Promise.all([
+      const [wsRes, opRes, vRes] = await Promise.all([
         axios.get('/inventory/facilities'),
-        axios.get('/production/portal/employees')
+        axios.get('/production/portal/employees'),
+        axios.get('/inventory/vendors')
       ]);
       setWorkstations(wsRes.data?.facilities || []);
       setOperators(opRes.data || []);
+      setVendors(vRes.data || []);
     } catch (error) {
       console.error('Error fetching inline edit data:', error);
     }
@@ -43,17 +47,11 @@ const InlineOperationEdit = ({ operation, workOrderQuantity, onCancel, onSave, o
     try {
       setLoading(true);
       await axios.put(`/production/work-orders/operations/${operation.id}`, formData);
-      Swal.fire({
-        title: 'Updated!',
-        text: 'Operational step has been modified.',
-        icon: 'success',
-        timer: 1500,
-        showConfirmButton: false
-      });
+      toast.success('Operational step has been modified.');
       onSave();
     } catch (error) {
       console.error('Error updating operation:', error);
-      Swal.fire('Error', 'Failed to update operation', 'error');
+      toast.error('Failed to update operation');
     } finally {
       setLoading(false);
     }
@@ -134,32 +132,55 @@ const InlineOperationEdit = ({ operation, workOrderQuantity, onCancel, onSave, o
               <select
                 className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                 value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, type: e.target.value, operatorId: e.target.value === 'outsource' ? '' : formData.operatorId })}
               >
                 <option value="in-house">In-House</option>
                 <option value="outsource">Outsource</option>
               </select>
             </div>
 
-            {/* Operator */}
-            <div>
-              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Operator</label>
-              <div className="relative">
-                <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <select
-                  className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                  value={formData.operatorId}
-                  onChange={(e) => setFormData({ ...formData, operatorId: e.target.value })}
-                >
-                  <option value="">Select Operator</option>
-                  {operators.map(op => (
-                    <option key={op.id} value={op.id}>
-                      {op.name} {op.employee_id ? `(${op.employee_id})` : ''} {op.department ? `- ${op.department}` : ''}
-                    </option>
-                  ))}
-                </select>
+            {/* Vendor (Shows for Outsource) */}
+            {formData.type === 'outsource' && (
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Vendor</label>
+                <div className="relative">
+                  <Users size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <select
+                    className="w-full pl-9 pr-3 py-2 bg-white border border-indigo-200 rounded-lg text-xs font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                    value={formData.vendorId}
+                    onChange={(e) => setFormData({ ...formData, vendorId: e.target.value })}
+                    required
+                  >
+                    <option value="">Select Vendor</option>
+                    {vendors.map(v => (
+                      <option key={v.id} value={v.id}>{v.name}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* Operator (Shows for In-House) */}
+            {formData.type === 'in-house' && (
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Operator</label>
+                <div className="relative">
+                  <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <select
+                    className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                    value={formData.operatorId}
+                    onChange={(e) => setFormData({ ...formData, operatorId: e.target.value })}
+                  >
+                    <option value="">Select Operator</option>
+                    {operators.map(op => (
+                      <option key={op.id} value={op.id}>
+                        {op.name} {op.employee_id ? `(${op.employee_id})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
 
             {/* Planned Qty */}
             <div>

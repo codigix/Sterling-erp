@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Calendar, ClipboardList, User, Layers, Box, Hash, Activity, Users } from 'lucide-react';
 import axios from '../../../utils/api';
+import { showSuccess, showError } from '../../../utils/toastUtils';
 import Swal from 'sweetalert2';
 
 const CreateJobCardModal = ({ isOpen, onClose, onRefresh }) => {
@@ -8,6 +9,7 @@ const CreateJobCardModal = ({ isOpen, onClose, onRefresh }) => {
   const [workOrders, setWorkOrders] = useState([]);
   const [workstations, setWorkstations] = useState([]);
   const [operators, setOperators] = useState([]);
+  const [vendors, setVendors] = useState([]);
   const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
   const [predefinedOperations, setPredefinedOperations] = useState([]);
   
@@ -16,6 +18,7 @@ const CreateJobCardModal = ({ isOpen, onClose, onRefresh }) => {
     operationName: '',
     workstation: '',
     operatorId: '',
+    vendorId: '',
     type: 'in-house',
     quantity: '',
     status: 'pending',
@@ -32,15 +35,17 @@ const CreateJobCardModal = ({ isOpen, onClose, onRefresh }) => {
 
   const fetchInitialData = async () => {
     try {
-      const [woRes, wsRes, opRes] = await Promise.all([
+      const [woRes, wsRes, opRes, vRes] = await Promise.all([
         axios.get('/production/work-orders'),
         axios.get('/inventory/facilities'),
-        axios.get('/production/portal/employees')
+        axios.get('/production/portal/employees'),
+        axios.get('/inventory/vendors')
       ]);
       
       setWorkOrders(woRes.data || []);
       setWorkstations(wsRes.data?.facilities || []);
       setOperators(opRes.data || []);
+      setVendors(vRes.data || []);
     } catch (error) {
       console.error('Error fetching modal data:', error);
     }
@@ -77,7 +82,7 @@ const CreateJobCardModal = ({ isOpen, onClose, onRefresh }) => {
       
       // Validation
       if (!formData.workOrderId || !formData.operationName || !formData.quantity) {
-        Swal.fire('Error', 'Please fill in all required fields', 'error');
+        showError('Please fill in all required fields');
         return;
       }
 
@@ -86,12 +91,12 @@ const CreateJobCardModal = ({ isOpen, onClose, onRefresh }) => {
         sequence: predefinedOperations.findIndex(op => op.operation_name === formData.operationName) + 1 || 1
       });
 
-      Swal.fire('Success', 'Job card created successfully', 'success');
+      showSuccess('Job card created successfully');
       onRefresh();
       onClose();
     } catch (error) {
       console.error('Error creating job card:', error);
-      Swal.fire('Error', error.response?.data?.message || 'Failed to create job card', 'error');
+      showError(error.response?.data?.message || 'Failed to create job card');
     } finally {
       setLoading(false);
     }
@@ -204,7 +209,8 @@ const CreateJobCardModal = ({ isOpen, onClose, onRefresh }) => {
                       setFormData({ 
                         ...formData, 
                         operationName: opName,
-                        type: op ? (op.type || 'in-house') : formData.type
+                        type: op ? (op.type || 'in-house') : formData.type,
+                        vendorId: op ? (op.vendor_id || '') : ''
                       });
                     }}
                     required
@@ -264,12 +270,33 @@ const CreateJobCardModal = ({ isOpen, onClose, onRefresh }) => {
                 <select
                   className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-semibold text-slate-700"
                   value={formData.type}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, type: e.target.value, operatorId: e.target.value === 'outsource' ? '' : formData.operatorId })}
                 >
                   <option value="in-house">In-House</option>
                   <option value="outsource">Outsource</option>
                 </select>
               </div>
+
+              {/* Vendor Select (Shows for Outsource) */}
+              {formData.type === 'outsource' && (
+                <div className="col-span-2 md:col-span-1 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Assign Vendor *</label>
+                  <div className="relative group">
+                    <Users size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                    <select
+                      className="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-indigo-200 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-bold text-slate-700"
+                      value={formData.vendorId}
+                      onChange={(e) => setFormData({ ...formData, vendorId: e.target.value })}
+                      required
+                    >
+                      <option value="">Select Vendor</option>
+                      {vendors.map(v => (
+                        <option key={v.id} value={v.id}>{v.name} ({v.category || 'Vendor'})</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
 
               {/* Dates */}
               <div className="col-span-2 md:col-span-1">

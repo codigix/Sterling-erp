@@ -92,23 +92,23 @@ class ProductionPlanDetail {
     });
 
     const timeline = {
-      productionStartDate: normalized.productionStartDate,
-      estimatedCompletionDate: normalized.estimatedCompletionDate,
-      procurementStatus: normalized.procurementStatus
+      productionStartDate: data.productionStartDate || normalized.productionStartDate || (data.timeline?.startDate) || null,
+      estimatedCompletionDate: data.estimatedCompletionDate || normalized.estimatedCompletionDate || (data.timeline?.endDate) || null,
+      procurementStatus: data.procurementStatus || normalized.procurementStatus || (data.timeline?.procurementStatus) || null
     };
 
     const params = [
       data.productionPlanId || null,
       data.salesOrderId || null,
-      data.rootCardId || null,
+      data.root_card_id || data.rootCardId || null,
       stringifyJsonField(timeline) || '{}',
-      stringifyJsonField(normalized.selectedPhases) || '{}',
-      stringifyJsonField(normalized.phaseDetails) || '{}',
+      stringifyJsonField(data.selectedPhases || normalized.selectedPhases) || '{}',
+      stringifyJsonField(data.phaseDetails || normalized.phaseDetails) || '{}',
       stringifyJsonField(data.materials) || '[]',
       stringifyJsonField(data.subAssemblies) || '[]',
       stringifyJsonField(data.finishedGoods) || '[]',
-      normalized.productionNotes || null,
-      normalized.estimatedCompletionDate || null
+      data.productionNotes || normalized.productionNotes || null,
+      data.estimatedCompletionDate || normalized.estimatedCompletionDate || null
     ];
 
     const [result] = await pool.execute(
@@ -128,20 +128,20 @@ class ProductionPlanDetail {
     });
 
     const timeline = {
-      productionStartDate: normalized.productionStartDate,
-      estimatedCompletionDate: normalized.estimatedCompletionDate,
-      procurementStatus: normalized.procurementStatus
+      productionStartDate: data.productionStartDate || normalized.productionStartDate || (data.timeline?.startDate) || null,
+      estimatedCompletionDate: data.estimatedCompletionDate || normalized.estimatedCompletionDate || (data.timeline?.endDate) || null,
+      procurementStatus: data.procurementStatus || normalized.procurementStatus || (data.timeline?.procurementStatus) || null
     };
 
     const params = [
       stringifyJsonField(timeline) || '{}',
-      stringifyJsonField(normalized.selectedPhases) || '{}',
-      stringifyJsonField(normalized.phaseDetails) || '{}',
+      stringifyJsonField(data.selectedPhases || normalized.selectedPhases) || '{}',
+      stringifyJsonField(data.phaseDetails || normalized.phaseDetails) || '{}',
       stringifyJsonField(data.materials) || '[]',
       stringifyJsonField(data.subAssemblies) || '[]',
       stringifyJsonField(data.finishedGoods) || '[]',
-      normalized.productionNotes || null,
-      normalized.estimatedCompletionDate || null,
+      data.productionNotes || normalized.productionNotes || null,
+      data.estimatedCompletionDate || normalized.estimatedCompletionDate || null,
       data.productionPlanId || null,
       id
     ];

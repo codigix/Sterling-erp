@@ -140,7 +140,7 @@ const SearchableSelect = ({
   return (
     <div className={`relative ${className}`} ref={wrapperRef}>
       {label && (
-        <label htmlFor={inputId} className="block text-xs font-black text-slate-900 dark:text-slate-100 mb-1.5 tracking-tight uppercase">
+        <label htmlFor={inputId} className="block text-[10px] font-bold text-slate-900 dark:text-slate-100 mb-1.5 tracking-tight uppercase">
           {label}
         </label>
       )}
@@ -171,7 +171,7 @@ const SearchableSelect = ({
           onKeyDown={handleInputKeyDown}
           placeholder={placeholder}
           disabled={disabled}
-          className="w-full px-3 py-2.5 bg-transparent text-slate-900 dark:text-white text-xs focus:outline-none placeholder:text-slate-400"
+          className="w-full px-3 py-2 bg-transparent text-slate-900 dark:text-white text-xs focus:outline-none placeholder:text-slate-400"
         />
         
         <div className="flex items-center gap-1 pr-2">

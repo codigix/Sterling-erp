@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import axios from '../../utils/api';
 import Swal from 'sweetalert2';
+import { toast } from '../../utils/toastUtils';
 
 const WorkOrderDetailPage = () => {
   const { id } = useParams();
@@ -23,9 +24,9 @@ const WorkOrderDetailPage = () => {
       const response = await axios.get(`/production/work-orders/${id}`);
       setOrder(response.data);
       setError(null);
-    } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Failed to fetch work order details');
-      console.error('Error fetching work order:', err);
+    } catch (error) {
+      setError(error.response?.data?.message || error.message || 'Failed to fetch work order details');
+      console.error('Error fetching work order:', error);
     } finally {
       if (showLoading) setLoading(false);
     }
@@ -44,15 +45,9 @@ const WorkOrderDetailPage = () => {
       });
       await fetchOrderDetail(false);
       setIsEditingStatus(false);
-      Swal.fire({
-        title: 'Success',
-        text: `Work order status updated to ${newStatus.replace('_', ' ')}`,
-        icon: 'success',
-        timer: 1500,
-        showConfirmButton: false
-      });
-    } catch (err) {
-      Swal.fire('Error', err.response?.data?.message || err.message, 'error');
+      toast.success(`Work order status updated to ${newStatus.replace('_', ' ')}`);
+    } catch (error) {
+      toast.error(error.response?.data?.message || error.message);
     } finally {
       setUpdatingStatus(false);
     }
@@ -72,10 +67,11 @@ const WorkOrderDetailPage = () => {
     if (result.isConfirmed) {
       try {
         await axios.delete(`/production/work-orders/${id}`);
-        Swal.fire('Deleted!', 'Work order has been deleted.', 'success');
+        toast.success('Work order has been deleted.');
         navigate('/department/production/work-orders');
-      } catch (err) {
-        Swal.fire('Error', 'Failed to delete work order', 'error');
+      } catch (error) {
+        console.error('Error deleting work order:', error);
+        toast.error('Failed to delete work order');
       }
     }
   };

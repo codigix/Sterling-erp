@@ -6,12 +6,13 @@ class WorkOrder {
     try {
       const [result] = await connection.execute(
         `INSERT INTO work_orders 
-        (work_order_no, sales_order_id, root_card_id, project_id, item_code, item_name, bom_id, quantity, unit, priority, status, planned_start_date, planned_end_date, notes, created_by, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        (work_order_no, sales_order_id, root_card_id, production_plan_id, project_id, item_code, item_name, bom_id, quantity, unit, priority, status, planned_start_date, planned_end_date, notes, created_by, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           data.workOrderNo,
           data.salesOrderId || null,
           data.rootCardId || null,
+          data.productionPlanId || null,
           data.projectId || null,
           data.itemCode,
           data.itemName || null,
@@ -38,18 +39,19 @@ class WorkOrder {
     try {
       const [result] = await connection.execute(
         `INSERT INTO work_order_operations 
-        (work_order_id, operation_name, workstation, type, operator_id, status, sequence, planned_start_date, planned_end_date, notes)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        (work_order_id, operation_name, workstation, type, vendor_id, operator_id, status, sequence, planned_start_date, planned_end_date, notes)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-          data.workOrderId,
-          data.operationName,
+          data.workOrderId || data.work_order_id,
+          data.operationName || data.operation_name,
           data.workstation || null,
           data.type || 'in-house',
-          data.operatorId || null,
+          data.vendorId || data.vendor_id || null,
+          data.operatorId || data.operator_id || null,
           data.status || 'pending',
           data.sequence,
-          data.plannedStartDate || null,
-          data.plannedEndDate || null,
+          data.plannedStartDate || data.planned_start_date || null,
+          data.plannedEndDate || data.planned_end_date || null,
           data.notes || null
         ]
       );
@@ -64,18 +66,19 @@ class WorkOrder {
     try {
       const [result] = await connection.execute(
         `UPDATE work_order_operations SET 
-          operation_name = ?, workstation = ?, type = ?, operator_id = ?, status = ?, 
+          operation_name = ?, workstation = ?, type = ?, vendor_id = ?, operator_id = ?, status = ?, 
           planned_start_date = ?, planned_end_date = ?, 
           notes = ?, updated_at = CURRENT_TIMESTAMP
          WHERE id = ?`,
         [
-          data.operationName,
+          data.operationName || data.operation_name,
           data.workstation || null,
           data.type || 'in-house',
-          data.operatorId || null,
+          data.vendorId || data.vendor_id || null,
+          data.operatorId || data.operator_id || null,
           data.status,
-          data.plannedStartDate || null,
-          data.plannedEndDate || null,
+          data.plannedStartDate || data.planned_start_date || null,
+          data.plannedEndDate || data.planned_end_date || null,
           data.notes || null,
           id
         ]
@@ -118,7 +121,18 @@ class WorkOrder {
       SELECT wo.*, 
              COALESCE(so.po_number, rc.code, rc.title) as sales_order_no, 
              p.name as project_name,
-             bom.bom_number as bom_no
+             bom.bom_number as bom_no,
+             (
+               SELECT 
+                 CASE 
+                   WHEN COUNT(*) = 0 THEN 0
+                   WHEN SUM(CASE WHEN status IN ('completed', 'received') THEN 0 ELSE 1 END) > 0 THEN 0
+                   ELSE 1
+                 END
+               FROM material_requests mr
+               WHERE (mr.production_plan_id = wo.production_plan_id AND wo.production_plan_id IS NOT NULL)
+                  OR (mr.sales_order_id = wo.sales_order_id AND wo.production_plan_id IS NULL AND wo.sales_order_id IS NOT NULL)
+             ) as is_material_ready
       FROM work_orders wo
       LEFT JOIN sales_orders so ON wo.sales_order_id = so.id
       LEFT JOIN root_cards rc ON wo.root_card_id = rc.id
@@ -139,6 +153,10 @@ class WorkOrder {
     if (filters.rootCardId) {
       conditions.push("wo.root_card_id = ?");
       params.push(filters.rootCardId);
+    }
+    if (filters.workOrderId) {
+      conditions.push("wo.id = ?");
+      params.push(filters.workOrderId);
     }
     if (filters.search) {
       conditions.push("(wo.work_order_no LIKE ? OR wo.item_name LIKE ? OR wo.item_code LIKE ?)");
@@ -162,10 +180,19 @@ class WorkOrder {
 
     const workOrderIds = workOrders.map(wo => wo.id);
     const [operations] = await pool.query(
-      `SELECT woo.*, COALESCE(NULLIF(CONCAT_WS(' ', e.first_name, e.last_name), ''), u.username) as operator_name 
+      `SELECT woo.*, 
+              COALESCE(NULLIF(CONCAT_WS(' ', e.first_name, e.last_name), ''), u.username) as operator_name,
+              v.name as vendor_name,
+              (SELECT oc.id FROM outward_challans oc WHERE oc.work_order_operation_id = woo.id ORDER BY oc.created_at DESC LIMIT 1) as outward_challan_id,
+              (SELECT SUM(oci.quantity) FROM outward_challan_items oci 
+               JOIN outward_challans oc ON oci.outward_challan_id = oc.id 
+               WHERE oc.work_order_operation_id = woo.id) as dispatched_qty,
+              (SELECT SUM(produced_qty) FROM work_order_time_logs wotl WHERE wotl.operation_id = woo.id) as produced_qty,
+              (SELECT SUM(accepted_qty) FROM work_order_quality_entries woqe WHERE woqe.operation_id = woo.id) as accepted_qty
        FROM work_order_operations woo 
        LEFT JOIN employees e ON woo.operator_id = e.id
        LEFT JOIN users u ON (e.email = u.email AND e.email IS NOT NULL)
+       LEFT JOIN vendors v ON woo.vendor_id = v.id
        WHERE woo.work_order_id IN (?) 
        ORDER BY woo.sequence ASC`,
       [workOrderIds]
@@ -189,7 +216,18 @@ class WorkOrder {
       `SELECT wo.*, 
               COALESCE(so.po_number, rc.code, rc.title) as sales_order_no, 
               p.name as project_name,
-              bom.bom_number as bom_no
+              bom.bom_number as bom_no,
+              (
+                SELECT 
+                  CASE 
+                    WHEN COUNT(*) = 0 THEN 0
+                    WHEN SUM(CASE WHEN status IN ('completed', 'received') THEN 0 ELSE 1 END) > 0 THEN 0
+                    ELSE 1
+                  END
+                FROM material_requests mr
+                WHERE (mr.production_plan_id = wo.production_plan_id AND wo.production_plan_id IS NOT NULL)
+                   OR (mr.sales_order_id = wo.sales_order_id AND wo.production_plan_id IS NULL AND wo.sales_order_id IS NOT NULL)
+              ) as is_material_ready
        FROM work_orders wo
        LEFT JOIN sales_orders so ON wo.sales_order_id = so.id
        LEFT JOIN root_cards rc ON wo.root_card_id = rc.id
@@ -203,10 +241,17 @@ class WorkOrder {
     const workOrder = rows[0];
     
     const [operations] = await pool.execute(
-      `SELECT woo.*, COALESCE(NULLIF(CONCAT_WS(' ', e.first_name, e.last_name), ''), u.username) as operator_name 
+      `SELECT woo.*, 
+              COALESCE(NULLIF(CONCAT_WS(' ', e.first_name, e.last_name), ''), u.username) as operator_name,
+              v.name as vendor_name,
+              (SELECT oc.id FROM outward_challans oc WHERE oc.work_order_operation_id = woo.id ORDER BY oc.created_at DESC LIMIT 1) as outward_challan_id,
+              (SELECT SUM(oci.quantity) FROM outward_challan_items oci 
+               JOIN outward_challans oc ON oci.outward_challan_id = oc.id 
+               WHERE oc.work_order_operation_id = woo.id) as dispatched_qty
        FROM work_order_operations woo 
        LEFT JOIN employees e ON woo.operator_id = e.id
        LEFT JOIN users u ON (e.email = u.email AND e.email IS NOT NULL)
+       LEFT JOIN vendors v ON woo.vendor_id = v.id
        WHERE woo.work_order_id = ? 
        ORDER BY woo.sequence ASC`,
       [id]

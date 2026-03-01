@@ -59,12 +59,11 @@ class ProductionPlan {
       const [result] = await connection.execute(
         `
           INSERT INTO production_plans
-          (id, sales_order_id, root_card_id, bom_id, target_quantity, plan_name, status, planned_start_date, planned_end_date, 
+          (sales_order_id, root_card_id, bom_id, target_quantity, plan_name, status, planned_start_date, planned_end_date, 
            estimated_completion_date, supervisor_id, notes)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
-          data.id || data.planName,
           data.salesOrderId || null,
           data.rootCardId || null,
           data.bomId || null,
@@ -83,7 +82,7 @@ class ProductionPlan {
         connection.release();
       }
 
-      return data.id || data.planName;
+      return result.insertId;
     } catch (error) {
       if (!externalConnection) {
         connection.release();
@@ -318,7 +317,8 @@ class ProductionPlan {
              ppd.finished_goods,
              ppd.sub_assemblies,
              ppd.materials,
-             sod.product_details
+             sod.product_details,
+             (SELECT COUNT(*) FROM material_requests WHERE production_plan_id = pp.id) as material_request_count
       FROM production_plans pp
       LEFT JOIN root_cards rc ON rc.id = pp.root_card_id
       LEFT JOIN sales_orders so ON so.id = pp.sales_order_id

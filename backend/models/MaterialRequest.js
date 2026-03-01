@@ -116,9 +116,10 @@ class MaterialRequest {
     return results;
   }
 
-  static async findById(id) {
+  static async findById(id, connection = null) {
+    const conn = connection || pool;
     // Get Header
-    const [rows] = await pool.execute(
+    const [rows] = await conn.execute(
       `SELECT mr.*, so.customer, u.username as created_by_name, 
               ru.username as requested_by_name,
               pp.plan_name as production_plan_name,
@@ -143,7 +144,7 @@ class MaterialRequest {
     const header = rows[0];
 
     // Get Items
-    const [itemRows] = await pool.execute(
+    const [itemRows] = await conn.execute(
       `SELECT * FROM material_request_items WHERE material_request_id = ?`,
       [id]
     );
@@ -234,6 +235,36 @@ class MaterialRequest {
     return rows || [];
   }
 
+  static async findByProductionPlanId(productionPlanId) {
+    const [rows] = await pool.execute(
+      `SELECT mr.*, so.customer, u.username as created_by_name, 
+              pp.plan_name as production_plan_name,
+              w.name as warehouse_name,
+              (SELECT COUNT(*) FROM quotations WHERE material_request_id = mr.id AND type = 'outbound') as rfq_count,
+              (SELECT COUNT(*) FROM quotations WHERE material_request_id = mr.id AND type = 'inbound' AND status = 'approved') as approved_quotation_count,
+              (SELECT COUNT(*) FROM purchase_orders WHERE material_request_id = mr.id) as po_count
+       FROM material_requests mr
+       LEFT JOIN sales_orders so ON so.id = mr.sales_order_id
+       LEFT JOIN users u ON u.id = mr.created_by
+       LEFT JOIN production_plans pp ON pp.id = mr.production_plan_id
+       LEFT JOIN warehouses w ON w.id = mr.target_warehouse_id
+       WHERE mr.production_plan_id = ?
+       ORDER BY mr.created_at DESC`,
+      [productionPlanId]
+    );
+
+    // Fetch items for each request
+    for (let row of rows) {
+      const [itemRows] = await pool.execute(
+        `SELECT * FROM material_request_items WHERE material_request_id = ?`,
+        [row.id]
+      );
+      row.items = itemRows;
+    }
+
+    return rows || [];
+  }
+
   static async update(id, data) {
     const updates = [];
     const params = [];
@@ -291,7 +322,7 @@ class MaterialRequest {
         SUM(CASE WHEN status = 'submitted' THEN 1 ELSE 0 END) as submitted,
         SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) as approved,
         SUM(CASE WHEN status = 'ordered' THEN 1 ELSE 0 END) as ordered,
-        SUM(CASE WHEN status = 'received' THEN 1 ELSE 0 END) as received
+        SUM(CASE WHEN status = 'received' OR status = 'completed' THEN 1 ELSE 0 END) as received
       FROM material_requests
     `);
     return rows[0] || {};

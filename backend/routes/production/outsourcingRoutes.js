@@ -36,6 +36,18 @@ router.get(
   outsourcingController.getProjectMaterials
 );
 
+router.get(
+  '/work-order/:workOrderId/materials',
+  roleMiddleware('Admin', 'Management', 'Production'),
+  outsourcingController.getWorkOrderMaterials
+);
+
+router.post(
+  '/job-card/:operationId/outward-challan',
+  roleMiddleware('Admin', 'Management', 'Production'),
+  outsourcingController.createOutwardChallanFromJobCard
+);
+
 router.post(
   '/tasks/:taskId/outward-challan',
   roleMiddleware('Admin', 'Management', 'Production'),

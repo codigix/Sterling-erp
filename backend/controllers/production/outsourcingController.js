@@ -83,6 +83,213 @@ const outsourcingController = {
     }
   },
 
+  async getWorkOrderMaterials(req, res) {
+    try {
+      const { workOrderId } = req.params;
+
+      // 1. Get work order details to find production_plan_id or sales_order_id
+      const [woRows] = await pool.execute(
+        'SELECT production_plan_id, sales_order_id FROM work_orders WHERE id = ?',
+        [workOrderId]
+      );
+      
+      if (woRows.length === 0) {
+        return res.status(404).json({ success: false, message: 'Work order not found' });
+      }
+
+      const { production_plan_id, sales_order_id } = woRows[0];
+
+      // 2. Fetch materials from material requests linked to this production plan or sales order
+      // We join with inventory to get the inventory ID and current available quantity
+      const [materials] = await pool.execute(
+        `SELECT DISTINCT 
+            inv.id, 
+            inv.item_code, 
+            inv.item_name, 
+            inv.unit, 
+            inv.quantity
+         FROM material_request_items mri
+         JOIN material_requests mr ON mri.material_request_id = mr.id
+         JOIN inventory inv ON mri.material_code = inv.item_code
+         WHERE (mr.production_plan_id = ? AND ? IS NOT NULL)
+            OR (mr.sales_order_id = ? AND ? IS NOT NULL)
+         ORDER BY inv.item_name ASC`,
+        [production_plan_id, production_plan_id, sales_order_id, sales_order_id]
+      );
+
+      res.json({
+        success: true,
+        data: materials || []
+      });
+    } catch (error) {
+      console.error('Error fetching work order materials:', error);
+      res.status(500).json({ success: false, message: 'Error fetching materials', error: error.message });
+    }
+  },
+
+  async createOutwardChallanFromJobCard(req, res) {
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+      
+      const { operationId } = req.params;
+      const { vendorId, materialSentDate, expectedReturnDate, items, notes, pdfBase64 } = req.body;
+
+      if (!vendorId) {
+        return res.status(400).json({ success: false, message: 'Vendor ID is required' });
+      }
+
+      if (!items || items.length === 0) {
+        return res.status(400).json({ success: false, message: 'At least one material must be selected' });
+      }
+
+      const [operationRows] = await connection.execute(
+        'SELECT woo.*, wo.work_order_no, wo.project_id FROM work_order_operations woo JOIN work_orders wo ON woo.work_order_id = wo.id WHERE woo.id = ?',
+        [operationId]
+      );
+      const operation = operationRows[0];
+      
+      if (!operation) {
+        return res.status(404).json({ success: false, message: 'Operation not found' });
+      }
+
+      const vendor = await Vendor.findById(vendorId);
+      if (!vendor) {
+        return res.status(404).json({ success: false, message: 'Vendor not found' });
+      }
+
+      // 1. Validate and deduct inventory
+      for (const item of items) {
+        const material = await Material.findById(item.materialId);
+        if (!material) {
+          throw new Error(`Material with ID ${item.materialId} not found`);
+        }
+        if (material.quantity < item.quantity) {
+          throw new Error(`Insufficient inventory for ${material.item_name}. Available: ${material.quantity}, Requested: ${item.quantity}`);
+        }
+
+        // Deduct inventory
+        await connection.execute(
+          'UPDATE inventory SET quantity = quantity - ? WHERE id = ?',
+          [item.quantity, item.materialId]
+        );
+      }
+
+      // 2. Create outward challan
+      const challanNumber = await OutwardChallan.generateChallanNumber();
+      const [result] = await connection.execute(
+        `INSERT INTO outward_challans 
+         (work_order_operation_id, challan_number, vendor_id, material_sent_date, 
+          expected_return_date, notes, created_by, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'issued')`,
+        [
+          operationId,
+          challanNumber,
+          vendorId,
+          materialSentDate || null,
+          expectedReturnDate || null,
+          notes || null,
+          req.user?.id || null
+        ]
+      );
+      const challanId = result.insertId;
+
+      // 3. Add items to challan
+      for (const item of items) {
+        await connection.execute(
+          `INSERT INTO outward_challan_items 
+           (outward_challan_id, material_id, quantity, unit, remarks)
+           VALUES (?, ?, ?, ?, ?)`,
+          [
+            challanId,
+            item.materialId,
+            item.quantity,
+            item.unit || 'piece',
+            item.remarks || null
+          ]
+        );
+      }
+
+      // 4. Update operation status and vendor
+      await connection.execute(
+        'UPDATE work_order_operations SET status = ?, vendor_id = ? WHERE id = ?',
+        ['in_progress', vendorId, operationId]
+      );
+      
+      await connection.commit();
+
+      // 5. Send email notification (async)
+      try {
+        const emailService = require('../../services/emailService');
+        const emailContent = `
+          <h2>Outward Challan Generated: ${challanNumber}</h2>
+          <p><strong>Work Order:</strong> ${operation.work_order_no || '-'}</p>
+          <p><strong>Operation:</strong> ${operation.operation_name || '-'}</p>
+          <p><strong>Expected Return Date:</strong> ${expectedReturnDate || 'Not specified'}</p>
+          <h3>Material List:</h3>
+          <table border="1" style="border-collapse: collapse; width: 100%;">
+            <thead>
+              <tr style="background-color: #f2f2f2;">
+                <th style="padding: 8px;">Item Code</th>
+                <th style="padding: 8px;">Material Name</th>
+                <th style="padding: 8px;">Quantity</th>
+                <th style="padding: 8px;">Unit</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${items.map(item => `
+                <tr>
+                  <td style="padding: 8px;">${item.itemCode || '-'}</td>
+                  <td style="padding: 8px;">${item.itemName || item.materialName || 'Material'}</td>
+                  <td style="padding: 8px;">${item.quantity}</td>
+                  <td style="padding: 8px;">${item.unit}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          <p>Please find the attached Outward Challan PDF for your records.</p>
+        `;
+
+        const attachments = [];
+        if (pdfBase64) {
+          const base64Data = pdfBase64.includes(',') ? pdfBase64.split(',')[1] : pdfBase64;
+          attachments.push({
+            filename: `Outward_Challan_${challanNumber}.pdf`,
+            content: Buffer.from(base64Data, 'base64')
+          });
+        }
+
+        if (vendor.email) {
+          await emailService.sendMail({
+            to: vendor.email,
+            subject: `Outward Challan Issued - ${challanNumber}`,
+            html: emailContent,
+            attachments
+          });
+        }
+      } catch (emailErr) {
+        console.error('Failed to send email to vendor:', emailErr);
+      }
+
+      res.json({
+        success: true,
+        message: 'Outward challan created successfully',
+        data: {
+          challanId,
+          challanNumber,
+          vendorName: vendor.name,
+          itemCount: items.length
+        }
+      });
+    } catch (error) {
+      await connection.rollback();
+      console.error('Error creating outward challan:', error);
+      res.status(500).json({ success: false, message: error.message || 'Error creating challan' });
+    } finally {
+      connection.release();
+    }
+  },
+
   async getProjectMaterials(req, res) {
     try {
       const { projectId } = req.params;

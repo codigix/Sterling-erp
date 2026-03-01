@@ -16,7 +16,6 @@ const QuotationsPage = lazy(() => import("../inventory/QuotationsPage"));
 const PurchaseOrderPage = lazy(() => import("../inventory/PurchaseOrderPage"));
 const PurchaseReceiptPage = lazy(() => import("../inventory/PurchaseReceiptPage"));
 const GRNProcessingPage = lazy(() => import("../inventory/GRNProcessingPage"));
-const ReportsPage = lazy(() => import("../inventory/ReportsPage"));
 const CreateQuotationPage = lazy(() => import("../inventory/CreateQuotationPage"));
 const MaterialRequestsPage = lazy(() => import("../inventory/MaterialRequestsPage"));
 const WarehousesPage = lazy(() => import("../inventory/WarehousesPage"));
@@ -625,11 +624,6 @@ const InventoryManagerDashboard = () => {
       icon: CheckCircle,
     },
     {
-      title: "Reports",
-      path: "/inventory-manager/reports",
-      icon: BarChart3,
-    },
-    {
       title: "Department Tasks",
       path: "/inventory-manager/department-tasks",
       icon: ClipboardList,
@@ -786,7 +780,6 @@ const InventoryManagerDashboard = () => {
           <Route path="/purchase-orders/edit/:id" element={<PurchaseOrderEditPage />} />
           <Route path="/purchase-receipt" element={<PurchaseReceiptPage />} />
           <Route path="/grn-processing" element={<GRNProcessingPage />} />
-          <Route path="/reports" element={<ReportsPage />} />
           <Route path="/department-tasks" element={<InventoryTasksPage />} />
           <Route
             path="*"

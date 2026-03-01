@@ -4,9 +4,9 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import axios from '../../utils/api';
 
-const OutwardChallanForm = ({ task, materials, vendors = [], onChallanCreated }) => {
+const OutwardChallanForm = ({ task, materials, vendors = [], onChallanCreated, type = 'outsourcing_task' }) => {
   const [formData, setFormData] = useState({
-    vendorId: task?.selected_vendor_id || '',
+    vendorId: task?.selected_vendor_id || task?.vendor_id || '',
     materialSentDate: new Date().toISOString().split('T')[0],
     expectedReturnDate: '',
     notes: ''
@@ -43,10 +43,15 @@ const OutwardChallanForm = ({ task, materials, vendors = [], onChallanCreated })
     doc.setFontSize(10);
     doc.text(`Date: ${new Date().toLocaleDateString('en-IN')}`, 14, 45);
     doc.text(`Vendor: ${vendor?.name || 'N/A'}`, 14, 50);
-    doc.text(`Project: ${task?.project_name || 'N/A'}`, 14, 55);
-    doc.text(`Product: ${task?.product_name || 'N/A'}`, 14, 60);
-    doc.text(`Task: ${task?.stage_name || 'N/A'}`, 14, 65);
-    doc.text(`Expected Return: ${new Date(formData.expectedReturnDate).toLocaleDateString('en-IN')}`, 14, 70);
+    if (type === 'job_card') {
+      doc.text(`Work Order: ${task?.work_order_no || 'N/A'}`, 14, 55);
+      doc.text(`Operation: ${task?.operation_name || 'N/A'}`, 14, 60);
+    } else {
+      doc.text(`Project: ${task?.project_name || 'N/A'}`, 14, 55);
+      doc.text(`Product: ${task?.product_name || 'N/A'}`, 14, 60);
+      doc.text(`Task: ${task?.stage_name || 'N/A'}`, 14, 65);
+    }
+    doc.text(`Expected Return: ${new Date(formData.expectedReturnDate).toLocaleDateString('en-IN')}`, 14, 75);
 
     // Items Table
     const tableColumn = ["Item Code", "Material Name", "Quantity", "Unit", "Remarks"];
@@ -150,7 +155,11 @@ const OutwardChallanForm = ({ task, materials, vendors = [], onChallanCreated })
       const doc = await generatePDF();
       const pdfBase64 = doc.output('datauristring');
 
-      await axios.post(`/production/outsourcing/tasks/${task.id}/outward-challan`, {
+      const endpoint = type === 'job_card' 
+        ? `/production/outsourcing/job-card/${task.id}/outward-challan`
+        : `/production/outsourcing/tasks/${task.id}/outward-challan`;
+
+      await axios.post(endpoint, {
         vendorId: parseInt(formData.vendorId),
         materialSentDate: formData.materialSentDate,
         expectedReturnDate: formData.expectedReturnDate,

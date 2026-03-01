@@ -49,22 +49,15 @@ class ProductionPlanController {
         }
 
         let finalPlanName = data.planName || `Production Plan for ${isRootCard ? 'RC' : 'SO'} ${rootCardId}`;
-        let finalPlanId = data.planId || data.id;
         
-        // Generate a unique ID if not provided, to avoid "Duplicate entry 'Production Plan'"
-        if (!finalPlanId || finalPlanId === 'Production Plan') {
-          finalPlanId = `PP-${Date.now()}-${rootCardId}`;
-        }
-
         const planData = {
-          id: finalPlanId,
           salesOrderId: finalSalesOrderId,
           rootCardId: isRootCard ? parseInt(rootCardId) : null,
           planName: finalPlanName,
           targetQuantity: data.targetQuantity || 1,
           status: 'draft',
-          plannedStartDate: data.timeline?.startDate || null,
-          plannedEndDate: data.timeline?.endDate || null,
+          plannedStartDate: data.productionStartDate || data.timeline?.startDate || null,
+          plannedEndDate: data.estimatedCompletionDate || data.timeline?.endDate || null,
           estimatedCompletionDate: data.estimatedCompletionDate || null,
           supervisorId: supervisorId,
           notes: data.productionNotes || null
@@ -118,7 +111,24 @@ class ProductionPlanController {
         : await ProductionPlanDetail.findBySalesOrderId(rootCardId);
       console.log(`[ProductionPlanController] Saved production plan detail`);
       
-      await RootCardStep.update(rootCardId, 4, { status: 'in_progress', data: updated, assignedTo });
+      // 3. Update the generic sales_order_steps table
+      const [currentStepInfo] = await pool.execute(
+        'SELECT status FROM sales_order_steps WHERE sales_order_id = ? AND step_id = 4',
+        [rootCardId]
+      );
+      
+      let nextStatus = 'in_progress';
+      if (currentStepInfo.length > 0 && currentStepInfo[0].status === 'completed') {
+        nextStatus = 'completed';
+      } else if (!validation.isValid && (!currentStepInfo.length || currentStepInfo[0].status === 'pending')) {
+        nextStatus = 'pending';
+      }
+
+      await RootCardStep.update(rootCardId, 4, { 
+        status: nextStatus, 
+        data: updated, 
+        assignedTo 
+      });
       
       if (assignedTo) {
         await RootCardStep.assignEmployee(rootCardId, 4, assignedTo);
@@ -178,9 +188,11 @@ class ProductionPlanController {
           }
         }
 
-        if (effectiveRootCardId) {
+      if (effectiveRootCardId && validation.isValid) {
           await WorkflowTaskHelper.completeAndOpenNext(effectiveRootCardId, 'Create Production Plan');
           console.log(`[ProductionPlanController] Automated workflow task completion for RC ${effectiveRootCardId}`);
+        } else if (effectiveRootCardId && !validation.isValid) {
+          console.log(`[ProductionPlanController] Skipping workflow task completion: Validation failed`, validation.errors);
         }
       } catch (workflowError) {
         console.warn(`[ProductionPlanController] Non-critical workflow sync error:`, workflowError.message);

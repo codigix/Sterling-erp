@@ -726,6 +726,7 @@ const productionPlanController = {
               workOrderNo: workOrderNo,
               salesOrderId: sId,
               rootCardId: rcId,
+              productionPlanId: plan.id,
               projectId: pId,
               itemCode: itemCode,
               itemName: itemName,

@@ -4,24 +4,31 @@ class AlertsNotification {
   static async resolveUserId(userId) {
     let resolvedUserId = userId;
     
-    if (userId && String(userId).startsWith('demo-')) {
-      let demoUsername = String(userId).replace('demo-', '');
+    // If it's a number, it's already a proper userId
+    if (!isNaN(userId) && userId !== null) return parseInt(userId);
+
+    if (userId) {
+      let usernameToFind = String(userId);
+      if (usernameToFind.startsWith('demo-')) {
+        usernameToFind = usernameToFind.replace('demo-', '');
+      }
+      
       try {
-        const [users] = await pool.execute("SELECT id FROM users WHERE username = ?", [demoUsername]);
+        const [users] = await pool.execute("SELECT id FROM users WHERE username = ?", [usernameToFind]);
         if (users.length > 0) {
           resolvedUserId = users[0].id;
-          console.log(`[AlertsNotification] Resolved demo user ${userId} to database user ${resolvedUserId}`);
+          console.log(`[AlertsNotification] Resolved user ${userId} to database user ${resolvedUserId}`);
         } else {
-          // Try with underscore instead of dot
-          const normalizedUsername = demoUsername.replace(/\./g, '_');
+          // Try with underscore instead of dot for common mapping patterns
+          const normalizedUsername = usernameToFind.replace(/\./g, '_');
           const [users2] = await pool.execute("SELECT id FROM users WHERE username = ?", [normalizedUsername]);
           if (users2.length > 0) {
             resolvedUserId = users2[0].id;
-            console.log(`[AlertsNotification] Resolved demo user ${userId} to database user ${resolvedUserId} (normalized username)`);
+            console.log(`[AlertsNotification] Resolved user ${userId} to database user ${resolvedUserId} (normalized username)`);
           }
         }
       } catch (err) {
-        console.warn(`[AlertsNotification] Failed to resolve demo user ${userId}:`, err.message);
+        console.warn(`[AlertsNotification] Failed to resolve user ${userId}:`, err.message);
       }
     }
     
@@ -37,22 +44,24 @@ class AlertsNotification {
 
     const checkQuery = `
       SELECT id FROM alerts_notifications 
-      WHERE user_id = ? AND alert_type = ? AND related_id = ? AND is_read = FALSE
+      WHERE user_id = ? AND alert_type = ? AND related_id = ? AND message = ? AND is_read = FALSE
       LIMIT 1
     `;
     const checkParams = [
       resolvedUserId,
       data.alertType || 'other',
-      data.relatedId || null
+      data.relatedId || null,
+      data.message
     ];
     
     const [existing] = await connection.execute(checkQuery, checkParams);
     
     if (existing.length > 0) {
-      console.log(`[AlertsNotification] ℹ️ Notification already exists, skipping creation`);
+      console.log(`[AlertsNotification] ℹ️ Notification already exists for user ${resolvedUserId}, type ${data.alertType}, relatedId ${data.relatedId}. Skipping creation.`);
       return existing[0].id;
     }
     
+    console.log(`[AlertsNotification] 🔔 Creating NEW notification for user ${resolvedUserId}`);
     const [result] = await connection.execute(
       `
         INSERT INTO alerts_notifications

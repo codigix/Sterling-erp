@@ -7,6 +7,7 @@ import {
   ChevronRight, Info, ShieldCheck, Zap
 } from 'lucide-react';
 import axios from '../../utils/api';
+import { showSuccess, showError } from '../../utils/toastUtils';
 import Swal from 'sweetalert2';
 import { format } from 'date-fns';
 
@@ -126,16 +127,10 @@ const ProductionEntryPage = () => {
     setSubmitting(true);
     try {
       await axios.post(`/production/work-orders/operations/${id}/time-logs`, timeLogForm);
-      Swal.fire({
-        title: 'Success',
-        text: 'Time log recorded successfully',
-        icon: 'success',
-        timer: 1500,
-        showConfirmButton: false
-      });
+      showSuccess('Time log recorded successfully');
       fetchData(); // Refresh logs
     } catch {
-      Swal.fire('Error', 'Failed to record time log', 'error');
+      showError('Failed to record time log');
     } finally {
       setSubmitting(false);
     }
@@ -146,16 +141,10 @@ const ProductionEntryPage = () => {
     setSubmitting(true);
     try {
       await axios.post(`/production/work-orders/operations/${id}/quality-entries`, qualityForm);
-      Swal.fire({
-        title: 'Success',
-        text: 'Quality entry saved successfully',
-        icon: 'success',
-        timer: 1500,
-        showConfirmButton: false
-      });
+      showSuccess('Quality entry saved successfully');
       fetchData(); // Refresh logs
     } catch {
-      Swal.fire('Error', 'Failed to save quality entry', 'error');
+      showError('Failed to save quality entry');
     } finally {
       setSubmitting(false);
     }
@@ -166,16 +155,10 @@ const ProductionEntryPage = () => {
     setSubmitting(true);
     try {
       await axios.post(`/production/work-orders/operations/${id}/downtime-logs`, downtimeForm);
-      Swal.fire({
-        title: 'Success',
-        text: 'Downtime log recorded successfully',
-        icon: 'success',
-        timer: 1500,
-        showConfirmButton: false
-      });
+      showSuccess('Downtime log recorded successfully');
       fetchData(); // Refresh logs
     } catch {
-      Swal.fire('Error', 'Failed to record downtime log', 'error');
+      showError('Failed to record downtime log');
     } finally {
       setSubmitting(false);
     }
@@ -196,16 +179,11 @@ const ProductionEntryPage = () => {
       setSubmitting(true);
       try {
         await axios.post(`/production/work-orders/operations/${id}/complete-entry`);
-        await Swal.fire({
-          title: 'Task Completed!',
-          text: 'The production entry has been finalized.',
-          icon: 'success',
-          timer: 2000
-        });
+        showSuccess('The production entry has been finalized.');
         navigate('/department/production/job-cards');
       } catch (err) {
         console.error('Error completing production entry:', err);
-        Swal.fire('Error', 'Failed to complete production entry task', 'error');
+        showError('Failed to complete production entry task');
       } finally {
         setSubmitting(false);
       }

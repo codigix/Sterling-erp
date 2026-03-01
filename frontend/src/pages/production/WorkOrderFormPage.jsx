@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import axios from '../../utils/api';
-import Swal from 'sweetalert2';
+import toast from '../../utils/toastUtils';
 
 const WorkOrderFormPage = () => {
   const navigate = useNavigate();
@@ -107,7 +107,7 @@ const WorkOrderFormPage = () => {
       }
     } catch (error) {
       console.error('Error fetching form data:', error);
-      Swal.fire('Error', 'Failed to load data', 'error');
+      toast.error('Failed to load data');
     } finally {
       setLoading(false);
     }
@@ -127,7 +127,7 @@ const WorkOrderFormPage = () => {
 
   const handleSubmit = async (status) => {
     if (!formData.itemName || !formData.itemCode) {
-      Swal.fire('Error', 'Please fill in required fields', 'error');
+      toast.error('Please fill in required fields');
       return;
     }
 
@@ -140,15 +140,15 @@ const WorkOrderFormPage = () => {
       
       if (isEdit) {
         await axios.put(`/production/work-orders/${id}`, payload);
-        Swal.fire('Success', 'Work order updated successfully', 'success');
+        toast.success('Work order updated successfully');
       } else {
         await axios.post('/production/work-orders', payload);
-        Swal.fire('Success', 'Work order created successfully', 'success');
+        toast.success('Work order created successfully');
       }
       navigate('/department/production/work-orders');
     } catch (error) {
       console.error('Error saving work order:', error);
-      Swal.fire('Error', 'Failed to save work order', 'error');
+      toast.error('Failed to save work order');
     } finally {
       setLoading(false);
     }

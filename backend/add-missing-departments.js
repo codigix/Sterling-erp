@@ -7,7 +7,9 @@ async function addMissingDepartments() {
 
     const departmentsToAdd = [
       { name: 'Admin', code: 'ADM', description: 'Administrative Department' },
-      { name: 'Design Engineering', code: 'DE', description: 'Design Engineering Department' }
+      { name: 'Design Engineering', code: 'DE', description: 'Design Engineering Department' },
+      { name: 'Inventory', code: 'INV', description: 'Inventory Management Department' },
+      { name: 'Production', code: 'PROD', description: 'Production Department' }
     ];
 
     for (const dept of departmentsToAdd) {

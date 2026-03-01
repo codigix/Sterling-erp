@@ -23,7 +23,6 @@ import {
 } from "lucide-react";
 
 const EmployeeManagement = () => {
-  const navigate = useNavigate();
   const [employees, setEmployees] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -80,8 +79,6 @@ const EmployeeManagement = () => {
     }
   }, []);
 
-  const fallbackSampleEmployees = [];
-
   const fetchEmployees = useCallback(async () => {
     try {
       setLoading(true);
@@ -112,15 +109,6 @@ const EmployeeManagement = () => {
     }));
   };
 
-  const handleActionToggle = (actionId) => {
-    setFormData((prev) => ({
-      ...prev,
-      actions: prev.actions.includes(actionId)
-        ? prev.actions.filter((id) => id !== actionId)
-        : [...prev.actions, actionId],
-    }));
-  };
-
   const generateLoginId = (firstName, lastName) => {
     return `${firstName.toLowerCase()}.${lastName.toLowerCase()}`;
   };
@@ -140,7 +128,8 @@ const EmployeeManagement = () => {
       const autoLoginId =
         formData.loginId ||
         generateLoginId(formData.firstName, formData.lastName);
-      const autoPassword = formData.password || generatePassword();
+      
+      const finalPassword = formData.password || (editingEmployee ? null : generatePassword());
 
       const data = {
         firstName: formData.firstName,
@@ -151,18 +140,21 @@ const EmployeeManagement = () => {
         departmentId: formData.departmentId,
         roleId: formData.roleId,
         loginId: autoLoginId,
-        password: autoPassword,
         actions: formData.actions,
       };
+
+      if (finalPassword) {
+        data.password = finalPassword;
+      }
 
       if (editingEmployee) {
         await axios.put(`/admin/employee-list/${editingEmployee.id}`, data);
       } else {
-        const response = await axios.post("/admin/employee-list", data);
+        await axios.post("/admin/employee-list", data);
         setSelectedCredentials({
           name: `${formData.firstName} ${formData.lastName}`,
           loginId: autoLoginId,
-          password: autoPassword,
+          password: finalPassword,
           email: formData.email,
         });
         setShowCredentialsDialog(true);
@@ -396,6 +388,7 @@ const EmployeeManagement = () => {
           onClick={() => {
             setShowForm(true);
             setEditingEmployee(null);
+            const tempPassword = generatePassword();
             setFormData({
               firstName: "",
               lastName: "",
@@ -405,7 +398,7 @@ const EmployeeManagement = () => {
               departmentId: null,
               roleId: null,
               loginId: "",
-              password: "",
+              password: tempPassword,
               actions: [],
             });
           }}
@@ -589,47 +582,64 @@ const EmployeeManagement = () => {
                 </select>
               </div>
 
-              {/* Credentials (only for new employees) */}
-              {!editingEmployee && (
-                <div>
-                  <h3 className="text-sm font-semibold  dark: mb-2 flex items-center gap-2">
-                    <Lock className="w-4 h-4" />
-                    Login Credentials (Auto-generated)
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1 text-left">
-                        Login ID
-                      </label>
-                      <input
-                        type="text"
-                        name="loginId"
-                        value={
-                          formData.loginId ||
-                          generateLoginId(formData.firstName, formData.lastName)
-                        }
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-700 text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1 text-left">
-                        Temporary Password
-                      </label>
-                      <input
-                        type="text"
-                        name="password"
-                        value={formData.password || generatePassword()}
-                        readOnly
-                        className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-700 text-sm"
-                      />
-                    </div>
+              {/* Credentials */}
+              <div>
+                <h3 className="text-sm font-semibold dark:mb-2 flex items-center gap-2">
+                  <Lock className="w-4 h-4" />
+                  {editingEmployee
+                    ? "Login Credentials (Update Password)"
+                    : "Login Credentials"}
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1 text-left">
+                      Login ID
+                    </label>
+                    <input
+                      type="text"
+                      name="loginId"
+                      value={
+                        formData.loginId ||
+                        (editingEmployee
+                          ? ""
+                          : generateLoginId(
+                              formData.firstName,
+                              formData.lastName
+                            ))
+                      }
+                      onChange={handleInputChange}
+                      readOnly={editingEmployee}
+                      className={`w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm ${
+                        editingEmployee
+                          ? "bg-slate-50 dark:bg-slate-800"
+                          : "bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      }`}
+                    />
                   </div>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 text-xs ">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1 text-left">
+                      {editingEmployee
+                        ? "New Password (leave blank to keep current)"
+                        : "Password"}
+                    </label>
+                    <input
+                      type="text"
+                      name="password"
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      placeholder={
+                        editingEmployee ? "Enter new password" : "Enter password"
+                      }
+                      className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+                {!editingEmployee && (
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">
                     Password will be displayed after employee creation
                   </p>
-                </div>
-              )}
+                )}
+              </div>
 
               <div className="flex items-center justify-end gap-2 mt-6">
                 <Button

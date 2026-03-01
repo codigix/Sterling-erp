@@ -527,7 +527,7 @@ exports.sendQuotationEmail = async (req, res) => {
     const base64Data = pdfBase64.includes(',') ? pdfBase64.split(',')[1] : pdfBase64;
     const pdfBuffer = Buffer.from(base64Data, 'base64');
 
-    await emailService.sendMail({
+    const result = await emailService.sendMail({
       to: email,
       subject: subject || `Quotation ${quotation.quotation_number}`,
       text: message || `Please find attached Quotation ${quotation.quotation_number}.`,
@@ -538,6 +538,42 @@ exports.sendQuotationEmail = async (req, res) => {
         }
       ]
     });
+
+    if (result.success) {
+      try {
+        const communicationId = await QuotationCommunication.create({
+          quotation_id: id,
+          sender_email: process.env.EMAIL_USER,
+          subject: subject || `Quotation ${quotation.quotation_number}`,
+          content_text: message || `Please find attached Quotation ${quotation.quotation_number}.`,
+          content_html: null,
+          message_id: result.messageId,
+          has_attachments: true
+        });
+
+        const uploadDir = path.join(__dirname, '../../uploads/quotation_attachments');
+        if (!fs.existsSync(uploadDir)) {
+          fs.mkdirSync(uploadDir, { recursive: true });
+        }
+
+        const fileName = `${quotation.quotation_number}.pdf`;
+        const uniqueFileName = `${Date.now()}-${fileName}`;
+        const filePath = path.join(uploadDir, uniqueFileName);
+        
+        fs.writeFileSync(filePath, pdfBuffer);
+        
+        await QuotationCommunication.addAttachment(communicationId, {
+          fileName: fileName,
+          filePath: `uploads/quotation_attachments/${uniqueFileName}`,
+          fileSize: pdfBuffer.length,
+          mimeType: 'application/pdf'
+        });
+        
+        await QuotationCommunication.markAsRead(communicationId);
+      } catch (dbError) {
+        console.error('Error saving outgoing Quotation communication:', dbError);
+      }
+    }
 
     await Quotation.changeStatus(id, 'sent');
 
@@ -579,14 +615,14 @@ exports.getQuotationCommunications = async (req, res) => {
     const communications = await QuotationCommunication.findByQuotationId(id);
     console.log(`💬 Found ${communications.length} communications for ID: ${id}`);
     
-    if (communications.length > 0) {
-      console.log('💬 Latest communication:', JSON.stringify(communications[0]).substring(0, 100));
-    } else {
-      console.log(`💬 No communications in DB for quotation ID: ${id}`);
-    }
+    // Add is_outgoing flag
+    const processedComms = communications.map(comm => ({
+      ...comm,
+      is_outgoing: comm.sender_email === process.env.EMAIL_USER
+    }));
     
-    for (const comm of communications) {
-      if (!comm.is_read) {
+    for (const comm of processedComms) {
+      if (!comm.is_read && !comm.is_outgoing) {
         QuotationCommunication.markAsRead(comm.id).catch(err => console.error('Error marking read:', err));
       }
     }
@@ -594,7 +630,7 @@ exports.getQuotationCommunications = async (req, res) => {
     res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.set('Pragma', 'no-cache');
     res.set('Expires', '0');
-    res.json(communications);
+    res.json(processedComms);
   } catch (error) {
     console.error('Get quotation communications error:', error);
     res.status(500).json({ message: 'Internal server error' });

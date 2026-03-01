@@ -10,32 +10,24 @@ const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
 
-// Helper function to parse email replies since 'email-reply-parser' is an ES module
-// and we are using CommonJS. We'll implement a basic regex parser instead.
+// Helper function to parse email replies
 function getVisibleText(text) {
   if (!text) return '';
   
-  // Split into lines
   const lines = text.split(/\r?\n/);
   const visibleLines = [];
   
-  // Common patterns for the start of the quoted text
   const quoteHeaders = [
-    /^On\s.*wrote:$/i, // Gmail: On Mon, Jan 1... wrote:
-    /^-----Original Message-----/i, // Outlook
+    /^On\s.*wrote:$/i,
+    /^-----Original Message-----/i,
     /^From:\s/i,
     /^________________________________/
   ];
 
   for (const line of lines) {
     const trimmed = line.trim();
+    if (trimmed.startsWith('>')) continue;
     
-    // Check if line starts with >
-    if (trimmed.startsWith('>')) {
-      continue;
-    }
-    
-    // Check if line matches any quote header
     let isQuoteHeader = false;
     for (const pattern of quoteHeaders) {
       if (pattern.test(trimmed)) {
@@ -44,13 +36,7 @@ function getVisibleText(text) {
       }
     }
     
-    if (isQuoteHeader) {
-      // If we hit a quote header, assume everything after is also part of the quote
-      // But we should verify if we have collected some text already.
-      // Usually the reply is at the top.
-      break; 
-    }
-    
+    if (isQuoteHeader) break; 
     visibleLines.push(line);
   }
   
@@ -67,38 +53,49 @@ class EmailMonitorService {
         port: parseInt(process.env.IMAP_PORT || '993'),
         tls: true,
         tlsOptions: { rejectUnauthorized: false },
-        authTimeout: 20000
+        authTimeout: 30000,
+        connTimeout: 30000
       }
     };
-    this.checkInterval = 30 * 1000; // Check every 30 seconds
+    this.checkInterval = 15 * 1000; // Check every 15 seconds
     this.isRunning = false;
+    this.isProcessing = false;
     this.timer = null;
   }
 
   start() {
     if (this.isRunning) return;
     
-    // Check if email credentials are set
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS || 
-        process.env.EMAIL_USER === 'undefined' || process.env.EMAIL_PASS === 'undefined') {
+        process.env.EMAIL_USER === 'undefined' || process.env.EMAIL_PASS === 'undefined' ||
+        process.env.EMAIL_USER === '' || process.env.EMAIL_PASS === '') {
       console.warn('📧 Email Monitor Service: EMAIL_USER or EMAIL_PASS not configured. Skipping start.');
       return;
     }
 
-    console.log('📧 Starting Email Monitor Service...');
+    console.log('📧 Starting Email Monitor Service (15s interval)...');
     this.isRunning = true;
     
-    // Run initial check without awaiting it so it doesn't block server startup
-    this.checkEmails().catch(err => {
-      console.error('❌ Initial Email Check failed:', err.message);
-    });
-    
-    this.timer = setInterval(() => this.checkEmails(), this.checkInterval);
+    this.runCheck();
+    this.timer = setInterval(() => this.runCheck(), this.checkInterval);
+  }
+
+  async runCheck() {
+    if (this.isProcessing) return;
+    this.isProcessing = true;
+    try {
+      await this.checkEmails();
+    } catch (err) {
+      console.error('❌ Email Monitor Check Error:', err.message);
+    } finally {
+      this.isProcessing = false;
+    }
   }
 
   stop() {
     if (this.timer) clearInterval(this.timer);
     this.isRunning = false;
+    this.isProcessing = false;
     console.log('📧 Email Monitor Service stopped');
   }
 
@@ -107,291 +104,209 @@ class EmailMonitorService {
     try {
       connection = await imaps.connect(this.config);
 
-      // Handle underlying IMAP object errors to prevent process crash (unhandled 'error' event)
       if (connection && connection.imap) {
-        // Remove any existing listeners to be safe (though this is a new connection)
         connection.imap.removeAllListeners('error');
-        
         connection.imap.on('error', (err) => {
-          // Just log the error, don't crash. 
-          // Socket closed by peer (EPIPE, ECONNRESET, etc.) will emit 'error'
           console.error('📧 Underlying IMAP Connection Error:', err.message);
         });
       }
 
-      // Handle connection-level errors (from imap-simple wrapper)
-      connection.on('error', (err) => {
-        console.error('❌ IMAP Connection Error:', err.message);
-      });
-
       await connection.openBox('INBOX');
 
-      // Check messages from the last 7 days to be safe
-      const searchPeriod = 7 * 24 * 60 * 60 * 1000;
-      const twentyFourHoursAgo = Date.now() - searchPeriod;
+      const searchPeriod = 3 * 24 * 60 * 60 * 1000;
+      const threeDaysAgo = new Date(Date.now() - searchPeriod);
       
-      // Search separately for POs and Quotations to ensure both are processed
-      const poCriteria = [['SUBJECT', 'PO']];
-      const qtCriteria = [['SUBJECT', 'QT']];
+      const searchCriteria = [
+        'UNSEEN',
+        ['SINCE', threeDaysAgo.toISOString()]
+      ];
       const fetchOptions = {
         bodies: ['HEADER', 'TEXT'],
         markSeen: false
       };
 
-      const poMessages = await connection.search(poCriteria, fetchOptions);
-      const qtMessages = await connection.search(qtCriteria, fetchOptions);
-      const messages = [...poMessages, ...qtMessages];
+      const messages = await connection.search(searchCriteria, fetchOptions);
 
-      const recentMessages = messages.filter(item => {
+      if (messages.length === 0) {
+        if (connection && connection.imap && connection.imap.state !== 'disconnected') {
+          await connection.end();
+        }
+        return;
+      }
+
+      console.log(`📬 Found ${messages.length} potential emails to process.`);
+
+      for (const item of messages) {
         try {
           const headerPart = item.parts.find(p => p.which === 'HEADER');
-          const date = new Date(headerPart.body.date[0]).getTime();
-          const isRecent = date >= twentyFourHoursAgo;
-          return isRecent;
-        } catch (e) {
-          return false;
+          if (!headerPart || !headerPart.body || !headerPart.body.subject) continue;
+          
+          const subject = headerPart.body.subject[0];
+          const messageId = headerPart.body['message-id'] ? headerPart.body['message-id'][0] : null;
+          const from = headerPart.body.from ? headerPart.body.from[0] : '';
+          
+          if (!messageId) continue;
+
+          const poRegex = /(PO-(?:MR-)?[A-Z0-9-]+)/i;
+          const qtRegex = /((?:QT|RFQ)-(?:MRS-)?[A-Z0-9-]+)/i;
+          
+          const poMatch = subject.match(poRegex);
+          const qtMatch = subject.match(qtRegex);
+          
+          if (poMatch) {
+            const poNumber = poMatch[1].toUpperCase();
+            if (await PurchaseOrderCommunication.exists(messageId)) continue;
+
+            const po = await PurchaseOrder.findByPoNumber(poNumber);
+            if (po) await this.processPoEmail(connection, item, po, messageId);
+          } else if (qtMatch) {
+            const qtNumber = qtMatch[1].toUpperCase();
+            if (await QuotationCommunication.exists(messageId)) continue;
+
+            const quotation = await Quotation.findByQuotationNumber(qtNumber);
+            if (quotation) await this.processQuotationEmail(connection, item, quotation, messageId);
+          }
+        } catch (itemError) {
+          console.error(`❌ Error processing email item: ${itemError.message}`);
         }
-      });
+      }
 
-      console.log(`📬 Total matching emails: ${messages.length}, Recent: ${recentMessages.length}`);
-
-      for (const item of recentMessages) {
-        const subject = item.parts.find(p => p.which === 'HEADER').body.subject[0];
-        // console.log(`📧 Processing email: "${subject}"`);
-        
-        // Look for PO number in subject: PO-timestamp-random or PO-MR-timestamp-random
-        const poMatch = subject.match(/PO-(?:MR-)?[A-Z0-9-]+/i);
-        // Look for QT number in subject: QT-timestamp-random or QT-MRS-timestamp-random
-        const qtMatch = subject.match(/QT-(?:MRS-)?[A-Z0-9-]+/i);
-        
-        if (poMatch && !subject.toUpperCase().includes('QUOTATION')) {
-          const poNumber = poMatch[0].toUpperCase();
-          
-          // Before processing, check if this message already exists in either table
-          // to prevent processing a message twice if it hits both PO and QT checks
-          const fullMessageSearch = await connection.search([['UID', item.attributes.uid]], { bodies: ['HEADER'], markSeen: false });
-          if (fullMessageSearch.length > 0) {
-            const headerPart = fullMessageSearch[0].parts.find(p => p.which === 'HEADER');
-            const messageId = headerPart.body['message-id'][0];
-            const existsInPO = await PurchaseOrderCommunication.exists(messageId);
-            const existsInQT = await QuotationCommunication.exists(messageId);
-            if (existsInPO || existsInQT) {
-              console.log(`⚠️ Message ${messageId} already exists in DB. Skipping.`);
-              continue;
-            }
-          }
-
-          console.log(`🔍 Matched PO Number: ${poNumber} in subject`);
-          
-          const po = await PurchaseOrder.findByPoNumber(poNumber);
-          
-          if (po) {
-            console.log(`✅ PO found in database. ID: ${po.id}, PO#: ${po.po_number}`);
-            
-            // Let's do a specific fetch for this message to get full content
-            const fullMessage = await connection.search([['UID', item.attributes.uid]], { bodies: [''], markSeen: true });
-             
-            if (fullMessage.length > 0) {
-              const source = fullMessage[0].parts[0].body;
-              const parsed = await simpleParser(source);
-              
-              console.log(`📩 Parsed email from: ${parsed.from.value[0].address}`);
-              const exists = await PurchaseOrderCommunication.exists(parsed.messageId);
-              
-              if (!exists) {
-                console.log(`💾 Saving new communication record for PO ${poNumber}...`);
-                // Parse the email to get only the visible reply text
-                const visibleText = getVisibleText(parsed.text);
-
-                const communicationId = await PurchaseOrderCommunication.create({
-                  po_id: po.id,
-                  sender_email: parsed.from.value[0].address,
-                  subject: parsed.subject,
-                  content_text: visibleText,
-                  content_html: parsed.html, 
-                  message_id: parsed.messageId,
-                  has_attachments: parsed.attachments && parsed.attachments.length > 0
-                });
-                console.log(`✨ Successfully saved communication ID: ${communicationId}`);
-
-                // Save attachments if any
-                if (parsed.attachments && parsed.attachments.length > 0) {
-                   const uploadDir = path.join(__dirname, '../uploads/po_attachments');
-                   if (!fs.existsSync(uploadDir)) {
-                     fs.mkdirSync(uploadDir, { recursive: true });
-                   }
-
-                   for (const attachment of parsed.attachments) {
-                     try {
-                        const fileName = attachment.filename || 'unknown';
-                        const uniqueFileName = `${Date.now()}-${fileName.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-                        const filePath = path.join(uploadDir, uniqueFileName);
-                        
-                        fs.writeFileSync(filePath, attachment.content);
-                        
-                        await PurchaseOrderCommunication.addAttachment(communicationId, {
-                            fileName: fileName,
-                            filePath: `uploads/po_attachments/${uniqueFileName}`,
-                            fileSize: attachment.size,
-                            mimeType: attachment.contentType
-                        });
-                        console.log(`📎 Attachment saved: ${uniqueFileName}`);
-                     } catch (attError) {
-                       console.error('❌ Failed to save attachment:', attError);
-                     }
-                   }
-                }
-
-                console.log(`💾 Saved reply for PO ${poNumber}`);
-
-                // Send notifications to Admin and Procurement Manager
-                try {
-                  const users = await User.findAll();
-                  const recipients = users.filter(u => 
-                    u.role_name === 'Admin' || u.role_name === 'Procurement Manager'
-                  );
-
-                  for (const user of recipients) {
-                    await Notification.create({
-                      userId: user.id,
-                      message: `New reply received for ${poNumber} from ${parsed.from.value[0].address}`,
-                      type: 'info',
-                      relatedId: po.id,
-                      relatedType: 'purchase_order'
-                    });
-                  }
-                  console.log(`🔔 Notifications sent to ${recipients.length} users`);
-                } catch (notifError) {
-                  console.error('❌ Failed to send notifications:', notifError);
-                }
-
-              } else {
-                console.log(`⚠️ Message ${parsed.messageId} already exists`);
-              }
-            }
-          }
-        } else if (qtMatch) {
-          const qtNumber = qtMatch[0].toUpperCase();
-
-          // Check if message already exists in either table
-          const fullMessageSearch = await connection.search([['UID', item.attributes.uid]], { bodies: ['HEADER'], markSeen: false });
-          if (fullMessageSearch.length > 0) {
-            const headerPart = fullMessageSearch[0].parts.find(p => p.which === 'HEADER');
-            const messageId = headerPart.body['message-id'][0];
-            const existsInPO = await PurchaseOrderCommunication.exists(messageId);
-            const existsInQT = await QuotationCommunication.exists(messageId);
-            if (existsInPO || existsInQT) {
-              console.log(`⚠️ Message ${messageId} already exists in DB. Skipping.`);
-              continue;
-            }
-          }
-
-          console.log(`🔎 Found potential Quotation reply for ${qtNumber}`);
-          
-          const quotation = await Quotation.findByQuotationNumber(qtNumber);
-          
-          if (quotation) {
-            console.log(`✅ Matched to Quotation ID: ${quotation.id}`);
-            
-            // Let's do a specific fetch for this message to get full content
-            const fullMessage = await connection.search([['UID', item.attributes.uid]], { bodies: [''], markSeen: true });
-             
-            if (fullMessage.length > 0) {
-              const source = fullMessage[0].parts[0].body;
-              const parsed = await simpleParser(source);
-              
-              const exists = await QuotationCommunication.exists(parsed.messageId);
-              
-              if (!exists) {
-                // Parse the email to get only the visible reply text
-                const visibleText = getVisibleText(parsed.text);
-
-                const communicationId = await QuotationCommunication.create({
-                  quotation_id: quotation.id,
-                  sender_email: parsed.from.value[0].address,
-                  subject: parsed.subject,
-                  content_text: visibleText, // Save only the visible text
-                  content_html: parsed.html, 
-                  message_id: parsed.messageId,
-                  has_attachments: parsed.attachments && parsed.attachments.length > 0
-                });
-
-                // Save attachments if any
-                if (parsed.attachments && parsed.attachments.length > 0) {
-                   const uploadDir = path.join(__dirname, '../uploads/quotation_attachments');
-                   if (!fs.existsSync(uploadDir)) {
-                     fs.mkdirSync(uploadDir, { recursive: true });
-                   }
-
-                   for (const attachment of parsed.attachments) {
-                     try {
-                        const fileName = attachment.filename || 'unknown';
-                        const uniqueFileName = `${Date.now()}-${fileName.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-                        const filePath = path.join(uploadDir, uniqueFileName);
-                        
-                        fs.writeFileSync(filePath, attachment.content);
-                        
-                        await QuotationCommunication.addAttachment(communicationId, {
-                            fileName: fileName,
-                            filePath: `uploads/quotation_attachments/${uniqueFileName}`,
-                            fileSize: attachment.size,
-                            mimeType: attachment.contentType
-                        });
-                        console.log(`📎 Attachment saved: ${uniqueFileName}`);
-                     } catch (attError) {
-                       console.error('❌ Failed to save attachment:', attError);
-                     }
-                   }
-                }
-
-                console.log(`💾 Saved reply for Quotation ${qtNumber}`);
-
-                // Send notifications to Admin and Procurement Manager
-                try {
-                  const users = await User.findAll();
-                  const recipients = users.filter(u => 
-                    u.role_name === 'Admin' || u.role_name === 'Procurement Manager'
-                  );
-
-                  for (const user of recipients) {
-                    await Notification.create({
-                      userId: user.id,
-                      message: `New reply received for ${qtNumber} from ${parsed.from.value[0].address}`,
-                      type: 'info',
-                      relatedId: quotation.id,
-                      relatedType: 'quotation'
-                    });
-                  }
-                  console.log(`🔔 Notifications sent to ${recipients.length} users`);
-                } catch (notifError) {
-                  console.error('❌ Failed to send notifications:', notifError);
-                }
-
-              } else {
-                console.log(`⚠️ Message ${parsed.messageId} already exists`);
-              }
-            }
-          }
-        }
+      if (connection && connection.imap && connection.imap.state !== 'disconnected') {
+        await connection.end();
       }
     } catch (error) {
-      console.error('❌ Email Monitor Error:', error.message);
-      // Don't crash the loop
-    } finally {
-      if (connection) {
-        try {
-          // Check if connection and underlying imap object exist
-          if (connection.imap && connection.imap.state !== 'disconnected') {
-            // Remove listeners before closing to avoid 'error' events during disconnect
-            connection.imap.removeAllListeners('error');
-            connection.imap.on('error', () => {}); // Null handler
-            
-            await connection.end();
-          }
-        } catch (e) {
-          // Already ended or in error state, safe to ignore
-        }
+      if (connection && connection.imap && connection.imap.state !== 'disconnected') {
+        await connection.end().catch(() => {});
       }
+      throw error;
+    }
+  }
+
+  async processPoEmail(connection, item, po, messageId) {
+    try {
+      const fullMessage = await connection.search([['UID', item.attributes.uid]], { bodies: [''], markSeen: true });
+      if (fullMessage.length === 0) return;
+
+      const source = fullMessage[0].parts[0].body;
+      const parsed = await simpleParser(source);
+      const visibleText = getVisibleText(parsed.text);
+      const senderEmail = parsed.from.value[0].address;
+
+      const communicationId = await PurchaseOrderCommunication.create({
+        po_id: po.id,
+        sender_email: senderEmail,
+        subject: parsed.subject,
+        content_text: visibleText,
+        content_html: parsed.html, 
+        message_id: messageId,
+        has_attachments: parsed.attachments && parsed.attachments.length > 0
+      });
+
+      if (parsed.attachments && parsed.attachments.length > 0) {
+        await this.savePoAttachments(communicationId, parsed.attachments);
+      }
+
+      console.log(`✨ Saved communication for PO ${po.po_number}`);
+      await this.notifyUsers('purchase_order', po.id, po.po_number, senderEmail);
+    } catch (err) {
+      console.error(`❌ Error processing PO email for ${po.po_number}:`, err.message);
+    }
+  }
+
+  async processQuotationEmail(connection, item, quotation, messageId) {
+    try {
+      const fullMessage = await connection.search([['UID', item.attributes.uid]], { bodies: [''], markSeen: true });
+      if (fullMessage.length === 0) return;
+
+      const source = fullMessage[0].parts[0].body;
+      const parsed = await simpleParser(source);
+      const visibleText = getVisibleText(parsed.text);
+      const senderEmail = parsed.from.value[0].address;
+
+      const communicationId = await QuotationCommunication.create({
+        quotation_id: quotation.id,
+        sender_email: senderEmail,
+        subject: parsed.subject,
+        content_text: visibleText,
+        content_html: parsed.html, 
+        message_id: messageId,
+        has_attachments: parsed.attachments && parsed.attachments.length > 0
+      });
+
+      if (parsed.attachments && parsed.attachments.length > 0) {
+        await this.saveQuotationAttachments(communicationId, parsed.attachments);
+      }
+
+      console.log(`✨ Saved communication for Quotation ${quotation.quotation_number}`);
+      await this.notifyUsers('quotation', quotation.id, quotation.quotation_number, senderEmail);
+    } catch (err) {
+      console.error(`❌ Error processing Quotation email for ${quotation.quotation_number}:`, err.message);
+    }
+  }
+
+  async savePoAttachments(communicationId, attachments) {
+    const uploadDir = path.join(__dirname, '../uploads/po_attachments');
+    if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+
+    for (const attachment of attachments) {
+      try {
+        const fileName = attachment.filename || 'unknown';
+        const uniqueFileName = `${Date.now()}-${fileName.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+        const filePath = path.join(uploadDir, uniqueFileName);
+        fs.writeFileSync(filePath, attachment.content);
+        
+        await PurchaseOrderCommunication.addAttachment(communicationId, {
+          fileName: fileName,
+          filePath: `uploads/po_attachments/${uniqueFileName}`,
+          fileSize: attachment.size,
+          mimeType: attachment.contentType
+        });
+      } catch (attError) {
+        console.error('❌ Failed to save PO attachment:', attError.message);
+      }
+    }
+  }
+
+  async saveQuotationAttachments(communicationId, attachments) {
+    const uploadDir = path.join(__dirname, '../uploads/quotation_attachments');
+    if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+
+    for (const attachment of attachments) {
+      try {
+        const fileName = attachment.filename || 'unknown';
+        const uniqueFileName = `${Date.now()}-${fileName.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+        const filePath = path.join(uploadDir, uniqueFileName);
+        fs.writeFileSync(filePath, attachment.content);
+        
+        await QuotationCommunication.addAttachment(communicationId, {
+          fileName: fileName,
+          filePath: `uploads/quotation_attachments/${uniqueFileName}`,
+          fileSize: attachment.size,
+          mimeType: attachment.contentType
+        });
+      } catch (attError) {
+        console.error('❌ Failed to save Quotation attachment:', attError.message);
+      }
+    }
+  }
+
+  async notifyUsers(type, id, number, sender) {
+    try {
+      const users = await User.findAll();
+      const roles = ['Admin', 'Procurement Manager', 'Inventory Manager', 'Production Manager'];
+      const recipients = users.filter(u => roles.some(role => u.role_name && u.role_name.toLowerCase().includes(role.toLowerCase())));
+
+      for (const user of recipients) {
+        await Notification.create({
+          userId: user.id,
+          message: `New email reply for ${number} from ${sender}`,
+          type: 'info',
+          relatedId: id,
+          relatedType: type
+        });
+      }
+    } catch (notifError) {
+      console.error('❌ Failed to send notifications:', notifError.message);
     }
   }
 }

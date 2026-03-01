@@ -338,9 +338,11 @@ const MaterialRequestDetailModal = ({
   };
 
   const getStatusBadge = (status) => {
+    const s = (status || "").toLowerCase();
     const styles = {
       received: "bg-emerald-100 text-emerald-700 border-emerald-200",
       fulfilled: "bg-emerald-100 text-emerald-700 border-emerald-200",
+      completed: "bg-emerald-100 text-emerald-700 border-emerald-200",
       ordered: "bg-purple-100 text-purple-700 border-purple-200",
       approved: "bg-blue-100 text-blue-700 border-blue-200",
       pending: "bg-blue-100 text-blue-700 border-blue-200",
@@ -349,11 +351,16 @@ const MaterialRequestDetailModal = ({
       cancelled: "bg-red-100 text-red-700 border-red-200",
     };
 
+    const displayNames = {
+      received: "fulfilled",
+      completed: "fulfilled",
+    };
+
     return (
       <span
-        className={`px-3 py-1 rounded-full text-xs font-bold border ${styles[status] || styles.draft} uppercase tracking-wider`}
+        className={`px-3 py-1 rounded-full text-xs font-bold border ${styles[s] || styles.draft} uppercase tracking-wider`}
       >
-        {status}
+        {displayNames[s] || s}
       </span>
     );
   };
@@ -1266,9 +1273,11 @@ const MaterialRequestsPage = () => {
   };
 
   const getStatusBadge = (status) => {
+    const s = (status || "").toLowerCase();
     const styles = {
       received: "bg-emerald-100 text-emerald-700",
       fulfilled: "bg-emerald-100 text-emerald-700",
+      completed: "bg-emerald-100 text-emerald-700",
       ordered: "bg-purple-100 text-purple-700",
       processing: "bg-purple-100 text-purple-700",
       approved: "bg-blue-100 text-blue-700",
@@ -1281,17 +1290,18 @@ const MaterialRequestsPage = () => {
     // Display name mapping
     const displayNames = {
       received: "fulfilled",
+      completed: "fulfilled",
       ordered: "processing",
     };
 
     return (
       <span
-        className={`px-2 py-1 rounded-md text-xs font-medium flex items-center gap-1 w-fit ${styles[status] || styles.draft}`}
+        className={`px-2 py-1 rounded-md text-xs font-medium flex items-center gap-1 w-fit ${styles[s] || styles.draft}`}
       >
-        {(status === "fulfilled" || status === "received") && (
+        {(s === "fulfilled" || s === "received" || s === "completed") && (
           <CheckCircle size={12} />
         )}
-        {displayNames[status] || status}
+        {displayNames[s] || s}
       </span>
     );
   };

@@ -15,6 +15,7 @@ router.post('/bulk', materialRequestController.bulkCreateMaterialRequests);
 router.get('/', materialRequestController.getAllMaterialRequests);
 
 router.get('/root-card/:rootCardId', materialRequestController.getMaterialRequestsByRootCard);
+router.get('/production-plan/:productionPlanId', materialRequestController.getMaterialRequestsByProductionPlan);
 
 router.get('/:id', materialRequestController.getMaterialRequest);
 

@@ -96,7 +96,11 @@ class Employee {
     if (data.roleId) { updates.push('role_id = ?'); values.push(data.roleId); }
     if (data.actions) { updates.push('actions = ?'); values.push(JSON.stringify(data.actions)); }
     if (data.status) { updates.push('status = ?'); values.push(data.status); }
-    if (data.password) { updates.push('password = ?'); values.push(data.password); }
+    if (data.password) { 
+      const hashedPassword = await bcrypt.hash(data.password, 10);
+      updates.push('password = ?'); 
+      values.push(hashedPassword); 
+    }
     updates.push('updated_at = NOW()');
     values.push(id);
     if (updates.length > 1) await pool.execute(`UPDATE employees SET ${updates.join(', ')} WHERE id = ?`, values);

@@ -15,7 +15,7 @@ import {
   AlertCircle,
   Loader2
 } from 'lucide-react';
-import Swal from 'sweetalert2';
+import { toast } from '../../utils/toastUtils';
 
 const WorkstationFormPage = () => {
   const navigate = useNavigate();
@@ -68,7 +68,7 @@ const WorkstationFormPage = () => {
       setFormData(data);
     } catch (error) {
       console.error('Error fetching workstation:', error);
-      Swal.fire('Error', 'Failed to fetch workstation details', 'error');
+      toast.error('Failed to fetch workstation details');
     } finally {
       setFetching(false);
     }
@@ -88,15 +88,15 @@ const WorkstationFormPage = () => {
       setLoading(true);
       if (isEdit) {
         await axios.put(`/production/workstations/${id}`, formData);
-        Swal.fire('Success', 'Workstation updated successfully', 'success');
+        toast.success('Workstation updated successfully');
       } else {
         await axios.post('/production/workstations', formData);
-        Swal.fire('Success', 'Workstation registered successfully', 'success');
+        toast.success('Workstation registered successfully');
       }
       navigate('/department/production/workstations');
     } catch (error) {
       console.error('Error saving workstation:', error);
-      Swal.fire('Error', 'Failed to save workstation', 'error');
+      toast.error('Failed to save workstation');
     } finally {
       setLoading(false);
     }

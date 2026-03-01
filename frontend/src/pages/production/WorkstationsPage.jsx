@@ -15,6 +15,7 @@ import {
   Loader2
 } from 'lucide-react';
 import Swal from 'sweetalert2';
+import { toast } from '../../utils/toastUtils';
 
 const WorkstationsPage = () => {
   const navigate = useNavigate();
@@ -36,7 +37,7 @@ const WorkstationsPage = () => {
       setStats(response.data.stats || { total_assets: 0, operational: 0, asset_classes: 0 });
     } catch (error) {
       console.error('Error fetching workstations:', error);
-      Swal.fire('Error', 'Failed to fetch workstations', 'error');
+      toast.error('Failed to fetch workstations');
     } finally {
       setLoading(false);
     }
@@ -56,11 +57,11 @@ const WorkstationsPage = () => {
     if (result.isConfirmed) {
       try {
         await axios.delete(`/production/workstations/${id}`);
-        Swal.fire('Deleted!', 'Workstation has been deleted.', 'success');
+        toast.success('Workstation deleted successfully');
         fetchWorkstations();
       } catch (error) {
         console.error('Error deleting workstation:', error);
-        Swal.fire('Error!', 'Failed to delete workstation.', 'error');
+        toast.error('Failed to delete workstation');
       }
     }
   };

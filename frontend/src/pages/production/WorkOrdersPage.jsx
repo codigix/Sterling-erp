@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Swal from 'sweetalert2';
+import { toast } from '../../utils/toastUtils';
 
 const WorkOrdersPage = () => {
   const [workOrders, setWorkOrders] = useState([]);
@@ -94,12 +95,12 @@ const WorkOrdersPage = () => {
 
       if (result.isConfirmed) {
         await axios.delete(`/production/work-orders/${id}`);
-        Swal.fire('Deleted!', 'Work order has been deleted.', 'success');
+        toast.success('Work order deleted successfully');
         fetchWorkOrders();
       }
     } catch (error) {
       console.error('Error deleting work order:', error);
-      Swal.fire('Error!', 'Failed to delete work order.', 'error');
+      toast.error('Failed to delete work order');
     }
   };
 
@@ -316,6 +317,7 @@ const WorkOrdersPage = () => {
                 <tr className="bg-white border-b border-slate-100">
                   <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Order Identity</th>
                   <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Item</th>
+                  <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-center">Material Status</th>
                   <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-center">Status & Priority</th>
                   <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-center">Progress</th>
                   <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-right">Actions</th>
@@ -361,6 +363,21 @@ const WorkOrdersPage = () => {
                         </div>
                       </td>
                       <td className="px-6 py-5">
+                        <div className="flex flex-col items-center">
+                          {order.is_material_ready ? (
+                            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black bg-green-50 text-green-700 border border-green-200 uppercase tracking-wider shadow-sm">
+                               <CheckCircle size={12} />
+                               Ready
+                            </div>
+                          ) : (
+                            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black bg-red-50 text-red-700 border border-red-200 uppercase tracking-wider shadow-sm animate-pulse">
+                               <AlertTriangle size={12} />
+                               Awaiting MR
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-5">
                         <div className="flex flex-col items-center gap-2">
                           <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black border uppercase tracking-wider ${getStatusBadge(order.status)} shadow-sm`}>
                              <Clock size={12} />
@@ -387,15 +404,26 @@ const WorkOrdersPage = () => {
                       <td className="px-6 py-5">
                         <div className="flex items-center justify-end gap-1.5">
                           <button 
-                            onClick={() => navigate(`/department/production/job-cards`, { state: { workOrderId: order.id, workOrderNo: order.work_order_no } })}
-                            className="p-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all shadow-sm flex items-center justify-center" 
-                            title="Track Production"
+                            onClick={() => order.is_material_ready && navigate(`/department/production/job-cards`, { state: { workOrderId: order.id, workOrderNo: order.work_order_no } })}
+                            disabled={!order.is_material_ready}
+                            className={`p-2.5 rounded-lg transition-all shadow-sm flex items-center justify-center ${
+                              order.is_material_ready 
+                              ? 'bg-indigo-600 text-white hover:bg-indigo-700' 
+                              : 'bg-slate-100 text-slate-400 cursor-not-allowed opacity-60'
+                            }`}
+                            title={order.is_material_ready ? "Track Production" : "Materials Pending"}
                           >
                             <Activity size={18} />
                           </button>
                           <button 
-                            onClick={() => navigate(`/department/production/work-orders/edit/${order.id}`)}
-                            className="p-2 text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all" title="Edit"
+                            onClick={() => order.is_material_ready && navigate(`/department/production/work-orders/edit/${order.id}`)}
+                            disabled={!order.is_material_ready}
+                            className={`p-2 rounded-lg transition-all ${
+                              order.is_material_ready 
+                              ? 'text-slate-500 hover:text-amber-600 hover:bg-amber-50' 
+                              : 'text-slate-300 cursor-not-allowed'
+                            }`}
+                            title={order.is_material_ready ? "Edit" : "Materials Pending"}
                           >
                             <Edit2 size={18} />
                           </button>

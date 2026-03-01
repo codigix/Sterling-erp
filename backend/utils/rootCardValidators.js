@@ -133,17 +133,19 @@ const validateMaterialRequirements = (data) => {
 
 const validateProductionPlan = (data) => {
   const errors = [];
+  const startDate = data.productionStartDate || data.timeline?.startDate;
+  const endDate = data.estimatedCompletionDate || data.timeline?.endDate;
 
-  if (!data.timeline || !data.timeline.startDate) {
+  if (!startDate) {
     errors.push('Start Date is required');
   }
 
-  if (!data.timeline || !data.timeline.endDate) {
+  if (!endDate) {
     errors.push('End Date is required');
   }
 
-  if (data.timeline && data.timeline.startDate && data.timeline.endDate) {
-    if (new Date(data.timeline.startDate) >= new Date(data.timeline.endDate)) {
+  if (startDate && endDate) {
+    if (new Date(startDate) >= new Date(endDate)) {
       errors.push('End Date must be after Start Date');
     }
   }

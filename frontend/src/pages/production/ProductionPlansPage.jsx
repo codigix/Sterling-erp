@@ -29,6 +29,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import Swal from "sweetalert2";
 import { showSuccess, showError } from "../../utils/toastUtils";
 import MaterialRequestModal from "../../components/production/MaterialRequestModal";
+import MaterialRequestTraceabilityModal from "../../components/production/MaterialRequestTraceabilityModal";
 
 // --- Main Component ---
 const ProductionPlansPage = () => {
@@ -43,6 +44,9 @@ const ProductionPlansPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showMaterialRequestModal, setShowMaterialRequestModal] = useState(false);
+  const [showTraceabilityModal, setShowTraceabilityModal] = useState(false);
+  const [selectedPlanId, setSelectedPlanId] = useState(null);
+  const [selectedPlanName, setSelectedPlanName] = useState(null);
   const [selectedPlanData, setSelectedPlanData] = useState(null);
   const [selectedPlanMaterials, setSelectedPlanMaterials] = useState([]);
   const navigate = useNavigate();
@@ -119,11 +123,11 @@ const ProductionPlansPage = () => {
     if (result.isConfirmed) {
       try {
         await axios.delete(`/production/plans/${id}`);
-        Swal.fire("Deleted!", "Plan has been deleted.", "success");
+        showSuccess("Plan has been deleted.");
         fetchPlans();
       } catch (error) {
         console.error("Error deleting plan:", error);
-        Swal.fire("Error!", "Failed to delete the plan.", "error");
+        showError("Failed to delete the plan.");
       }
     }
   };
@@ -157,6 +161,12 @@ const ProductionPlansPage = () => {
       console.error("Error generating work orders:", error);
       showError(error.response?.data?.message || "Failed to generate work orders");
     }
+  };
+
+  const handleViewTraceability = (planId, planName) => {
+    setSelectedPlanId(planId);
+    setSelectedPlanName(planName);
+    setShowTraceabilityModal(true);
   };
 
   const handleSendMaterialRequest = async (planId) => {
@@ -224,16 +234,8 @@ const ProductionPlansPage = () => {
             <button
               className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 font-bold hover:bg-white dark:hover:bg-slate-800 transition-all text-sm"
               onClick={() => {
-                Swal.fire({
-                  title: "System Reset",
-                  text: "This will clear current view caches. Continue?",
-                  icon: "question",
-                  showCancelButton: true,
-                  confirmButtonText: "Reset",
-                  customClass: { container: "z-[10000]" },
-                }).then((result) => {
-                  if (result.isConfirmed) fetchPlans();
-                });
+                fetchPlans();
+                showSuccess("Cache reset successfully");
               }}
             >
               <Trash2 size={16} />
@@ -514,7 +516,12 @@ const ProductionPlansPage = () => {
                                   { state: { viewMode: false } },
                                 ),
                             },
-                            { icon: Bell, badge: true },
+                            { 
+                              icon: Bell, 
+                              badge: plan.material_request_count > 0,
+                              count: plan.material_request_count,
+                              onClick: () => handleViewTraceability(plan.id, plan.plan_name)
+                            },
                             {
                               icon: Trash2,
                               variant: "danger",
@@ -534,7 +541,7 @@ const ProductionPlansPage = () => {
                               <action.icon size={16} />
                               {action.badge && (
                                 <span className="absolute top-1.5 right-1.5 w-3.5 h-3.5 bg-blue-500 text-[8px] font-bold text-white rounded-full flex items-center justify-center border-2 border-white dark:border-slate-800">
-                                  1
+                                  {action.count || 1}
                                 </span>
                               )}
                             </button>
@@ -561,6 +568,14 @@ const ProductionPlansPage = () => {
           </div>
         </div>
       </div>
+      {showTraceabilityModal && (
+        <MaterialRequestTraceabilityModal
+          isOpen={showTraceabilityModal}
+          onClose={() => setShowTraceabilityModal(false)}
+          planId={selectedPlanId}
+          planName={selectedPlanName}
+        />
+      )}
       {showMaterialRequestModal && (
         <MaterialRequestModal
           isOpen={showMaterialRequestModal}

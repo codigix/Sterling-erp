@@ -304,6 +304,22 @@ exports.getMaterialRequest = async (req, res) => {
   }
 };
 
+exports.getMaterialRequestsByProductionPlan = async (req, res) => {
+  const { productionPlanId } = req.params;
+
+  try {
+    const materialRequests = await MaterialRequest.findByProductionPlanId(productionPlanId);
+
+    res.json({
+      materialRequests,
+      total: materialRequests.length
+    });
+  } catch (error) {
+    console.error('Get material requests by production plan error:', error.message);
+    res.status(500).json({ message: 'Failed to fetch material requests' });
+  }
+};
+
 exports.getMaterialRequestsByRootCard = async (req, res) => {
   const { rootCardId } = req.params;
 
@@ -381,7 +397,7 @@ exports.updateMaterialRequestStatus = async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
 
-  const validStatuses = ['draft', 'submitted', 'pending', 'approved', 'ordered', 'received', 'rejected', 'cancelled'];
+  const validStatuses = ['draft', 'submitted', 'pending', 'approved', 'ordered', 'received', 'rejected', 'cancelled', 'completed'];
 
   if (!status || !validStatuses.includes(status)) {
     return res.status(400).json({ message: 'Invalid status' });
@@ -510,7 +526,7 @@ exports.releaseMaterial = async (req, res) => {
       return res.status(404).json({ message: 'Material request not found' });
     }
 
-    if (materialRequest.status === 'received') {
+    if (materialRequest.status === 'received' || materialRequest.status === 'completed') {
       await connection.rollback();
       return res.status(400).json({ message: 'Materials already released for this request' });
     }
@@ -610,11 +626,31 @@ exports.releaseMaterial = async (req, res) => {
       ]
     );
 
-    // Update MR status to 'received' (as requested by user)
+    // Update MR status to 'completed' (as requested by user)
     await connection.execute(
-      'UPDATE material_requests SET status = "received", updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+      'UPDATE material_requests SET status = "completed", updated_at = CURRENT_TIMESTAMP WHERE id = ?',
       [id]
     );
+
+    // Update all items in the request to 'completed'
+    await connection.execute(
+      'UPDATE material_request_items SET status = "completed", updated_at = CURRENT_TIMESTAMP WHERE material_request_id = ?',
+      [id]
+    );
+
+    // Refetch MR after status updates to get latest data for notification
+    const updatedMR = await MaterialRequest.findById(id, connection);
+
+    // Notify Production Department
+    try {
+      if (updatedMR) {
+        await notifyProductionRelease(updatedMR, connection);
+      } else {
+        await notifyProductionRelease(materialRequest, connection);
+      }
+    } catch (notifError) {
+      console.warn('Could not notify production:', notifError.message);
+    }
 
     // Complete the final workflow task if it exists
     if (materialRequest.sales_order_id) {
@@ -650,11 +686,13 @@ async function notifyInventoryManagers(materialRequest, bulkCount = 0) {
   try {
     // Find users with inventory-related roles
     const [managers] = await pool.execute(`
-      SELECT u.id 
+      SELECT u.id, u.username, r.name as role_name
       FROM users u 
       JOIN roles r ON u.role_id = r.id 
-      WHERE LOWER(r.name) IN ('inventory_manager', 'inventory')
+      WHERE LOWER(r.name) IN ('inventory_manager', 'inventory', 'inventory manager', 'procurement', 'admin')
     `);
+
+    console.log(`[notifyInventoryManagers] Found ${managers?.length || 0} potential recipients for MR ${materialRequest.mr_number}`);
 
     if (!managers || managers.length === 0) {
       console.log('No inventory managers found to notify');
@@ -670,6 +708,7 @@ async function notifyInventoryManagers(materialRequest, bulkCount = 0) {
       : `New Material Request ${mrNumber} from ${department} department`;
 
     for (const manager of managers) {
+      console.log(`[notifyInventoryManagers] Sending notification to ${manager.username} (ID: ${manager.id})`);
       await AlertsNotification.create({
         userId: manager.id,
         fromUserId: materialRequest.created_by || null,
@@ -677,12 +716,61 @@ async function notifyInventoryManagers(materialRequest, bulkCount = 0) {
         alertType: 'info',
         relatedTable: 'material_requests',
         relatedId: materialRequest.id,
-        priority: 'medium',
+        priority: 'high', // Changed to high to ensure visibility
         link: '/inventory-manager/material-requests'
       });
     }
   } catch (error) {
     console.error('Error in notifyInventoryManagers:', error);
     throw error;
+  }
+}
+
+/**
+ * Helper to notify production department about released materials
+ */
+async function notifyProductionRelease(materialRequest, connection = null) {
+  try {
+    const conn = connection || pool;
+    const recipients = new Set();
+    
+    console.log('[notifyProductionRelease] Notifying for MR:', materialRequest.mr_number);
+    console.log('[notifyProductionRelease] MR requested_by:', materialRequest.requested_by, 'created_by:', materialRequest.created_by);
+    
+    // 1. Get requested_by and created_by
+    if (materialRequest.requested_by) recipients.add(materialRequest.requested_by);
+    if (materialRequest.created_by) recipients.add(materialRequest.created_by);
+    
+    // 2. Find production department members
+    const [productionUsers] = await conn.execute(`
+      SELECT u.id 
+      FROM users u 
+      JOIN roles r ON u.role_id = r.id 
+      WHERE LOWER(r.name) IN ('production', 'production_manager', 'production manager')
+    `);
+    
+    console.log('[notifyProductionRelease] Production users found in DB:', productionUsers.length);
+    productionUsers.forEach(u => recipients.add(u.id));
+    
+    const mrNumber = materialRequest.mr_number || materialRequest.id;
+    const message = `Materials released for Request ${mrNumber}. Ready for production!`;
+    
+    console.log('[notifyProductionRelease] Total unique recipients:', recipients.size, Array.from(recipients));
+    
+    for (const userId of recipients) {
+      console.log('[notifyProductionRelease] Creating alert for userId:', userId);
+      const alertId = await AlertsNotification.create({
+        userId: userId,
+        message: message,
+        alertType: 'success',
+        relatedTable: 'material_requests',
+        relatedId: materialRequest.id,
+        priority: 'high',
+        link: '/department/production/plans'
+      }, conn);
+      console.log('[notifyProductionRelease] Alert created with ID:', alertId);
+    }
+  } catch (error) {
+    console.error('Error in notifyProductionRelease:', error);
   }
 }
