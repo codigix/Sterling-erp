@@ -100,19 +100,20 @@ const outsourcingController = {
       const { production_plan_id, sales_order_id } = woRows[0];
 
       // 2. Fetch materials from material requests linked to this production plan or sales order
-      // We join with inventory to get the inventory ID and current available quantity
+      // We show the quantity that was actually requested/released in the Material Request
       const [materials] = await pool.execute(
-        `SELECT DISTINCT 
+        `SELECT 
             inv.id, 
             inv.item_code, 
             inv.item_name, 
             inv.unit, 
-            inv.quantity
+            SUM(mri.quantity) as quantity
          FROM material_request_items mri
          JOIN material_requests mr ON mri.material_request_id = mr.id
          JOIN inventory inv ON mri.material_code = inv.item_code
          WHERE (mr.production_plan_id = ? AND ? IS NOT NULL)
             OR (mr.sales_order_id = ? AND ? IS NOT NULL)
+         GROUP BY inv.id, inv.item_code, inv.item_name, inv.unit
          ORDER BY inv.item_name ASC`,
         [production_plan_id, production_plan_id, sales_order_id, sales_order_id]
       );
@@ -158,21 +159,13 @@ const outsourcingController = {
         return res.status(404).json({ success: false, message: 'Vendor not found' });
       }
 
-      // 1. Validate and deduct inventory
+      // 1. Material verification (No deduction as it was already released to production)
       for (const item of items) {
         const material = await Material.findById(item.materialId);
         if (!material) {
           throw new Error(`Material with ID ${item.materialId} not found`);
         }
-        if (material.quantity < item.quantity) {
-          throw new Error(`Insufficient inventory for ${material.item_name}. Available: ${material.quantity}, Requested: ${item.quantity}`);
-        }
-
-        // Deduct inventory
-        await connection.execute(
-          'UPDATE inventory SET quantity = quantity - ? WHERE id = ?',
-          [item.quantity, item.materialId]
-        );
+        // Removed inventory deduction as materials were already issued via MR
       }
 
       // 2. Create outward challan
@@ -292,15 +285,31 @@ const outsourcingController = {
 
   async getProjectMaterials(req, res) {
     try {
-      const { projectId } = req.params;
+      const { projectId } = req.params; // This is root_card_id
 
-      const [materials] = await pool.execute(
-        `SELECT DISTINCT inv.* 
-         FROM inventory inv
-         LEFT JOIN root_card_inventory_tasks pit ON pit.root_card_id = ?
-         WHERE 1=1
-         ORDER BY inv.item_name ASC`,
+      // 1. Get sales_order_id from root_card
+      const [rcRows] = await pool.execute(
+        'SELECT sales_order_id FROM root_cards WHERE id = ?',
         [projectId]
+      );
+      
+      const sales_order_id = rcRows.length > 0 ? rcRows[0].sales_order_id : null;
+
+      // 2. Fetch materials from material requests linked to this sales order
+      const [materials] = await pool.execute(
+        `SELECT 
+            inv.id, 
+            inv.item_code, 
+            inv.item_name, 
+            inv.unit, 
+            SUM(mri.quantity) as quantity
+         FROM material_request_items mri
+         JOIN material_requests mr ON mri.material_request_id = mr.id
+         JOIN inventory inv ON mri.material_code = inv.item_code
+         WHERE mr.sales_order_id = ? AND ? IS NOT NULL
+         GROUP BY inv.id, inv.item_code, inv.item_name, inv.unit
+         ORDER BY inv.item_name ASC`,
+        [sales_order_id, sales_order_id]
       );
 
       res.json({
@@ -339,21 +348,13 @@ const outsourcingController = {
         return res.status(404).json({ success: false, message: 'Vendor not found' });
       }
 
-      // 1. Validate and deduct inventory
+      // 1. Material verification (No deduction as it was already released to production)
       for (const item of items) {
         const material = await Material.findById(item.materialId);
         if (!material) {
           throw new Error(`Material with ID ${item.materialId} not found`);
         }
-        if (material.quantity < item.quantity) {
-          throw new Error(`Insufficient inventory for ${material.item_name}. Available: ${material.quantity}, Requested: ${item.quantity}`);
-        }
-
-        // Deduct inventory
-        await connection.execute(
-          'UPDATE inventory SET quantity = quantity - ? WHERE id = ?',
-          [item.quantity, item.materialId]
-        );
+        // Removed inventory deduction as materials were already issued via MR
       }
 
       // 2. Create outward challan
@@ -632,6 +633,114 @@ const outsourcingController = {
     } catch (error) {
       console.error('Error fetching inward challan:', error);
       res.status(500).json({ success: false, message: 'Error fetching inward challan', error: error.message });
+    }
+  },
+
+  async createInwardChallanFromJobCard(req, res) {
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+
+      const { operationId } = req.params;
+      const { receivedQty, acceptedQty, rejectedQty, notes } = req.body;
+
+      // 1. Find the outward challan for this operation
+      const [ocRows] = await connection.execute(
+        'SELECT id FROM outward_challans WHERE work_order_operation_id = ? ORDER BY created_at DESC LIMIT 1',
+        [operationId]
+      );
+
+      if (ocRows.length === 0) {
+        return res.status(404).json({ success: false, message: 'No outward challan found for this operation' });
+      }
+
+      const outwardChallanId = ocRows[0].id;
+
+      // 2. Create inward challan record
+      const challanNumber = await InwardChallan.generateChallanNumber();
+      const [icResult] = await connection.execute(
+        `INSERT INTO inward_challans 
+         (outward_challan_id, challan_number, received_date, received_by, notes, status)
+         VALUES (?, ?, NOW(), ?, ?, 'received')`,
+        [outwardChallanId, challanNumber, req.user?.id || null, notes || null]
+      );
+      const inwardChallanId = icResult.insertId;
+
+      // 3. Update work_order_operations status and end date
+      await connection.execute(
+        `UPDATE work_order_operations 
+         SET status = 'completed', actual_end_date = NOW(), updated_at = CURRENT_TIMESTAMP 
+         WHERE id = ?`,
+        [operationId]
+      );
+
+      // 4. Record production quantity (Time Log)
+      await connection.execute(
+        `INSERT INTO work_order_time_logs 
+         (operation_id, operator_id, start_time, end_time, produced_qty, notes)
+         VALUES (?, ?, NOW(), NOW(), ?, ?)`,
+        [operationId, req.user?.id || null, receivedQty, 'Received from Outsource Vendor']
+      );
+
+      // 5. Record quality entry
+      await connection.execute(
+        `INSERT INTO work_order_quality_entries 
+         (operation_id, operator_id, inspection_date, accepted_qty, rejected_qty, notes)
+         VALUES (?, ?, NOW(), ?, ?, ?)`,
+        [operationId, req.user?.id || null, acceptedQty, rejectedQty, notes || 'Outsource receipt inspection']
+      );
+
+      // 6. Check if this was the last operation of the work order
+      const [opRows] = await connection.execute(
+        'SELECT work_order_id FROM work_order_operations WHERE id = ?',
+        [operationId]
+      );
+      const workOrderId = opRows[0].work_order_id;
+
+      const [remainingOps] = await connection.execute(
+        "SELECT id FROM work_order_operations WHERE work_order_id = ? AND status != 'completed'",
+        [workOrderId]
+      );
+
+      if (remainingOps.length === 0) {
+        await connection.execute(
+          "UPDATE work_orders SET status = 'completed', actual_end_date = NOW() WHERE id = ?",
+          [workOrderId]
+        );
+      } else {
+        // Find next operation in sequence and mark as ready if it's currently pending
+        const [currentOp] = await connection.execute(
+          'SELECT sequence FROM work_order_operations WHERE id = ?',
+          [operationId]
+        );
+        
+        if (currentOp.length > 0) {
+          await connection.execute(
+            `UPDATE work_order_operations 
+             SET status = 'ready' 
+             WHERE work_order_id = ? AND sequence > ? AND status = 'pending' 
+             ORDER BY sequence ASC LIMIT 1`,
+            [workOrderId, currentOp[0].sequence]
+          );
+        }
+      }
+
+      await connection.commit();
+
+      res.json({
+        success: true,
+        message: 'Inward challan created and operation completed successfully',
+        data: {
+          inwardChallanId,
+          challanNumber
+        }
+      });
+    } catch (error) {
+      await connection.rollback();
+      console.error('Error creating inward challan from job card:', error);
+      res.status(500).json({ success: false, message: error.message || 'Error processing receipt' });
+    } finally {
+      connection.release();
     }
   },
 

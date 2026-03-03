@@ -94,7 +94,8 @@ const GRNProcessingPage = () => {
         if (existingInspection.items_results) {
           formItems = formItems.map((item) => {
             const savedResult = existingInspection.items_results.find(r => r.description === (item.material_name || item.description));
-            return savedResult ? { ...item, ...savedResult } : item;
+            // Ensure the ordered quantity always comes from the actual GRN record, not stale inspection results
+            return savedResult ? { ...item, ...savedResult, quantity: item.quantity } : item;
           });
         }
       }
@@ -144,6 +145,7 @@ const GRNProcessingPage = () => {
           shortage: item.shortage,
           overage: item.overage,
           notes: item.notes,
+          warehouse: item.warehouse,
         })),
         status: qcForm.status,
         remarks: qcForm.remarks,

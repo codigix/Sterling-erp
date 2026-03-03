@@ -1264,13 +1264,19 @@ const ProductionPlanFormPage = () => {
       }
 
       // 1. Process Finished Goods
+      let fgWarehouse = selectedSO.warehouse_name || 'Finished Goods - NC';
+      if (activeBOM?.operations?.length > 0) {
+        const lastOp = activeBOM.operations[activeBOM.operations.length - 1];
+        fgWarehouse = lastOp.targetWarehouse || lastOp.target_warehouse || fgWarehouse;
+      }
+
       const fgItem = {
         itemCode: selectedSO.item_code,
         productName: selectedSO.product_name,
         bomNo: activeBOM?.bomNumber || 'N/A',
         plannedQty: selectedSO.quantity,
         uom: selectedSO.uom || 'Nos',
-        warehouse: selectedSO.warehouse_name || 'Finished Goods - NC',
+        warehouse: fgWarehouse,
         startDate: step4?.timeline?.startDate || new Date().toISOString().split('T')[0]
       };
       setFinishedGoods([fgItem]);
@@ -1293,6 +1299,7 @@ const ProductionPlanFormPage = () => {
               requiredQty: m.quantity * multiplier,
               qtyPerUnit: m.quantity,
               uom: m.uom || m.unit || 'Nos',
+              warehouse: m.warehouse || m.location || '',
               sourceAssembly: sourceName,
               sourceAssemblyCode: sourceCode,
               bomRef: bomRef,
@@ -1314,6 +1321,7 @@ const ProductionPlanFormPage = () => {
               requiredQty: (s.inputQty || 0) * multiplier,
               qtyPerUnit: s.inputQty || 0,
               uom: bom.uom || 'Nos',
+              warehouse: '',
               sourceAssembly: sourceName,
               sourceAssemblyCode: sourceCode,
               bomRef: bomRef,
@@ -1344,12 +1352,19 @@ const ProductionPlanFormPage = () => {
               subAssys = [...subAssys, ...childSubAssys];
             }
 
+            // Find target warehouse for sub-assembly from its BOM operations (last operation usually defines target)
+            let subAssyTargetWH = 'Work In Progress - NC';
+            if (comp.subAssemblyDetails?.operations?.length > 0) {
+              const lastOp = comp.subAssemblyDetails.operations[comp.subAssemblyDetails.operations.length - 1];
+              subAssyTargetWH = lastOp.targetWarehouse || lastOp.target_warehouse || subAssyTargetWH;
+            }
+
             subAssys.push({
               itemCode: comp.itemCode || comp.item_code || comp.componentCode,
               itemName: compName,
               parentItemCode: sourceCode,
               parentItemName: sourceName,
-              targetWarehouse: 'Work In Progress - NC',
+              targetWarehouse: subAssyTargetWH,
               scheduledDate: step4?.timeline?.startDate || new Date().toISOString().split('T')[0],
               requiredQty: compMultiplier,
               qtyPerUnit: comp.quantity,

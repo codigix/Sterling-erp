@@ -122,7 +122,8 @@ const QCInspectionsPage = () => {
               (r) => r.description === item.description
             );
             if (savedResult) {
-              return { ...item, ...savedResult };
+              // Ensure the ordered quantity always comes from the actual GRN record, not stale inspection results
+              return { ...item, ...savedResult, quantity: item.quantity };
             }
             return item;
           });

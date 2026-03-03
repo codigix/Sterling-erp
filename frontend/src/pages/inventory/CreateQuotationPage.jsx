@@ -732,6 +732,7 @@ const CreateQuotationPage = () => {
                               <input
                                 type="number"
                                 min="0"
+                                step="any"
                                 value={material.requiredQuantity}
                                 onChange={(e) =>
                                   handleRequirementChange(
@@ -822,6 +823,7 @@ const CreateQuotationPage = () => {
                         <input
                           type="number"
                           min="0"
+                          step="any"
                           value={item.quantity}
                           onChange={(e) =>
                             handleItemChange(index, "quantity", e.target.value)
@@ -833,7 +835,7 @@ const CreateQuotationPage = () => {
                         <input
                           type="number"
                           min="0"
-                          step="0.01"
+                          step="any"
                           value={item.unit_price}
                           onChange={(e) =>
                             handleItemChange(

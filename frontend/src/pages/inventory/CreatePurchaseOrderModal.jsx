@@ -492,6 +492,7 @@ const CreatePurchaseOrderModal = ({ isOpen, onClose, source, type, onPOCreated, 
                         <td className="px-6 py-4 text-center">
                           <input 
                             type="number"
+                            step="any"
                             className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-lg py-1 px-2 text-center text-sm font-bold"
                             value={item.quantity}
                             onChange={(e) => handleItemChange(idx, 'quantity', Number(e.target.value))}
@@ -509,6 +510,7 @@ const CreatePurchaseOrderModal = ({ isOpen, onClose, source, type, onPOCreated, 
                             <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-xs">₹</span>
                             <input 
                               type="number"
+                              step="any"
                               className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-lg py-1 pl-6 pr-2 text-right text-sm font-bold"
                               value={item.rate}
                               onChange={(e) => handleItemChange(idx, 'rate', Number(e.target.value))}

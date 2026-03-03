@@ -235,7 +235,8 @@ exports.saveInspection = async (req, res) => {
                      received_quantity: Number(result.accepted) || 0, // accepted is the received/approved qty for inventory
                      shortage_quantity: Math.max(0, (Number(result.invoice_quantity) || 0) - (Number(result.accepted) || 0)),
                      overage_quantity: Number(result.overage) || 0,
-                     notes: result.notes || ''
+                     notes: result.notes || '',
+                     warehouse: result.warehouse || item.warehouse
                  };
              }
              return item;

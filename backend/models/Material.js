@@ -40,7 +40,7 @@ class Material {
   static async findAll(filters = {}) {
     let query = `
       SELECT i.*, ig.name as item_group_name,
-             COALESCE(SUM(CASE WHEN ? IS NULL OR TRIM(LOWER(ms.warehouse_name)) = TRIM(LOWER(?)) THEN ms.quantity ELSE 0 END), 0) as total_stock,
+             COALESCE(SUM(CASE WHEN ? IS NULL THEN ms.quantity WHEN TRIM(LOWER(ms.warehouse_name)) = TRIM(LOWER(?)) THEN ms.quantity ELSE 0 END), 0) as total_stock,
              GROUP_CONCAT(DISTINCT CASE WHEN ms.quantity > 0 THEN ms.warehouse_name END) as warehouses_list
       FROM inventory i 
       LEFT JOIN item_groups ig ON i.item_group_id = ig.id 

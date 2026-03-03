@@ -229,7 +229,7 @@ const PurchaseOrderDetailPage = () => {
       poId: po.id,
       poNumber: po.po_number,
       email: po.vendor_email || "",
-      subject: `Purchase Order ${po.po_number} from Nobal Casting`,
+      subject: `Purchase Order ${po.po_number} from Sterling`,
       message: `Dear ${po.vendor_name || 'Vendor'},\n\nPlease find attached the Purchase Order ${po.po_number}.\n\nBest regards,\nNobal Casting`,
       po: po // Store the whole po object to generate PDF later
     });
@@ -386,7 +386,12 @@ const PurchaseOrderDetailPage = () => {
             {(po.status === 'approved' || po.status === 'delivered' || po.status === 'received' || po.status === 'submitted') && (
               <button 
                 onClick={() => setShowGRNModal(true)}
-                className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-lg font-bold text-xs uppercase tracking-wider hover:bg-blue-700 shadow-lg shadow-blue-500/25"
+                disabled={po.status === 'submitted'}
+                className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-xs uppercase tracking-wider transition-all ${
+                  po.status === 'submitted' 
+                    ? 'bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-slate-600' 
+                    : 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-500/25'
+                }`}
               >
                 <Package size={16} /> Receive Material
               </button>

@@ -95,19 +95,23 @@ class ProductionPlan {
     const [rows] = await pool.execute(
       `
         SELECT pp.*, 
-               COALESCE(rc.project_id, p.id) as project_id,
-               so.customer AS customer_name,
+               COALESCE(rc.project_id, p.id, som.id) as project_id,
+               COALESCE(so.customer, som.customer_name) AS customer_name,
                u.username AS supervisor_name,
                ppd.selected_phases,
                ppd.finished_goods,
                ppd.sub_assemblies,
                ppd.materials,
-               sod.product_details
+               sod.product_details,
+               bom.product_name as bom_product_name,
+               bom.item_code as bom_item_code,
+               p.name as project_name
         FROM production_plans pp
         LEFT JOIN root_cards rc ON rc.id = pp.root_card_id
         LEFT JOIN sales_orders so ON so.id = pp.sales_order_id
-        LEFT JOIN projects p ON p.sales_order_id = pp.sales_order_id
-        LEFT JOIN bill_of_materials bom ON bom.id = pp.bom_id
+        LEFT JOIN sales_orders_management som ON som.id = pp.sales_order_id
+        LEFT JOIN projects p ON (p.sales_order_id = pp.sales_order_id OR p.id = rc.project_id)
+        LEFT JOIN bill_of_materials bom ON (bom.id = pp.bom_id OR bom.id = som.bom_id)
         LEFT JOIN users u ON u.id = pp.supervisor_id
         LEFT JOIN production_plan_details ppd ON 
           (ppd.production_plan_id = pp.id) OR
@@ -125,7 +129,9 @@ class ProductionPlan {
     
     if (rows[0]) {
       try {
-        if (rows[0].product_details) {
+        if (rows[0].bom_product_name) {
+          rows[0].product_name = rows[0].bom_product_name;
+        } else if (rows[0].product_details) {
           const productDetails = typeof rows[0].product_details === 'string'
             ? JSON.parse(rows[0].product_details)
             : rows[0].product_details;
@@ -134,6 +140,7 @@ class ProductionPlan {
           rows[0].product_name = rows[0].project_name || null;
         }
         delete rows[0].product_details;
+        delete rows[0].bom_product_name;
 
         if (rows[0].selected_phases) {
           const selectedPhases = typeof rows[0].selected_phases === 'string' 
@@ -164,17 +171,22 @@ class ProductionPlan {
     const [rows] = await pool.execute(
       `
         SELECT pp.*, 
-               p.id as project_id,
-               so.customer AS customer_name,
+               COALESCE(p.id, som.id) as project_id,
+               COALESCE(so.customer, som.customer_name) AS customer_name,
                u.username AS supervisor_name,
                ppd.selected_phases,
                ppd.finished_goods,
                ppd.sub_assemblies,
                ppd.materials,
-               sod.product_details
+               sod.product_details,
+               bom.product_name as bom_product_name,
+               bom.item_code as bom_item_code,
+               p.name as project_name
         FROM production_plans pp
         LEFT JOIN sales_orders so ON so.id = pp.sales_order_id
+        LEFT JOIN sales_orders_management som ON som.id = pp.sales_order_id
         LEFT JOIN projects p ON p.sales_order_id = pp.sales_order_id
+        LEFT JOIN bill_of_materials bom ON (bom.id = pp.bom_id OR bom.id = som.bom_id)
         LEFT JOIN users u ON u.id = pp.supervisor_id
         LEFT JOIN production_plan_details ppd ON 
           (ppd.production_plan_id = pp.id) OR
@@ -190,7 +202,9 @@ class ProductionPlan {
     
     if (rows[0]) {
       try {
-        if (rows[0].product_details) {
+        if (rows[0].bom_product_name) {
+          rows[0].product_name = rows[0].bom_product_name;
+        } else if (rows[0].product_details) {
           const productDetails = typeof rows[0].product_details === 'string'
             ? JSON.parse(rows[0].product_details)
             : rows[0].product_details;
@@ -199,6 +213,7 @@ class ProductionPlan {
           rows[0].product_name = rows[0].project_name || null;
         }
         delete rows[0].product_details;
+        delete rows[0].bom_product_name;
 
         if (rows[0].selected_phases) {
           const selectedPhases = typeof rows[0].selected_phases === 'string' 
@@ -228,17 +243,23 @@ class ProductionPlan {
     const [rows] = await pool.execute(
       `
         SELECT pp.*, 
-               rc.project_id,
-               so.customer AS customer_name,
+               COALESCE(rc.project_id, p.id, som.id) as project_id,
+               COALESCE(so.customer, som.customer_name) AS customer_name,
                u.username AS supervisor_name,
                ppd.selected_phases,
                ppd.finished_goods,
                ppd.sub_assemblies,
                ppd.materials,
-               sod.product_details
+               sod.product_details,
+               bom.product_name as bom_product_name,
+               bom.item_code as bom_item_code,
+               p.name as project_name
         FROM production_plans pp
         LEFT JOIN root_cards rc ON rc.id = pp.root_card_id
         LEFT JOIN sales_orders so ON so.id = pp.sales_order_id
+        LEFT JOIN sales_orders_management som ON som.id = pp.sales_order_id
+        LEFT JOIN projects p ON (p.sales_order_id = pp.sales_order_id OR p.id = rc.project_id)
+        LEFT JOIN bill_of_materials bom ON (bom.id = pp.bom_id OR bom.id = som.bom_id)
         LEFT JOIN users u ON u.id = pp.supervisor_id
         LEFT JOIN production_plan_details ppd ON 
           (ppd.production_plan_id = pp.id) OR
@@ -254,7 +275,9 @@ class ProductionPlan {
     
     if (rows[0]) {
       try {
-        if (rows[0].product_details) {
+        if (rows[0].bom_product_name) {
+          rows[0].product_name = rows[0].bom_product_name;
+        } else if (rows[0].product_details) {
           const productDetails = typeof rows[0].product_details === 'string'
             ? JSON.parse(rows[0].product_details)
             : rows[0].product_details;
@@ -263,6 +286,7 @@ class ProductionPlan {
           rows[0].product_name = rows[0].project_name || null;
         }
         delete rows[0].product_details;
+        delete rows[0].bom_product_name;
 
         if (rows[0].selected_phases) {
           const selectedPhases = typeof rows[0].selected_phases === 'string' 
@@ -310,23 +334,32 @@ class ProductionPlan {
 
     let query = `
       SELECT pp.*, 
-             COALESCE(rc.project_id, p.id) as project_id,
-             so.customer AS customer_name,
+             COALESCE(rc.project_id, p.id, som.id) as project_id,
+             rc.title AS root_card_title,
+             COALESCE(so.customer, som.customer_name) AS customer_name,
              u.username AS supervisor_name,
              ppd.selected_phases,
              ppd.finished_goods,
              ppd.sub_assemblies,
              ppd.materials,
              sod.product_details,
+             bom.product_name as bom_product_name,
+             bom.item_code as bom_item_code,
+             p.name as project_name,
              (SELECT COUNT(*) FROM material_requests WHERE production_plan_id = pp.id) as material_request_count
       FROM production_plans pp
       LEFT JOIN root_cards rc ON rc.id = pp.root_card_id
       LEFT JOIN sales_orders so ON so.id = pp.sales_order_id
-      LEFT JOIN projects p ON p.sales_order_id = pp.sales_order_id
+      LEFT JOIN sales_orders_management som ON som.id = pp.sales_order_id
+      LEFT JOIN projects p ON (p.sales_order_id = pp.sales_order_id OR p.id = rc.project_id)
+      LEFT JOIN bill_of_materials bom ON (bom.id = pp.bom_id OR bom.id = som.bom_id)
       LEFT JOIN users u ON u.id = pp.supervisor_id
       LEFT JOIN production_plan_details ppd ON 
-        (pp.sales_order_id IS NOT NULL AND ppd.sales_order_id = pp.sales_order_id) OR
-        (pp.root_card_id IS NOT NULL AND ppd.root_card_id = pp.root_card_id)
+        (ppd.production_plan_id = pp.id) OR
+        (ppd.production_plan_id IS NULL AND (
+          (pp.sales_order_id IS NOT NULL AND ppd.sales_order_id = pp.sales_order_id) OR
+          (pp.root_card_id IS NOT NULL AND ppd.root_card_id = pp.root_card_id)
+        ))
       LEFT JOIN sales_order_details sod ON sod.sales_order_id = pp.sales_order_id
     `;
 
@@ -341,7 +374,9 @@ class ProductionPlan {
     const plansWithPhases = [];
     for (const plan of rows || []) {
       try {
-        if (plan.product_details) {
+        if (plan.bom_product_name) {
+          plan.product_name = plan.bom_product_name;
+        } else if (plan.product_details) {
           const productDetails = typeof plan.product_details === 'string'
             ? JSON.parse(plan.product_details)
             : plan.product_details;
@@ -350,6 +385,7 @@ class ProductionPlan {
           plan.product_name = plan.project_name || null;
         }
         delete plan.product_details;
+        delete plan.bom_product_name;
 
         if (plan.selected_phases) {
           const selectedPhases = typeof plan.selected_phases === 'string' 

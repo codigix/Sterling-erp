@@ -105,6 +105,7 @@ const generateVendorDiscrepancyEmail = (grnData, poData, grnItems, status) => {
       <p>Please take the following steps to resolve these discrepancies:</p>
       <ul>
         <li>Review the discrepancies listed in the table above</li>
+        ${status === 'overage' ? '<li><strong>Note:</strong> Excess materials received will be adjusted in the next Purchase Order.</li>' : ''}
         <li>Confirm whether items were shipped or if there are quality issues</li>
         <li>Respond with a resolution plan (replacement, credit note, adjustment, etc.)</li>
         <li>Please reply to this email or contact us within 48 hours</li>

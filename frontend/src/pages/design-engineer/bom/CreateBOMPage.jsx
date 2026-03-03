@@ -279,11 +279,6 @@ const CreateBOMPage = () => {
       setWorkstations(facilitiesRes.data.facilities || []);
       setVendors(Array.isArray(vendorsRes.data) ? vendorsRes.data : []);
 
-      // Warehouses
-      const fetchedMaterials = materialsRes.data.materials || [];
-      const uniqueWarehouses = [...new Set(fetchedMaterials.map(m => m.location).filter(loc => loc && loc.trim() !== ""))];
-      setWarehouses(uniqueWarehouses.length > 0 ? uniqueWarehouses : ["Main Warehouse", "Secondary Warehouse"]);
-
       // Stages
       let combinedStages = [];
       if (rootCard.stages && Array.isArray(rootCard.stages)) {
@@ -480,15 +475,17 @@ const CreateBOMPage = () => {
     const fetchData = async () => {
       try {
         setLoadingMaterials(true);
-        const [rootCardsRes, bomsRes] = await Promise.all([
+        const [rootCardsRes, bomsRes, warehousesRes] = await Promise.all([
           axios.get("/root-cards", {
             params: { assignedOnly: true }
           }),
-          axios.get("/engineering/bom/comprehensive")
+          axios.get("/engineering/bom/comprehensive"),
+          axios.get("/inventory/warehouses")
         ]);
         
         setRootCards(rootCardsRes.data.rootCards || []);
         setExistingBoms(bomsRes.data.boms || []);
+        setWarehouses(warehousesRes.data || []);
 
         const urlBomId = searchParams.get("bomId");
         if (urlBomId) {
@@ -675,10 +672,13 @@ const CreateBOMPage = () => {
     value: v.name,
   })), [vendors]);
 
-  const warehouseOptions = useMemo(() => warehouses.map((w) => ({
-    label: w,
-    value: w,
-  })), [warehouses]);
+  const warehouseOptions = useMemo(() => {
+    if (!warehouses || warehouses.length === 0) return [];
+    return warehouses.map((w) => ({
+      label: w.name || w,
+      value: w.name || w,
+    }));
+  }, [warehouses]);
 
   const operationTypeOptions = useMemo(() => [
     { label: "In-house", value: "in-house" },

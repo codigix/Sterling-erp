@@ -45,6 +45,7 @@ const MaterialRequestDetailModal = ({
   const [releasing, setReleasing] = useState(false);
   const [stockLevels, setStockLevels] = useState({});
   const [loadingStock, setLoadingStock] = useState(false);
+  const [approving, setApproving] = useState(false);
 
   const fetchStockLevels = useCallback(async () => {
     if (!request || !request.items) return;
@@ -275,6 +276,36 @@ const MaterialRequestDetailModal = ({
     });
   };
 
+  const handleApproveRequest = async () => {
+    try {
+      const result = await Swal.fire({
+        title: "Approve Material Request?",
+        text: "This will allow the request to be fulfilled or ordered.",
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonColor: "#3b82f6",
+        cancelButtonColor: "#64748b",
+        confirmButtonText: "Yes, Approve",
+      });
+
+      if (result.isConfirmed) {
+        setApproving(true);
+        await axios.patch(`/inventory/material-requests/${request.id}/status`, {
+          status: "approved",
+        });
+
+        showSuccess("Material request approved successfully");
+        if (onStatusUpdate) onStatusUpdate();
+        onClose();
+      }
+    } catch (error) {
+      console.error("Error approving request:", error);
+      showError("Failed to approve request");
+    } finally {
+      setApproving(false);
+    }
+  };
+
   const handleReleaseMaterial = async () => {
     try {
       const warehouseObj = warehouses.find(
@@ -497,7 +528,7 @@ const MaterialRequestDetailModal = ({
                                 <span
                                   className={`text-sm font-bold ${Number(stockQty || 0) >= Number(item.quantity || 0) && Number(stockQty || 0) > 0 ? "text-emerald-600" : Number(stockQty || 0) > 0 ? "text-amber-600" : "text-red-600"}`}
                                 >
-                                  {Number(stockQty || 0).toFixed(2)} {item.unit}
+                                  {Number(stockQty || 0).toFixed(3)} {item.unit}
                                 </span>
                                 <div className="flex flex-col items-center gap-1 mt-1">
                                   {selectedWarehouse ? (
@@ -666,14 +697,24 @@ const MaterialRequestDetailModal = ({
             >
               Cancel
             </button>
+            {request.status === "submitted" && (
+              <button
+                onClick={handleApproveRequest}
+                disabled={approving}
+                className="px-6 py-2 bg-blue-600 text-white hover:bg-blue-700 font-bold rounded-lg transition-all text-xs uppercase flex items-center gap-2"
+              >
+                {approving ? "Approving..." : "Approve Request"} <CheckCircle size={16} />
+              </button>
+            )}
             {request.status !== "received" &&
               request.status !== "fulfilled" &&
-              request.status !== "cancelled" && (
+              request.status !== "cancelled" &&
+              request.status !== "submitted" && (
                 <>
                   <button
                     onClick={handleReleaseMaterial}
-                    disabled={releasing || !allInStock}
-                    className={`px-6 py-2 ${!allInStock ? "bg-slate-300 text-slate-500 cursor-not-allowed" : "bg-emerald-500 text-white hover:bg-emerald-600 shadow-lg shadow-emerald-500/20"} font-bold rounded-lg transition-all text-xs uppercase flex items-center gap-2 disabled:opacity-50`}
+                    disabled={releasing || !allInStock || request.status !== "approved"}
+                    className={`px-6 py-2 ${!allInStock || request.status !== "approved" ? "bg-slate-300 text-slate-500 cursor-not-allowed" : "bg-emerald-500 text-white hover:bg-emerald-600 shadow-lg shadow-emerald-500/20"} font-bold rounded-lg transition-all text-xs uppercase flex items-center gap-2 disabled:opacity-50`}
                   >
                     {releasing ? "Releasing..." : "Release Material"}{" "}
                     <ShieldCheck size={16} />
@@ -684,8 +725,8 @@ const MaterialRequestDetailModal = ({
                         ? handleAutoCreatePO
                         : () => handleCreateQuotation(true)
                     }
-                    disabled={creatingPO || request.po_count > 0 || allInStock}
-                    className={`px-6 py-2 ${request.po_count > 0 || allInStock ? "bg-slate-300 text-slate-500 cursor-not-allowed" : "bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-500/20"} font-bold rounded-lg transition-all text-xs uppercase flex items-center gap-2`}
+                    disabled={creatingPO || request.po_count > 0 || allInStock || request.status !== "approved"}
+                    className={`px-6 py-2 ${request.po_count > 0 || allInStock || request.status !== "approved" ? "bg-slate-300 text-slate-500 cursor-not-allowed" : "bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-500/20"} font-bold rounded-lg transition-all text-xs uppercase flex items-center gap-2`}
                   >
                     {creatingPO
                       ? "Creating..."

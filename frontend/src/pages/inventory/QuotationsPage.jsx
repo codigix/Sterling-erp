@@ -55,9 +55,9 @@ const QuotationsPage = ({ defaultTab }) => {
       setShowAddModal(true);
     } else {
       const mrId = searchParams.get("materialRequestId") || searchParams.get("mrId");
-      if (mrId && activeTab === "outbound") {
-        const action = searchParams.get("action");
-        
+      const action = searchParams.get("action");
+      
+      if (mrId && activeTab === "outbound" && action !== "record") {
         if (action === "send") {
           // Find existing quotation for this MR and open send modal
           axios.get(`/inventory/quotations?material_request_id=${mrId}&type=outbound`).then(response => {
@@ -70,23 +70,23 @@ const QuotationsPage = ({ defaultTab }) => {
               fetchMRAndOpenAddModal(mrId, "outbound");
             }
           }).catch(err => console.error("Error finding quote for send action:", err));
-        } else if (action === "record") {
-          // Find existing quotation for this MR and open record response modal
-          // We filter for outbound (RFQs) that are either 'pending' or 'sent'
-          axios.get(`/inventory/quotations?material_request_id=${mrId}&type=outbound`).then(response => {
-            const existingQuotes = response.data;
-            if (existingQuotes && existingQuotes.length > 0) {
-              // Try to find the first one that is 'sent', otherwise take the latest
-              const quote = existingQuotes.find(q => q.status === "sent") || existingQuotes[0];
-              handleRecordResponse(quote);
-            } else {
-              // No quote found, fallback to record mode directly from MR
-              fetchMRAndOpenAddModal(mrId, "inbound");
-            }
-          }).catch(err => console.error("Error finding quote for record action:", err));
         } else if (action === "create") {
           fetchMRAndOpenAddModal(mrId, "outbound");
         }
+      } else if (mrId && activeTab === "inbound" && action === "record") {
+        // Find existing quotation for this MR and open record response modal
+        // We filter for outbound (RFQs) that are either 'pending' or 'sent'
+        axios.get(`/inventory/quotations?material_request_id=${mrId}&type=outbound`).then(response => {
+          const existingQuotes = response.data;
+          if (existingQuotes && existingQuotes.length > 0) {
+            // Try to find the first one that is 'sent', otherwise take the latest
+            const quote = existingQuotes.find(q => q.status === "sent") || existingQuotes[0];
+            handleRecordResponse(quote);
+          } else {
+            // No quote found, fallback to record mode directly from MR
+            fetchMRAndOpenAddModal(mrId, "inbound");
+          }
+        }).catch(err => console.error("Error finding quote for record action:", err));
       }
     }
   }, [location.state, searchParams, activeTab]);

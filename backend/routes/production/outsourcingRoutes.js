@@ -49,6 +49,12 @@ router.post(
 );
 
 router.post(
+  '/job-card/:operationId/inward-challan',
+  roleMiddleware('Admin', 'Management', 'Production'),
+  outsourcingController.createInwardChallanFromJobCard
+);
+
+router.post(
   '/tasks/:taskId/outward-challan',
   roleMiddleware('Admin', 'Management', 'Production'),
   outsourcingController.createOutwardChallan

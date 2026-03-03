@@ -87,6 +87,14 @@ class ComprehensiveBOM {
         [bomId, itemCode || null, itemName, quantity, uom, itemGroup, rate || 0, warehouse || null, operation || null]
       );
 
+      // Update material's primary warehouse in inventory table to persist it globally
+      if (itemCode && warehouse) {
+        await conn.execute(
+          `UPDATE inventory SET location = ?, warehouse = ? WHERE item_code = ?`,
+          [warehouse, warehouse, itemCode]
+        );
+      }
+
       return result.insertId;
     } finally {
       if (!connection) conn.release();

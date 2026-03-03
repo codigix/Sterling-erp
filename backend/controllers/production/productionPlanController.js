@@ -940,7 +940,7 @@ const productionPlanController = {
       // Create the Material Request
       const mrData = {
         productionPlanId: planId,
-        salesOrderId: plan.sales_order_id || null,
+        rootCardId: plan.sales_order_id || plan.root_card_id || null,
         department: 'Production',
         purpose: 'Material Issue',
         status: 'submitted',

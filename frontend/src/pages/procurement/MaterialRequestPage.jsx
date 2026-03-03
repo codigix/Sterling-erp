@@ -367,7 +367,7 @@ const MaterialRequestPage = () => {
                 </label>
                 <input
                   type="number"
-                  step="0.01"
+                  step="any"
                   name="quantity"
                   value={formData.quantity}
                   onChange={handleFormChange}

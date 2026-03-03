@@ -24,7 +24,8 @@ import {
   AlertCircle,
   Truck,
   X,
-  Package
+  Package,
+  Eye
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Swal from 'sweetalert2';
@@ -412,16 +413,16 @@ const JobCardsPage = () => {
         {/* Job Cards Table */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <div className="grid grid-cols-12 items-center px-6 py-4 bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-              <div className="col-span-1">ID</div>
+            <div className="grid grid-cols-12 items-center px-6 py-4 bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase tracking-wider gap-2">
+              <div className="col-span-1">Job Card ID</div>
               <div className="col-span-2">Operation</div>
-              <div className="col-span-1 text-center">Status</div>
-              <div className="col-span-1 text-center">Execution Mode</div>
-              <div className="col-span-1 text-center">Qty To Man.</div>
-              <div className="col-span-1 text-center">Produced Qty</div>
-              <div className="col-span-1 text-center">Accepted Qty</div>
-              <div className="col-span-1 text-center">Workstation/Vendor</div>
-              <div className="col-span-1 text-center">Assignee</div>
+              <div className="col-span-1 whitespace-normal">Status</div>
+              <div className="col-span-1 text-center whitespace-normal">Execution Mode</div>
+              <div className="col-span-1 text-center whitespace-normal">Qty To Man.</div>
+              <div className="col-span-1 text-center whitespace-normal">Produced Qty</div>
+              <div className="col-span-1 text-center whitespace-normal">Accepted Qty</div>
+              <div className="col-span-1 text-center whitespace-normal leading-tight">Workstation / Vendor</div>
+              <div className="col-span-1 text-center whitespace-normal">Assignee</div>
               <div className="col-span-2 text-right px-4">Actions</div>
             </div>
 
@@ -451,78 +452,81 @@ const JobCardsPage = () => {
                       />
                     </div>
                   ) : (
-                    <div className="grid grid-cols-12 items-center px-6 py-5 hover:bg-slate-50 transition-all group border-b border-slate-50 last:border-0">
+                    <div className="grid grid-cols-12 items-center px-6 py-5 hover:bg-slate-50 transition-all group border-b border-slate-50 last:border-0 gap-2">
                       {/* ID */}
                       <div className="col-span-1">
-                        <div className="text-[13px] font-black text-blue-600 hover:text-blue-700 cursor-pointer mb-0.5 tracking-tight">
-                          JC-{op.id}
+                        <div className="text-[11px] font-black text-blue-600 hover:text-blue-700 cursor-pointer mb-0.5 tracking-tight break-all">
+                          JC-{op.work_order_no?.split('-')?.pop() || op.work_order_id}-{op.id}
                         </div>
-                        <div className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter truncate">
-                          WO: {op.work_order_no}
+                        <div className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter truncate">
+                          Ref: {op.work_order_no}
                         </div>
                       </div>
 
                       {/* Operation */}
                       <div className="col-span-2">
-                        <div className="text-[14px] font-black text-slate-900 leading-tight mb-0.5">{op.operation_name}</div>
-                        <div className="text-[11px] text-slate-500 font-medium truncate italic" title={op.work_order_item}>
+                        <div className="text-[13px] font-black text-slate-900 leading-tight mb-0.5">{op.operation_name}</div>
+                        <div className="text-[10px] text-slate-500 font-medium truncate italic" title={op.work_order_item}>
                           {op.work_order_item}
                         </div>
                       </div>
 
                       {/* Status */}
-                      <div className="col-span-1 text-center">
-                        <span className={`text-[12px] font-black ${getStatusBadge(op.status)}`}>
+                      <div className="col-span-1">
+                        <span className={`text-[11px] font-black ${getStatusBadge(op.status)}`}>
                           {getStatusText(op.status)}
                         </span>
                       </div>
 
                       {/* Execution */}
                       <div className="col-span-1 text-center">
-                        <span className={`text-[12px] font-black ${getTypeColor(op.type)}`}>
+                        <span className={`text-[11px] font-black ${getTypeColor(op.type)}`}>
                           {getTypeText(op.type)}
                         </span>
                       </div>
 
                       {/* Qty To Man */}
                       <div className="col-span-1 text-center">
-                        <div className="text-[13px] font-black text-slate-700">
-                          {parseFloat(op.work_order_qty).toFixed(2)} <span className="text-[10px] text-slate-400 font-medium">units</span>
+                        <div className="text-[12px] font-black text-slate-700">
+                          {parseFloat(op.work_order_qty).toFixed(2)}
                         </div>
+                        <div className="text-[9px] text-slate-400 font-medium">units</div>
                       </div>
 
                       {/* Produced Qty */}
                       <div className="col-span-1 text-center">
-                        <div className="text-[13px] font-black text-slate-700">
-                          {parseFloat(op.produced_qty || 0).toFixed(2)} <span className="text-[10px] text-slate-400 font-medium">units</span>
+                        <div className="text-[12px] font-black text-slate-700">
+                          {parseFloat(op.produced_qty || 0).toFixed(2)}
                         </div>
+                        <div className="text-[9px] text-slate-400 font-medium">units</div>
                       </div>
 
                       {/* Accepted Qty */}
                       <div className="col-span-1 text-center">
-                        <div className="text-[13px] font-black text-emerald-600">
-                          {parseFloat(op.accepted_qty || 0).toFixed(2)} <span className="text-[10px] text-slate-400 font-medium">units</span>
+                        <div className="text-[12px] font-black text-emerald-600">
+                          {parseFloat(op.accepted_qty || 0).toFixed(2)}
                         </div>
+                        <div className="text-[9px] text-slate-400 font-medium">units</div>
                       </div>
 
                       {/* Workstation/Vendor */}
                       <div className="col-span-1 text-center">
-                        <span className={`text-[11px] font-black px-2 py-1 rounded ${op.type === 'outsource' || op.type === 'subcontract' ? 'bg-purple-50 text-purple-600 border border-purple-100' : 'text-slate-700'}`}>
+                        <span className={`text-[10px] font-black px-2 py-1 rounded block truncate ${op.type === 'outsource' || op.type === 'subcontract' ? 'bg-purple-50 text-purple-600 border border-purple-100' : 'text-slate-700 bg-slate-50'}`}>
                           {op.type === 'outsource' || op.type === 'subcontract' ? (op.vendor_name || 'Outsource') : (op.workstation || 'N/A')}
                         </span>
                       </div>
 
                       {/* Assignee */}
                       <div className="col-span-1 text-center">
-                        <span className="text-[11px] font-black text-slate-600 bg-slate-100 px-2 py-1 rounded">
+                        <span className="text-[10px] font-black text-slate-600 bg-slate-100 px-2 py-1 rounded block truncate">
                           {op.type === 'outsource' || op.type === 'subcontract' ? 'N/A' : (op.operator_name || 'Unassigned')}
                         </span>
                       </div>
 
                       {/* Actions */}
                       <div className="col-span-2 flex items-center justify-end gap-1 px-2">
-                        <button className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="View Details">
-                          <Activity size={18} />
+                        <button className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="View Details">
+                          <Eye size={16} />
                         </button>
                         
                         {(op.type === 'outsource' || op.type === 'subcontract') && (
@@ -530,26 +534,20 @@ const JobCardsPage = () => {
                             {!op.outward_challan_id ? (
                               <button 
                                 onClick={() => handleOpenChallanModal(op, { id: op.work_order_id, work_order_no: op.work_order_no, quantity: op.work_order_qty })}
-                                className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" 
+                                className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" 
                                 title="Vendor Dispatch (Outward Challan)"
                               >
-                                <Truck size={18} />
+                                <Truck size={16} />
                               </button>
                             ) : (
                               <button 
                                 onClick={() => handleOpenInwardModal(op, { id: op.work_order_id, work_order_no: op.work_order_no, quantity: op.work_order_qty })}
-                                className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all" 
+                                className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all" 
                                 title="Vendor Receipt (Inward Challan)"
                               >
-                                <Box size={18} />
+                                <Box size={16} />
                               </button>
                             )}
-                            <button 
-                              className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" 
-                              title="Subcontracting PO"
-                            >
-                              <FileText size={18} />
-                            </button>
                           </>
                         )}
 

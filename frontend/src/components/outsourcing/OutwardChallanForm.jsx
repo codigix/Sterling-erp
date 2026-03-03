@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, AlertCircle, Loader } from 'lucide-react';
+import { Plus, Trash2, AlertCircle, Loader, CheckCircle } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import axios from '../../utils/api';
@@ -102,7 +102,7 @@ const OutwardChallanForm = ({ task, materials, vendors = [], onChallanCreated, t
       itemCode: material.item_code,
       itemName: material.item_name,
       availableQuantity: material.quantity || 0,
-      quantity: updated[index].quantity || 1,
+      quantity: 0,
       unit: material.unit || 'piece',
       remarks: updated[index].remarks || ''
     };
@@ -142,10 +142,13 @@ const OutwardChallanForm = ({ task, materials, vendors = [], onChallanCreated, t
       return;
     }
 
+    // Removed inventory check as materials were already issued via MR
+    /*
     if (selectedItems.some(item => item.quantity > item.availableQuantity)) {
       setError('One or more items exceed available inventory');
       return;
     }
+    */
 
     try {
       setLoading(true);
@@ -288,10 +291,10 @@ const OutwardChallanForm = ({ task, materials, vendors = [], onChallanCreated, t
                 className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 bg-slate-50 dark:bg-slate-800"
               >
                 {item.materialId === null ? (
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                    <div>
-                      <label className="text-xs font-medium text-slate-600 dark:text-slate-400 uppercase mb-1 block">
-                        Material *
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                    <div className="md:col-span-4">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">
+                        Select Material *
                       </label>
                       <select
                         value=""
@@ -301,7 +304,7 @@ const OutwardChallanForm = ({ task, materials, vendors = [], onChallanCreated, t
                             handleSelectMaterial(index, material);
                           }
                         }}
-                        className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-700"
+                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 font-medium"
                         disabled={loading}
                       >
                         <option value="">Select material...</option>
@@ -313,114 +316,115 @@ const OutwardChallanForm = ({ task, materials, vendors = [], onChallanCreated, t
                       </select>
                     </div>
 
-                    <div>
-                      <label className="text-xs font-medium text-slate-600 dark:text-slate-400 uppercase mb-1 block">
+                    <div className="md:col-span-2">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">
                         Quantity *
                       </label>
                       <input
                         type="number"
                         min="0.1"
-                        step="0.1"
+                        step="any"
                         value={item.quantity}
                         onChange={(e) => handleUpdateItem(index, 'quantity', parseFloat(e.target.value))}
-                        className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm"
+                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm font-bold"
                         disabled={loading}
                       />
                     </div>
 
-                    <div>
-                      <label className="text-xs font-medium text-slate-600 dark:text-slate-400 uppercase mb-1 block">
+                    <div className="md:col-span-2">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">
                         Unit
                       </label>
                       <input
                         type="text"
+                        readOnly
                         value={item.unit}
-                        onChange={(e) => handleUpdateItem(index, 'unit', e.target.value)}
-                        className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm"
+                        className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg text-sm font-medium text-slate-500"
                         disabled={loading}
                       />
                     </div>
 
-                    <div className="flex items-end gap-2">
+                    <div className="md:col-span-3">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">
+                        Remarks
+                      </label>
                       <input
                         type="text"
-                        placeholder="Remarks"
+                        placeholder="Optional remarks"
                         value={item.remarks}
                         onChange={(e) => handleUpdateItem(index, 'remarks', e.target.value)}
-                        className="flex-1 px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm"
+                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm"
                         disabled={loading}
                       />
+                    </div>
+
+                    <div className="md:col-span-1 flex justify-end">
                       <button
                         type="button"
                         onClick={() => handleRemoveMaterial(index)}
-                        className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+                        className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                         disabled={loading}
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-5 h-5" />
                       </button>
                     </div>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-                    <div>
-                      <p className="text-xs font-medium text-slate-600 dark:text-slate-400 uppercase mb-1">Material</p>
-                      <p className="font-medium text-slate-900 dark:text-white">{item.itemName}</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">{item.itemCode}</p>
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+                    <div className="md:col-span-3">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Material Details</p>
+                      <p className="text-sm font-black text-slate-900 dark:text-white leading-tight">{item.itemName}</p>
+                      <p className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400">{item.itemCode}</p>
                     </div>
 
-                    <div>
-                      <p className="text-xs font-medium text-slate-600 dark:text-slate-400 uppercase mb-1">Available</p>
-                      <p className="font-medium text-slate-900 dark:text-white">{item.availableQuantity} {item.unit}</p>
+                    <div className="md:col-span-2">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase mb-1 text-center">Released</p>
+                      <div className="bg-indigo-50 dark:bg-indigo-900/20 px-2 py-1.5 rounded-lg border border-indigo-100 dark:border-indigo-800 text-center">
+                        <span className="text-sm font-black text-indigo-700 dark:text-indigo-300">
+                          {item.availableQuantity} {item.unit}
+                        </span>
+                      </div>
                     </div>
 
-                    <div>
-                      <label className="text-xs font-medium text-slate-600 dark:text-slate-400 uppercase mb-1 block">
+                    <div className="md:col-span-2">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block text-center">
                         Issue Qty *
                       </label>
                       <input
                         type="number"
-                        min="0.1"
-                        step="0.1"
-                        max={item.availableQuantity}
+                        min="0"
+                        step="any"
                         value={item.quantity}
-                        onChange={(e) => handleUpdateItem(index, 'quantity', parseFloat(e.target.value))}
-                        className={`w-full px-2 py-1 border rounded text-sm ${item.quantity > item.availableQuantity ? 'border-red-500 bg-red-50' : 'border-slate-300 dark:border-slate-600'}`}
+                        placeholder="0.00"
+                        onChange={(e) => handleUpdateItem(index, 'quantity', parseFloat(e.target.value) || 0)}
+                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm font-black text-center focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none"
                         disabled={loading}
                       />
-                      {item.quantity > item.availableQuantity && (
-                        <p className="text-[10px] text-red-500 mt-1">Exceeds available stock</p>
-                      )}
                     </div>
 
-                    <div>
-                      <label className="text-xs font-medium text-slate-600 dark:text-slate-400 uppercase mb-1 block">
-                        Unit
+                    <div className="md:col-span-4">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">
+                        Remarks
                       </label>
                       <input
                         type="text"
-                        value={item.unit}
-                        onChange={(e) => handleUpdateItem(index, 'unit', e.target.value)}
-                        className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm"
+                        placeholder="Add internal notes..."
+                        value={item.remarks}
+                        onChange={(e) => handleUpdateItem(index, 'remarks', e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 focus:ring-2 focus:ring-indigo-500 transition-all outline-none"
                         disabled={loading}
                       />
                     </div>
 
-                    <div className="flex items-end gap-2">
-                      <input
-                        type="text"
-                        placeholder="Remarks"
-                        value={item.remarks}
-                        onChange={(e) => handleUpdateItem(index, 'remarks', e.target.value)}
-                        className="flex-1 px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm"
-                        disabled={loading}
-                      />
+                    <div className="md:col-span-1 flex justify-end">
                       <button
                         type="button"
                         onClick={() => handleRemoveMaterial(index)}
-                        className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+                        className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                         disabled={loading}
+                        title="Remove material"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-5 h-5" />
                       </button>
                     </div>
                   </div>
@@ -431,14 +435,20 @@ const OutwardChallanForm = ({ task, materials, vendors = [], onChallanCreated, t
         )}
       </div>
 
-      <div className="flex gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
+      <div className="pt-6">
         <button
           type="submit"
           disabled={loading || selectedItems.length === 0}
-          className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-xl font-black uppercase tracking-widest text-sm shadow-lg shadow-indigo-200 dark:shadow-none transition-all flex items-center justify-center gap-2 group"
         >
-          {loading && <Loader className="w-4 h-4 animate-spin" />}
-          {loading ? 'Creating...' : 'Create Outward Challan'}
+          {loading ? (
+            <Loader className="w-5 h-5 animate-spin" />
+          ) : (
+            <>
+              <CheckCircle className="w-5 h-5 group-hover:scale-110 transition-transform" />
+              Create Outward Challan
+            </>
+          )}
         </button>
       </div>
     </form>

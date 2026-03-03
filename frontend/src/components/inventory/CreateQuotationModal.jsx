@@ -914,6 +914,7 @@ const CreateQuotationModal = ({
                                   }
                                   placeholder="0"
                                   min="0"
+                                  step="any"
                                   disabled={preFilledMaterials}
                                   className="w-full px-2 py-1.5 text-xs font-bold text-center text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded bg-white dark:bg-slate-900 transition-all disabled:opacity-80"
                                 />

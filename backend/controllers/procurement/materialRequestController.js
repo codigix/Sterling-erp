@@ -67,7 +67,7 @@ exports.createMaterialRequest = async (req, res) => {
       targetWarehouseId,
       requiredDate: formattedRequiredDate,
       priority,
-      status: 'approved',
+      status: 'submitted',
       createdBy: createdBy || (req.user ? req.user.id : null),
       remarks
     });
@@ -211,7 +211,7 @@ exports.bulkCreateMaterialRequests = async (req, res) => {
           ...req,
           requiredDate: formattedDate,
           createdBy,
-          status: 'approved'
+          status: 'submitted'
         };
       });
     }
@@ -429,8 +429,14 @@ exports.updateMaterialRequestStatus = async (req, res) => {
 
             if (targetRootCardId) {
               // Get root card details to ensure project exists
+              // root_cards doesn't have project_name/po_number, they are in projects or sales_orders
               const [rcRows] = await conn.execute(
-                'SELECT id, project_id, project_name, po_number FROM root_cards WHERE id = ? OR sales_order_id = ? LIMIT 1',
+                `SELECT rc.id, rc.project_id, p.name as project_name, so.po_number 
+                 FROM root_cards rc
+                 LEFT JOIN projects p ON rc.project_id = p.id
+                 LEFT JOIN sales_orders so ON rc.sales_order_id = so.id
+                 WHERE rc.id = ? OR rc.sales_order_id = ? 
+                 LIMIT 1`,
                 [targetRootCardId, targetRootCardId]
               );
 

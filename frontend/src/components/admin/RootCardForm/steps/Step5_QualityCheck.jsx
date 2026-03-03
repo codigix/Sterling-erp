@@ -267,7 +267,7 @@ export default function Step5_QualityCheck({ readOnly = false }) {
           <Input
             label="Total Amount *"
             type="number"
-            step="0.01"
+            step="any"
             value={formData.totalAmount || ""}
             onChange={(e) => updateField("totalAmount", e.target.value)}
             placeholder="0.00"
@@ -306,7 +306,7 @@ export default function Step5_QualityCheck({ readOnly = false }) {
           <Input
             label="Estimated Costing (₹)"
             type="number"
-            step="0.01"
+            step="any"
             value={formData.internalInfo?.estimatedCosting || ""}
             onChange={(e) => setNestedField("internalInfo", "estimatedCosting", e.target.value)}
             placeholder="0.00"
@@ -315,7 +315,7 @@ export default function Step5_QualityCheck({ readOnly = false }) {
           <Input
             label="Estimated Profit (₹)"
             type="number"
-            step="0.01"
+            step="any"
             value={formData.internalInfo?.estimatedProfit || ""}
             onChange={(e) => setNestedField("internalInfo", "estimatedProfit", e.target.value)}
             placeholder="0.00"

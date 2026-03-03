@@ -30,11 +30,11 @@ const InlineOperationEdit = ({ operation, workOrderQuantity, onCancel, onSave, o
   const fetchData = async () => {
     try {
       const [wsRes, opRes, vRes] = await Promise.all([
-        axios.get('/inventory/facilities'),
+        axios.get('/production/workstations'),
         axios.get('/production/portal/employees'),
         axios.get('/inventory/vendors')
       ]);
-      setWorkstations(wsRes.data?.facilities || []);
+      setWorkstations(wsRes.data?.workstations || []);
       setOperators(opRes.data || []);
       setVendors(vRes.data || []);
     } catch (error) {
@@ -105,7 +105,7 @@ const InlineOperationEdit = ({ operation, workOrderQuantity, onCancel, onSave, o
                 >
                   <option value="">Select Workstation</option>
                   {workstations.map(ws => (
-                    <option key={ws.id} value={ws.name}>{ws.name}</option>
+                    <option key={ws.id} value={ws.display_name}>{ws.display_name}</option>
                   ))}
                 </select>
               </div>
