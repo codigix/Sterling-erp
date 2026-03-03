@@ -5,10 +5,24 @@ const parseJson = (value, fallback = null) => {
     return fallback;
   }
   try {
-    return JSON.parse(value);
+    return typeof value === 'string' ? JSON.parse(value) : value;
   } catch (_error) {
     return fallback;
   }
+};
+
+const ensureArray = (value) => {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [parsed];
+    } catch (e) {
+      return [];
+    }
+  }
+  return [value];
 };
 
 class ProductionPlan {
@@ -99,6 +113,7 @@ class ProductionPlan {
                COALESCE(so.customer, som.customer_name) AS customer_name,
                u.username AS supervisor_name,
                ppd.selected_phases,
+               ppd.available_phases,
                ppd.finished_goods,
                ppd.sub_assemblies,
                ppd.materials,
@@ -154,6 +169,9 @@ class ProductionPlan {
           rows[0].phases = [];
         }
         delete rows[0].selected_phases;
+        
+        rows[0].availablePhases = ensureArray(rows[0].available_phases);
+        delete rows[0].available_phases;
 
         // Parse finished_goods, sub_assemblies, and materials
         rows[0].finished_goods = parseJson(rows[0].finished_goods, []);
@@ -175,6 +193,7 @@ class ProductionPlan {
                COALESCE(so.customer, som.customer_name) AS customer_name,
                u.username AS supervisor_name,
                ppd.selected_phases,
+               ppd.available_phases,
                ppd.finished_goods,
                ppd.sub_assemblies,
                ppd.materials,
@@ -247,6 +266,7 @@ class ProductionPlan {
                COALESCE(so.customer, som.customer_name) AS customer_name,
                u.username AS supervisor_name,
                ppd.selected_phases,
+               ppd.available_phases,
                ppd.finished_goods,
                ppd.sub_assemblies,
                ppd.materials,
@@ -398,6 +418,9 @@ class ProductionPlan {
         } else {
           plan.phases = [];
         }
+
+        plan.availablePhases = ensureArray(plan.available_phases);
+        delete plan.available_phases;
 
         plan.finished_goods = parseJson(plan.finished_goods, []);
         plan.sub_assemblies = parseJson(plan.sub_assemblies, []);

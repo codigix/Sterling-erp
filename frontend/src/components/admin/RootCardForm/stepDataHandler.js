@@ -66,6 +66,7 @@ export const buildStepPayload = (stepNumber, formData, poDocuments = []) => {
       estimatedCompletionDate: formData.estimatedCompletionDate,
       procurementStatus: formData.procurementStatus,
       selectedPhases: formData.selectedPhases || {},
+      availablePhases: formData.availablePhases || [],
       phaseDetails: formData.productionPhaseDetails || {},
       assignedTo: formData.productionPlanAssignedTo || null
     },

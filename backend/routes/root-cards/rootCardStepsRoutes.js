@@ -163,17 +163,17 @@ router.put('/:rootCardId/material-requirements/materials/:materialId', materialR
 router.delete('/:rootCardId/material-requirements/materials/:materialId', materialRequirementsController.removeMaterial);
 router.post('/:rootCardId/material-requirements/materials/:materialId/assign', materialRequirementsController.assignMaterial);
 
-router.post('/:rootCardId/production-plan', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer'), productionPlanController.createOrUpdate);
-router.get('/:rootCardId/production-plan', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer'), productionPlanController.getProductionPlan);
-router.get('/:rootCardId/production-plan/validate', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer'), productionPlanController.validateProductionPlan);
-router.post('/:rootCardId/production-plan/validate-timeline', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer'), productionPlanController.validateTimeline);
-router.get('/:rootCardId/production-plan/validate-phases', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer'), productionPlanController.validatePhases);
-router.post('/:rootCardId/production-plan/phases', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer'), productionPlanController.addPhase);
-router.get('/:rootCardId/production-plan/phases', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer'), productionPlanController.getPhases);
-router.get('/:rootCardId/production-plan/phases/:phaseKey', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer'), productionPlanController.getPhase);
-router.put('/:rootCardId/production-plan/phases/:phaseKey', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer'), productionPlanController.updatePhase);
-router.delete('/:rootCardId/production-plan/phases/:phaseKey', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer'), productionPlanController.removePhase);
-router.post('/:rootCardId/production-plan/phases/:phaseKey/status', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer'), productionPlanController.updatePhaseStatus);
+router.post('/:rootCardId/production-plan', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer', 'design_engineer', 'design.engineer'), productionPlanController.createOrUpdate);
+router.get('/:rootCardId/production-plan', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer', 'design_engineer', 'design.engineer'), productionPlanController.getProductionPlan);
+router.get('/:rootCardId/production-plan/validate', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer', 'design_engineer', 'design.engineer'), productionPlanController.validateProductionPlan);
+router.post('/:rootCardId/production-plan/validate-timeline', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer', 'design_engineer', 'design.engineer'), productionPlanController.validateTimeline);
+router.get('/:rootCardId/production-plan/validate-phases', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer', 'design_engineer', 'design.engineer'), productionPlanController.validatePhases);
+router.post('/:rootCardId/production-plan/phases', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer', 'design_engineer', 'design.engineer'), productionPlanController.addPhase);
+router.get('/:rootCardId/production-plan/phases', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer', 'design_engineer', 'design.engineer'), productionPlanController.getPhases);
+router.get('/:rootCardId/production-plan/phases/:phaseKey', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer', 'design_engineer', 'design.engineer'), productionPlanController.getPhase);
+router.put('/:rootCardId/production-plan/phases/:phaseKey', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer', 'design_engineer', 'design.engineer'), productionPlanController.updatePhase);
+router.delete('/:rootCardId/production-plan/phases/:phaseKey', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer', 'design_engineer', 'design.engineer'), productionPlanController.removePhase);
+router.post('/:rootCardId/production-plan/phases/:phaseKey/status', roleMiddleware('Admin', 'Management', 'Production', 'Design Engineer', 'design_engineer', 'design.engineer'), productionPlanController.updatePhaseStatus);
 
 router.post('/:rootCardId/quality-check', qualityCheckController.createOrUpdate);
 router.get('/:rootCardId/quality-check', qualityCheckController.getQualityCheck);

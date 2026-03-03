@@ -2,10 +2,10 @@ const pool = require('../config/database');
 
 class ProductionPhaseMaster {
   static async create(data) {
-    const { name, description, isDefault = false } = data;
+    const { name, description, hourlyRate = 0, isDefault = false } = data;
     const [result] = await pool.execute(
-      'INSERT INTO production_phase_master (name, description, is_default) VALUES (?, ?, ?)',
-      [name, description || null, isDefault]
+      'INSERT INTO production_phase_master (name, description, hourly_rate, is_default) VALUES (?, ?, ?, ?)',
+      [name, description || null, hourlyRate, isDefault]
     );
     return result.insertId;
   }
@@ -26,10 +26,10 @@ class ProductionPhaseMaster {
   }
 
   static async update(id, data) {
-    const { name, description, isDefault } = data;
+    const { name, description, hourlyRate = 0, isDefault } = data;
     await pool.execute(
-      'UPDATE production_phase_master SET name = ?, description = ?, is_default = ? WHERE id = ?',
-      [name, description || null, isDefault, id]
+      'UPDATE production_phase_master SET name = ?, description = ?, hourly_rate = ?, is_default = ? WHERE id = ?',
+      [name, description || null, hourlyRate, isDefault, id]
     );
   }
 

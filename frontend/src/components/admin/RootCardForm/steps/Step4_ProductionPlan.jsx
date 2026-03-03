@@ -6,31 +6,37 @@ import FormRow from "../shared/FormRow";
 import AssigneeField from "../shared/AssigneeField";
 import Button from "../../../ui/Button";
 import { useFormData, useRootCardContext } from "../hooks";
-import { useProductionPhaseMaster } from "../hooks/useProductionPhaseMaster";
 import AddProductionPhaseModal from "./AddProductionPhaseModal";
 
 export default function Step4_ProductionPlan({ readOnly = false }) {
   const { formData, updateField } = useFormData();
   const { state } = useRootCardContext();
-  const { phases, loading: phasesLoading, addPhase: addPhaseToState } = useProductionPhaseMaster();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // Use local phases defined for this specific root card
+  const availablePhases = useMemo(() => {
+    return Array.isArray(formData.availablePhases) ? formData.availablePhases : [];
+  }, [formData.availablePhases]);
   const selectedPhases = useMemo(() => formData.selectedPhases || {}, [formData.selectedPhases]);
 
-  const handlePhaseToggle = useCallback((phase) => {
+  const handlePhaseToggle = useCallback((phaseName) => {
     const newPhases = { ...selectedPhases };
-    if (newPhases[phase]) {
-      delete newPhases[phase];
+    if (newPhases[phaseName]) {
+      delete newPhases[phaseName];
     } else {
-      newPhases[phase] = true;
+      newPhases[phaseName] = true;
     }
     updateField("selectedPhases", newPhases);
   }, [selectedPhases, updateField]);
 
   const handleAddPhaseSuccess = (newPhase) => {
-    addPhaseToState(newPhase);
-    // Optionally auto-select the new phase
-    handlePhaseToggle(newPhase.name);
+    // Add to local available phases for this root card
+    const updatedAvailable = [...availablePhases, newPhase];
+    updateField("availablePhases", updatedAvailable);
+    
+    // Auto-select the newly added phase
+    const newSelected = { ...selectedPhases, [newPhase.name]: true };
+    updateField("selectedPhases", newSelected);
   };
 
   const content = useMemo(() => (
@@ -109,7 +115,9 @@ export default function Step4_ProductionPlan({ readOnly = false }) {
                   Production Phases
                 </h5>
                 <p className="text-sm text-slate-600">
-                  Select the production phases required for this project
+                  {availablePhases.length === 0 
+                    ? "No phases added yet. Click 'Add Phase' to start." 
+                    : "Select the production phases required for this project"}
                 </p>
               </div>
               {!readOnly && (
@@ -126,15 +134,13 @@ export default function Step4_ProductionPlan({ readOnly = false }) {
               )}
             </div>
             
-            {phasesLoading ? (
-              <div className="py-8 text-center text-slate-500">Loading phases...</div>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {phases.map((phase) => (
-                  <label
-                    key={phase.id}
-                    className={`flex items-center text-xs gap-2 p-3 border border-slate-200 rounded-lg bg-white cursor-pointer hover:bg-purple-50 hover:border-purple-400 transition-colors ${readOnly ? 'pointer-events-none opacity-80' : ''}`}
-                  >
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {availablePhases.map((phase, index) => (
+                <label
+                  key={phase.id || index}
+                  className={`flex flex-col p-3 border border-slate-200 rounded-lg bg-white cursor-pointer hover:bg-purple-50 hover:border-purple-400 transition-colors ${readOnly ? 'pointer-events-none opacity-80' : ''} ${selectedPhases[phase.name] ? 'border-purple-500 bg-purple-50' : ''}`}
+                >
+                  <div className="flex items-center text-xs gap-2">
                     <input
                       type="checkbox"
                       checked={selectedPhases[phase.name] || false}
@@ -142,27 +148,22 @@ export default function Step4_ProductionPlan({ readOnly = false }) {
                       disabled={readOnly}
                       className="w-4 h-4 text-purple-600 bg-white border-slate-300 rounded focus:ring-2 focus:ring-purple-500 cursor-pointer disabled:cursor-not-allowed"
                     />
-                    <span className="text-sm font-medium text-slate-900 text-left">
+                    <span className="text-sm font-bold text-slate-900 text-left">
                       {phase.name}
                     </span>
-                  </label>
-                ))}
-              </div>
-            )}
+                  </div>
+                  {phase.hourly_rate > 0 && (
+                    <span className="text-xs text-slate-500 mt-1 ml-6">
+                      Rate: ₹{phase.hourly_rate}/hr
+                    </span>
+                  )}
+                </label>
+              ))}
+            </div>
           </div>
 
           {/* Production Dashboard Banner */}
-          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-3">
-            <AlertCircle className="text-blue-600 flex-shrink-0 mt-0.5" size={20} />
-            <div>
-              <p className="text-sm font-medium text-blue-900 mb-1">
-                Detailed Production Planning
-              </p>
-              <p className="text-sm text-blue-700">
-                Go to the Production Manager Dashboard to configure detailed production stages, sub-tasks, requirements, and schedules for each phase selected above.
-              </p>
-            </div>
-          </div>
+          
         </div>
       </FormSection>
 
@@ -182,8 +183,7 @@ export default function Step4_ProductionPlan({ readOnly = false }) {
     readOnly,
     handlePhaseToggle,
     updateField,
-    phases,
-    phasesLoading,
+    availablePhases,
     isModalOpen
   ]);
 

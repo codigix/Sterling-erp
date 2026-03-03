@@ -208,7 +208,9 @@ function RootCardFormContent({
             "estimatedCompletionDate",
             formatDateForInput(productionData.estimatedCompletionDate),
           );
+          updateField("procurementStatus", productionData.procurementStatus || "");
           updateField("selectedPhases", productionData.selectedPhases || {});
+          updateField("availablePhases", (productionData.availablePhases && productionData.availablePhases.length > 0) ? productionData.availablePhases : Object.keys(productionData.selectedPhases || {}).map(name => ({ name })));
           if (productionData.phaseDetails) {
             setProductionPhaseDetails(productionData.phaseDetails);
           }

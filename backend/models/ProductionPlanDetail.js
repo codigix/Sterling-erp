@@ -1,5 +1,5 @@
 const pool = require('../config/database');
-const { parseJsonField, stringifyJsonField, normalizeStepData } = require('../utils/rootCardHelpers');
+const { parseJsonField, stringifyJsonField, normalizeStepData, ensureArray } = require('../utils/rootCardHelpers');
 
 class ProductionPlanDetail {
   static async createTable() {
@@ -11,6 +11,7 @@ class ProductionPlanDetail {
         root_card_id INT NULL,
         timeline JSON,
         selected_phases JSON,
+        available_phases JSON,
         phase_details JSON,
         materials JSON,
         sub_assemblies JSON,
@@ -103,6 +104,7 @@ class ProductionPlanDetail {
       data.root_card_id || data.rootCardId || null,
       stringifyJsonField(timeline) || '{}',
       stringifyJsonField(data.selectedPhases || normalized.selectedPhases) || '{}',
+      stringifyJsonField(ensureArray(data.availablePhases || [])) || '[]',
       stringifyJsonField(data.phaseDetails || normalized.phaseDetails) || '{}',
       stringifyJsonField(data.materials) || '[]',
       stringifyJsonField(data.subAssemblies) || '[]',
@@ -113,14 +115,14 @@ class ProductionPlanDetail {
 
     const [result] = await pool.execute(
       `INSERT INTO production_plan_details 
-       (production_plan_id, sales_order_id, root_card_id, timeline, selected_phases, phase_details, materials, sub_assemblies, finished_goods, production_notes, estimated_completion_date)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (production_plan_id, sales_order_id, root_card_id, timeline, selected_phases, available_phases, phase_details, materials, sub_assemblies, finished_goods, production_notes, estimated_completion_date)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       params
     );
     return result.insertId;
   }
 
-  static async update(id, data, isRootCard = false) {
+  static async update(id, data, isRootCard = false, detailId = null) {
     const normalized = normalizeStepData(data, {
       productionStartDate: 'timeline.startDate',
       estimatedCompletionDate: 'timeline.endDate',
@@ -136,6 +138,7 @@ class ProductionPlanDetail {
     const params = [
       stringifyJsonField(timeline) || '{}',
       stringifyJsonField(data.selectedPhases || normalized.selectedPhases) || '{}',
+      stringifyJsonField(ensureArray(data.availablePhases || [])) || '[]',
       stringifyJsonField(data.phaseDetails || normalized.phaseDetails) || '{}',
       stringifyJsonField(data.materials) || '[]',
       stringifyJsonField(data.subAssemblies) || '[]',
@@ -143,8 +146,22 @@ class ProductionPlanDetail {
       data.productionNotes || normalized.productionNotes || null,
       data.estimatedCompletionDate || normalized.estimatedCompletionDate || null,
       data.productionPlanId || null,
-      id
+      detailId || id
     ];
+
+    if (detailId) {
+      await pool.execute(
+        `UPDATE production_plan_details 
+         SET timeline = ?, selected_phases = ?, available_phases = ?, phase_details = ?, 
+             materials = ?, sub_assemblies = ?, finished_goods = ?,
+             production_notes = ?, estimated_completion_date = ?, 
+             production_plan_id = COALESCE(production_plan_id, ?),
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        params
+      );
+      return;
+    }
 
     const whereColumn = isRootCard ? 'root_card_id' : 'sales_order_id';
 
@@ -152,11 +169,11 @@ class ProductionPlanDetail {
     if (data.productionPlanId) {
       const [updateResult] = await pool.execute(
         `UPDATE production_plan_details 
-         SET timeline = ?, selected_phases = ?, phase_details = ?, 
+         SET timeline = ?, selected_phases = ?, available_phases = ?, phase_details = ?, 
              materials = ?, sub_assemblies = ?, finished_goods = ?,
              production_notes = ?, estimated_completion_date = ?, updated_at = CURRENT_TIMESTAMP
          WHERE production_plan_id = ?`,
-        [...params.slice(0, 8), data.productionPlanId]
+        [...params.slice(0, 9), data.productionPlanId]
       );
       
       if (updateResult.affectedRows > 0) return;
@@ -164,7 +181,7 @@ class ProductionPlanDetail {
 
     await pool.execute(
       `UPDATE production_plan_details 
-       SET timeline = ?, selected_phases = ?, phase_details = ?, 
+       SET timeline = ?, selected_phases = ?, available_phases = ?, phase_details = ?, 
            materials = ?, sub_assemblies = ?, finished_goods = ?,
            production_notes = ?, estimated_completion_date = ?, 
            production_plan_id = COALESCE(production_plan_id, ?),
@@ -375,6 +392,7 @@ class ProductionPlanDetail {
       productName: productName,
       timeline: timeline,
       selectedPhases: parseJsonField(row.selected_phases),
+      availablePhases: ensureArray(parseJsonField(row.available_phases, [])),
       phaseDetails: parseJsonField(row.phase_details),
       materials: parseJsonField(row.materials) || [],
       subAssemblies: parseJsonField(row.sub_assemblies) || [],

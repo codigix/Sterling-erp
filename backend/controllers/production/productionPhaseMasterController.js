@@ -20,7 +20,7 @@ const productionPhaseMasterController = {
 
   async createPhase(req, res) {
     try {
-      const { name, description } = req.body;
+      const { name, description, hourlyRate } = req.body;
       
       if (!name) {
         return res.status(400).json({
@@ -37,7 +37,11 @@ const productionPhaseMasterController = {
         });
       }
 
-      const id = await ProductionPhaseMaster.create({ name, description });
+      const id = await ProductionPhaseMaster.create({ 
+        name, 
+        description, 
+        hourlyRate: hourlyRate ? parseFloat(hourlyRate) : 0 
+      });
       const newPhase = await ProductionPhaseMaster.findById(id);
 
       res.status(201).json({

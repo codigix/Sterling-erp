@@ -8,34 +8,31 @@ import toast from "../../../../utils/toastUtils";
 const AddProductionPhaseModal = ({ isOpen, onClose, onSuccess }) => {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [hourlyRate, setHourlyRate] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     if (!name.trim()) {
       toast.error("Phase name is required");
       return;
     }
 
-    setLoading(true);
-    try {
-      const response = await axios.post("/production/phases-master", {
-        name,
-        description,
-      });
-      if (response.data.success) {
-        toast.success("Production phase added successfully");
-        onSuccess(response.data.data);
-        setName("");
-        setDescription("");
-        onClose();
-      }
-    } catch (error) {
-      console.error("Error adding production phase:", error);
-      toast.error(error.response?.data?.message || "Failed to add production phase");
-    } finally {
-      setLoading(false);
-    }
+    // Instead of calling the backend master API, we just return the data locally
+    const newLocalPhase = {
+      id: "local-" + Date.now(), // Generate a unique local ID
+      name: name.trim(),
+      description: description,
+      hourly_rate: parseFloat(hourlyRate) || 0,
+      is_default: false
+    };
+
+    toast.success("Phase added to this root card");
+    onSuccess(newLocalPhase);
+    setName("");
+    setDescription("");
+    setHourlyRate("");
+    onClose();
   };
 
   return (
@@ -49,6 +46,15 @@ const AddProductionPhaseModal = ({ isOpen, onClose, onSuccess }) => {
             onChange={(e) => setName(e.target.value)}
             required
             autoFocus
+          />
+          <Input
+            label="Hourly Rate (INR)"
+            type="number"
+            placeholder="Enter hourly rate"
+            value={hourlyRate}
+            onChange={(e) => setHourlyRate(e.target.value)}
+            min="0"
+            step="0.01"
           />
           <div className="space-y-1">
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 text-left">

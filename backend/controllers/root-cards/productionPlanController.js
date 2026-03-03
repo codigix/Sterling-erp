@@ -87,13 +87,29 @@ class ProductionPlanController {
       data.productionPlanId = productionPlanId;
 
       if (detail) {
-        console.log(`[ProductionPlanController] Updating existing production plan detail`);
-        // Ensure the update also sets the production_plan_id link if it was missing
-        await pool.execute(
-          'UPDATE production_plan_details SET production_plan_id = ? WHERE id = ?',
-          [productionPlanId, detail.id]
-        );
-        await ProductionPlanDetail.update(rootCardId, data, isRootCard);
+        console.log(`[ProductionPlanController] Updating existing production plan detail (ID: ${detail.id})`);
+        // Ensure the update also sets the production_plan_id and root_card_id links if they were missing
+        const updateFields = [];
+        const updateParams = [];
+        
+        if (!detail.production_plan_id && productionPlanId) {
+          updateFields.push('production_plan_id = ?');
+          updateParams.push(productionPlanId);
+        }
+        
+        if (isRootCard && !detail.root_card_id) {
+          updateFields.push('root_card_id = ?');
+          updateParams.push(rootCardId);
+        }
+        
+        if (updateFields.length > 0) {
+          await pool.execute(
+            `UPDATE production_plan_details SET ${updateFields.join(', ')} WHERE id = ?`,
+            [...updateParams, detail.id]
+          );
+        }
+        
+        await ProductionPlanDetail.update(rootCardId, data, isRootCard, detail.id);
       } else {
         console.log(`[ProductionPlanController] Creating new production plan detail`);
         if (isRootCard) {

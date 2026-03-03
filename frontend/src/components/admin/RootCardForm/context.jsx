@@ -240,6 +240,7 @@ const initialState = {
     productionPlanAssignedTo: "",
     qualityCheckAssignedTo: "",
     shipmentAssignedTo: "",
+    availablePhases: [],
   },
   enabledMaterials: {
     steelSection: false,

@@ -279,44 +279,73 @@ const CreateBOMPage = () => {
       setWorkstations(facilitiesRes.data.facilities || []);
       setVendors(Array.isArray(vendorsRes.data) ? vendorsRes.data : []);
 
-      // Stages
-      let combinedStages = [];
-      if (rootCard.stages && Array.isArray(rootCard.stages)) {
-        combinedStages = [...rootCard.stages];
-      }
-      
+      // --- DATA EXTRACTION ---
       // Try to get phases from step 4 data if it exists in the root card
       const step4 = rootCard.steps?.step4_production || rootCard.steps?.production_plan;
       const step4Phases = step4?.selectedPhases || step4?.selected_phases || step4?.data?.selectedPhases || step4?.data?.selected_phases || {};
       
-      const planData = planRes.data?.data || {};
+      const planData = planRes?.data?.data || planRes?.data || {};
       const planPhases = planData.selectedPhases || planData.selected_phases || planData.phaseDetails || planData.phases || {};
-      
-      // Combine all potential sources of phases
-      const allPhases = { ...step4Phases, ...planPhases };
-      
-      if (Object.keys(allPhases).length > 0) {
-        const planStages = Array.isArray(allPhases) 
-          ? allPhases.map(p => ({ 
-              stage_name: p.phase || p.stageName || p.name || p.stage_name || p.phase_name,
-              stage_type: p.type || p.stage_type || 'in-house',
-              assigned_worker: p.assignee || p.assigned_worker || ""
-            }))
-          : Object.entries(allPhases).map(([key, phase]) => ({ 
-              stage_name: (typeof phase === 'object' && phase !== null) ? (phase.phase || phase.stageName || phase.name || phase.phase_name || key) : key,
-              stage_type: (typeof phase === 'object' && phase !== null) ? (phase.type || phase.stage_type || 'in-house') : 'in-house',
-              assigned_worker: (typeof phase === 'object' && phase !== null) ? (phase.assignee || phase.assigned_worker || "") : ""
-            }));
+      const availablePhases = planData.availablePhases || planData.available_phases || step4?.availablePhases || step4?.available_phases || [];
 
-        planStages.forEach(ps => {
-          if (ps.stage_name && !combinedStages.some(cs => cs.stage_name === ps.stage_name)) {
-            combinedStages.push(ps);
-          }
+      // --- STAGES / OPERATIONS CONSOLIDATION ---
+      // Collect all phase/stage information from all possible sources
+      const phaseMap = new Map();
+
+      const mergePhaseData = (name, data) => {
+        if (!name || name === "null" || name === "undefined") return;
+        const key = name.toLowerCase().trim();
+        const existing = phaseMap.get(key) || {};
+        
+        // Extract rate from any possible field name
+        const rawRate = (typeof data === 'object' && data !== null) 
+          ? (data.hourly_rate ?? data.hourlyRate ?? data.rate ?? 0)
+          : 0;
+        
+        const rate = parseFloat(rawRate) || existing.hourly_rate || 0;
+        
+        const type = (typeof data === 'object' && data !== null)
+          ? (data.stage_type ?? data.stageType ?? data.type ?? existing.stage_type ?? 'in-house')
+          : (existing.stage_type || 'in-house');
+          
+        const worker = (typeof data === 'object' && data !== null)
+          ? (data.assigned_worker ?? data.assignedWorker ?? data.assignee ?? existing.assigned_worker ?? "")
+          : (existing.assigned_worker || "");
+
+        phaseMap.set(key, {
+          stage_name: (typeof data === 'object' && data !== null) 
+            ? (data.phase || data.stageName || data.name || data.phase_name || data.stage_name || name)
+            : (existing.stage_name || name),
+          stage_type: type,
+          hourly_rate: rate,
+          assigned_worker: worker
         });
+      };
+
+      // Source 1: rootCard.stages (Legacy/Main sync)
+      if (Array.isArray(rootCard.stages)) {
+        rootCard.stages.forEach(s => mergePhaseData(s.stage_name || s.name || s.phase, s));
       }
+
+      // Source 2: Step 4 phases from rootCard object (Draft/Wizard Context)
+      if (step4Phases) {
+        Object.entries(step4Phases).forEach(([name, data]) => mergePhaseData(name, data));
+      }
+
+      // Source 3: Dedicated Production Plan API (Step 4 saved data)
+      if (planPhases) {
+        Object.entries(planPhases).forEach(([name, data]) => mergePhaseData(name, data));
+      }
+
+      // Source 4: Available Phases (Project-specific master list - CRITICAL for rates)
+      if (Array.isArray(availablePhases)) {
+        availablePhases.forEach(ap => mergePhaseData(ap.name, ap));
+      }
+
+      const combinedStages = Array.from(phaseMap.values());
       setRootCardStages(combinedStages);
 
-      // Requirements
+      // --- REQUIREMENTS ---
       let potentialMaterials = [];
       if (reqRes.data?.success && reqRes.data?.data) {
         potentialMaterials = (reqRes.data.data.materials || []).map(req => ({ ...req, id: req.id || `req-${Date.now()}-${Math.random()}` }));
@@ -694,12 +723,12 @@ const CreateBOMPage = () => {
     })).filter(opt => opt.label);
 
     // If root card is selected, we return ONLY project stages
-    if (bomData.productInfo.rootCardId) {
+    if (bomData.productInfo.rootCardId && options.length > 0) {
       return options;
     }
 
-    // Default: return nothing or standard options (disabled anyway)
-    return [];
+    // Default: return standard options
+    return OperationOptions.map(op => ({ label: op, value: op }));
   }, [rootCardStages, bomData.productInfo.rootCardId]);
 
   const UOMSelectOptions = useMemo(() => UOMOptions.map((uom) => ({
@@ -1841,7 +1870,19 @@ const CreateBOMPage = () => {
                         label="Operation *"
                         options={operationSelectOptions}
                         value={newOperation.operationName}
-                        onChange={(val) => setNewOperation(prev => ({ ...prev, operationName: val }))}
+                        onChange={(val) => {
+                          const selectedStage = rootCardStages.find(s => s.stage_name?.toLowerCase().trim() === val?.toLowerCase().trim());
+                          setNewOperation(prev => {
+                            const updated = { 
+                              ...prev, 
+                              operationName: val,
+                              hourlyRate: selectedStage ? (parseFloat(selectedStage.hourly_rate || selectedStage.hourlyRate) || 0) : prev.hourlyRate,
+                              type: selectedStage?.stage_type || prev.type
+                            };
+                            updated.cost = updateOperationCost(updated);
+                            return updated;
+                          });
+                        }}
                         placeholder="Search operator"
                         allowCustom={true}
                       />
@@ -2067,7 +2108,25 @@ const CreateBOMPage = () => {
                                   aria-label="Operation Name"
                                   options={operationSelectOptions}
                                   value={row.operationName}
-                                  onChange={(value) => updateTableRow("operations", row.id, "operationName", value)}
+                                  onChange={(value) => {
+                                    const selectedStage = rootCardStages.find(s => s.stage_name?.toLowerCase().trim() === value?.toLowerCase().trim());
+                                    setBomData(prev => ({
+                                      ...prev,
+                                      operations: prev.operations.map(op => {
+                                        if (op.id === row.id) {
+                                          const updated = { 
+                                            ...op, 
+                                            operationName: value,
+                                            hourlyRate: selectedStage ? (parseFloat(selectedStage.hourly_rate || selectedStage.hourlyRate) || 0) : op.hourlyRate,
+                                            type: selectedStage?.stage_type || op.type
+                                          };
+                                          updated.cost = updateOperationCost(updated);
+                                          return updated;
+                                        }
+                                        return op;
+                                      })
+                                    }));
+                                  }}
                                   placeholder="Select operation"
                                   allowCustom={true}
                                 />
