@@ -93,6 +93,12 @@ const DepartmentLayout = () => {
     if (rawRole.includes("engineering") || rawRole.includes("design")) return departmentModules.engineering;
     if (rawRole.includes("sales")) return departmentModules.sales;
     
+    // Check for "management" or "admin" roles
+    if (rawRole.includes("admin") || rawRole.includes("management")) {
+      // Admins see Sales/Root Cards by default in DepartmentLayout
+      return departmentModules.sales;
+    }
+    
     return departmentModules[rawRole] || departmentModules.sales;
   };
 

@@ -26,86 +26,33 @@ class ProductionPlanController {
         console.warn('Production Plan validation warnings:', validation.errors);
       }
 
-      // 1. First ensure the production_plan exists in the main production_plans table
+      // 1. First ensure the production_plan_details entry exists
+      // NOTE: We no longer create a record in the main production_plans table from this wizard
+      // as per user request to disconnect Root Card Step 4 from direct Production Plan creation.
+      // Production Plans should be created separately from Sales Orders using BOM data.
       let productionPlanId = null;
-      try {
-        let supervisorId = data.supervisorId ? parseInt(data.supervisorId) : null;
-        
-        // Validate supervisor exists if provided
-        if (supervisorId && supervisorId > 0) {
-          const [supervisorCheck] = await pool.execute('SELECT id FROM employees WHERE id = ? AND status = "active"', [supervisorId]);
-          if (supervisorCheck.length === 0) supervisorId = null;
-        }
 
-        let finalSalesOrderId = data.salesOrderId ? parseInt(data.salesOrderId) : null;
-        if (!finalSalesOrderId && rootCardId) {
-          if (!isRootCard) {
-            const [soCheck] = await pool.execute('SELECT id FROM sales_orders WHERE id = ?', [rootCardId]);
-            if (soCheck.length > 0) finalSalesOrderId = parseInt(rootCardId);
-          } else {
-            const [rcLink] = await pool.execute('SELECT sales_order_id FROM root_cards WHERE id = ?', [rootCardId]);
-            if (rcLink.length > 0 && rcLink[0].sales_order_id) finalSalesOrderId = rcLink[0].sales_order_id;
-          }
-        }
-
-        let finalPlanName = data.planName || `Production Plan for ${isRootCard ? 'RC' : 'SO'} ${rootCardId}`;
-        
-        const planData = {
-          salesOrderId: finalSalesOrderId,
-          rootCardId: isRootCard ? parseInt(rootCardId) : null,
-          planName: finalPlanName,
-          targetQuantity: data.targetQuantity || 1,
-          status: 'draft',
-          plannedStartDate: data.productionStartDate || data.timeline?.startDate || null,
-          plannedEndDate: data.estimatedCompletionDate || data.timeline?.endDate || null,
-          estimatedCompletionDate: data.estimatedCompletionDate || null,
-          supervisorId: supervisorId,
-          notes: data.productionNotes || null
-        };
-
-        const existingPlan = isRootCard 
-          ? await ProductionPlan.findByRootCardId(rootCardId)
-          : await ProductionPlan.findBySalesOrderId(rootCardId);
-
-        if (existingPlan) {
-          await ProductionPlan.update(existingPlan.id, planData);
-          productionPlanId = existingPlan.id;
-        } else {
-          productionPlanId = await ProductionPlan.create(planData);
-        }
-      } catch (planError) {
-        console.error(`[ProductionPlanController] Error in production_plans sync:`, planError);
-        throw planError;
-      }
-
-      // 2. Now save the detailed JSON data to production_plan_details
+      // 2. Save/Update the detailed JSON data to production_plan_details
       let detail = isRootCard 
         ? await ProductionPlanDetail.findByRootCardId(rootCardId)
         : await ProductionPlanDetail.findBySalesOrderId(rootCardId);
 
-      // Add the productionPlanId to the data for the model to use
+      // If we already have a productionPlanId linked in the existing detail, we can preserve it
+      if (detail && detail.production_plan_id) {
+        productionPlanId = detail.production_plan_id;
+      }
+
+      // Add the productionPlanId to the data for the model to use (might be null)
       data.productionPlanId = productionPlanId;
 
       if (detail) {
         console.log(`[ProductionPlanController] Updating existing production plan detail (ID: ${detail.id})`);
-        // Ensure the update also sets the production_plan_id and root_card_id links if they were missing
-        const updateFields = [];
-        const updateParams = [];
         
-        if (!detail.production_plan_id && productionPlanId) {
-          updateFields.push('production_plan_id = ?');
-          updateParams.push(productionPlanId);
-        }
-        
+        // Ensure the update also sets the root_card_id link if it was missing
         if (isRootCard && !detail.root_card_id) {
-          updateFields.push('root_card_id = ?');
-          updateParams.push(rootCardId);
-        }
-        
-        if (updateFields.length > 0) {
           await pool.execute(
-            `UPDATE production_plan_details SET ${updateFields.join(', ')} WHERE id = ?`,
-            [...updateParams, detail.id]
+            `UPDATE production_plan_details SET root_card_id = ? WHERE id = ?`,
+            [rootCardId, detail.id]
           );
         }
         
@@ -148,35 +95,7 @@ class ProductionPlanController {
       
       if (assignedTo) {
         await RootCardStep.assignEmployee(rootCardId, 4, assignedTo);
-        
-        try {
-          const RootCard = require('../../models/RootCard');
-          const EmployeeTask = require('../../models/EmployeeTask');
-          
-          const rootCard = await RootCard.findById(rootCardId);
-          const existingTasks = await EmployeeTask.findByRelatedId(rootCardId, 'production_plan');
-          
-          if (existingTasks.length === 0) {
-            await EmployeeTask.createAssignedTask(assignedTo, {
-              title: `Production Plan: ${rootCard?.project_name || rootCard?.title || 'Project'}`,
-              description: `Create production plan for Root Card ${rootCard?.po_number || ''}`,
-              type: 'production_plan',
-              priority: rootCard?.priority || 'medium',
-              dueDate: rootCard?.due_date,
-              salesOrderId: rootCardId,
-              notes: `Auto-assigned from Admin Root Card flow`
-            });
-            console.log(`[ProductionPlanController] ✓ Task created for employee ${assignedTo}`);
-          } else {
-            const task = existingTasks[0];
-            if (task.employee_id !== parseInt(assignedTo)) {
-              await pool.execute('UPDATE employee_tasks SET employee_id = ? WHERE id = ?', [assignedTo, task.id]);
-              console.log(`[ProductionPlanController] ✓ Task ${task.id} reassigned to employee ${assignedTo}`);
-            }
-          }
-        } catch (taskError) {
-          console.error('[ProductionPlanController] Error handling employee task:', taskError.message);
-        }
+        // Task creation removed as per user request to keep them only in workflow tasks
       }
 
       const responseData = {
@@ -204,11 +123,9 @@ class ProductionPlanController {
           }
         }
 
-      if (effectiveRootCardId && validation.isValid) {
+      if (effectiveRootCardId) {
           await WorkflowTaskHelper.completeAndOpenNext(effectiveRootCardId, 'Create Production Plan');
           console.log(`[ProductionPlanController] Automated workflow task completion for RC ${effectiveRootCardId}`);
-        } else if (effectiveRootCardId && !validation.isValid) {
-          console.log(`[ProductionPlanController] Skipping workflow task completion: Validation failed`, validation.errors);
         }
       } catch (workflowError) {
         console.warn(`[ProductionPlanController] Non-critical workflow sync error:`, workflowError.message);

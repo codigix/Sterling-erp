@@ -422,7 +422,7 @@ const ProductionPlansPage = () => {
                           </div>
                           <div 
                             className="cursor-pointer"
-                            onClick={() => navigate(`/department/production/plans/${plan.id}`, { state: { viewMode: true } })}
+                            onClick={() => navigate(`/department/production/plans/${plan.plan_name || plan.id}`, { state: { viewMode: true } })}
                           >
                             <p className="text-sm font-semibold text-slate-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
                               {plan.plan_name}
@@ -493,7 +493,7 @@ const ProductionPlansPage = () => {
                               icon: Eye,
                               onClick: () =>
                                 navigate(
-                                  `/department/production/plans/${plan.id}`,
+                                  `/department/production/plans/${plan.plan_name || plan.id}`,
                                   { state: { viewMode: true } },
                                 ),
                             },

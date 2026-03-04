@@ -199,18 +199,24 @@ function RootCardFormContent({
 
         if (productionResponse?.data?.data) {
           const productionData = productionResponse.data.data;
+          console.log("[loadAllStepData] Step 4 Loaded:", productionData);
           updateField("productionPlan", productionData);
-          updateField(
-            "productionStartDate",
-            formatDateForInput(productionData.productionStartDate),
-          );
-          updateField(
-            "estimatedCompletionDate",
-            formatDateForInput(productionData.estimatedCompletionDate),
-          );
-          updateField("procurementStatus", productionData.procurementStatus || "");
+          
+          const startDate = productionData.productionStartDate || productionData.timeline?.productionStartDate || productionData.timeline?.startDate;
+          const endDate = productionData.estimatedCompletionDate || productionData.timeline?.estimatedCompletionDate || productionData.timeline?.endDate;
+          const status = productionData.procurementStatus || productionData.timeline?.procurementStatus || "";
+
+          updateField("productionStartDate", formatDateForInput(startDate));
+          updateField("estimatedCompletionDate", formatDateForInput(endDate));
+          updateField("procurementStatus", status);
           updateField("selectedPhases", productionData.selectedPhases || {});
-          updateField("availablePhases", (productionData.availablePhases && productionData.availablePhases.length > 0) ? productionData.availablePhases : Object.keys(productionData.selectedPhases || {}).map(name => ({ name })));
+          
+          const availablePhases = (productionData.availablePhases && productionData.availablePhases.length > 0) 
+            ? productionData.availablePhases 
+            : Object.keys(productionData.selectedPhases || {}).map(name => ({ name }));
+            
+          updateField("availablePhases", availablePhases);
+          
           if (productionData.phaseDetails) {
             setProductionPhaseDetails(productionData.phaseDetails);
           }

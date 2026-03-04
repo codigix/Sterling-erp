@@ -18,6 +18,7 @@ import {
   Filter,
   IndianRupee,
   ChevronDown,
+  Loader2,
 } from 'lucide-react';
 
 const formatIndianCurrency = (value) => {
@@ -38,7 +39,7 @@ const formatIndianCurrency = (value) => {
 const RootCardList = ({ onCreateNew, onViewRootCard, onEditRootCard, onSendToDesignEngineering, refreshTrigger = 0 }) => {
   const [rootCards, setRootCards] = useState([]);
   const [filter, setFilter] = useState('all');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [updatingStatus, setUpdatingStatus] = useState(null);
 
   useEffect(() => {
@@ -363,16 +364,25 @@ const RootCardList = ({ onCreateNew, onViewRootCard, onEditRootCard, onSendToDes
       </div>
 
       {/* DataTable */}
-      <Card shadow="md" padding="none" className="bg-white dark:border-slate-700">
-        <CardContent className="p-0">
-          <DataTable
-            columns={columns}
-            data={filteredRootCards}
-            emptyMessage="No root cards found"
-            sortable={true}
-            striped={true}
-            hover={true}
-          />
+      <Card shadow="md" padding="none" className="bg-white dark:border-slate-700 overflow-hidden">
+        <CardContent className="p-0 min-h-[400px] flex flex-col">
+          {loading ? (
+            <div className="flex-1 flex flex-col items-center justify-center py-20 space-y-4">
+              <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
+              <p className="text-sm font-medium text-slate-500 animate-pulse">
+                Loading root cards...
+              </p>
+            </div>
+          ) : (
+            <DataTable
+              columns={columns}
+              data={filteredRootCards}
+              emptyMessage="No root cards found"
+              sortable={true}
+              striped={true}
+              hover={true}
+            />
+          )}
         </CardContent>
       </Card>
     </div>

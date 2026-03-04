@@ -2,16 +2,18 @@ const pool = require('../config/database');
 const EmployeeTask = require('./EmployeeTask');
 
 class DepartmentTask {
-  static async getDepartmentTasks(roleId, status = null, priority = null) {
+  static async getDepartmentTasks(roleId, status = null, priority = null, excludeWorkflow = false) {
     let query = `SELECT 
                     dt.*,
-                    rc.title as root_card_title,
-                    rc.priority as root_card_priority,
-                    rc.code as root_card_code,
-                    rc.project_id,
+                    COALESCE(rc.title, rc_alt.title, rc_so.title) as root_card_title,
+                    COALESCE(rc.priority, rc_alt.priority, rc_so.priority) as root_card_priority,
+                    COALESCE(rc.code, rc_alt.code, rc_so.code) as root_card_code,
+                    wo.work_order_no,
+                    wo.id as work_order_id,
+                    COALESCE(rc.project_id, rc_alt.project_id, rc_so.project_id) as project_id,
                     p.name as project_name,
                     p.code as project_code,
-                    COALESCE(dt.sales_order_id, rc.sales_order_id, p.sales_order_id) as sales_order_id,
+                    COALESCE(dt.sales_order_id, rc.sales_order_id, rc_alt.sales_order_id, rc_so.sales_order_id, p.sales_order_id) as sales_order_id,
                     so.po_number,
                     so.customer,
                     so.total,
@@ -19,11 +21,16 @@ class DepartmentTask {
                     so.due_date,
                     r.name as role_name,
                     u.username as assigned_by_name,
-                    sod.product_details
+                    sod.product_details,
+                    woo.created_at as operation_created_at
                  FROM department_tasks dt
                  LEFT JOIN root_cards rc ON dt.root_card_id = rc.id
-                 LEFT JOIN projects p ON rc.project_id = p.id
-                 LEFT JOIN sales_orders so ON COALESCE(dt.sales_order_id, rc.sales_order_id, p.sales_order_id) = so.id
+                 LEFT JOIN work_order_operations woo ON dt.work_order_operation_id = woo.id
+                 LEFT JOIN work_orders wo ON (woo.work_order_id = wo.id OR (dt.root_card_id = wo.root_card_id AND dt.work_order_operation_id IS NULL))
+                 LEFT JOIN root_cards rc_alt ON wo.root_card_id = rc_alt.id
+                 LEFT JOIN root_cards rc_so ON dt.sales_order_id = rc_so.sales_order_id
+                 LEFT JOIN projects p ON COALESCE(rc.project_id, rc_alt.project_id, rc_so.project_id) = p.id
+                 LEFT JOIN sales_orders so ON COALESCE(dt.sales_order_id, rc.sales_order_id, rc_alt.sales_order_id, rc_so.sales_order_id, p.sales_order_id) = so.id
                  LEFT JOIN sales_order_details sod ON sod.id = (
                     SELECT id FROM sales_order_details 
                     WHERE sales_order_id = so.id 
@@ -42,6 +49,11 @@ class DepartmentTask {
     if (priority && priority !== 'all') {
       query += ' AND dt.priority = ?';
       params.push(priority);
+    }
+    
+    if (excludeWorkflow) {
+      // Exclude tasks that are workflow steps OR custom workflow tasks
+      query += " AND (dt.notes IS NULL OR (JSON_EXTRACT(dt.notes, '$.workflow_step') IS NULL AND JSON_EXTRACT(dt.notes, '$.is_workflow_custom') IS NULL))";
     }
 
     query += ' ORDER BY dt.priority DESC, dt.created_at DESC';
@@ -73,13 +85,15 @@ class DepartmentTask {
     const [rows] = await pool.execute(
       `SELECT 
           dt.*,
-          rc.title as root_card_title,
-          rc.priority as root_card_priority,
-          rc.code as root_card_code,
-          rc.project_id,
+          COALESCE(rc.title, rc_alt.title, rc_so.title) as root_card_title,
+          COALESCE(rc.priority, rc_alt.priority, rc_so.priority) as root_card_priority,
+          COALESCE(rc.code, rc_alt.code, rc_so.code) as root_card_code,
+          wo.work_order_no,
+          wo.id as work_order_id,
+          COALESCE(rc.project_id, rc_alt.project_id, rc_so.project_id) as project_id,
           p.name as project_name,
           p.code as project_code,
-          COALESCE(dt.sales_order_id, rc.sales_order_id, p.sales_order_id) as sales_order_id,
+          COALESCE(dt.sales_order_id, rc.sales_order_id, rc_alt.sales_order_id, rc_so.sales_order_id, p.sales_order_id) as sales_order_id,
           so.po_number,
           so.customer,
           so.total,
@@ -87,11 +101,16 @@ class DepartmentTask {
           so.due_date,
           r.name as role_name,
           u.username as assigned_by_name,
-          sod.product_details
+          sod.product_details,
+          woo.created_at as operation_created_at
        FROM department_tasks dt
        LEFT JOIN root_cards rc ON dt.root_card_id = rc.id
-       LEFT JOIN projects p ON rc.project_id = p.id
-       LEFT JOIN sales_orders so ON COALESCE(dt.sales_order_id, rc.sales_order_id, p.sales_order_id) = so.id
+       LEFT JOIN work_order_operations woo ON dt.work_order_operation_id = woo.id
+       LEFT JOIN work_orders wo ON (woo.work_order_id = wo.id OR (dt.root_card_id = wo.root_card_id AND dt.work_order_operation_id IS NULL))
+       LEFT JOIN root_cards rc_alt ON wo.root_card_id = rc_alt.id
+       LEFT JOIN root_cards rc_so ON dt.sales_order_id = rc_so.sales_order_id
+       LEFT JOIN projects p ON COALESCE(rc.project_id, rc_alt.project_id, rc_so.project_id) = p.id
+       LEFT JOIN sales_orders so ON COALESCE(dt.sales_order_id, rc.sales_order_id, rc_alt.sales_order_id, rc_so.sales_order_id, p.sales_order_id) = so.id
        LEFT JOIN sales_order_details sod ON sod.id = (
           SELECT id FROM sales_order_details 
           WHERE sales_order_id = so.id 

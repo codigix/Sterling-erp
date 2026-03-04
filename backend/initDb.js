@@ -347,6 +347,20 @@ async function initDatabase() {
         INDEX idx_root_card (root_card_id)
       )`,
 
+      `CREATE TABLE production_plan_fg (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        production_plan_id INT NOT NULL,
+        item_id INT NOT NULL,
+        quantity DECIMAL(12, 4) DEFAULT 1,
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (production_plan_id) REFERENCES production_plans(id) ON DELETE CASCADE,
+        FOREIGN KEY (item_id) REFERENCES inventory(id) ON DELETE RESTRICT,
+        INDEX idx_production_plan (production_plan_id),
+        INDEX idx_item (item_id)
+      )`,
+
       `CREATE TABLE production_plan_stages (
         id INT PRIMARY KEY AUTO_INCREMENT,
         production_plan_id INT NOT NULL,

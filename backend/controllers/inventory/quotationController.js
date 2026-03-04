@@ -327,12 +327,61 @@ exports.createQuotation = async (req, res) => {
       document_path: document_path || null
     });
     
+    // If this is an RFQ (type outbound) linked to a material request, mark the workflow task as completed
+    if (material_request_id && (type === 'outbound' || !type)) {
+      try {
+        const userId = req.user ? req.user.id : null;
+        // Step 2 is "Create RFQ Quotation" in the inventory workflow
+        await RootCardInventoryTask.completeTaskByMRAndStep(material_request_id, 2, userId);
+        
+        // Also set Step 3 "Send Quotation to Vendor" to in_progress if it's pending
+        const tasks = await RootCardInventoryTask.getTasksByMaterialRequestId(material_request_id);
+        const step3Task = tasks.find(t => t.step_number === 3);
+        if (step3Task && step3Task.status === 'pending') {
+          await RootCardInventoryTask.updateTaskStatus(step3Task.id, 'in_progress', userId);
+        }
+        
+        console.log(`[Quotation] Automatically completed "Create RFQ Quotation" task for MR ${material_request_id}`);
+      } catch (err) {
+        console.error('Error updating workflow task for quotation:', err);
+      }
+    }
+    
     // If this is an inbound response to an outbound RFQ, update the original RFQ status
     if (type === 'inbound' && reference_id) {
       try {
         await Quotation.changeStatus(reference_id, 'responded');
+        
+        // If linked to a material request, mark "Receive Vendor Quotation" task as completed
+        if (material_request_id) {
+          const userId = req.user ? req.user.id : null;
+          // Step 4 is "Receive Vendor Quotation" in the inventory workflow
+          await RootCardInventoryTask.completeTaskByMRAndStep(material_request_id, 4, userId);
+          
+          // Also set Step 5 "Create Purchase Order" to in_progress if it's pending
+          const tasks = await RootCardInventoryTask.getTasksByMaterialRequestId(material_request_id);
+          const step5Task = tasks.find(t => t.step_number === 5);
+          if (step5Task && step5Task.status === 'pending') {
+            await RootCardInventoryTask.updateTaskStatus(step5Task.id, 'in_progress', userId);
+          }
+          console.log(`[Quotation] Automatically completed "Receive Vendor Quotation" task for MR ${material_request_id}`);
+        }
       } catch (e) {
-        console.error('Error updating original RFQ status:', e);
+        console.error('Error updating original RFQ status or workflow task:', e);
+      }
+    } else if (type === 'inbound' && material_request_id) {
+      // Direct inbound record without reference_id
+      try {
+        const userId = req.user ? req.user.id : null;
+        await RootCardInventoryTask.completeTaskByMRAndStep(material_request_id, 4, userId);
+        
+        const tasks = await RootCardInventoryTask.getTasksByMaterialRequestId(material_request_id);
+        const step5Task = tasks.find(t => t.step_number === 5);
+        if (step5Task && step5Task.status === 'pending') {
+          await RootCardInventoryTask.updateTaskStatus(step5Task.id, 'in_progress', userId);
+        }
+      } catch (e) {
+        console.error('Error updating workflow task for direct inbound quotation:', e);
       }
     }
     
@@ -576,6 +625,26 @@ exports.sendQuotationEmail = async (req, res) => {
     }
 
     await Quotation.changeStatus(id, 'sent');
+    
+    // If this quotation is linked to a material request, mark the "Send Quotation to Vendor" task as completed
+    if (quotation.material_request_id) {
+      try {
+        const userId = req.user ? req.user.id : null;
+        // Step 3 is "Send Quotation to Vendor" in the inventory workflow
+        await RootCardInventoryTask.completeTaskByMRAndStep(quotation.material_request_id, 3, userId);
+        
+        // Also set Step 4 "Receive Vendor Quotation" to in_progress if it's pending
+        const tasks = await RootCardInventoryTask.getTasksByMaterialRequestId(quotation.material_request_id);
+        const step4Task = tasks.find(t => t.step_number === 4);
+        if (step4Task && step4Task.status === 'pending') {
+          await RootCardInventoryTask.updateTaskStatus(step4Task.id, 'in_progress', userId);
+        }
+        
+        console.log(`[Quotation] Automatically completed "Send Quotation to Vendor" task for MR ${quotation.material_request_id}`);
+      } catch (err) {
+        console.error('Error updating workflow task for quotation email:', err);
+      }
+    }
 
     res.json({ message: 'Email sent successfully' });
   } catch (error) {

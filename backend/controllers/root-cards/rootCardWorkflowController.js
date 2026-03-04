@@ -153,6 +153,7 @@ exports.assignEmployeeToStep = async (req, res) => {
       [stepId, employeeId, userId || null, reason || null]
     );
 
+    /* 
     // Create task in employee dashboard
     try {
       const RootCard = require('../../models/RootCard');
@@ -174,6 +175,7 @@ exports.assignEmployeeToStep = async (req, res) => {
     } catch (err) {
       console.error('Error creating employee task:', err.message);
     }
+    */
 
     // Send notification
     const notificationData = {

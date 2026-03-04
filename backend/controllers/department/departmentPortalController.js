@@ -53,13 +53,18 @@ exports.getRoleByName = async (req, res) => {
 exports.getTasksByRole = async (req, res) => {
   try {
     const { roleId } = req.params;
-    const { status, priority } = req.query;
+    const { status, priority, excludeWorkflow } = req.query;
 
     if (!roleId) {
       return res.status(400).json({ message: 'Role ID is required' });
     }
 
-    const tasks = await DepartmentTask.getDepartmentTasks(roleId, status, priority);
+    const tasks = await DepartmentTask.getDepartmentTasks(
+      roleId, 
+      status, 
+      priority, 
+      excludeWorkflow === 'true'
+    );
 
     res.json(tasks);
   } catch (error) {
@@ -97,7 +102,8 @@ exports.createTask = async (req, res) => {
       description,
       priority = 'medium',
       status = 'pending',
-      rootCardId = null
+      rootCardId = null,
+      isWorkflowCustomTask = false
     } = req.body;
     const userId = req.user?.id;
 
@@ -112,7 +118,8 @@ exports.createTask = async (req, res) => {
       priority,
       status,
       assigned_by: userId,
-      root_card_id: rootCardId
+      root_card_id: rootCardId,
+      notes: isWorkflowCustomTask ? { is_workflow_custom: true } : null
     };
 
     const result = await DepartmentTask.createDepartmentTask(taskData);

@@ -45,6 +45,7 @@ class AlertsNotification {
     const checkQuery = `
       SELECT id FROM alerts_notifications 
       WHERE user_id = ? AND alert_type = ? AND related_id = ? AND message = ? AND is_read = FALSE
+      AND created_at > DATE_SUB(NOW(), INTERVAL 30 SECOND)
       LIMIT 1
     `;
     const checkParams = [

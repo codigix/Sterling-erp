@@ -121,11 +121,11 @@ const EmployeeDashboardLayout = () => {
               >
                 <div className="w-8 h-8 bg-primary-100 dark:bg-primary-900 rounded-full flex items-center justify-center">
                   <span className="text-primary-600 dark:text-primary-400 font-medium text-sm">
-                    {user?.name?.charAt(0) || "E"}
+                    {user?.username?.charAt(0).toUpperCase() || "E"}
                   </span>
                 </div>
                 <span className="hidden md:block text-slate-700 dark:text-slate-300 text-sm">
-                  {user?.name || "Employee"}
+                  {user?.username || "Employee"}
                 </span>
                 <ChevronDown size={16} className="hidden md:block text-slate-600 dark:text-slate-400" />
               </button>

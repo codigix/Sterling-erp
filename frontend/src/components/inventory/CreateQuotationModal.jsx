@@ -402,6 +402,8 @@ const CreateQuotationModal = ({
 
       if (formData.type === "inbound") {
         await completeCurrentTask("Vendor quotation response recorded");
+      } else if (formData.type === "outbound") {
+        await completeCurrentTask("RFQ Quotation (RFQ) created");
       }
 
       if (onQuotationCreated) {
@@ -725,7 +727,7 @@ const CreateQuotationModal = ({
                   </div>
                 </div>
 
-                {formData.root_card_id && !preFilledMaterials && (
+                {/* {formData.root_card_id && !preFilledMaterials && (
                   <div className="flex justify-between items-center bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-800">
                     <span className="text-sm text-blue-800 dark:text-blue-200 flex items-center gap-2">
                       <Check size={16} />
@@ -739,7 +741,7 @@ const CreateQuotationModal = ({
                       Re-Analyze
                     </button>
                   </div>
-                )}
+                )} */}
 
                 {formData.type === "inbound" && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

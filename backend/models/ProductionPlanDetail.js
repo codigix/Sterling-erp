@@ -20,7 +20,7 @@ class ProductionPlanDetail {
         estimated_completion_date DATE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (production_plan_id) REFERENCES production_plans(id) ON DELETE CASCADE,
+        FOREIGN KEY (production_plan_id) REFERENCES production_plans(id) ON DELETE SET NULL,
         FOREIGN KEY (sales_order_id) REFERENCES sales_orders(id) ON DELETE CASCADE,
         FOREIGN KEY (root_card_id) REFERENCES root_cards(id) ON DELETE CASCADE,
         INDEX idx_production_plan (production_plan_id),
@@ -123,72 +123,91 @@ class ProductionPlanDetail {
   }
 
   static async update(id, data, isRootCard = false, detailId = null) {
+    // 1. Fetch existing record first to perform a partial update
+    let existing = null;
+    if (detailId) {
+      existing = await this.findById(detailId);
+    } else {
+      existing = isRootCard ? await this.findByRootCardId(id) : await this.findBySalesOrderId(id);
+    }
+
+    if (!existing) {
+      console.warn(`[ProductionPlanDetail.update] No existing record found for ID ${id}. Creating new one.`);
+      return this.create({ ...data, rootCardId: isRootCard ? id : null, salesOrderId: !isRootCard ? id : null });
+    }
+
     const normalized = normalizeStepData(data, {
       productionStartDate: 'timeline.startDate',
       estimatedCompletionDate: 'timeline.endDate',
       procurementStatus: 'timeline.procurementStatus'
     });
 
+    // Merge timeline data carefully to avoid overwriting with null
+    const existingTimeline = existing.timeline || {};
     const timeline = {
-      productionStartDate: data.productionStartDate || normalized.productionStartDate || (data.timeline?.startDate) || null,
-      estimatedCompletionDate: data.estimatedCompletionDate || normalized.estimatedCompletionDate || (data.timeline?.endDate) || null,
-      procurementStatus: data.procurementStatus || normalized.procurementStatus || (data.timeline?.procurementStatus) || null
+      productionStartDate: data.productionStartDate || normalized.productionStartDate || (data.timeline && data.timeline.startDate) || existingTimeline.productionStartDate || null,
+      estimatedCompletionDate: data.estimatedCompletionDate || normalized.estimatedCompletionDate || (data.timeline && data.timeline.endDate) || existingTimeline.estimatedCompletionDate || null,
+      procurementStatus: data.procurementStatus || normalized.procurementStatus || (data.timeline && data.timeline.procurementStatus) || existingTimeline.procurementStatus || null
     };
 
-    const params = [
-      stringifyJsonField(timeline) || '{}',
-      stringifyJsonField(data.selectedPhases || normalized.selectedPhases) || '{}',
-      stringifyJsonField(ensureArray(data.availablePhases || [])) || '[]',
-      stringifyJsonField(data.phaseDetails || normalized.phaseDetails) || '{}',
-      stringifyJsonField(data.materials) || '[]',
-      stringifyJsonField(data.subAssemblies) || '[]',
-      stringifyJsonField(data.finishedGoods) || '[]',
-      data.productionNotes || normalized.productionNotes || null,
-      data.estimatedCompletionDate || normalized.estimatedCompletionDate || null,
-      data.productionPlanId || null,
-      detailId || id
-    ];
+    // Prepare fields for update, only if they are provided in data
+    const fields = [];
+    const params = [];
 
-    if (detailId) {
-      await pool.execute(
-        `UPDATE production_plan_details 
-         SET timeline = ?, selected_phases = ?, available_phases = ?, phase_details = ?, 
-             materials = ?, sub_assemblies = ?, finished_goods = ?,
-             production_notes = ?, estimated_completion_date = ?, 
-             production_plan_id = COALESCE(production_plan_id, ?),
-             updated_at = CURRENT_TIMESTAMP
-         WHERE id = ?`,
-        params
-      );
-      return;
+    fields.push('timeline = ?');
+    params.push(stringifyJsonField(timeline) || '{}');
+
+    if (data.selectedPhases !== undefined || normalized.selectedPhases !== undefined) {
+      fields.push('selected_phases = ?');
+      params.push(stringifyJsonField(data.selectedPhases || normalized.selectedPhases) || '{}');
     }
 
-    const whereColumn = isRootCard ? 'root_card_id' : 'sales_order_id';
-
-    // Try to update by production_plan_id first if provided
-    if (data.productionPlanId) {
-      const [updateResult] = await pool.execute(
-        `UPDATE production_plan_details 
-         SET timeline = ?, selected_phases = ?, available_phases = ?, phase_details = ?, 
-             materials = ?, sub_assemblies = ?, finished_goods = ?,
-             production_notes = ?, estimated_completion_date = ?, updated_at = CURRENT_TIMESTAMP
-         WHERE production_plan_id = ?`,
-        [...params.slice(0, 9), data.productionPlanId]
-      );
-      
-      if (updateResult.affectedRows > 0) return;
+    if (data.availablePhases !== undefined) {
+      fields.push('available_phases = ?');
+      params.push(stringifyJsonField(ensureArray(data.availablePhases)) || '[]');
     }
 
-    await pool.execute(
-      `UPDATE production_plan_details 
-       SET timeline = ?, selected_phases = ?, available_phases = ?, phase_details = ?, 
-           materials = ?, sub_assemblies = ?, finished_goods = ?,
-           production_notes = ?, estimated_completion_date = ?, 
-           production_plan_id = COALESCE(production_plan_id, ?),
-           updated_at = CURRENT_TIMESTAMP
-       WHERE ${whereColumn} = ?`,
-      params
-    );
+    if (data.phaseDetails !== undefined || normalized.phaseDetails !== undefined) {
+      fields.push('phase_details = ?');
+      params.push(stringifyJsonField(data.phaseDetails || normalized.phaseDetails) || '{}');
+    }
+
+    if (data.materials !== undefined) {
+      fields.push('materials = ?');
+      params.push(stringifyJsonField(data.materials) || '[]');
+    }
+
+    if (data.subAssemblies !== undefined) {
+      fields.push('sub_assemblies = ?');
+      params.push(stringifyJsonField(data.subAssemblies) || '[]');
+    }
+
+    if (data.finishedGoods !== undefined) {
+      fields.push('finished_goods = ?');
+      params.push(stringifyJsonField(data.finishedGoods) || '[]');
+    }
+
+    if (data.productionNotes !== undefined || normalized.productionNotes !== undefined) {
+      fields.push('production_notes = ?');
+      params.push(data.productionNotes || normalized.productionNotes || null);
+    }
+
+    if (data.estimatedCompletionDate !== undefined || normalized.estimatedCompletionDate !== undefined) {
+      fields.push('estimated_completion_date = ?');
+      params.push(data.estimatedCompletionDate || normalized.estimatedCompletionDate || null);
+    }
+
+    if (data.productionPlanId !== undefined) {
+      fields.push('production_plan_id = COALESCE(production_plan_id, ?)');
+      params.push(data.productionPlanId || null);
+    }
+
+    if (fields.length === 0) return;
+
+    fields.push('updated_at = CURRENT_TIMESTAMP');
+    
+    const sql = `UPDATE production_plan_details SET ${fields.join(', ')} WHERE id = ?`;
+    await pool.execute(sql, [...params, existing.id]);
   }
 
   static async addPhase(id, phaseKey, phaseData, isRootCard = true) {

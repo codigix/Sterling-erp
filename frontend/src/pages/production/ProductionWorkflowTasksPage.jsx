@@ -21,6 +21,7 @@ const ProductionWorkflowTasksPage = () => {
   const [roleId, setRoleId] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -107,6 +108,7 @@ const ProductionWorkflowTasksPage = () => {
         status: formData.status,
         roleId: roleId,
         rootCardId: selectedProject?.id,
+        isWorkflowCustomTask: true,
       };
 
       const response = await axios.post("/department/portal/tasks", payload);
@@ -128,6 +130,39 @@ const ProductionWorkflowTasksPage = () => {
       );
     } finally {
       setIsCreating(false);
+    }
+  };
+
+  const handleGenerateTasks = async () => {
+    if (!selectedProject) {
+      alert("Please select a project first");
+      return;
+    }
+
+    if (tasks.length > 0) {
+      const confirm = window.confirm(
+        "Workflow tasks already exist for this project. Generating new tasks will delete existing ones. Do you want to continue?"
+      );
+      if (!confirm) return;
+    }
+
+    setIsGenerating(true);
+    try {
+      const response = await axios.post(
+        `/root-cards/${selectedProject.id}/workflow-tasks?type=production`
+      );
+
+      if (response.status === 201 || response.status === 200) {
+        alert("Workflow tasks generated successfully");
+        await fetchTasksForProject(selectedProject);
+      }
+    } catch (err) {
+      console.error("Error generating tasks:", err);
+      alert(
+        "Failed to generate tasks: " + (err.response?.data?.message || err.message)
+      );
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -200,13 +235,24 @@ const ProductionWorkflowTasksPage = () => {
             View root cards and manage production workflow tasks
           </p>
         </div>
-        <Button 
-          onClick={() => setShowCreateModal(true)}
-          className="bg-purple-600 hover:bg-purple-700 text-white"
-        >
-          <Plus size={18} className="mr-2" />
-          New Custom Task
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={handleGenerateTasks}
+            variant="outline"
+            className="border-purple-600 text-purple-600 hover:bg-purple-50"
+            disabled={isGenerating || !selectedProject}
+          >
+            <Zap size={18} className="mr-2" />
+            {isGenerating ? "Generating..." : "Generate Workflow Tasks"}
+          </Button>
+          <Button 
+            onClick={() => setShowCreateModal(true)}
+            className="bg-purple-600 hover:bg-purple-700 text-white"
+          >
+            <Plus size={18} className="mr-2" />
+            New Custom Task
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">

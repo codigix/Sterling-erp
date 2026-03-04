@@ -5,6 +5,7 @@ const GRN = require('../../models/GRN');
 const emailService = require('../../services/emailService');
 const WorkflowTaskHelper = require('../../utils/workflowTaskHelper');
 const MaterialRequest = require('../../models/MaterialRequest');
+const RootCardInventoryTask = require('../../models/RootCardInventoryTask');
 const path = require('path');
 const fs = require('fs');
 
@@ -88,11 +89,27 @@ exports.createPurchaseOrder = async (req, res) => {
     // Handle workflow task transition
     if (material_request_id) {
       try {
+        const userId = req.user ? req.user.id : null;
         const mr = await MaterialRequest.findById(material_request_id);
-        if (mr && mr.sales_order_id) {
-          // If a PO is created, we transition from RFQ/Quotation steps to PO creation
-          // Step 4 is 'Create & Send Purchase Order'
-          await WorkflowTaskHelper.completeAndOpenNext(mr.sales_order_id, 'Record & Approve Vendor Quotation', null);
+        
+        if (mr) {
+          // 1. Update RootCardInventoryTask (Modern Inventory Workflow)
+          // Step 5 is "Create Purchase Order"
+          await RootCardInventoryTask.completeTaskByMRAndStep(material_request_id, 5, userId);
+          
+          // Also set Step 6 "Send PO to Vendor" to in_progress if it's pending
+          const tasks = await RootCardInventoryTask.getTasksByMaterialRequestId(material_request_id);
+          const step6Task = tasks.find(t => t.step_number === 6);
+          if (step6Task && step6Task.status === 'pending') {
+            await RootCardInventoryTask.updateTaskStatus(step6Task.id, 'in_progress', userId);
+          }
+          console.log(`[PO] Automatically completed "Create Purchase Order" task for MR ${material_request_id}`);
+
+          // 2. Legacy/Standard Workflow transition
+          if (mr.sales_order_id) {
+            // If a PO is created, we transition from RFQ/Quotation steps to PO creation
+            await WorkflowTaskHelper.completeAndOpenNext(mr.sales_order_id, 'Record & Approve Vendor Quotation', null);
+          }
         }
       } catch (wfError) {
         console.warn('Workflow transition error:', wfError.message);
@@ -281,6 +298,25 @@ exports.sendPurchaseOrderEmail = async (req, res) => {
         
         // Mark as read since we sent it
         await PurchaseOrderCommunication.markAsRead(communicationId);
+        
+        // Handle workflow task transition for modern inventory workflow
+        if (purchaseOrder.material_request_id) {
+          try {
+            const userId = req.user ? req.user.id : null;
+            // Step 6 is "Send PO to Vendor"
+            await RootCardInventoryTask.completeTaskByMRAndStep(purchaseOrder.material_request_id, 6, userId);
+            
+            // Also set Step 7 "Receive Material" to in_progress if it's pending
+            const tasks = await RootCardInventoryTask.getTasksByMaterialRequestId(purchaseOrder.material_request_id);
+            const step7Task = tasks.find(t => t.step_number === 7);
+            if (step7Task && step7Task.status === 'pending') {
+              await RootCardInventoryTask.updateTaskStatus(step7Task.id, 'in_progress', userId);
+            }
+            console.log(`[PO-Email] Automatically completed "Send PO to Vendor" task for MR ${purchaseOrder.material_request_id}`);
+          } catch (wfErr) {
+            console.warn('[PO-Email] Workflow update error:', wfErr.message);
+          }
+        }
       } catch (dbError) {
         console.error('Error saving outgoing PO communication:', dbError);
         // Don't fail the request if just saving to history fails

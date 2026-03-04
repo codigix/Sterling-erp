@@ -549,11 +549,11 @@ exports.internalCreateWorkflowTasks = async (rootCardId, userId, connection, typ
   let roleSearchNames = [];
   
   if (type === 'production') {
-    roleSearchNames = ['Production', 'production', 'Production Manager'];
+    roleSearchNames = ['Production', 'production', 'Production Manager', 'production_manager'];
   } else if (type === 'inventory') {
     roleSearchNames = ['Inventory', 'inventory', 'inventory_manager', 'Inventory Manager'];
   } else {
-    roleSearchNames = ['Design Engineer', 'design_engineer', 'Design Engineering'];
+    roleSearchNames = ['Design Engineer', 'design_engineer', 'Design Engineering', 'Design engineering'];
   }
 
   const rolePlaceholders = roleSearchNames.map(() => '?').join(',');
@@ -833,6 +833,11 @@ exports.getProductionPlans = async (req, res) => {
 exports.getProductionPlanById = async (req, res) => {
   try {
     const { id } = req.params;
+    
+    if (!id || id === 'null') {
+      return res.json(null);
+    }
+    
     const ProductionPlan = require('../../models/ProductionPlan');
 
     const plan = await ProductionPlan.findById(id);
@@ -882,6 +887,11 @@ exports.createProductionPlan = async (req, res) => {
 
     if (rootCardId) {
       try {
+        // Link the production_plan_id in production_plan_details
+        const ProductionPlanDetail = require('../../models/ProductionPlanDetail');
+        await ProductionPlanDetail.update(rootCardId, { productionPlanId: planId }, true);
+        console.log(`[Production Plan] Linked production_plan_id ${planId} to details for rootCardId ${rootCardId}`);
+
         // Mark the "Create Production Plan" task as completed if it exists
         // and automatically open the next task in sequence
         const WorkflowTaskHelper = require('../../utils/workflowTaskHelper');

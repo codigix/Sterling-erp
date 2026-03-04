@@ -15,22 +15,33 @@ class WorkflowTaskHelper {
     try {
       if (!connection) await conn.beginTransaction();
 
-      console.log(`[WorkflowTaskHelper] Completing task: "${taskTitle}" for Root Card: ${rootCardId}`);
+      console.log(`[WorkflowTaskHelper] DEBUG: Attempting to complete task: "${taskTitle}" for ID: ${rootCardId}`);
 
-      // 1. Find the task to complete
+      // Resolve the actual root_card_id from department_tasks 
+      // It could be stored as root_card_id or linked via sales_order_id
       const [tasks] = await conn.execute(
-        `SELECT id, notes FROM department_tasks 
-         WHERE root_card_id = ? AND task_title = ? AND status != 'completed'`,
-        [rootCardId, taskTitle]
+        `SELECT dt.id, dt.notes, dt.root_card_id, dt.sales_order_id, rc.sales_order_id as rc_so_id
+         FROM department_tasks dt
+         LEFT JOIN root_cards rc ON dt.root_card_id = rc.id
+         WHERE (dt.root_card_id = ? OR dt.sales_order_id = ? OR rc.sales_order_id = ?) 
+         AND dt.task_title = ? AND dt.status != 'completed'`,
+        [rootCardId, rootCardId, rootCardId, taskTitle]
       );
 
       if (tasks.length === 0) {
-        console.log(`[WorkflowTaskHelper] No active task found with title "${taskTitle}"`);
+        console.log(`[WorkflowTaskHelper] DEBUG: No matching active task found. Checking all active workflow tasks for debugging...`);
+        const [allActive] = await conn.execute(
+          `SELECT id, task_title, root_card_id, sales_order_id FROM department_tasks WHERE status != 'completed' AND task_title = ? LIMIT 5`,
+          [taskTitle]
+        );
+        console.log(`[WorkflowTaskHelper] DEBUG: Other active tasks with same title:`, JSON.stringify(allActive));
         if (!connection) await conn.rollback();
         return;
       }
 
+      console.log(`[WorkflowTaskHelper] DEBUG: Found matching task:`, JSON.stringify(tasks[0]));
       const task = tasks[0];
+      const actualRootCardId = task.root_card_id;
       let stepOrder = 0;
       
       try {
@@ -48,13 +59,13 @@ class WorkflowTaskHelper {
       console.log(`[WorkflowTaskHelper] Task ${task.id} marked as completed`);
 
       // 3. Open the next task (step_order + 1)
-      if (stepOrder > 0) {
+      if (stepOrder > 0 && actualRootCardId) {
         const nextStepOrder = stepOrder + 1;
         const [nextTasks] = await conn.execute(
           `SELECT id FROM department_tasks 
            WHERE root_card_id = ? AND status = 'on_hold' 
            AND JSON_EXTRACT(notes, '$.step_order') = ?`,
-          [rootCardId, nextStepOrder]
+          [actualRootCardId, nextStepOrder]
         );
 
         if (nextTasks.length > 0) {

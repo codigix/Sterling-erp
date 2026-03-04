@@ -49,36 +49,7 @@ class MaterialRequirementsController {
       
       if (assignedTo) {
         await RootCardStep.assignEmployee(rootCardId, 3, assignedTo);
-        
-        try {
-          const RootCard = require('../../models/RootCard');
-          const EmployeeTask = require('../../models/EmployeeTask');
-          const pool = require('../../config/database');
-          
-          const rootCard = await RootCard.findById(rootCardId);
-          const existingTasks = await EmployeeTask.findByRelatedId(rootCardId, 'material_requirement');
-          
-          if (existingTasks.length === 0) {
-            await EmployeeTask.createAssignedTask(assignedTo, {
-              title: `Material Requirements: ${rootCard?.project_name || rootCard?.title || 'Project'}`,
-              description: `Define material requirements for Root Card ${rootCard?.po_number || ''}`,
-              type: 'material_requirement',
-              priority: rootCard?.priority || 'medium',
-              dueDate: rootCard?.due_date,
-              salesOrderId: rootCardId,
-              notes: `Auto-assigned from Admin Root Card flow`
-            });
-            console.log(`[MaterialRequirementsController] ✓ Task created for employee ${assignedTo}`);
-          } else {
-            const task = existingTasks[0];
-            if (task.employee_id !== parseInt(assignedTo)) {
-              await pool.execute('UPDATE employee_tasks SET employee_id = ? WHERE id = ?', [assignedTo, task.id]);
-              console.log(`[MaterialRequirementsController] ✓ Task ${task.id} reassigned to employee ${assignedTo}`);
-            }
-          }
-        } catch (taskError) {
-          console.error('[MaterialRequirementsController] Error handling employee task:', taskError.message);
-        }
+        // Task creation removed as per user request to keep them only in workflow tasks
       }
 
       res.json(formatSuccessResponse(updated, 'Material requirements saved'));

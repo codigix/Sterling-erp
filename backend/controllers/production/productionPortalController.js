@@ -312,7 +312,8 @@ exports.createManufacturingStages = async (req, res) => {
     const createdStages = await ManufacturingStage.createMany(stages);
     console.log('[createManufacturingStages] ✓ Successfully created', stages.length, 'stages');
 
-    console.log('[createManufacturingStages] Creating worker tasks for assigned stages...');
+    console.log('[createManufacturingStages] Creating worker tasks for assigned stages removed as per user request...');
+    /*
     let tasksCreated = 0;
     for (const createdStage of createdStages) {
       if (createdStage.assignedWorker) {
@@ -325,13 +326,12 @@ exports.createManufacturingStages = async (req, res) => {
         }
       }
     }
-
-    console.log(`[createManufacturingStages] ✓ Created ${tasksCreated} worker tasks`);
+    */
 
     res.json({ 
       message: 'Manufacturing stages created successfully',
       createdCount: stages.length,
-      tasksCreated: tasksCreated
+      tasksCreated: 0
     });
   } catch (error) {
     console.error('[createManufacturingStages] Error:', error.message);
@@ -580,11 +580,12 @@ exports.updateOutsourceTaskStatus = async (req, res) => {
           try {
             const AlertsNotification = require('../../models/AlertsNotification');
             
-            // Get all employees in Production Department
+            // Get all management/admin users for Production Department
             const [deptMembers] = await pool.execute(`
-              SELECT DISTINCT e.id 
-              FROM employees e
-              WHERE e.department = 'Production' OR e.department_name = 'Production'
+              SELECT DISTINCT u.id 
+              FROM users u 
+              INNER JOIN roles r ON u.role_id = r.id 
+              WHERE r.name = 'Production'
               LIMIT 20
             `);
             
@@ -607,6 +608,7 @@ exports.updateOutsourceTaskStatus = async (req, res) => {
           } catch (outsourceError) {
             console.error(`[ProductionPortalController.updateOutsourceTaskStatus] Error handling outsource stage:`, outsourceError.message);
           }
+        /* 
         } else if (nextStageEmployeeId) {
           // In-house stage - create task for employee
           try {
@@ -624,6 +626,7 @@ exports.updateOutsourceTaskStatus = async (req, res) => {
           } catch (createTaskError) {
             console.error(`[ProductionPortalController.updateOutsourceTaskStatus] Error creating task:`, createTaskError.message);
           }
+        */
         }
       }
     }

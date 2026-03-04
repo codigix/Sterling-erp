@@ -222,6 +222,18 @@ class RootCardInventoryTask {
     return result;
   }
 
+  static async completeTaskByMRAndStep(mrId, stepNumber, completedBy, externalConnection = null) {
+    const conn = externalConnection || pool;
+    const [result] = await conn.execute(
+      `UPDATE root_card_inventory_tasks 
+       SET status = 'completed', completed_by = ?, completed_at = NOW()
+       WHERE material_request_id = ? AND step_number = ?`,
+      [completedBy, mrId, stepNumber]
+    );
+    
+    return result;
+  }
+
   static async setTaskInProgress(taskId, completedBy = null) {
     const [result] = await pool.execute(
       `UPDATE root_card_inventory_tasks 

@@ -125,6 +125,15 @@ exports.createMaterialRequest = async (req, res) => {
           
           console.log(`[MR-Single] Initializing RootCardInventoryTask for MR: ${materialRequestId}, RootCard: ${actualRootCardId}`);
           await RootCardInventoryTask.initializeRootCardTasks(actualRootCardId || null, null, conn, materialRequestId);
+
+          // Complete workflow task
+          if (rootCardId) {
+            try {
+              await WorkflowTaskHelper.completeAndOpenNext(rootCardId, 'Initiate Material Request');
+            } catch (workflowErr) {
+              console.warn(`[MR-Single] Workflow task completion skipped/failed: ${workflowErr.message}`);
+            }
+          }
         } finally {
           conn.release();
         }
@@ -266,6 +275,15 @@ exports.bulkCreateMaterialRequests = async (req, res) => {
             
             console.log(`[MR-Bulk] Initializing RootCardInventoryTask for MR: ${mr.id}, RootCard: ${actualRootCardId}`);
             await RootCardInventoryTask.initializeRootCardTasks(actualRootCardId || null, null, conn, mr.id);
+
+            // Complete workflow task
+            if (targetRootCardId) {
+              try {
+                await WorkflowTaskHelper.completeAndOpenNext(targetRootCardId, 'Initiate Material Request');
+              } catch (workflowErr) {
+                console.warn(`[MR-Bulk] Workflow task completion skipped/failed: ${workflowErr.message}`);
+              }
+            }
           }
         } finally {
           conn.release();
@@ -458,6 +476,11 @@ exports.updateMaterialRequestStatus = async (req, res) => {
             
             await RootCardInventoryTask.initializeRootCardTasks(actualRootCardId || null, null, conn, id);
           }
+          
+          // Complete Step 1: Check Project Material Requirements
+          // This task is completed when the material request is approved
+          console.log(`[MR-Status-Trigger] Completing Step 1 for MR: ${id}`);
+          await RootCardInventoryTask.completeTaskByMRAndStep(id, 1, req.user?.id, conn);
         } finally {
           conn.release();
         }
@@ -690,12 +713,13 @@ exports.selectVendor = async (req, res) => { res.status(501).json({ message: 'No
  */
 async function notifyInventoryManagers(materialRequest, bulkCount = 0) {
   try {
-    // Find users with inventory-related roles
+    // Find ONLY inventory managers and admins to notify (NOT all workers with inventory/procurement roles)
     const [managers] = await pool.execute(`
       SELECT u.id, u.username, r.name as role_name
       FROM users u 
       JOIN roles r ON u.role_id = r.id 
-      WHERE LOWER(r.name) IN ('inventory_manager', 'inventory', 'inventory manager', 'procurement', 'admin')
+      WHERE LOWER(r.name) IN ('inventory_manager', 'inventory manager', 'admin', 'administrator', 'inventory', 'procurement', 'production_manager')
+      OR LOWER(u.username) IN ('inventory.manager', 'inventory_user', 'procurement.manger')
     `);
 
     console.log(`[notifyInventoryManagers] Found ${managers?.length || 0} potential recipients for MR ${materialRequest.mr_number}`);
@@ -713,6 +737,7 @@ async function notifyInventoryManagers(materialRequest, bulkCount = 0) {
       ? `New bulk material request (${bulkCount} items) from ${department} department`
       : `New Material Request ${mrNumber} from ${department} department`;
 
+    // 1. Notify Inventory Managers/Procurement/Admin
     for (const manager of managers) {
       console.log(`[notifyInventoryManagers] Sending notification to ${manager.username} (ID: ${manager.id})`);
       await AlertsNotification.create({
@@ -725,6 +750,24 @@ async function notifyInventoryManagers(materialRequest, bulkCount = 0) {
         priority: 'high', // Changed to high to ensure visibility
         link: '/inventory-manager/material-requests'
       });
+    }
+
+    // 2. Also notify the requester themselves (to confirm submission)
+    const requesterId = materialRequest.created_by || materialRequest.requested_by;
+    if (requesterId) {
+      const isAlreadyNotified = managers.some(m => m.id === requesterId);
+      if (!isAlreadyNotified) {
+        await AlertsNotification.create({
+          userId: requesterId,
+          fromUserId: requesterId,
+          message: `Your Material Request ${mrNumber} has been submitted successfully`,
+          alertType: 'success',
+          relatedTable: 'material_requests',
+          relatedId: materialRequest.id,
+          priority: 'medium',
+          link: '/department/production/plans'
+        });
+      }
     }
   } catch (error) {
     console.error('Error in notifyInventoryManagers:', error);
@@ -747,16 +790,16 @@ async function notifyProductionRelease(materialRequest, connection = null) {
     if (materialRequest.requested_by) recipients.add(materialRequest.requested_by);
     if (materialRequest.created_by) recipients.add(materialRequest.created_by);
     
-    // 2. Find production department members
-    const [productionUsers] = await conn.execute(`
+    // 2. Find ONLY Production role users to notify
+    const [productionManagers] = await conn.execute(`
       SELECT u.id 
       FROM users u 
       JOIN roles r ON u.role_id = r.id 
-      WHERE LOWER(r.name) IN ('production', 'production_manager', 'production manager')
+      WHERE r.name IN ('Production', 'production_manager', 'production manager')
     `);
     
-    console.log('[notifyProductionRelease] Production users found in DB:', productionUsers.length);
-    productionUsers.forEach(u => recipients.add(u.id));
+    console.log('[notifyProductionRelease] Production role users found in DB:', productionManagers.length);
+    productionManagers.forEach(u => recipients.add(u.id));
     
     const mrNumber = materialRequest.mr_number || materialRequest.id;
     const message = `Materials released for Request ${mrNumber}. Ready for production!`;

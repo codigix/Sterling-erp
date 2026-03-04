@@ -791,8 +791,10 @@ const outsourcingController = {
             try {
               const AlertsNotification = require('../../models/AlertsNotification');
               const [deptMembers] = await pool.execute(`
-                SELECT DISTINCT e.id FROM employees e
-                WHERE e.department = 'Production' OR e.department_name = 'Production'
+                SELECT DISTINCT u.id 
+                FROM users u 
+                INNER JOIN roles r ON u.role_id = r.id 
+                WHERE r.name = 'Production'
                 LIMIT 20
               `);
               for (const member of deptMembers) {
@@ -808,6 +810,7 @@ const outsourcingController = {
             } catch (err) {
               console.error('Error sending outsource notifications:', err);
             }
+          /* 
           } else if (nextStageEmployeeId) {
             try {
               const EmployeeTask = require('../../models/EmployeeTask');
@@ -823,6 +826,7 @@ const outsourcingController = {
             } catch (err) {
               console.error('Error creating employee task:', err);
             }
+          */
           }
         }
       }

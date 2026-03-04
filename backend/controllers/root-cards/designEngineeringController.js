@@ -127,49 +127,7 @@ class DesignEngineeringController {
       
       if (assignedTo) {
         await RootCardStep.assignEmployee(rootCardId, 2, assignedTo);
-        
-        try {
-          const EmployeeTask = require('../../models/EmployeeTask');
-          const pool = require('../../config/database');
-          const productionController = require('../production/productionController');
-          
-          // Create workflow based tasks automatically if an employee is assigned
-          const connection = await pool.getConnection();
-          try {
-            await connection.beginTransaction();
-            const created = await productionController.internalCreateWorkflowTasks(rootCardId, assignedTo, connection);
-            await connection.commit();
-            console.log(`[DesignEngineeringController] ✓ Generated ${created.length} workflow tasks for employee ${assignedTo}`);
-          } catch (workflowError) {
-            await connection.rollback();
-            throw workflowError;
-          } finally {
-            connection.release();
-          }
-          
-          const existingTasks = await EmployeeTask.findByRelatedId(rootCardId, 'design_engineering');
-          
-          if (existingTasks.length === 0) {
-            await EmployeeTask.createAssignedTask(assignedTo, {
-              title: `Design Engineering: ${rootCard?.project_name || rootCard?.title || 'Project'}`,
-              description: `Complete design engineering for Root Card ${rootCard?.po_number || ''}`,
-              type: 'design_engineering',
-              priority: rootCard?.priority || 'medium',
-              dueDate: rootCard?.due_date,
-              salesOrderId: rootCardId,
-              notes: `Auto-assigned from Admin Root Card flow`
-            });
-            console.log(`[DesignEngineeringController] ✓ Task created for employee ${assignedTo}`);
-          } else {
-            const task = existingTasks[0];
-            if (task.employee_id !== parseInt(assignedTo)) {
-              await pool.execute('UPDATE employee_tasks SET employee_id = ? WHERE id = ?', [assignedTo, task.id]);
-              console.log(`[DesignEngineeringController] ✓ Task ${task.id} reassigned to employee ${assignedTo}`);
-            }
-          }
-        } catch (taskError) {
-          console.error('[DesignEngineeringController] Error handling employee task:', taskError.message);
-        }
+        // Task creation removed as per user request to keep them only in workflow tasks
       }
 
       res.json(formatSuccessResponse(updated, 'Design Engineering data saved'));

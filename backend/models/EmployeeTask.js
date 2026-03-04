@@ -3,7 +3,7 @@ const RootCardStep = require('./RootCardStep');
 
 class EmployeeTask {
   static async findAll(filters = {}) {
-    let query = `SELECT wt.*, COALESCE(CONCAT(e.first_name, ' ', e.last_name), u.username) as username, ms.stage_name, rc.title as root_card_title
+    let query = `SELECT wt.*, COALESCE(CONCAT(e.first_name, ' ', e.last_name), u.username) as username, ms.stage_name, rc.id as root_card_id, rc.title as root_card_title
                  FROM worker_tasks wt
                  LEFT JOIN users u ON wt.worker_id = u.id
                  LEFT JOIN employees e ON (u.email = e.email AND u.email IS NOT NULL)
@@ -40,7 +40,7 @@ class EmployeeTask {
 
   static async findById(id) {
     const [rows] = await pool.execute(
-      `SELECT wt.*, COALESCE(CONCAT(e.first_name, ' ', e.last_name), u.username) as username, ms.stage_name, rc.title as root_card_title
+      `SELECT wt.*, COALESCE(CONCAT(e.first_name, ' ', e.last_name), u.username) as username, ms.stage_name, rc.id as root_card_id, rc.title as root_card_title
        FROM worker_tasks wt
        LEFT JOIN users u ON wt.worker_id = u.id
        LEFT JOIN employees e ON (u.email = e.email AND u.email IS NOT NULL)
@@ -54,7 +54,7 @@ class EmployeeTask {
 
   static async findByWorkerId(workerId) {
     const [rows] = await pool.execute(
-      `SELECT wt.*, COALESCE(CONCAT(e.first_name, ' ', e.last_name), u.username) as username, ms.stage_name, rc.title as root_card_title
+      `SELECT wt.*, COALESCE(CONCAT(e.first_name, ' ', e.last_name), u.username) as username, ms.stage_name, rc.id as root_card_id, rc.title as root_card_title
        FROM worker_tasks wt
        LEFT JOIN users u ON wt.worker_id = u.id
        LEFT JOIN employees e ON (u.email = e.email AND u.email IS NOT NULL)
@@ -102,6 +102,7 @@ class EmployeeTask {
                     wt.*, 
                     ms.stage_name, 
                     ms.root_card_id,
+                    rc.id as root_card_id_direct,
                     rc.code as root_card_code,
                     rc.title as root_card_name,
                     COALESCE(qcd_so_rc.job_card_no, qcd_so_p.job_card_no, qcd_rc.job_card_no, rc.code, so_rc.po_number, so_p.po_number, 'N/A') as root_card_title, 
@@ -272,6 +273,7 @@ class EmployeeTask {
                         et.assigned_by, et.due_date, et.notes, et.started_at, et.completed_at, 
                         et.created_at, et.updated_at, et.production_plan_stage_id, et.work_order_operation_id, et.sales_order_id,
                         pps.stage_name, woo.operation_name, woo.created_at as operation_created_at, wo.work_order_no, wo.item_name,
+                        COALESCE(rc1.id, rc2.id, rc3.id) as root_card_id,
                         COALESCE(qcd1.job_card_no, qcd2.job_card_no, qcd_rc1.job_card_no, qcd_rc2.job_card_no, qcd_rc3.job_card_no, rc1.code, rc2.code, rc3.code, so.po_number, wo.work_order_no, 'N/A') as root_card_title,
                         COALESCE(rc1.code, rc2.code, rc3.code) as root_card_code,
                         COALESCE(rc1.title, rc2.title, rc3.title) as root_card_name,
@@ -360,6 +362,7 @@ class EmployeeTask {
               et.assigned_by, et.due_date, et.notes, et.started_at, et.completed_at, 
               et.created_at, et.updated_at, et.production_plan_stage_id, et.work_order_operation_id, et.sales_order_id,
               pps.stage_name, woo.operation_name, woo.created_at as operation_created_at, wo.work_order_no, wo.item_name,
+              COALESCE(rc_pp.id, rc_wo.id, rc_et.id) as root_card_id,
               COALESCE(qcd_pp.job_card_no, qcd_wo.job_card_no, qcd_et.job_card_no, rc_pp.code, rc_wo.code, rc_et.code, so.po_number, wo.work_order_no, 'N/A') as root_card_title,
               COALESCE(rc_pp.code, rc_wo.code, rc_et.code) as root_card_code,
               COALESCE(rc_pp.title, rc_wo.title, rc_et.title) as root_card_name,

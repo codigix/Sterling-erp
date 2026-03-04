@@ -271,12 +271,12 @@ exports.updateStatus = async (req, res) => {
             console.error('[SalesManagementController] Error automating production workflow:', wfError.message);
           }
 
-          // 4. Find production managers or relevant production roles to notify
+          // 4. Find ONLY Production role users to notify (Exclude Admin)
           const [productionManagers] = await pool.execute(`
             SELECT DISTINCT u.id 
             FROM users u
             INNER JOIN roles r ON u.role_id = r.id
-            WHERE r.name IN ('Production', 'production_manager', 'Production Manager')
+            WHERE r.name = 'Production'
           `);
 
           console.log(`[SalesManagementController] Found ${productionManagers.length} production managers to notify`);

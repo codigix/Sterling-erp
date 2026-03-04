@@ -41,7 +41,7 @@ router.delete('/:id', rootCardController.deleteRootCard);
 router.post('/:id/assign', rootCardController.assignRootCard);
 
 router.post('/:rootCardId/design-details', designEngineeringController.createOrUpdate);
-router.post('/:rootCardId/workflow-tasks', roleMiddleware('Admin', 'Management', 'Design Engineer', 'design_engineer', 'design.engineer', 'Engineering', 'engineering'), productionController.createWorkflowBasedTasks);
+router.post('/:rootCardId/workflow-tasks', roleMiddleware('Admin', 'Management', 'Production', 'production', 'Production Manager', 'production_manager', 'Design Engineer', 'design_engineer', 'design.engineer', 'Engineering', 'engineering'), productionController.createWorkflowBasedTasks);
 router.post('/:rootCardId/production-workflow-tasks', roleMiddleware('Admin', 'Management', 'Production', 'production', 'Production Manager'), productionController.createProductionWorkflowTasks);
 router.post('/:rootCardId/send-to-inventory', rootCardController.sendToInventory);
 router.post('/:rootCardId/send-to-design-engineering', rootCardController.sendToDesignEngineering);

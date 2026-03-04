@@ -181,49 +181,52 @@ const ProductionProjectCard = ({
       {isExpanded && (
         <div className="p-4 space-y-3">
           {workflowTasks.length > 0 ? (
-            workflowTasks.map((task, idx) => (
-              <div 
-                key={task.id}
-                className="flex items-center justify-between p-3 rounded-lg border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/20"
-              >
-                <div className="flex items-center gap-4">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${getStatusColor(task.status)}`}>
-                    {getStatusIcon(task.status)}
+            workflowTasks.map((task, idx) => {
+              const isPreviousCompleted = idx === 0 || workflowTasks.slice(0, idx).every(t => t.status === 'completed');
+              const isTaskEnabled = isPreviousCompleted;
+              
+              return (
+                <div 
+                  key={task.id}
+                  className={`flex items-center justify-between p-3 rounded-lg border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/20 ${!isTaskEnabled ? 'opacity-50 grayscale' : ''}`}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${getStatusColor(task.status)}`}>
+                      {getStatusIcon(task.status)}
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                        {task.task_title || task.title}
+                      </h4>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                      {task.task_title || task.title}
-                    </h4>
-                    <p className="text-[10px] text-slate-500 uppercase tracking-tighter">
-                      {task.priority} Priority
-                    </p>
-                  </div>
-                </div>
 
-                <div className="flex items-center gap-3">
-                  <select
-                    value={task.status}
-                    onChange={(e) => handleTaskStatusUpdate(task.id, e.target.value)}
-                    disabled={updatingTaskId === task.id}
-                    className="text-xs border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded px-2 py-1 outline-none"
-                  >
-                    <option value="pending">Pending</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="completed">Completed</option>
-                    <option value="on_hold">On Hold</option>
-                  </select>
-                  
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-purple-600 hover:text-purple-700 text-xs font-bold"
-                    onClick={() => navigate(getTaskNavigationUrl(task))}
-                  >
-                    GO TO MODULE →
-                  </Button>
+                  <div className="flex items-center gap-3">
+                    <select
+                      value={task.status}
+                      onChange={(e) => handleTaskStatusUpdate(task.id, e.target.value)}
+                      disabled={updatingTaskId === task.id || !isTaskEnabled}
+                      className="text-xs border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded px-2 py-1 outline-none"
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="in_progress">In Progress</option>
+                      <option value="completed">Completed</option>
+                      <option value="on_hold">On Hold</option>
+                    </select>
+                    
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-purple-600 hover:text-purple-700 text-xs font-bold"
+                      onClick={() => navigate(getTaskNavigationUrl(task))}
+                      disabled={!isTaskEnabled}
+                    >
+                      GO TO MODULE →
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           ) : (
             <div className="text-center py-6">
               <Zap size={24} className="mx-auto text-slate-300 mb-2" />

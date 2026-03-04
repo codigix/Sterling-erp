@@ -4,6 +4,7 @@ const ManufacturingStage = require('../../models/ManufacturingStage');
 const WorkOrder = require('../../models/WorkOrder');
 const MaterialRequest = require('../../models/MaterialRequest');
 const ComprehensiveBOM = require('../../models/ComprehensiveBOM');
+const WorkflowTaskHelper = require('../../utils/workflowTaskHelper');
 const pool = require('../../config/database');
 
 const productionPlanController = {
@@ -17,39 +18,71 @@ const productionPlanController = {
         planName,
         startDate,
         endDate,
+        plannedStartDate,
+        plannedEndDate,
         estimatedCompletionDate,
         assignedSupervisor,
         notes,
         finishedGoods
       } = req.body;
 
-      if (!projectId || !planName) {
-        return res.status(400).json({ message: 'Project ID and plan name are required' });
+      if (!planName) {
+        return res.status(400).json({ message: 'Plan name is required' });
       }
 
       const planId = await ProductionPlan.create({
-        id: planName,
         projectId,
         salesOrderId,
         rootCardId,
         bomId,
         planName,
         status: 'draft',
-        plannedStartDate: startDate,
-        plannedEndDate: endDate,
+        plannedStartDate: plannedStartDate || startDate,
+        plannedEndDate: plannedEndDate || endDate,
         estimatedCompletionDate,
         createdBy: req.user?.id,
         supervisorId: assignedSupervisor,
         notes
       });
 
+      // Link existing production_plan_details if they exist
+      if (rootCardId || salesOrderId) {
+        try {
+          console.log(`[ProductionPlanController] Linking existing production_plan_details for ${rootCardId ? 'RC' : 'SO'} ${rootCardId || salesOrderId} to new plan ${planId}`);
+          const detailSearch = rootCardId ? 
+            await ProductionPlanDetail.findByRootCardId(rootCardId) : 
+            await ProductionPlanDetail.findBySalesOrderId(salesOrderId);
+            
+          if (detailSearch) {
+            console.log(`[ProductionPlanController] Found existing detail ID ${detailSearch.id}, updating production_plan_id to ${planId}`);
+            await ProductionPlanDetail.update(rootCardId || salesOrderId, { 
+              productionPlanId: planId 
+            }, !!rootCardId, detailSearch.id);
+          }
+        } catch (linkError) {
+          console.error('[ProductionPlanController] Error linking details:', linkError.message);
+        }
+      }
+
       if (finishedGoods && Array.isArray(finishedGoods)) {
         await ProductionPlan.addFinishedGoods(planId, finishedGoods);
       }
 
+      // Complete workflow task
+      if (rootCardId) {
+        try {
+          await WorkflowTaskHelper.completeAndOpenNext(rootCardId, 'Create Production Plan');
+        } catch (workflowErr) {
+          console.error('[ProductionPlanController] Error completing workflow task:', workflowErr.message);
+        }
+      }
+
       res.status(201).json({
         message: 'Production plan created successfully',
-        planId
+        data: { 
+          planId,
+          planName: planName 
+        }
       });
     } catch (error) {
       console.error(error);
@@ -60,6 +93,11 @@ const productionPlanController = {
   async getPlan(req, res) {
     try {
       const { id } = req.params;
+      
+      if (!id || id === 'null') {
+        return res.json(null);
+      }
+      
       const plan = await ProductionPlan.findById(id);
 
       if (!plan) {
@@ -67,10 +105,10 @@ const productionPlanController = {
       }
 
       try {
-        const finishedGoods = await ProductionPlan.getFinishedGoods(id);
+        const finishedGoods = await ProductionPlan.getFinishedGoods(plan.id);
         plan.finishedGoods = finishedGoods || [];
       } catch (fgError) {
-        console.warn(`[ProductionPlanController] Could not fetch finished goods for plan ${id}:`, fgError.message);
+        console.warn(`[ProductionPlanController] Could not fetch finished goods for plan ${plan.id}:`, fgError.message);
         plan.finishedGoods = [];
       }
 
@@ -84,6 +122,11 @@ const productionPlanController = {
   async getPlanWithStages(req, res) {
     try {
       const { id } = req.params;
+      
+      if (!id || id === 'null') {
+        return res.json(null);
+      }
+      
       const plan = await ProductionPlan.findById(id);
 
       if (!plan) {
@@ -92,7 +135,7 @@ const productionPlanController = {
 
       // Ensure we have all the data from production_plan_details if findById missed it
       if (!plan.materials || plan.materials.length === 0) {
-        const detail = await ProductionPlanDetail.findByProductionPlanId(id);
+        const detail = await ProductionPlanDetail.findByProductionPlanId(plan.id);
         if (detail) {
           plan.materials = detail.materials || [];
           plan.sub_assemblies = detail.subAssemblies || [];
@@ -112,7 +155,7 @@ const productionPlanController = {
            LEFT JOIN employees e ON e.id = pps.assigned_employee_id
            WHERE pps.production_plan_id = ? 
            ORDER BY pps.sequence ASC`,
-          [id]
+          [plan.id]
         );
 
         let rootCardTitle = 'Unknown';
@@ -204,21 +247,28 @@ const productionPlanController = {
 
       console.log(`[ProductionPlanController] Updating plan ${id}:`, JSON.stringify(data, null, 2));
 
+      if (!id || id === 'null') {
+        return res.status(400).json({ message: 'Invalid plan ID' });
+      }
+
       const plan = await ProductionPlan.findById(id);
       if (!plan) {
         return res.status(404).json({ message: 'Production plan not found' });
       }
 
+      // Ensure we use the actual numeric database ID for operations
+      const numericId = plan.id;
+
       // 1. Update main production_plans table
-      await ProductionPlan.update(id, {
+      await ProductionPlan.update(numericId, {
         planName: planName || plan.plan_name,
         status: status || plan.status,
         rootCardId: data.rootCardId || plan.root_card_id,
         salesOrderId: data.salesOrderId || plan.sales_order_id,
         targetQuantity: targetQuantity || data.targetQuantity || plan.target_quantity || 1,
-        plannedStartDate: (timeline?.startDate) || data.startDate || plan.planned_start_date,
-        plannedEndDate: (timeline?.endDate) || data.endDate || plan.planned_end_date,
-        estimatedCompletionDate: estimatedCompletionDate || plan.estimated_completion_date,
+        plannedStartDate: data.plannedStartDate || (timeline?.startDate) || data.startDate || plan.planned_start_date,
+        plannedEndDate: data.plannedEndDate || (timeline?.endDate) || data.endDate || plan.planned_end_date,
+        estimatedCompletionDate: estimatedCompletionDate || data.estimatedCompletionDate || plan.estimated_completion_date,
         supervisorId: supervisorId || data.assignedSupervisor || plan.supervisor_id,
         notes: notes || productionNotes || plan.notes
       });
@@ -226,18 +276,18 @@ const productionPlanController = {
       // 2. Update production_plan_details (JSON data)
       const detailData = {
         ...data,
-        productionPlanId: id,
+        productionPlanId: numericId,
         productionNotes: productionNotes || notes || plan.notes,
         timeline: timeline || {
-          startDate: data.startDate || plan.planned_start_date,
-          endDate: data.endDate || plan.planned_end_date,
+          startDate: data.plannedStartDate || data.startDate || plan.planned_start_date,
+          endDate: data.plannedEndDate || data.endDate || plan.planned_end_date,
           procurementStatus: status || plan.status
         }
       };
 
       try {
         // Try to update existing details
-        await ProductionPlanDetail.update(id, detailData, !!plan.root_card_id);
+        await ProductionPlanDetail.update(numericId, detailData, !!plan.root_card_id, plan.detail_id);
       } catch (detailError) {
         console.warn('[ProductionPlanController] Error updating details, trying to create instead:', detailError.message);
         try {
@@ -249,12 +299,12 @@ const productionPlanController = {
 
       // 3. Update finished goods if provided
       if (finishedGoods && Array.isArray(finishedGoods)) {
-        await ProductionPlan.addFinishedGoods(id, finishedGoods);
+        await ProductionPlan.addFinishedGoods(numericId, finishedGoods);
       }
 
       // 4. Update stages if provided
       if (stages && Array.isArray(stages)) {
-        await ProductionPlan.addStages(id, stages);
+        await ProductionPlan.addStages(numericId, stages);
       }
 
       res.json({ message: 'Production plan updated successfully' });
@@ -278,7 +328,7 @@ const productionPlanController = {
         return res.status(404).json({ message: 'Production plan not found' });
       }
 
-      await ProductionPlan.updateStatus(id, status);
+      await ProductionPlan.updateStatus(plan.id, status);
       res.json({ message: 'Production plan status updated successfully' });
     } catch (error) {
       console.error(error);
@@ -305,7 +355,7 @@ const productionPlanController = {
         return res.status(404).json({ message: 'Production plan not found' });
       }
 
-      await ProductionPlan.delete(id);
+      await ProductionPlan.delete(plan.id);
       res.json({ message: 'Production plan deleted successfully' });
     } catch (error) {
       console.error('Error deleting production plan:', error);
@@ -328,11 +378,11 @@ const productionPlanController = {
 
       console.log('[ProductionPlanController] Final stages being inserted:', JSON.stringify(stages, null, 2));
 
-      await ProductionPlan.addStages(id, stages);
+      await ProductionPlan.addStages(plan.id, stages);
       
       const [createdStages] = await pool.execute(
         `SELECT id, stage_name, assigned_employee_id, stage_type, sequence, is_blocked FROM production_plan_stages WHERE production_plan_id = ? ORDER BY sequence ASC`,
-        [id]
+        [plan.id]
       );
       
       const EmployeeTask = require('../../models/EmployeeTask');
@@ -349,9 +399,10 @@ const productionPlanController = {
               const AlertsNotification = require('../../models/AlertsNotification');
               
               const [deptMembers] = await pool.execute(`
-                SELECT DISTINCT e.id 
-                FROM employees e
-                WHERE e.department = 'Production' OR e.department_name = 'Production'
+                SELECT DISTINCT u.id 
+                FROM users u
+                INNER JOIN roles r ON u.role_id = r.id
+                WHERE r.name = 'Production'
                 LIMIT 20
               `);
               
@@ -376,23 +427,7 @@ const productionPlanController = {
             console.warn(`[ProductionPlanController] Warning - error handling outsource stage:`, taskError.message);
           }
         } else if (firstStage.assigned_employee_id) {
-          try {
-            const taskTitle = plan.product_name 
-              ? `Task for ${plan.product_name}: ${firstStage.stage_name}`
-              : `Production Stage: ${firstStage.stage_name}`;
-              
-            await EmployeeTask.createAssignedTask(firstStage.assigned_employee_id, {
-              title: taskTitle,
-              description: `Assigned to production plan stage`,
-              type: 'production_stage',
-              priority: 'medium',
-              dueDate: null,
-              notes: `Production Plan ID: ${id}`,
-              productionPlanStageId: firstStage.id
-            });
-          } catch (taskError) {
-            console.warn(`[ProductionPlanController] Warning - could not create employee task:`, taskError.message);
-          }
+          // Task creation removed as per user request to keep them only in workflow tasks
         }
       }
       
@@ -551,9 +586,9 @@ const productionPlanController = {
       // Log raw data from database to debug
       const [rawDetails] = await connection.execute(
         'SELECT id, production_plan_id, sales_order_id, root_card_id FROM production_plan_details WHERE production_plan_id = ?',
-        [planId]
+        [plan.id]
       );
-      console.log(`[ProductionPlanController.generateWorkOrders] Raw details check for plan ${planId}:`, rawDetails);
+      console.log(`[ProductionPlanController.generateWorkOrders] Raw details check for plan ${plan.id}:`, rawDetails);
 
       let projectId = plan.project_id || plan.projectId;
       if (!projectId) {
@@ -898,7 +933,7 @@ const productionPlanController = {
       }
 
       // Fetch items for the plan
-      const detail = await ProductionPlanDetail.findByProductionPlanId(planId);
+      const detail = await ProductionPlanDetail.findByProductionPlanId(plan.id);
       
       if (!detail || ((!detail.materials || detail.materials.length === 0) && (!detail.subAssemblies || detail.subAssemblies.length === 0))) {
         return res.status(400).json({ 

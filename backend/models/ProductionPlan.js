@@ -32,14 +32,43 @@ class ProductionPlan {
       await connection.execute('DELETE FROM production_plan_fg WHERE production_plan_id = ?', [planId]);
 
       if (items && items.length > 0) {
-        const values = items.map(item => [planId, item.itemId, item.quantity || 1, item.notes || null]);
-        const flattenedValues = values.reduce((acc, val) => acc.concat(val), []);
-        const placeholders = values.map(() => '(?, ?, ?, ?)').join(', ');
+        const values = [];
+        
+        for (const item of items) {
+          let itemId = item.itemId || item.id;
+          
+          // If no numeric ID provided, try to find by itemCode
+          if (!itemId && item.itemCode) {
+            const [itemRows] = await connection.execute(
+              'SELECT id FROM inventory WHERE item_code = ? LIMIT 1',
+              [item.itemCode]
+            );
+            if (itemRows.length > 0) {
+              itemId = itemRows[0].id;
+            }
+          }
+          
+          if (itemId) {
+            values.push([
+              planId, 
+              itemId, 
+              item.quantity || item.plannedQty || 1, 
+              item.notes || null
+            ]);
+          } else {
+            console.warn(`[ProductionPlan.addFinishedGoods] Skipping item without ID: ${item.itemCode || 'Unknown'}`);
+          }
+        }
 
-        await connection.execute(
-          `INSERT INTO production_plan_fg (production_plan_id, item_id, quantity, notes) VALUES ${placeholders}`,
-          flattenedValues
-        );
+        if (values.length > 0) {
+          const flattenedValues = values.reduce((acc, val) => acc.concat(val), []);
+          const placeholders = values.map(() => '(?, ?, ?, ?)').join(', ');
+
+          await connection.execute(
+            `INSERT INTO production_plan_fg (production_plan_id, item_id, quantity, notes) VALUES ${placeholders}`,
+            flattenedValues
+          );
+        }
       }
 
       if (!externalConnection) {
@@ -82,7 +111,7 @@ class ProductionPlan {
           data.rootCardId || null,
           data.bomId || null,
           data.targetQuantity || 1,
-          data.planName,
+          data.planName || null,
           data.status || 'draft',
           data.plannedStartDate || null,
           data.plannedEndDate || null,
@@ -106,12 +135,14 @@ class ProductionPlan {
   }
 
   static async findById(id) {
+    const isPlanName = typeof id === 'string' && id.startsWith('PP-');
     const [rows] = await pool.execute(
       `
         SELECT pp.*, 
                COALESCE(rc.project_id, p.id, som.id) as project_id,
                COALESCE(so.customer, som.customer_name) AS customer_name,
                u.username AS supervisor_name,
+               ppd.id AS detail_id,
                ppd.selected_phases,
                ppd.available_phases,
                ppd.finished_goods,
@@ -135,7 +166,7 @@ class ProductionPlan {
             (pp.root_card_id IS NOT NULL AND ppd.root_card_id = pp.root_card_id)
           ))
         LEFT JOIN sales_order_details sod ON sod.sales_order_id = pp.sales_order_id
-        WHERE pp.id = ?
+        WHERE ${isPlanName ? 'pp.plan_name = ?' : 'pp.id = ?'}
         ORDER BY (ppd.production_plan_id = pp.id) DESC
         LIMIT 1
       `,
@@ -359,6 +390,7 @@ class ProductionPlan {
              COALESCE(so.customer, som.customer_name) AS customer_name,
              u.username AS supervisor_name,
              ppd.selected_phases,
+             ppd.available_phases,
              ppd.finished_goods,
              ppd.sub_assemblies,
              ppd.materials,
@@ -380,7 +412,7 @@ class ProductionPlan {
           (pp.sales_order_id IS NOT NULL AND ppd.sales_order_id = pp.sales_order_id) OR
           (pp.root_card_id IS NOT NULL AND ppd.root_card_id = pp.root_card_id)
         ))
-      LEFT JOIN sales_order_details sod ON sod.sales_order_id = pp.sales_order_id
+      LEFT JOIN sales_order_details sod ON sod.sales_order_id = COALESCE(pp.sales_order_id, rc.sales_order_id)
     `;
 
     if (conditions.length) {
@@ -448,13 +480,14 @@ class ProductionPlan {
   }
 
   static async update(id, data) {
+    const isPlanName = typeof id === 'string' && id.startsWith('PP-');
     await pool.execute(
       `
         UPDATE production_plans
         SET plan_name = ?, status = ?, root_card_id = ?, sales_order_id = ?, target_quantity = ?, 
             planned_start_date = ?, planned_end_date = ?, 
             estimated_completion_date = ?, supervisor_id = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
+        WHERE ${isPlanName ? 'plan_name = ?' : 'id = ?'}
       `,
       [
         data.planName,
@@ -496,6 +529,9 @@ class ProductionPlan {
     const connection = externalConnection || (await pool.getConnection());
     
     try {
+      // 1. Delete existing stages before adding new ones
+      await connection.execute('DELETE FROM production_plan_stages WHERE production_plan_id = ?', [planId]);
+
       if (!stages || stages.length === 0) {
         if (!externalConnection) connection.release();
         return;
@@ -667,9 +703,27 @@ class ProductionPlan {
   }
 
   static async delete(id) {
+    const isPlanName = typeof id === 'string' && id.startsWith('PP-');
+    
+    // 1. Resolve numeric ID if plan_name was provided
+    let numericId = id;
+    if (isPlanName) {
+      const plan = await this.findById(id);
+      if (!plan) return; // Plan not found
+      numericId = plan.id;
+    }
+
+    // 2. Unlink production_plan_details instead of deleting it
+    // This preserves the wizard data even if the formal plan is deleted
+    await pool.execute(
+      'UPDATE production_plan_details SET production_plan_id = NULL WHERE production_plan_id = ?',
+      [numericId]
+    );
+
+    // 3. Now delete the formal plan
     await pool.execute(
       'DELETE FROM production_plans WHERE id = ?',
-      [id]
+      [numericId]
     );
   }
 }

@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { Zap, AlertCircle, Plus } from "lucide-react";
+import { Zap, AlertCircle, Plus, Trash2 } from "lucide-react";
 import Input from "../../../ui/Input";
 import FormSection from "../shared/FormSection";
 import FormRow from "../shared/FormRow";
@@ -13,7 +13,6 @@ export default function Step4_ProductionPlan({ readOnly = false }) {
   const { state } = useRootCardContext();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Use local phases defined for this specific root card
   const availablePhases = useMemo(() => {
     return Array.isArray(formData.availablePhases) ? formData.availablePhases : [];
   }, [formData.availablePhases]);
@@ -28,6 +27,22 @@ export default function Step4_ProductionPlan({ readOnly = false }) {
     }
     updateField("selectedPhases", newPhases);
   }, [selectedPhases, updateField]);
+
+  const handleDeletePhase = useCallback((phaseName, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Remove from available phases
+    const updatedAvailable = availablePhases.filter(p => p.name !== phaseName);
+    updateField("availablePhases", updatedAvailable);
+    
+    // Remove from selected phases if it was selected
+    if (selectedPhases[phaseName]) {
+      const newSelected = { ...selectedPhases };
+      delete newSelected[phaseName];
+      updateField("selectedPhases", newSelected);
+    }
+  }, [availablePhases, selectedPhases, updateField]);
 
   const handleAddPhaseSuccess = (newPhase) => {
     // Add to local available phases for this root card
@@ -136,28 +151,39 @@ export default function Step4_ProductionPlan({ readOnly = false }) {
             
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {availablePhases.map((phase, index) => (
-                <label
-                  key={phase.id || index}
-                  className={`flex flex-col p-3 border border-slate-200 rounded-lg bg-white cursor-pointer hover:bg-purple-50 hover:border-purple-400 transition-colors ${readOnly ? 'pointer-events-none opacity-80' : ''} ${selectedPhases[phase.name] ? 'border-purple-500 bg-purple-50' : ''}`}
-                >
-                  <div className="flex items-center text-xs gap-2">
-                    <input
-                      type="checkbox"
-                      checked={selectedPhases[phase.name] || false}
-                      onChange={() => !readOnly && handlePhaseToggle(phase.name)}
-                      disabled={readOnly}
-                      className="w-4 h-4 text-purple-600 bg-white border-slate-300 rounded focus:ring-2 focus:ring-purple-500 cursor-pointer disabled:cursor-not-allowed"
-                    />
-                    <span className="text-sm font-bold text-slate-900 text-left">
-                      {phase.name}
-                    </span>
-                  </div>
-                  {phase.hourly_rate > 0 && (
-                    <span className="text-xs text-slate-500 mt-1 ml-6">
-                      Rate: ₹{phase.hourly_rate}/hr
-                    </span>
+                <div key={phase.id || index} className="relative group">
+                  <label
+                    className={`flex flex-col p-3 border border-slate-200 rounded-lg bg-white cursor-pointer hover:bg-purple-50 hover:border-purple-400 transition-colors ${readOnly ? 'pointer-events-none opacity-80' : ''} ${selectedPhases[phase.name] ? 'border-purple-500 bg-purple-50' : ''}`}
+                  >
+                    <div className="flex items-center text-xs gap-2">
+                      <input
+                        type="checkbox"
+                        checked={selectedPhases[phase.name] || false}
+                        onChange={() => !readOnly && handlePhaseToggle(phase.name)}
+                        disabled={readOnly}
+                        className="w-4 h-4 text-purple-600 bg-white border-slate-300 rounded focus:ring-2 focus:ring-purple-500 cursor-pointer disabled:cursor-not-allowed"
+                      />
+                      <span className="text-sm font-bold text-slate-900 text-left">
+                        {phase.name}
+                      </span>
+                    </div>
+                    {phase.hourly_rate > 0 && (
+                      <span className="text-xs text-slate-500 mt-1 ml-6">
+                        Rate: ₹{phase.hourly_rate}/hr
+                      </span>
+                    )}
+                  </label>
+                  {!readOnly && (
+                    <button
+                      type="button"
+                      onClick={(e) => handleDeletePhase(phase.name, e)}
+                      className="absolute -top-1.5 -right-1.5 p-1 bg-white border border-slate-200 text-slate-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 rounded-full shadow-sm transition-all z-20 group-hover:text-red-500"
+                      title="Delete Phase"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
                   )}
-                </label>
+                </div>
               ))}
             </div>
           </div>
@@ -182,6 +208,7 @@ export default function Step4_ProductionPlan({ readOnly = false }) {
     selectedPhases,
     readOnly,
     handlePhaseToggle,
+    handleDeletePhase,
     updateField,
     availablePhases,
     isModalOpen

@@ -1,5 +1,6 @@
 const pool = require('../../config/database');
 const ProductionPhaseTracking = require('../../models/ProductionPhaseTracking');
+const WorkflowTaskHelper = require('../../utils/workflowTaskHelper');
 
 const challanController = {
   async createOutwardChallan(req, res) {
@@ -22,6 +23,15 @@ const challanController = {
       await ProductionPhaseTracking.updateStatus(trackingId, 'Outsourced', {
         outwardChallanNo: challanNo
       });
+
+      // Complete workflow task
+      if (rootCardId) {
+        try {
+          await WorkflowTaskHelper.completeAndOpenNext(rootCardId, 'Initiate Shipment');
+        } catch (workflowErr) {
+          console.error('[ChallanController] Error completing workflow task:', workflowErr.message);
+        }
+      }
 
       res.status(201).json({ 
         message: 'Outward challan created', 

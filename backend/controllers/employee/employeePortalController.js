@@ -252,8 +252,8 @@ exports.getEmployeeTasks = async (req, res) => {
       // Calculate dynamic Job Card number for production operations
       let job_card_no = t.job_card_no;
       if (t.type === 'job_card' && t.work_order_operation_id) {
-        const timestamp = t.operation_created_at ? new Date(t.operation_created_at).getTime().toString(36) : 'new';
-        job_card_no = `JC-${t.work_order_operation_id}-${timestamp}`;
+        const woSuffix = t.work_order_no?.split('-')?.pop() || t.work_order_id;
+        job_card_no = `JC-${woSuffix}-${t.work_order_operation_id}`;
       }
 
       return {
@@ -489,12 +489,12 @@ exports.updateTaskStatus = async (req, res) => {
       const { userId: taskOwnerUserId } = await resolveIds(task.employee_id);
 
       // Handle completion flow - Notify Production Department
-      if (status === 'completed') {
+      if (status === 'completed' && task.status !== 'completed') {
         try {
           const pool = require('../../config/database');
           
           // 1. Find Production Role ID
-          const [roles] = await pool.execute("SELECT id FROM roles WHERE name = 'Production' OR name = 'production_manager' ORDER BY (CASE WHEN name = 'Production' THEN 0 ELSE 1 END) LIMIT 1");
+          const [roles] = await pool.execute("SELECT id FROM roles WHERE LOWER(name) = 'production' OR LOWER(name) = 'production_manager' ORDER BY (CASE WHEN LOWER(name) = 'production' THEN 0 ELSE 1 END) LIMIT 1");
           let productionRoleId = roles.length > 0 ? roles[0].id : null;
           
           // Fallback to role ID 5 if not found by name
@@ -531,6 +531,13 @@ exports.updateTaskStatus = async (req, res) => {
             let salesOrderId = updatedTask.sales_order_id;
             let finalOperationId = operationId;
 
+            if (!rootCardId && salesOrderId) {
+              const [rcData] = await pool.execute('SELECT id FROM root_cards WHERE sales_order_id = ? LIMIT 1', [salesOrderId]);
+              if (rcData.length > 0) {
+                rootCardId = rcData[0].id;
+              }
+            }
+
             if ((!rootCardId || !salesOrderId || !finalOperationId) && operationId) {
               const [opData] = await pool.execute(`
                 SELECT wo.root_card_id, wo.sales_order_id, woo.id as valid_op_id
@@ -543,6 +550,14 @@ exports.updateTaskStatus = async (req, res) => {
                 rootCardId = rootCardId || opData[0].root_card_id;
                 salesOrderId = salesOrderId || opData[0].sales_order_id;
                 finalOperationId = opData[0].valid_op_id;
+
+                // Fallback: If rootCardId is still null but we have salesOrderId, find it from root_cards table
+                if (!rootCardId && salesOrderId) {
+                  const [rcData] = await pool.execute('SELECT id FROM root_cards WHERE sales_order_id = ? LIMIT 1', [salesOrderId]);
+                  if (rcData.length > 0) {
+                    rootCardId = rcData[0].id;
+                  }
+                }
               } else {
                 console.warn(`[employeePortalController] Operation ID ${operationId} is invalid. Setting to null.`);
                 finalOperationId = null;
@@ -640,11 +655,9 @@ exports.updateTaskStatus = async (req, res) => {
               const [managerUsers] = await pool.execute(`
                 SELECT DISTINCT u.id 
                 FROM users u 
-                LEFT JOIN employees e ON u.email = e.email 
-                JOIN roles r ON (e.role_id = r.id OR u.role_id = r.id)
-                WHERE (r.name = 'production_manager' OR r.name = 'Production' OR r.id = 5 OR r.id = 10) 
-                AND (e.status = 'active' OR e.status IS NULL)
-              `);
+                JOIN roles r ON u.role_id = r.id
+                WHERE (LOWER(r.name) = 'production' OR LOWER(r.name) = 'production_manager') AND u.id != ?
+              `, [req.user?.id]);
               
               console.log(`[employeePortalController] Notifying ${managerUsers.length} production users`);
               
@@ -673,16 +686,17 @@ exports.updateTaskStatus = async (req, res) => {
         message: 'Task status updated successfully',
         data: updatedTask
       });
+      return; // ADDED: Prevent falling through to worker tasks logic
     } else {
       const { producedQty, rejectedQty, scrapQty, notes: completionNotes } = req.body;
       await EmployeeTask.updateStatus(taskId, status);
       const updatedTask = await EmployeeTask.findById(taskId);
       
       // Handle worker task completion flow
-      if (status === 'completed') {
+      if (status === 'completed' && task.status !== 'completed') {
         try {
           const pool = require('../../config/database');
-          const [roles] = await pool.execute("SELECT id FROM roles WHERE name = 'Production' OR name = 'production_manager' ORDER BY (CASE WHEN name = 'Production' THEN 0 ELSE 1 END) LIMIT 1");
+          const [roles] = await pool.execute("SELECT id FROM roles WHERE LOWER(name) = 'production' OR LOWER(name) = 'production_manager' ORDER BY (CASE WHEN LOWER(name) = 'production' THEN 0 ELSE 1 END) LIMIT 1");
           let productionRoleId = roles.length > 0 ? roles[0].id : null;
           
           // Fallback to role ID 5 if not found by name
@@ -819,11 +833,9 @@ exports.updateTaskStatus = async (req, res) => {
               const [managerUsers] = await pool.execute(`
                 SELECT DISTINCT u.id 
                 FROM users u 
-                LEFT JOIN employees e ON u.email = e.email 
-                JOIN roles r ON (e.role_id = r.id OR u.role_id = r.id)
-                WHERE (r.name = 'production_manager' OR r.name = 'Production' OR r.id = 5 OR r.id = 10) 
-                AND (e.status = 'active' OR e.status IS NULL)
-              `);
+                JOIN roles r ON u.role_id = r.id
+                WHERE (LOWER(r.name) = 'production' OR LOWER(r.name) = 'production_manager') AND u.id != ?
+              `, [req.user?.id]);
               
               console.log(`[employeePortalController] Notifying ${managerUsers.length} production users for worker task`);
 

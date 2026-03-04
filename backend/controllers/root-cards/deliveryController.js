@@ -27,9 +27,11 @@ class DeliveryController {
 
       const updated = await DeliveryDetail.findByRootCardId(rootCardId);
       
+      /* Task creation removed as per user request to keep them only in workflow tasks
       if (assignedTo) {
         await this.createOrUpdateDeliveryTask(rootCardId, assignedTo);
       }
+      */
 
       await RootCardStep.update(rootCardId, 7, { status: 'in_progress', data: updated, assignedTo });
       
@@ -40,40 +42,6 @@ class DeliveryController {
       res.json(formatSuccessResponse(updated, 'Delivery details saved'));
     } catch (error) {
       res.status(500).json(formatErrorResponse(error.message));
-    }
-  }
-
-  static async createOrUpdateDeliveryTask(rootCardId, employeeId) {
-    try {
-      const RootCard = require('../../models/RootCard');
-      const EmployeeTask = require('../../models/EmployeeTask');
-      const pool = require('../../config/database');
-      
-      const rootCard = await RootCard.findById(rootCardId);
-      if (!rootCard) return;
-
-      const existingTasks = await EmployeeTask.findByRelatedId(rootCardId, 'delivery');
-      
-      if (existingTasks.length === 0) {
-        await EmployeeTask.createAssignedTask(employeeId, {
-          title: `Delivery: ${rootCard?.project_name || rootCard?.title || 'Project'}`,
-          description: `Manage delivery and installation for Root Card ${rootCard?.po_number || ''}`,
-          type: 'delivery',
-          priority: rootCard?.priority || 'medium',
-          dueDate: rootCard?.due_date,
-          salesOrderId: rootCardId,
-          notes: `Auto-assigned from Admin Root Card flow`
-        });
-        console.log(`[DeliveryController] ✓ Task created for employee ${employeeId}`);
-      } else {
-        const task = existingTasks[0];
-        if (task.employee_id !== parseInt(employeeId)) {
-          await pool.execute('UPDATE employee_tasks SET employee_id = ? WHERE id = ?', [employeeId, task.id]);
-          console.log(`[DeliveryController] ✓ Task ${task.id} reassigned to employee ${employeeId}`);
-        }
-      }
-    } catch (error) {
-      console.error('Error creating delivery task:', error);
     }
   }
 

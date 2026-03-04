@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from '../../utils/api';
-import { 
-  Search, 
-  Filter, 
-  Clock, 
+import {
+  Search,
+  Filter,
+  Clock,
   Plus,
   ChevronDown,
   ChevronUp,
@@ -32,6 +32,7 @@ import Swal from 'sweetalert2';
 import { showSuccess, showError, showWarning } from '../../utils/toastUtils';
 import CreateJobCardModal from './components/CreateJobCardModal';
 import InlineOperationEdit from './components/InlineOperationEdit';
+import JobCardDetailsModal from './components/JobCardDetailsModal';
 import OutwardChallanForm from '../../components/outsourcing/OutwardChallanForm';
 import InwardChallanForm from '../../components/outsourcing/InwardChallanForm';
 
@@ -44,12 +45,14 @@ const JobCardsPage = () => {
   const [expandedOrders, setExpandedOrders] = useState(new Set());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingOperationId, setEditingOperationId] = useState(null);
-  
+
   // Outward Challan Modal State
   const [isChallanModalOpen, setIsChallanModalOpen] = useState(false);
   const [isInwardModalOpen, setIsInwardModalOpen] = useState(false);
   const [selectedOperation, setSelectedOperation] = useState(null);
   const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [selectedOperationForDetails, setSelectedOperationForDetails] = useState(null);
   const [vendors, setVendors] = useState([]);
   const [materials, setMaterials] = useState([]);
   const [fetchingMaterials, setFetchingMaterials] = useState(false);
@@ -99,7 +102,7 @@ const JobCardsPage = () => {
     if (location.state?.workOrderId) {
       const orderId = parseInt(location.state.workOrderId);
       setExpandedOrders(new Set([orderId]));
-      
+
       // Scroll to the specific job card after a short delay to ensure list is rendered
       setTimeout(() => {
         const element = document.getElementById(`work-order-${orderId}`);
@@ -126,10 +129,10 @@ const JobCardsPage = () => {
           workOrderId: location.state?.workOrderId || undefined
         }
       });
-      
+
       const orders = response.data || [];
       setWorkOrders(orders);
-      
+
       // Flatten operations into jobCards
       const flattened = [];
       orders.forEach(wo => {
@@ -147,7 +150,7 @@ const JobCardsPage = () => {
         }
       });
       setJobCards(flattened);
-      
+
       // Auto-expand all for now if searching
       if (searchTerm) {
         setExpandedOrders(new Set(orders.map(wo => wo.id)));
@@ -186,9 +189,9 @@ const JobCardsPage = () => {
           operatorId: operation.operator_id,
           workstationId: operation.workstation_id
         });
-        
+
         showSuccess('Operation is now in-progress. Task assigned to operator.');
-        
+
         fetchJobCards();
       }
     } catch (error) {
@@ -308,13 +311,13 @@ const JobCardsPage = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-3">
-             <button className="flex items-center gap-2 px-3 py-2 text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors text-sm font-medium">
-               <Trash2 size={16} />
-               Reset Queue
-             </button>
-            <button 
+            <button className="flex items-center gap-2 px-3 py-2 text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors text-sm font-medium">
+              <Trash2 size={16} />
+              Reset Queue
+            </button>
+            <button
               onClick={() => setIsModalOpen(true)}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-900 text-white font-bold hover:bg-black transition-all text-sm shadow-sm"
             >
@@ -385,8 +388,8 @@ const JobCardsPage = () => {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div className="relative flex-1 max-w-2xl">
             <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input 
-              type="text" 
+            <input
+              type="text"
               placeholder="Search by Work Order ID or Item name..."
               className="w-full pl-11 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 shadow-sm"
               value={searchTerm}
@@ -394,19 +397,19 @@ const JobCardsPage = () => {
             />
           </div>
           <div className="flex items-center gap-3">
-             <div className="px-4 py-2.5 bg-white border border-slate-200 rounded-xl shadow-sm flex items-center gap-3">
-                <Filter size={16} className="text-slate-400" />
-                <select 
-                  className="bg-transparent text-sm font-bold text-slate-700 outline-none min-w-[150px]"
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                >
-                  <option value="all">All Operational States</option>
-                  <option value="draft">Draft</option>
-                  <option value="in_progress">In Production</option>
-                  <option value="completed">Completed</option>
-                </select>
-             </div>
+            <div className="px-4 py-2.5 bg-white border border-slate-200 rounded-xl shadow-sm flex items-center gap-3">
+              <Filter size={16} className="text-slate-400" />
+              <select
+                className="bg-transparent text-sm font-bold text-slate-700 outline-none min-w-[150px]"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="all">All Operational States</option>
+                <option value="draft">Draft</option>
+                <option value="in_progress">In Production</option>
+                <option value="completed">Completed</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -440,8 +443,8 @@ const JobCardsPage = () => {
                 <React.Fragment key={op.id}>
                   {editingOperationId === op.id ? (
                     <div className="p-6 bg-blue-50/30 border-b border-slate-100 animate-in fade-in slide-in-from-top-2 duration-200">
-                      <InlineOperationEdit 
-                        operation={op} 
+                      <InlineOperationEdit
+                        operation={op}
                         workOrderQuantity={op.work_order_qty}
                         onCancel={() => setEditingOperationId(null)}
                         onSave={() => {
@@ -525,24 +528,31 @@ const JobCardsPage = () => {
 
                       {/* Actions */}
                       <div className="col-span-2 flex items-center justify-end gap-1 px-2">
-                        <button className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="View Details">
+                        <button
+                          className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                          title="View Details"
+                          onClick={() => {
+                            setSelectedOperationForDetails(op);
+                            setIsDetailsModalOpen(true);
+                          }}
+                        >
                           <Eye size={16} />
                         </button>
-                        
+
                         {(op.type === 'outsource' || op.type === 'subcontract') && (
                           <>
                             {!op.outward_challan_id ? (
-                              <button 
+                              <button
                                 onClick={() => handleOpenChallanModal(op, { id: op.work_order_id, work_order_no: op.work_order_no, quantity: op.work_order_qty })}
-                                className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" 
+                                className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
                                 title="Vendor Dispatch (Outward Challan)"
                               >
                                 <Truck size={16} />
                               </button>
                             ) : (
-                              <button 
+                              <button
                                 onClick={() => handleOpenInwardModal(op, { id: op.work_order_id, work_order_no: op.work_order_no, quantity: op.work_order_qty })}
-                                className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all" 
+                                className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
                                 title="Vendor Receipt (Inward Challan)"
                               >
                                 <Box size={16} />
@@ -552,7 +562,7 @@ const JobCardsPage = () => {
                         )}
 
                         {op.status === 'in_progress' || op.status === 'completed' ? (
-                          <button 
+                          <button
                             onClick={() => navigate(`/department/production/operations/${op.id}/entry`)}
                             className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
                             title="Production Entry"
@@ -560,28 +570,27 @@ const JobCardsPage = () => {
                             <Zap size={18} fill="currentColor" />
                           </button>
                         ) : (
-                          <button 
+                          <button
                             onClick={() => op.is_material_ready && handleStartOperation(op)}
                             disabled={!op.is_material_ready}
-                            className={`p-2 rounded-lg transition-all ${
-                              op.is_material_ready 
-                              ? 'text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50' 
-                              : 'text-slate-200 cursor-not-allowed'
-                            }`}
+                            className={`p-2 rounded-lg transition-all ${op.is_material_ready
+                                ? 'text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50'
+                                : 'text-slate-200 cursor-not-allowed'
+                              }`}
                             title="Start Operation"
                           >
                             <Play size={18} fill="currentColor" />
                           </button>
                         )}
 
-                        <button 
+                        <button
                           onClick={() => setEditingOperationId(op.id)}
                           className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all"
                           title="Edit Operation"
                         >
                           <Edit2 size={18} />
                         </button>
-                        <button 
+                        <button
                           onClick={() => handleDeleteOperation(op.id)}
                           className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
                           title="Delete Operation"
@@ -598,9 +607,9 @@ const JobCardsPage = () => {
         </div>
       </div>
 
-      <CreateJobCardModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
+      <CreateJobCardModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
         onRefresh={fetchJobCards}
       />
 
@@ -621,7 +630,7 @@ const JobCardsPage = () => {
                   </p>
                 </div>
               </div>
-              <button 
+              <button
                 onClick={() => setIsChallanModalOpen(false)}
                 className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
               >
@@ -639,7 +648,7 @@ const JobCardsPage = () => {
                 <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Quantity</p>
                   <p className="text-sm font-black text-slate-900 dark:text-white">
-                    {parseFloat(selectedWorkOrder?.quantity).toFixed(6)} units
+                    {parseFloat(selectedWorkOrder?.quantity).toFixed(2)} units
                   </p>
                 </div>
               </div>
@@ -650,7 +659,7 @@ const JobCardsPage = () => {
                   <p className="text-sm text-slate-500 font-bold uppercase tracking-tighter">Loading materials...</p>
                 </div>
               ) : (
-                <OutwardChallanForm 
+                <OutwardChallanForm
                   type="job_card"
                   task={{
                     ...selectedOperation,
@@ -697,7 +706,7 @@ const JobCardsPage = () => {
                   </p>
                 </div>
               </div>
-              <button 
+              <button
                 onClick={() => setIsInwardModalOpen(false)}
                 className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
               >
@@ -707,7 +716,7 @@ const JobCardsPage = () => {
 
             {/* Modal Body */}
             <div className="p-6 overflow-y-auto flex-1 bg-slate-50/50 dark:bg-slate-950/50">
-              <InwardChallanForm 
+              <InwardChallanForm
                 operation={selectedOperation}
                 onChallanCreated={() => {
                   setIsInwardModalOpen(false);
@@ -729,6 +738,13 @@ const JobCardsPage = () => {
           </div>
         </div>
       )}
+
+      {/* Operational Intelligence Modal */}
+      <JobCardDetailsModal
+        isOpen={isDetailsModalOpen}
+        onClose={() => setIsDetailsModalOpen(false)}
+        operation={selectedOperationForDetails}
+      />
     </div>
   );
 };

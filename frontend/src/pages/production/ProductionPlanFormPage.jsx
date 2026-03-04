@@ -1033,6 +1033,7 @@ const ProductionPlanFormPage = () => {
   const [formData, setFormData] = useState({
     rootCardId: '',
     salesOrderId: '',
+    projectId: '',
     namingSeries: 'PP',
     planName: '', // Will be auto-generated
     productionStartDate: '',
@@ -1091,6 +1092,10 @@ const ProductionPlanFormPage = () => {
   const [editedStage, setEditedStage] = useState(null);
 
   const fetchPlanDetails = async (planId) => {
+    if (!planId || planId === 'null') {
+      console.log('[fetchPlanDetails] Skipping fetch - planId is null');
+      return;
+    }
     try {
       setLoading(true);
       const response = await axios.get(`/production/plans/${planId}/with-stages`);
@@ -1110,6 +1115,7 @@ const ProductionPlanFormPage = () => {
           id: plan.id,
           rootCardId: plan.root_card_id || plan.rootCardId,
           salesOrderId: (plan.sales_order_id || plan.salesOrderId) ? (plan.sales_order_id || plan.salesOrderId).toString() : '',
+          projectId: (plan.project_id || plan.projectId) ? (plan.project_id || plan.projectId).toString() : '',
           namingSeries: (plan.plan_name || plan.planName)?.split('-')[0] || 'PP',
           planName: plan.plan_name || plan.planName,
           productionStartDate: formatDate(plan.planned_start_date || plan.productionStartDate || plan.plannedStartDate),
@@ -1427,6 +1433,7 @@ const ProductionPlanFormPage = () => {
         ...prev,
         salesOrderId: salesOrderId,
         rootCardId: rootCardId,
+        projectId: rootCard.project_id || '',
         productName: selectedSO.product_name,
         itemCode: selectedSO.item_code,
         targetQuantity: selectedSO.quantity,
@@ -1787,53 +1794,44 @@ const ProductionPlanFormPage = () => {
       return null;
     }
 
-    if (!formData.stages || formData.stages.length === 0) {
-      console.warn('[handleSubmit] No manufacturing stages added');
-      setError('Please add at least one manufacturing stage');
-      setLoading(false);
-      return null;
-    }
-
     console.log('[handleSubmit] ✓ All validations passed');
-    console.log(`[handleSubmit] Making ${id ? 'PUT' : 'POST'} to: ${id ? `/production/plans/${id}` : `/root-cards/steps/${formData.rootCardId}/production-plan`}`);
-    
-    setLoading(true);
-    setError('');
-    setSuccess('');
+      console.log(`[handleSubmit] Making ${id ? 'PUT' : 'POST'} to: ${id ? `/production/plans/${id}` : '/production/plans'}`);
+      
+      setLoading(true);
+      setError('');
+      setSuccess('');
 
-    try {
-      const payload = {
-        rootCardId: formData.rootCardId || null,
-        salesOrderId: formData.salesOrderId || null,
-        planName: formData.planName || 'Production Plan',
-        supervisorId: formData.supervisorId || null,
-        targetQuantity: formData.targetQuantity || 1,
-        timeline: {
-          startDate: formData.productionStartDate || null,
-          endDate: formData.estimatedCompletionDate || null,
-          procurementStatus: formData.procurementStatus || 'Draft'
-        },
-        selectedPhases: productionPhases.length > 0 ? Object.fromEntries(productionPhases.map(p => [p, true])) : {},
-        estimatedCompletionDate: formData.estimatedCompletionDate || null,
-        productionNotes: formData.notes || '',
-        materials: materials || [],
-        subAssemblies: subAssemblies || [],
-        finishedGoods: finishedGoods || [],
-        stages: formData.stages || []
-      };
+      try {
+        const payload = {
+          rootCardId: formData.rootCardId || null,
+          salesOrderId: formData.salesOrderId || null,
+          projectId: formData.projectId || null,
+          planName: formData.planName || 'Production Plan',
+          supervisorId: formData.supervisorId || null,
+          targetQuantity: formData.targetQuantity || 1,
+          plannedStartDate: formData.productionStartDate || null,
+          plannedEndDate: formData.estimatedCompletionDate || null,
+          estimatedCompletionDate: formData.estimatedCompletionDate || null,
+          status: formData.procurementStatus?.toLowerCase() || 'draft',
+          notes: formData.notes || '',
+          materials: materials || [],
+          subAssemblies: subAssemblies || [],
+          finishedGoods: finishedGoods || [],
+          stages: formData.stages || []
+        };
 
-      console.log('[handleSubmit] Payload to send:', JSON.stringify(payload, null, 2));
+        console.log('[handleSubmit] Payload to send:', JSON.stringify(payload, null, 2));
 
-      let response;
-      if (id) {
-        response = await axios.put(`/production/plans/${id}`, payload);
-      } else {
-        response = await axios.post(`/root-cards/steps/${formData.rootCardId}/production-plan`, payload);
-      }
+        let response;
+        if (id) {
+          response = await axios.put(`/production/plans/${id}`, payload);
+        } else {
+          response = await axios.post('/production/plans', payload);
+        }
 
       console.log('[handleSubmit] ✓✓✓ SUCCESS! Response:', response.data);
-      const newPlanId = id || response.data.data?.planId;
-      console.log('[handleSubmit] Production plan processed with ID:', newPlanId);
+      const newPlanId = id || response.data.data?.planName || response.data.data?.planId;
+      console.log('[handleSubmit] Production plan processed with ID/Name:', newPlanId);
       setPlanId(newPlanId);
 
       // Success - reset form and navigate

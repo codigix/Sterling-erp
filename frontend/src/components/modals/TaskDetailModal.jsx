@@ -39,13 +39,7 @@ const TaskDetailModal = ({ task, isOpen, onClose, onTaskComplete, isUpdating }) 
   };
 
   const handleSwipeComplete = async () => {
-    const details = {
-      producedQty: parseFloat(producedQty) || 0,
-      rejectedQty: parseFloat(rejectedQty) || 0,
-      scrapQty: parseFloat(scrapQty) || 0,
-      notes: notes
-    };
-    await onTaskComplete(task.id, 'completed', details);
+    await onTaskComplete(task.id, 'completed');
     // Reset form and close
     setProducedQty('');
     setRejectedQty('');
@@ -153,61 +147,6 @@ const TaskDetailModal = ({ task, isOpen, onClose, onTaskComplete, isUpdating }) 
           </div>
         </div>
 
-        {task.status === 'in_progress' && (
-          <div className="space-y-4 animate-in fade-in duration-500">
-            <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-2">
-              <Box className="w-5 h-5 text-indigo-600" />
-              <h3 className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-sm">Production Entry Details</h3>
-            </div>
-            
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-500 uppercase">Produced Qty <span className="text-red-500">*</span></label>
-                <input 
-                  type="number" 
-                  value={producedQty}
-                  onChange={(e) => setProducedQty(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none"
-                  placeholder="0"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-red-500 uppercase">Rejected Qty</label>
-                <input 
-                  type="number" 
-                  value={rejectedQty}
-                  onChange={(e) => setRejectedQty(e.target.value)}
-                  className="w-full px-3 py-2 bg-red-50/50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 rounded-lg text-sm font-bold text-red-600 focus:ring-2 focus:ring-red-500 outline-none"
-                  placeholder="0"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-500 uppercase">Scrap Qty</label>
-                <input 
-                  type="number" 
-                  value={scrapQty}
-                  onChange={(e) => setScrapQty(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-bold focus:ring-2 focus:ring-slate-500 outline-none"
-                  placeholder="0"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1">
-                <MessageSquare className="w-3 h-3" />
-                Completion Notes
-              </label>
-              <textarea 
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none min-h-[80px]"
-                placeholder="Enter any additional notes about this production run..."
-              />
-            </div>
-          </div>
-        )}
-
         <div className="pt-2 flex flex-col gap-3">
           {task.status === 'pending' ? (
             <div className="w-full flex items-center justify-center gap-2 py-4 px-4 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 rounded-xl font-bold border border-amber-100 dark:border-amber-900/30 shadow-sm uppercase">
@@ -215,16 +154,13 @@ const TaskDetailModal = ({ task, isOpen, onClose, onTaskComplete, isUpdating }) 
               Waiting for Production to Start Task
             </div>
           ) : (
-            <div className={task.status === 'in_progress' && !producedQty ? 'opacity-50 pointer-events-none' : ''}>
+            <div>
               <SwipeButton
                 onSwipeComplete={handleSwipeComplete}
                 isLoading={isUpdating}
                 isCompleted={task.status === 'completed'}
                 text={task.status === 'in_progress' ? "Swipe to Complete Task" : "Task Completed"}
               />
-              {task.status === 'in_progress' && !producedQty && (
-                <p className="text-[10px] text-center text-red-500 font-bold mt-2 uppercase">Please enter Produced Quantity to complete</p>
-              )}
             </div>
           )}
         </div>

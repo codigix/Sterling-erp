@@ -66,8 +66,13 @@ const ProductionPlanDetailPage = () => {
       setIsSaving(true);
       await axios.patch(`/production/plans/${id}`, formData, { __sessionGuard: true });
       
-      // Re-fetch to get updated and populated data
-      await fetchPlanDetail(false);
+      // If planName changed and we are using it in the URL, we need to update navigation
+      if (formData.planName && formData.planName !== id && id.startsWith('PP-')) {
+        navigate(`/department/production/plans/${formData.planName}`, { replace: true });
+      } else {
+        // Re-fetch to get updated and populated data
+        await fetchPlanDetail(false);
+      }
       
       setIsEditing(false);
       setError(null);
