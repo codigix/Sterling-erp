@@ -1,35 +1,45 @@
 const pool = require('../config/database');
+const userCache = new Map();
 
 class AlertsNotification {
   static async resolveUserId(userId) {
-    let resolvedUserId = userId;
+    if (!userId) return null;
     
     // If it's a number, it's already a proper userId
     if (!isNaN(userId) && userId !== null) return parseInt(userId);
 
-    if (userId) {
-      let usernameToFind = String(userId);
-      if (usernameToFind.startsWith('demo-')) {
-        usernameToFind = usernameToFind.replace('demo-', '');
+    // Check cache first
+    if (userCache.has(userId)) {
+      return userCache.get(userId);
+    }
+
+    let resolvedUserId = userId;
+    let usernameToFind = String(userId);
+    if (usernameToFind.startsWith('demo-')) {
+      usernameToFind = usernameToFind.replace('demo-', '');
+    }
+    
+    try {
+      const [users] = await pool.execute("SELECT id FROM users WHERE username = ?", [usernameToFind]);
+      if (users.length > 0) {
+        resolvedUserId = users[0].id;
+        console.log(`[AlertsNotification] Resolved user ${userId} to database user ${resolvedUserId}`);
+      } else {
+        // Try with underscore instead of dot for common mapping patterns
+        const normalizedUsername = usernameToFind.replace(/\./g, '_');
+        const [users2] = await pool.execute("SELECT id FROM users WHERE username = ?", [normalizedUsername]);
+        if (users2.length > 0) {
+          resolvedUserId = users2[0].id;
+          console.log(`[AlertsNotification] Resolved user ${userId} to database user ${resolvedUserId} (normalized username)`);
+        }
       }
       
-      try {
-        const [users] = await pool.execute("SELECT id FROM users WHERE username = ?", [usernameToFind]);
-        if (users.length > 0) {
-          resolvedUserId = users[0].id;
-          console.log(`[AlertsNotification] Resolved user ${userId} to database user ${resolvedUserId}`);
-        } else {
-          // Try with underscore instead of dot for common mapping patterns
-          const normalizedUsername = usernameToFind.replace(/\./g, '_');
-          const [users2] = await pool.execute("SELECT id FROM users WHERE username = ?", [normalizedUsername]);
-          if (users2.length > 0) {
-            resolvedUserId = users2[0].id;
-            console.log(`[AlertsNotification] Resolved user ${userId} to database user ${resolvedUserId} (normalized username)`);
-          }
-        }
-      } catch (err) {
-        console.warn(`[AlertsNotification] Failed to resolve user ${userId}:`, err.message);
+      // Cache the result
+      if (resolvedUserId && !isNaN(resolvedUserId)) {
+        userCache.set(userId, resolvedUserId);
       }
+    } catch (err) {
+      console.warn(`[AlertsNotification] Failed to resolve user ${userId}:`, err.message);
     }
     
     return resolvedUserId;

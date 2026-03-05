@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Zap, Calendar, User, FileText, Plus, Trash2, Loader2, Edit2, Save, Settings, Package, Layers, ChevronDown, ChevronUp, Activity, ArrowLeft, AlertCircle, CheckCircle, X, Send } from 'lucide-react';
 import axios from '../../utils/api';
@@ -420,8 +420,55 @@ const ProductionPlanFormPage = () => {
   );
 
   const renderMaterialsSection = () => {
-    const coreMaterials = materials.filter(m => m.isCore || m.is_core || m.isCore == 1 || m.is_core == 1);
-    const explodedComponents = materials.filter(m => !(m.isCore || m.is_core || m.isCore == 1 || m.is_core == 1));
+    // Helper to consolidate materials by item code/specification
+    const consolidateMaterials = (mats) => {
+      const consolidated = {};
+      mats.forEach(m => {
+        // Normalize key: prioritize itemCode, then specification, then name. Trim and uppercase for robust matching.
+        const rawKey = m.itemCode || m.specification || m.itemName || 'unknown';
+        const key = String(rawKey).trim().toUpperCase();
+        
+        if (!consolidated[key]) {
+          consolidated[key] = { 
+            ...m,
+            requiredQty: parseFloat(m.requiredQty) || 0
+          };
+        } else {
+          // Sum the required quantities
+          consolidated[key].requiredQty += parseFloat(m.requiredQty) || 0;
+          
+          // Concatenate warehouses if they are different
+          const warehouse = m.warehouse || m.location;
+          if (warehouse && consolidated[key].warehouse && !consolidated[key].warehouse.includes(warehouse)) {
+            consolidated[key].warehouse = `${consolidated[key].warehouse}, ${warehouse}`;
+          } else if (warehouse && !consolidated[key].warehouse) {
+            consolidated[key].warehouse = warehouse;
+          }
+          
+          // Concatenate source assemblies/codes
+          const source = m.sourceAssemblyCode || m.sourceAssembly;
+          if (source && consolidated[key].sourceAssemblyCode && !consolidated[key].sourceAssemblyCode.includes(source)) {
+            consolidated[key].sourceAssemblyCode = `${consolidated[key].sourceAssemblyCode}, ${source}`;
+          } else if (source && !consolidated[key].sourceAssemblyCode) {
+            consolidated[key].sourceAssemblyCode = source;
+          }
+
+          // Combine BOM references
+          if (m.bomRef && consolidated[key].bomRef && !consolidated[key].bomRef.includes(m.bomRef)) {
+            consolidated[key].bomRef = `${consolidated[key].bomRef}, ${m.bomRef}`;
+          }
+        }
+      });
+      
+      // Return values with formatted quantities
+      return Object.values(consolidated).map(m => ({
+        ...m,
+        requiredQty: Number(m.requiredQty.toFixed(4)).toString() // Remove trailing zeros
+      }));
+    };
+
+    const coreMaterials = consolidateMaterials(materials.filter(m => m.isCore || m.is_core || m.isCore == 1 || m.is_core == 1));
+    const explodedComponents = consolidateMaterials(materials.filter(m => !(m.isCore || m.is_core || m.isCore == 1 || m.is_core == 1)));
 
     return (
       <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden mb-6 transition-all duration-300">
@@ -434,7 +481,7 @@ const ProductionPlanFormPage = () => {
           icon={Layers} 
           number="04" 
           colorClass="bg-orange-500 shadow-orange-500/30"
-          badge={`${materials.length} ITEMS`}
+          badge={`${coreMaterials.length + explodedComponents.length} ITEMS`}
         />
         
         {expandedSections.materials && (
@@ -1104,9 +1151,18 @@ const ProductionPlanFormPage = () => {
       if (plan) {
         const formatDate = (dateStr) => {
           if (!dateStr) return '';
+          // If it's already YYYY-MM-DD, return it directly to avoid timezone shifts
+          if (typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+            return dateStr;
+          }
           try {
-            return new Date(dateStr).toISOString().split('T')[0];
-          } catch (e) {
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return dateStr;
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+          } catch {
             return dateStr || '';
           }
         };
@@ -1283,7 +1339,7 @@ const ProductionPlanFormPage = () => {
         plannedQty: selectedSO.quantity,
         uom: selectedSO.uom || 'Nos',
         warehouse: fgWarehouse,
-        startDate: step4?.timeline?.startDate || new Date().toISOString().split('T')[0]
+        startDate: step4?.timeline?.startDate || new Date().toLocaleDateString('en-CA')
       };
       setFinishedGoods([fgItem]);
 
@@ -1371,7 +1427,7 @@ const ProductionPlanFormPage = () => {
               parentItemCode: sourceCode,
               parentItemName: sourceName,
               targetWarehouse: subAssyTargetWH,
-              scheduledDate: step4?.timeline?.startDate || new Date().toISOString().split('T')[0],
+              scheduledDate: step4?.timeline?.startDate || new Date().toLocaleDateString('en-CA'),
               requiredQty: compMultiplier,
               qtyPerUnit: comp.quantity,
               uom: comp.uom || 'Nos',
@@ -1494,6 +1550,7 @@ const ProductionPlanFormPage = () => {
       const step4 = rootCard.stepData?.step4_productionPlan || rootCard.steps?.step4_production || {};
       const step1 = rootCard.stepData?.step1_clientPO || rootCard.steps?.step1_clientPO || {};
       const activeBOM = rootCard.stepData?.activeBOM || rootCard.bom_details;
+      const targetQty = step1.product_details?.quantity || step1.productDetails?.quantity || 1;
       
       // Populate items from BOM if available
       if (activeBOM) {
@@ -1545,7 +1602,7 @@ const ProductionPlanFormPage = () => {
                 parentItemCode: sourceCode,
                 parentItemName: sourceName,
                 targetWarehouse: 'Work In Progress - NC',
-                scheduledDate: step4?.timeline?.startDate || new Date().toISOString().split('T')[0],
+                scheduledDate: step4?.timeline?.startDate || new Date().toLocaleDateString('en-CA'),
                 requiredQty: compMultiplier,
                 qtyPerUnit: comp.quantity,
                 uom: comp.uom || 'Nos',
@@ -1558,9 +1615,8 @@ const ProductionPlanFormPage = () => {
           return { mats, subAssys };
         };
 
-        const targetQty = step1.productDetails?.quantity || 1;
-        const prodName = step1.productDetails?.itemName || rootCard.product_name || 'Product';
-        const itemCode = step1.productDetails?.itemCode || rootCard.item_code || 'ITEM';
+        const prodName = step1.product_details?.itemName || step1.productDetails?.itemName || rootCard.product_name || 'Product';
+        const itemCode = step1.product_details?.itemCode || step1.productDetails?.itemCode || rootCard.item_code || 'ITEM';
 
         const { mats, subAssys } = explodeBOM(
           activeBOM,
@@ -1581,7 +1637,7 @@ const ProductionPlanFormPage = () => {
           plannedQty: targetQty,
           uom: 'Nos',
           warehouse: 'Finished Goods - NC',
-          startDate: step4?.timeline?.startDate || new Date().toISOString().split('T')[0],
+          startDate: step4?.timeline?.startDate || new Date().toLocaleDateString('en-CA'),
           rawMaterials: mats.filter(m => m.isCore)
         }]);
       }
@@ -1616,7 +1672,8 @@ const ProductionPlanFormPage = () => {
       setFormData(prev => ({
         ...prev,
         rootCardId: rootCardId,
-        productName: step1.productDetails?.itemName || rootCard.product_name || '',
+        productName: step1.product_details?.itemName || step1.productDetails?.itemName || rootCard.product_name || '',
+        targetQuantity: targetQty,
         planName: prev.planName,
         productionStartDate: step4?.timeline?.startDate || '',
         estimatedCompletionDate: step4?.timeline?.endDate || '',

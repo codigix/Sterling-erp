@@ -139,6 +139,9 @@ class ProductionPlan {
     const [rows] = await pool.execute(
       `
         SELECT pp.*, 
+               DATE_FORMAT(pp.planned_start_date, '%Y-%m-%d') as planned_start_date,
+               DATE_FORMAT(pp.planned_end_date, '%Y-%m-%d') as planned_end_date,
+               DATE_FORMAT(pp.estimated_completion_date, '%Y-%m-%d') as estimated_completion_date,
                COALESCE(rc.project_id, p.id, som.id) as project_id,
                COALESCE(so.customer, som.customer_name) AS customer_name,
                u.username AS supervisor_name,
@@ -220,6 +223,9 @@ class ProductionPlan {
     const [rows] = await pool.execute(
       `
         SELECT pp.*, 
+               DATE_FORMAT(pp.planned_start_date, '%Y-%m-%d') as planned_start_date,
+               DATE_FORMAT(pp.planned_end_date, '%Y-%m-%d') as planned_end_date,
+               DATE_FORMAT(pp.estimated_completion_date, '%Y-%m-%d') as estimated_completion_date,
                COALESCE(p.id, som.id) as project_id,
                COALESCE(so.customer, som.customer_name) AS customer_name,
                u.username AS supervisor_name,
@@ -293,6 +299,9 @@ class ProductionPlan {
     const [rows] = await pool.execute(
       `
         SELECT pp.*, 
+               DATE_FORMAT(pp.planned_start_date, '%Y-%m-%d') as planned_start_date,
+               DATE_FORMAT(pp.planned_end_date, '%Y-%m-%d') as planned_end_date,
+               DATE_FORMAT(pp.estimated_completion_date, '%Y-%m-%d') as estimated_completion_date,
                COALESCE(rc.project_id, p.id, som.id) as project_id,
                COALESCE(so.customer, som.customer_name) AS customer_name,
                u.username AS supervisor_name,
@@ -385,6 +394,9 @@ class ProductionPlan {
 
     let query = `
       SELECT pp.*, 
+             DATE_FORMAT(pp.planned_start_date, '%Y-%m-%d') as planned_start_date,
+             DATE_FORMAT(pp.planned_end_date, '%Y-%m-%d') as planned_end_date,
+             DATE_FORMAT(pp.estimated_completion_date, '%Y-%m-%d') as estimated_completion_date,
              COALESCE(rc.project_id, p.id, som.id) as project_id,
              rc.title AS root_card_title,
              COALESCE(so.customer, som.customer_name) AS customer_name,

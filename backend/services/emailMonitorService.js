@@ -57,7 +57,7 @@ class EmailMonitorService {
         connTimeout: 30000
       }
     };
-    this.checkInterval = 15 * 1000; // Check every 15 seconds
+    this.checkInterval = 60 * 1000; // Check every 60 seconds
     this.isRunning = false;
     this.isProcessing = false;
     this.timer = null;

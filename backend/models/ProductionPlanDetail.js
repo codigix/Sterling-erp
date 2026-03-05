@@ -32,7 +32,9 @@ class ProductionPlanDetail {
 
   static async findByProductionPlanId(planId) {
     const [rows] = await pool.execute(
-      `SELECT ppd.*, sod.product_details 
+      `SELECT ppd.*, 
+              DATE_FORMAT(ppd.estimated_completion_date, '%Y-%m-%d') as estimated_completion_date,
+              sod.product_details 
        FROM production_plan_details ppd
        LEFT JOIN production_plans pp ON pp.id = ppd.production_plan_id
        LEFT JOIN sales_order_details sod ON sod.sales_order_id = COALESCE(ppd.sales_order_id, pp.sales_order_id)
@@ -44,7 +46,9 @@ class ProductionPlanDetail {
 
   static async findBySalesOrderId(salesOrderId) {
     const [rows] = await pool.execute(
-      `SELECT ppd.*, sod.product_details 
+      `SELECT ppd.*, 
+              DATE_FORMAT(ppd.estimated_completion_date, '%Y-%m-%d') as estimated_completion_date,
+              sod.product_details 
        FROM production_plan_details ppd
        LEFT JOIN sales_order_details sod ON sod.sales_order_id = ppd.sales_order_id
        WHERE ppd.sales_order_id = ?`,
@@ -55,7 +59,8 @@ class ProductionPlanDetail {
 
   static async findByRootCardId(rootCardId) {
     const [rows] = await pool.execute(
-      `SELECT ppd.*
+      `SELECT ppd.*,
+              DATE_FORMAT(ppd.estimated_completion_date, '%Y-%m-%d') as estimated_completion_date
        FROM production_plan_details ppd
        WHERE ppd.root_card_id = ? OR ppd.sales_order_id = ?`,
       [rootCardId, rootCardId]
@@ -65,7 +70,9 @@ class ProductionPlanDetail {
 
   static async findById(id) {
     const [rows] = await pool.execute(
-      `SELECT ppd.*, sod.product_details 
+      `SELECT ppd.*, 
+              DATE_FORMAT(ppd.estimated_completion_date, '%Y-%m-%d') as estimated_completion_date,
+              sod.product_details 
        FROM production_plan_details ppd
        LEFT JOIN sales_order_details sod ON sod.sales_order_id = ppd.sales_order_id
        WHERE ppd.id = ?`,

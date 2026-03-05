@@ -106,10 +106,57 @@ class RootCard {
     const formattedCards = rows.map(RootCard.formatRow);
     
     const includeSteps = filters.includeSteps !== false;
-    if (includeSteps) {
-      return Promise.all(formattedCards.map(card => RootCard.enrichRootCardWithSteps(card)));
+    if (includeSteps && formattedCards.length > 0) {
+      return await RootCard.enrichRootCardsBulk(formattedCards);
     }
     return formattedCards;
+  }
+
+  static async enrichRootCardsBulk(rootCards) {
+    const rootCardIds = rootCards.map(rc => rc.id);
+    const tables = [
+      { key: 'step1_clientPO', name: 'client_po_details' },
+      { key: 'step2_design', name: 'design_engineering_details' },
+      { key: 'step3_materials', name: 'material_requirements_details' },
+      { key: 'step4_production', name: 'production_plan_details' },
+      { key: 'step5_quality', name: 'quality_check_details' },
+      { key: 'step6_shipment', name: 'shipment_details' },
+      { key: 'step7_delivery', name: 'delivery_details' }
+    ];
+
+    const stepsMap = {};
+    rootCardIds.forEach(id => {
+      stepsMap[id] = {
+        step1_clientPO: null,
+        step2_design: null,
+        step3_materials: null,
+        step4_production: null,
+        step5_quality: null,
+        step6_shipment: null,
+        step7_delivery: null
+      };
+    });
+
+    for (const table of tables) {
+      try {
+        const [rows] = await pool.execute(
+          `SELECT * FROM ${table.name} WHERE sales_order_id IN (${rootCardIds.map(() => '?').join(',')})`,
+          rootCardIds
+        );
+        rows.forEach(row => {
+          if (stepsMap[row.sales_order_id]) {
+            stepsMap[row.sales_order_id][table.key] = RootCard.parseStepData(row);
+          }
+        });
+      } catch (error) {
+        console.warn(`Table ${table.name} not available in bulk fetch:`, error.message);
+      }
+    }
+
+    return rootCards.map(rc => ({
+      ...rc,
+      steps: stepsMap[rc.id]
+    }));
   }
 
   static async findById(id) {

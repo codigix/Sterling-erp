@@ -12,7 +12,9 @@ const getAllWorkOrders = async (req, res) => {
       search: req.query.search,
       salesOrderId: req.query.salesOrderId,
       rootCardId: req.query.rootCardId,
-      workOrderId: req.query.workOrderId
+      workOrderId: req.query.workOrderId,
+      month: req.query.month,
+      year: req.query.year
     };
     const workOrders = await WorkOrder.findAll(filters);
     res.json(workOrders);
@@ -65,7 +67,9 @@ const getAllJobCards = async (req, res) => {
       search: req.query.search,
       salesOrderId: req.query.salesOrderId,
       rootCardId: req.query.rootCardId,
-      workOrderId: req.query.workOrderId
+      workOrderId: req.query.workOrderId,
+      month: req.query.month,
+      year: req.query.year
     };
     const workOrders = await WorkOrder.findAllWithOperations(filters);
     res.json(workOrders);

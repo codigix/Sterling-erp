@@ -226,7 +226,7 @@ const ProductionWorkflowTasksPage = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center p-4">
         <div>
           <h2 className="text-xl font-bold text-slate-900 dark:text-white">
             Production Workflow Projects
@@ -255,7 +255,7 @@ const ProductionWorkflowTasksPage = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 px-4">
         <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
           <h3 className="font-semibold text-slate-900 dark:text-white mb-4">
             Root Cards

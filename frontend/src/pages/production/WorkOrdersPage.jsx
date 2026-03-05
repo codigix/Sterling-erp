@@ -40,6 +40,8 @@ const WorkOrdersPage = () => {
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [monthFilter, setMonthFilter] = useState('all');
+  const [yearFilter, setYearFilter] = useState(new Date().getFullYear().toString());
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -54,6 +56,8 @@ const WorkOrdersPage = () => {
         params: {
           search: searchTerm,
           status: statusFilter === 'all' ? undefined : statusFilter,
+          month: monthFilter === 'all' ? undefined : monthFilter,
+          year: yearFilter === 'all' ? undefined : yearFilter,
           salesOrderId: salesOrderId,
           rootCardId: rootCardId
         }
@@ -75,7 +79,7 @@ const WorkOrdersPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [searchTerm, statusFilter]);
+  }, [searchTerm, statusFilter, monthFilter, yearFilter, location.search]);
 
   useEffect(() => {
     fetchWorkOrders();
@@ -302,11 +306,35 @@ const WorkOrdersPage = () => {
                  </select>
               </div>
               <div className="h-4 w-px bg-slate-300 mx-1" />
-              <select className="bg-transparent text-sm font-medium text-slate-600 outline-none">
-                 <option>Month</option>
+              <select 
+                className="bg-transparent text-sm font-medium text-slate-600 outline-none"
+                value={monthFilter}
+                onChange={(e) => setMonthFilter(e.target.value)}
+              >
+                 <option value="all">All Months</option>
+                 <option value="1">January</option>
+                 <option value="2">February</option>
+                 <option value="3">March</option>
+                 <option value="4">April</option>
+                 <option value="5">May</option>
+                 <option value="6">June</option>
+                 <option value="7">July</option>
+                 <option value="8">August</option>
+                 <option value="9">September</option>
+                 <option value="10">October</option>
+                 <option value="11">November</option>
+                 <option value="12">December</option>
               </select>
-              <select className="bg-transparent text-sm font-medium text-slate-600 outline-none font-bold">
-                 <option>2024</option>
+              <select 
+                className="bg-transparent text-sm font-medium text-slate-600 outline-none font-bold"
+                value={yearFilter}
+                onChange={(e) => setYearFilter(e.target.value)}
+              >
+                 <option value="all">All Years</option>
+                 <option value="2023">2023</option>
+                 <option value="2024">2024</option>
+                 <option value="2025">2025</option>
+                 <option value="2026">2026</option>
               </select>
             </div>
           </div>

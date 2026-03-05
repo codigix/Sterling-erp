@@ -163,6 +163,14 @@ class WorkOrder {
       const search = `%${filters.search}%`;
       params.push(search, search, search);
     }
+    if (filters.month && filters.month !== 'all') {
+      conditions.push("MONTH(wo.created_at) = ?");
+      params.push(filters.month);
+    }
+    if (filters.year && filters.year !== 'all') {
+      conditions.push("YEAR(wo.created_at) = ?");
+      params.push(filters.year);
+    }
 
     if (conditions.length > 0) {
       query += " WHERE " + conditions.join(" AND ");

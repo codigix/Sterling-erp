@@ -176,6 +176,33 @@ const GRNProcessingPage = () => {
   };
 
   const [processingStock, setProcessingStock] = useState(null);
+  const [approvingGRN, setApprovingGRN] = useState(null);
+
+  const handleApproveGRN = async (grn) => {
+    try {
+      const result = await Swal.fire({
+        title: "Approve GRN?",
+        text: `Do you want to approve ${grn.grnNo} for quality inspection?`,
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonText: "Yes, Approve",
+        cancelButtonText: "No, Cancel",
+        confirmButtonColor: "#10b981",
+      });
+
+      if (result.isConfirmed) {
+        setApprovingGRN(grn.id);
+        await axios.post(`/inventory/grns/${grn.id}/approve`);
+        showSuccess("GRN approved successfully and moved to inspection phase!");
+        fetchGRNs();
+      }
+    } catch (error) {
+      console.error("Error approving GRN:", error);
+      showError(error.response?.data?.message || "Failed to approve GRN");
+    } finally {
+      setApprovingGRN(null);
+    }
+  };
 
   const handleAddToStock = async (grn) => {
     try {
@@ -366,6 +393,7 @@ const GRNProcessingPage = () => {
                 <td className="px-6 py-4 text-center">
                   <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${
                     grn.status === 'completed' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 
+                    grn.status === 'pending_approval' ? 'bg-orange-50 text-orange-600 border border-orange-100' :
                     grn.status === 'pending' ? 'bg-slate-50 text-slate-600 border border-slate-100' :
                     grn.status === 'qc_pending' ? 'bg-purple-50 text-purple-600 border border-purple-100' : 
                     grn.status === 'shortage' ? 'bg-amber-50 text-amber-600 border border-amber-100' :
@@ -377,6 +405,16 @@ const GRNProcessingPage = () => {
                 </td>
                 <td className="px-6 py-4 text-right">
                   <div className="flex justify-end gap-2">
+                    {grn.status === 'pending_approval' && (
+                      <button 
+                        onClick={() => handleApproveGRN(grn)}
+                        disabled={approvingGRN === grn.id}
+                        className="flex items-center gap-1 px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold disabled:opacity-50"
+                      >
+                        {approvingGRN === grn.id ? <RefreshCw size={14} className="animate-spin" /> : <CheckCircle size={14} />}
+                        {approvingGRN === grn.id ? "Approving..." : "Approve GRN"}
+                      </button>
+                    )}
                     {(grn.status === 'qc_pending' || grn.status === 'pending') && (
                       <button 
                         onClick={() => handleInspectClick(grn)}

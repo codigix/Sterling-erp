@@ -47,7 +47,7 @@ const RootCardList = ({ onCreateNew, onViewRootCard, onEditRootCard, onSendToDes
       try {
         setLoading(true);
         const response = await axios.get('/root-cards', {
-          params: { includeSteps: true }
+          params: { includeSteps: false }
         });
         setRootCards(response.data.rootCards || []);
       } catch (error) {

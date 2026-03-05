@@ -30,22 +30,41 @@ const ProductionProjectCard = ({
   }, [tasks]);
 
   const extractWorkflowTasks = () => {
-    const workflow = tasks.filter((task) => {
-      const taskTitle = (task.task_title || task.title || "").toLowerCase();
-      
-      // Check for explicit workflow flag in notes
+    // 1. Identify tasks that have explicit workflow metadata
+    const explicitWorkflowTasks = tasks.filter((task) => {
       if (task.notes) {
         try {
           const notes = typeof task.notes === 'string' ? JSON.parse(task.notes) : task.notes;
           if (notes && notes.workflow_step) return true;
         } catch (e) {
+          // Fallback check if string parsing fails
           const notesText = String(task.notes).toLowerCase();
-          if (notesText.includes("workflow_step") || notesText.includes("auto_generated")) return true;
+          if (notesText.includes("\"workflow_step\":true")) return true;
         }
       }
-      
-      // Check for production step patterns
-      if (
+      return false;
+    });
+
+    // 2. If we found explicit workflow tasks, use only those (avoids pattern-matching duplicates)
+    if (explicitWorkflowTasks.length > 0) {
+      // Sort by step_order if available in notes
+      const sorted = [...explicitWorkflowTasks].sort((a, b) => {
+        try {
+          const notesA = typeof a.notes === 'string' ? JSON.parse(a.notes) : a.notes;
+          const notesB = typeof b.notes === 'string' ? JSON.parse(b.notes) : b.notes;
+          return (notesA.step_order || 0) - (notesB.step_order || 0);
+        } catch (e) {
+          return 0;
+        }
+      });
+      setWorkflowTasks(sorted);
+      return;
+    }
+
+    // 3. Fallback to pattern matching only if no explicit workflow tasks exist
+    const patternMatchedTasks = tasks.filter((task) => {
+      const taskTitle = (task.task_title || task.title || "").toLowerCase();
+      return (
         taskTitle.startsWith("step ") || 
         taskTitle.includes("production plan") || 
         taskTitle.includes("material request") ||
@@ -54,13 +73,9 @@ const ProductionProjectCard = ({
         taskTitle.includes("quality check") ||
         taskTitle.includes("shipment") ||
         taskTitle.includes("delivery")
-      ) {
-        return true;
-      }
-      
-      return false;
+      );
     });
-    setWorkflowTasks(workflow);
+    setWorkflowTasks(patternMatchedTasks);
   };
 
   const getTaskNavigationUrl = (task) => {
@@ -74,7 +89,7 @@ const ProductionProjectCard = ({
       return `/department/production/plans?${baseParams}&openMaterialRequest=true`;
     }
     else if (taskTitle.includes("work order")) {
-      return `/department/production/work-orders?${baseParams}`;
+      return `/department/production/plans?${baseParams}&openWorkOrder=true`;
     }
     else if (taskTitle.includes("job card") || taskTitle.includes("manufacturing")) {
       return `/department/production/job-cards?${baseParams}`;
