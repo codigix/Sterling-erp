@@ -224,6 +224,29 @@ const SalesOrderPage = () => {
     }
   };
 
+  const handleApprove = async (order) => {
+    try {
+      const result = await Swal.fire({
+        title: 'Approve Sales Order?',
+        text: `Are you sure you want to approve Sales Order ${order.so_number}?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#10b981',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, approve it!'
+      });
+
+      if (result.isConfirmed) {
+        await axios.patch(`sales/management/${order.id}/status`, { status: 'Approved' });
+        Swal.fire('Approved!', 'Sales Order has been approved.', 'success');
+        fetchData();
+      }
+    } catch (error) {
+      console.error('Approve error:', error);
+      Swal.fire('Error!', 'Failed to approve sales order.', 'error');
+    }
+  };
+
   const getStatusColor = (status) => {
     const s = status?.toLowerCase();
     switch (s) {
@@ -316,6 +339,15 @@ const SalesOrderPage = () => {
                       </td>
                       <td className="px-6 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex justify-end gap-1">
+                          {order.status?.toLowerCase() === 'pending' && (
+                            <button 
+                              onClick={() => handleApprove(order)}
+                              className="p-1.5 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors"
+                              title="Approve Order"
+                            >
+                              <CheckCircle2 size={18} />
+                            </button>
+                          )}
                           {order.status?.toLowerCase() === 'approved' && (
                             <button 
                               onClick={() => handleSendToProduction(order)}

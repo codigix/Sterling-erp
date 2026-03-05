@@ -41,13 +41,32 @@ const ProductionPlanDetailPage = () => {
       const data = response.data;
       setPlan(data);
       
+      const formatDate = (dateStr) => {
+        if (!dateStr) return '';
+        // If it's already YYYY-MM-DD, return it directly to avoid timezone shifts
+        if (typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+          return dateStr;
+        }
+        try {
+          const d = new Date(dateStr);
+          if (isNaN(d.getTime())) return dateStr;
+          const year = d.getFullYear();
+          const month = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        } catch {
+          return dateStr || '';
+        }
+      };
+
       // Initialize formData with current values mapped to form field names
       setFormData({
         planName: data.plan_name || '',
         status: data.status || 'draft',
-        plannedStartDate: data.planned_start_date || '',
-        plannedEndDate: data.planned_end_date || '',
-        estimatedCompletionDate: data.estimated_completion_date || '',
+        plannedStartDate: formatDate(data.planned_start_date),
+        plannedEndDate: formatDate(data.planned_end_date),
+        estimatedCompletionDate: formatDate(data.estimated_completion_date),
+        targetQuantity: data.target_quantity || data.quantity || 1,
         notes: data.notes || '',
         supervisorId: data.supervisor_id || ''
       });
@@ -311,6 +330,28 @@ const ProductionPlanDetailPage = () => {
                     </div>
 
                     <div>
+                      <p className="text-[10px] uppercase font-black tracking-widest text-slate-400 mb-2">Target Quantity</p>
+                      {isEditing ? (
+                        <div className="flex items-center">
+                          <input
+                            type="number"
+                            value={formData.targetQuantity || ''}
+                            onChange={(e) => setFormData({ ...formData, targetQuantity: e.target.value })}
+                            className="w-full px-4 py-2 border border-slate-200 dark:border-slate-600 rounded-l-lg bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm"
+                          />
+                          <span className="px-4 py-2 bg-slate-100 dark:bg-slate-700 border border-l-0 border-slate-200 dark:border-slate-600 rounded-r-lg text-[10px] font-bold text-slate-500 uppercase">
+                            {plan.uom || 'Units'}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex items-end gap-2">
+                          <p className="text-lg font-bold text-slate-900 dark:text-white">{plan.target_quantity || plan.quantity || 1}</p>
+                          <span className="text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-widest">{plan.uom || 'Units'}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
                       <p className="text-[10px] uppercase font-black tracking-widest text-slate-400 mb-2">Supervisor</p>
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-500">
@@ -502,7 +543,7 @@ const ProductionPlanDetailPage = () => {
                 <p className="text-xs text-slate-400 font-mono mb-6">{plan.item_code || 'ITM-XXXX'}</p>
                 
                 <div className="flex items-end gap-2">
-                  <span className="text-4xl font-black text-white">{plan.quantity || 1}</span>
+                  <span className="text-4xl font-black text-white">{plan.target_quantity || plan.quantity || 1}</span>
                   <span className="text-xs font-bold text-slate-400 mb-1 uppercase tracking-widest">{plan.uom || 'Units'}</span>
                 </div>
               </div>

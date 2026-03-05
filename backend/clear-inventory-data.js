@@ -8,16 +8,23 @@ async function clearInventoryData() {
     console.log('Temporarily disabled foreign key checks...');
 
     const tablesToClear = [
-      'material_request_items',
-      'material_requests',
+      'quotation_attachments',
+      'quotation_communications',
+      'quotations',
       'purchase_order_attachments',
       'purchase_order_communications',
       'purchase_orders',
       'grn',
+      'goods_receipt_notes',
+      'qc_inspections',
+      'qc_reports',
       'stock_entries',
       'material_stock',
-      'quotation_communications',
-      'quotations'
+      'inventory_tasks',
+      'inventory_workflow_steps',
+      'material_request_items',
+      'material_request_vendors',
+      'material_requests'
     ];
 
     for (const table of tablesToClear) {

@@ -22,8 +22,12 @@ const productionPlanController = {
         plannedEndDate,
         estimatedCompletionDate,
         assignedSupervisor,
+        targetQuantity,
         notes,
-        finishedGoods
+        finishedGoods,
+        materials,
+        subAssemblies,
+        stages
       } = req.body;
 
       if (!planName) {
@@ -36,6 +40,7 @@ const productionPlanController = {
         rootCardId,
         bomId,
         planName,
+        targetQuantity: (targetQuantity !== undefined && targetQuantity !== null && targetQuantity !== '') ? targetQuantity : 1,
         status: 'draft',
         plannedStartDate: plannedStartDate || startDate,
         plannedEndDate: plannedEndDate || endDate,
@@ -45,27 +50,35 @@ const productionPlanController = {
         notes
       });
 
-      // Link existing production_plan_details if they exist
-      if (rootCardId || salesOrderId) {
-        try {
-          console.log(`[ProductionPlanController] Linking existing production_plan_details for ${rootCardId ? 'RC' : 'SO'} ${rootCardId || salesOrderId} to new plan ${planId}`);
-          const detailSearch = rootCardId ? 
-            await ProductionPlanDetail.findByRootCardId(rootCardId) : 
-            await ProductionPlanDetail.findBySalesOrderId(salesOrderId);
-            
-          if (detailSearch) {
-            console.log(`[ProductionPlanController] Found existing detail ID ${detailSearch.id}, updating production_plan_id to ${planId}`);
-            await ProductionPlanDetail.update(rootCardId || salesOrderId, { 
-              productionPlanId: planId 
-            }, !!rootCardId, detailSearch.id);
-          }
-        } catch (linkError) {
-          console.error('[ProductionPlanController] Error linking details:', linkError.message);
+      // Update or Create production_plan_details with full data
+      const detailData = {
+        ...req.body,
+        productionPlanId: planId,
+        productionNotes: notes
+      };
+
+      try {
+        const detailSearch = rootCardId ? 
+          await ProductionPlanDetail.findByRootCardId(rootCardId) : 
+          await ProductionPlanDetail.findBySalesOrderId(salesOrderId);
+          
+        if (detailSearch) {
+          console.log(`[ProductionPlanController] Updating existing detail ID ${detailSearch.id} for plan ${planId}`);
+          await ProductionPlanDetail.update(rootCardId || salesOrderId, detailData, !!rootCardId, detailSearch.id);
+        } else {
+          console.log(`[ProductionPlanController] Creating new detail for plan ${planId}`);
+          await ProductionPlanDetail.create(detailData);
         }
+      } catch (linkError) {
+        console.error('[ProductionPlanController] Error saving details:', linkError.message);
       }
 
       if (finishedGoods && Array.isArray(finishedGoods)) {
         await ProductionPlan.addFinishedGoods(planId, finishedGoods);
+      }
+
+      if (stages && Array.isArray(stages)) {
+        await ProductionPlan.addStages(planId, stages);
       }
 
       // Complete workflow task
@@ -148,6 +161,8 @@ const productionPlanController = {
       try {
         const [stages] = await connection.execute(
           `SELECT pps.*,
+                  DATE_FORMAT(pps.planned_start_date, '%Y-%m-%d') as planned_start_date,
+                  DATE_FORMAT(pps.planned_end_date, '%Y-%m-%d') as planned_end_date,
                   pps.target_warehouse AS targetWarehouse,
                   CONCAT(e.first_name, ' ', e.last_name) AS worker_name,
                   e.email AS worker_email
@@ -265,7 +280,7 @@ const productionPlanController = {
         status: status || plan.status,
         rootCardId: data.rootCardId || plan.root_card_id,
         salesOrderId: data.salesOrderId || plan.sales_order_id,
-        targetQuantity: targetQuantity || data.targetQuantity || plan.target_quantity || 1,
+        targetQuantity: (targetQuantity !== undefined && targetQuantity !== null && targetQuantity !== '') ? targetQuantity : (data.targetQuantity !== undefined ? data.targetQuantity : (plan.target_quantity || 1)),
         plannedStartDate: data.plannedStartDate || (timeline?.startDate) || data.startDate || plan.planned_start_date,
         plannedEndDate: data.plannedEndDate || (timeline?.endDate) || data.endDate || plan.planned_end_date,
         estimatedCompletionDate: estimatedCompletionDate || data.estimatedCompletionDate || plan.estimated_completion_date,
@@ -286,8 +301,9 @@ const productionPlanController = {
       };
 
       try {
-        // Try to update existing details
-        await ProductionPlanDetail.update(numericId, detailData, !!plan.root_card_id, plan.detail_id);
+        // Try to update existing details - use rootCardId or salesOrderId as the identifier
+        const detailIdToUse = plan.root_card_id || plan.sales_order_id;
+        await ProductionPlanDetail.update(detailIdToUse, detailData, !!plan.root_card_id, plan.detail_id);
       } catch (detailError) {
         console.warn('[ProductionPlanController] Error updating details, trying to create instead:', detailError.message);
         try {
