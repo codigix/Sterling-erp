@@ -884,6 +884,17 @@ const productionPlanController = {
 
         await connection.commit();
         
+        // Complete the workflow task if it exists
+        if (plan.root_card_id || plan.sales_order_id) {
+          try {
+            const rcId = plan.root_card_id || plan.sales_order_id;
+            await WorkflowTaskHelper.completeAndOpenNext(rcId, 'Generate Work Orders', connection);
+            console.log(`[ProductionPlanController.generateWorkOrders] Completed workflow task for ${rcId}`);
+          } catch (wfErr) {
+            console.warn(`[ProductionPlanController.generateWorkOrders] Could not complete workflow task:`, wfErr.message);
+          }
+        }
+        
         const message = generatedWorkOrders.length > 0 
           ? `Successfully generated ${generatedWorkOrders.length} work orders.`
           : `No new work orders were generated (they may already exist).`;

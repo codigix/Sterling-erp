@@ -123,9 +123,6 @@ const ProjectDetailsPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterPriority, setFilterPriority] = useState("all");
-  const [showDocModal, setShowDocModal] = useState(false);
-  const [modalDocs, setModalDocs] = useState([]);
-  const [modalProjectName, setModalProjectName] = useState("");
 
   const [projectData, setProjectData] = useState({
     designId: "",
@@ -199,105 +196,6 @@ const ProjectDetailsPage = () => {
       setProjects([]);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleOpenDocModal = async (project) => {
-    try {
-      // Aggregate all documents from different sources
-      const projectDocs = Array.isArray(project.documents)
-        ? project.documents
-        : [];
-
-      const poAttachments = Array.isArray(
-        project.steps?.step1_clientPO?.attachments,
-      )
-        ? project.steps.step1_clientPO.attachments
-        : [];
-
-      const designDocs = Array.isArray(project.steps?.step2_design?.documents)
-        ? project.steps.step2_design.documents
-        : [];
-
-      const designDrawings = Array.isArray(
-        project.steps?.step2_design?.drawings3D,
-      )
-        ? project.steps.step2_design.drawings3D
-        : [];
-
-      // Fetch technical specifications for this project
-      let technicalSpecs = [];
-      try {
-        const specsResponse = await axios.get("/production/specifications", {
-          params: { rootCardId: project.id },
-        });
-        technicalSpecs = (
-          Array.isArray(specsResponse.data) ? specsResponse.data : []
-        ).map((s) => ({
-          name: s.title,
-          fileName: s.fileName,
-          version: s.version,
-          id: s.id,
-          type: "specification",
-        }));
-      } catch (err) {
-        console.error(
-          "Error fetching technical specifications for modal:",
-          err,
-        );
-      }
-
-      const allDocuments = [
-        ...projectDocs,
-        ...poAttachments,
-        ...designDocs,
-        ...designDrawings,
-        ...technicalSpecs,
-      ];
-
-      const uniqueDocuments = allDocuments.filter(
-        (doc, index, self) =>
-          index === self.findIndex((d) => (d.name || d) === (doc.name || doc)),
-      );
-
-      setModalDocs(uniqueDocuments);
-      setModalProjectName(project.project_name || project.customer);
-      setShowDocModal(true);
-    } catch (error) {
-      console.error("Error opening document modal:", error);
-    }
-  };
-
-  const handleDownload = async (doc) => {
-    try {
-      const docName = doc.name || (typeof doc === "string" ? doc : "document");
-
-      // Handle technical specifications
-      if (doc.type === "specification") {
-        const response = await axios.get(
-          `/production/specifications/${doc.id}/download`,
-          {
-            responseType: "blob",
-          },
-        );
-        const url = window.URL.createObjectURL(new Blob([response.data]));
-        const link = document.createElement("a");
-        link.href = url;
-        link.setAttribute("download", doc.fileName || `${docName}.pdf`);
-        document.body.appendChild(link);
-        link.click();
-        link.parentNode.removeChild(link);
-        window.URL.revokeObjectURL(url);
-        return;
-      }
-
-      // Handle other documents (assuming they might have a name/path)
-      // For now, if it's just a string or has a name, we try to download if it's a known URL
-      // If we don't have a direct download endpoint for these yet, we show a message
-      alert(`Downloading ${docName}...`);
-    } catch (err) {
-      console.error("Failed to download document:", err);
-      alert("Failed to download document. Please try again.");
     }
   };
 
@@ -683,9 +581,6 @@ const ProjectDetailsPage = () => {
                     <th className="p-1 text-left text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                       End Date
                     </th>
-                    <th className="p-1 text-left text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                      Documents
-                    </th>
                     <th className="p-1 text-center text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                       Actions
                     </th>
@@ -694,14 +589,14 @@ const ProjectDetailsPage = () => {
                 <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                   {loading ? (
                     <tr>
-                      <td colSpan="6" className="px-6 py-12 text-center">
+                      <td colSpan="5" className="px-6 py-12 text-center">
                         <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto" />
                       </td>
                     </tr>
                   ) : filteredProjects.length === 0 ? (
                     <tr>
                       <td
-                        colSpan="6"
+                        colSpan="5"
                         className="px-6 py-12 text-center text-slate-500"
                       >
                         <div className="flex flex-col items-center gap-2">
@@ -712,45 +607,6 @@ const ProjectDetailsPage = () => {
                     </tr>
                   ) : (
                     filteredProjects.map((project) => {
-                      // Aggregate all documents from different sources
-                      const projectDocs = Array.isArray(project.documents)
-                        ? project.documents
-                        : [];
-
-                      const poAttachments = Array.isArray(
-                        project.steps?.step1_clientPO?.attachments,
-                      )
-                        ? project.steps.step1_clientPO.attachments
-                        : [];
-
-                      const designDocs = Array.isArray(
-                        project.steps?.step2_design?.documents,
-                      )
-                        ? project.steps.step2_design.documents
-                        : [];
-
-                      const designDrawings = Array.isArray(
-                        project.steps?.step2_design?.drawings3D,
-                      )
-                        ? project.steps.step2_design.drawings3D
-                        : [];
-
-                      // Combine and remove duplicates based on name if necessary
-                      const allDocuments = [
-                        ...projectDocs,
-                        ...poAttachments,
-                        ...designDocs,
-                        ...designDrawings,
-                      ];
-
-                      const projectDocuments = allDocuments.filter(
-                        (doc, index, self) =>
-                          index ===
-                          self.findIndex(
-                            (d) => (d.name || d) === (doc.name || doc),
-                          ),
-                      );
-
                       return (
                         <tr
                           key={project.id}
@@ -804,15 +660,6 @@ const ProjectDetailsPage = () => {
                             </span>
                           </td>
                           <td className="p-3">
-                            <button
-                              onClick={() => handleOpenDocModal(project)}
-                              className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors text-xs font-medium border border-blue-100 dark:border-blue-800"
-                            >
-                              <File size={14} />
-                              View Doc
-                            </button>
-                          </td>
-                          <td className="p-3">
                             <div className="flex items-center justify-center gap-1">
                               <button
                                 onClick={() => handleViewProject(project)}
@@ -846,90 +693,6 @@ const ProjectDetailsPage = () => {
             )}
           </div>
         </div>
-
-        {/* Document List Modal */}
-        {showDocModal && (
-          <div className="fixed inset-0 bg-black/50 dark:bg-black/70 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-            <div className="bg-white dark:bg-slate-800 rounded-xl max-w-lg w-full shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-              <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
-                    <FileText
-                      className="text-blue-600 dark:text-blue-400"
-                      size={18}
-                    />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                      Project Documents
-                    </h3>
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400">
-                      {modalProjectName}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowDocModal(false)}
-                  className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-slate-500 transition-colors"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              <div className="p-4 max-h-[60vh] overflow-y-auto">
-                {modalDocs.length > 0 ? (
-                  <div className="space-y-2">
-                    {modalDocs.map((doc, idx) => {
-                      const name =
-                        doc.name ||
-                        (typeof doc === "string" ? doc : "Document");
-                      return (
-                        <div
-                          key={idx}
-                          className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-100 dark:border-slate-800 group hover:border-blue-200 dark:hover:border-blue-800 transition-colors"
-                        >
-                          <div className="flex items-center gap-3 min-w-0">
-                            <File
-                              size={16}
-                              className="text-blue-500 flex-shrink-0"
-                            />
-                            <span
-                              className="text-xs text-slate-700 dark:text-slate-300 truncate font-medium"
-                              title={name}
-                            >
-                              {name}
-                            </span>
-                          </div>
-                          <button
-                            onClick={() => handleDownload(doc)}
-                            className="p-2 hover:bg-blue-100 dark:hover:bg-blue-900 rounded-lg text-blue-600 dark:text-blue-400 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
-                            title="Download/View"
-                          >
-                            <Download size={16} />
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-8 text-slate-500">
-                    <File size={32} className="text-slate-300 mb-2" />
-                    <p className="text-sm italic">No documents available</p>
-                  </div>
-                )}
-              </div>
-
-              <div className="p-4 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-700 flex justify-end">
-                <button
-                  onClick={() => setShowDocModal(false)}
-                  className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     );
   }

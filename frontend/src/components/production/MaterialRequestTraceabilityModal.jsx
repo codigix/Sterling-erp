@@ -136,7 +136,7 @@ const MaterialRequestTraceabilityModal = ({ isOpen, onClose, planId, planName })
                   <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
                     <div className="flex items-center gap-2">
                       <CheckCircle size={16} className="text-green-500" />
-                      <h3 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">Completed Archive</h3>
+                      <h3 className="text-xs font-bold text-slate-900 dark:text-slate-200 uppercase tracking-wider">Completed Archive</h3>
                     </div>
                     <span className="px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 text-[10px] font-bold rounded-full">
                       {completedRequests.length}

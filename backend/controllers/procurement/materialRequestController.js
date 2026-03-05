@@ -126,7 +126,8 @@ exports.createMaterialRequest = async (req, res) => {
           console.log(`[MR-Single] Initializing RootCardInventoryTask for MR: ${materialRequestId}, RootCard: ${actualRootCardId}`);
           await RootCardInventoryTask.initializeRootCardTasks(actualRootCardId || null, null, conn, materialRequestId);
 
-          // Complete workflow task
+          // Task completion is now handled in updateMaterialRequestStatus only when MR status is 'completed'
+          /*
           if (rootCardId) {
             try {
               await WorkflowTaskHelper.completeAndOpenNext(rootCardId, 'Initiate Material Request');
@@ -134,6 +135,7 @@ exports.createMaterialRequest = async (req, res) => {
               console.warn(`[MR-Single] Workflow task completion skipped/failed: ${workflowErr.message}`);
             }
           }
+          */
         } finally {
           conn.release();
         }
@@ -276,7 +278,8 @@ exports.bulkCreateMaterialRequests = async (req, res) => {
             console.log(`[MR-Bulk] Initializing RootCardInventoryTask for MR: ${mr.id}, RootCard: ${actualRootCardId}`);
             await RootCardInventoryTask.initializeRootCardTasks(actualRootCardId || null, null, conn, mr.id);
 
-            // Complete workflow task
+            // Task completion is now handled in updateMaterialRequestStatus only when MR status is 'completed'
+            /*
             if (targetRootCardId) {
               try {
                 await WorkflowTaskHelper.completeAndOpenNext(targetRootCardId, 'Initiate Material Request');
@@ -284,6 +287,7 @@ exports.bulkCreateMaterialRequests = async (req, res) => {
                 console.warn(`[MR-Bulk] Workflow task completion skipped/failed: ${workflowErr.message}`);
               }
             }
+            */
           }
         } finally {
           conn.release();
@@ -427,27 +431,57 @@ exports.updateMaterialRequestStatus = async (req, res) => {
     // Use the model method for consistency
     await MaterialRequest.updateStatus(id, status);
 
-    // If status is approved, trigger workflow creation if not already created
+    // If status is completed or received, trigger workflow completion for production workflow
+    if (status === 'completed' || status === 'received') {
+      const materialRequest = await MaterialRequest.findById(id);
+      if (materialRequest) {
+        const conn = await pool.getConnection();
+        try {
+          let targetRootCardId = materialRequest.sales_order_id || materialRequest.root_card_id;
+          
+          // If not found, try to resolve from production plan
+          if (!targetRootCardId && materialRequest.production_plan_id) {
+            const [planRows] = await conn.execute(
+              'SELECT root_card_id, sales_order_id FROM production_plans WHERE id = ?',
+              [materialRequest.production_plan_id]
+            );
+            if (planRows.length > 0) {
+              targetRootCardId = planRows[0].root_card_id || planRows[0].sales_order_id;
+            }
+          }
+
+          if (targetRootCardId) {
+            // Also complete the Production workflow task "Initiate Material Request"
+            await WorkflowTaskHelper.completeAndOpenNext(targetRootCardId, 'Initiate Material Request', conn);
+            console.log(`[MR-Status-Trigger] Syncing production workflow for MR: ${id}, targetRootCardId: ${targetRootCardId}`);
+          }
+        } finally {
+          conn.release();
+        }
+      }
+    }
+
+    // If status is approved, trigger inventory workflow initialization
     if (status === 'approved') {
       const materialRequest = await MaterialRequest.findById(id);
       if (materialRequest) {
         const conn = await pool.getConnection();
         try {
-          // Check if tasks already exist for this MR
+          const targetRootCardId = materialRequest.sales_order_id || materialRequest.root_card_id;
+          
+          // Check if tasks already exist for this MR (Inventory Workflow)
           const [existingTasks] = await conn.execute(
             'SELECT id FROM root_card_inventory_tasks WHERE material_request_id = ? LIMIT 1',
             [id]
           );
 
           if (existingTasks.length === 0) {
-            console.log(`[MR-Status-Trigger] Initializing workflow for approved MR: ${id}`);
+            console.log(`[MR-Status-Trigger] Initializing inventory workflow for approved MR: ${id}`);
             
-            const targetRootCardId = materialRequest.sales_order_id || materialRequest.root_card_id;
             let actualRootCardId = targetRootCardId;
 
             if (targetRootCardId) {
               // Get root card details to ensure project exists
-              // root_cards doesn't have project_name/po_number, they are in projects or sales_orders
               const [rcRows] = await conn.execute(
                 `SELECT rc.id, rc.project_id, p.name as project_name, so.po_number 
                  FROM root_cards rc
@@ -477,9 +511,8 @@ exports.updateMaterialRequestStatus = async (req, res) => {
             await RootCardInventoryTask.initializeRootCardTasks(actualRootCardId || null, null, conn, id);
           }
           
-          // Complete Step 1: Check Project Material Requirements
-          // This task is completed when the material request is approved
-          console.log(`[MR-Status-Trigger] Completing Step 1 for MR: ${id}`);
+          // Complete Inventory Step 1: Check Project Material Requirements
+          console.log(`[MR-Status-Trigger] Completing inventory Step 1 for MR: ${id}`);
           await RootCardInventoryTask.completeTaskByMRAndStep(id, 1, req.user?.id, conn);
         } finally {
           conn.release();
@@ -661,6 +694,14 @@ exports.releaseMaterial = async (req, res) => {
       [id]
     );
 
+    // Sync overall workflow including Step 14: Release Material
+    try {
+      await RootCardInventoryTask.syncMRWorkflow(id);
+      console.log(`[MR-Release] Synced workflow for MR ${id} after release`);
+    } catch (syncErr) {
+      console.warn('[MR-Release] Workflow sync error:', syncErr.message);
+    }
+
     // Update all items in the request to 'completed'
     await connection.execute(
       'UPDATE material_request_items SET status = "completed", updated_at = CURRENT_TIMESTAMP WHERE material_request_id = ?',
@@ -681,10 +722,27 @@ exports.releaseMaterial = async (req, res) => {
       console.warn('Could not notify production:', notifError.message);
     }
 
-    // Complete the final workflow task if it exists
-    if (materialRequest.sales_order_id) {
+    // Complete the workflow tasks if they exist
+    let targetRootCardId = materialRequest.sales_order_id || materialRequest.root_card_id;
+    
+    // If not directly on MR, try to resolve from production plan
+    if (!targetRootCardId && materialRequest.production_plan_id) {
+      const [planRows] = await connection.execute(
+        'SELECT root_card_id, sales_order_id FROM production_plans WHERE id = ?',
+        [materialRequest.production_plan_id]
+      );
+      if (planRows.length > 0) {
+        targetRootCardId = planRows[0].root_card_id || planRows[0].sales_order_id;
+      }
+    }
+
+    if (targetRootCardId) {
       try {
-        await WorkflowTaskHelper.completeAndOpenNext(materialRequest.sales_order_id, 'Add to Stock & Release Material', connection);
+        // Complete the Production workflow task "Initiate Material Request" if not already completed
+        await WorkflowTaskHelper.completeAndOpenNext(targetRootCardId, 'Initiate Material Request', connection);
+        
+        // Complete the Inventory workflow task "Add to Stock & Release Material"
+        await WorkflowTaskHelper.completeAndOpenNext(targetRootCardId, 'Add to Stock & Release Material', connection);
       } catch (wfError) {
         console.warn('Could not complete workflow task:', wfError.message);
       }

@@ -26,9 +26,18 @@ class DepartmentTask {
                  FROM department_tasks dt
                  LEFT JOIN root_cards rc ON dt.root_card_id = rc.id
                  LEFT JOIN work_order_operations woo ON dt.work_order_operation_id = woo.id
-                 LEFT JOIN work_orders wo ON (woo.work_order_id = wo.id OR (dt.root_card_id = wo.root_card_id AND dt.work_order_operation_id IS NULL))
+                 LEFT JOIN work_orders wo ON (
+                    (dt.work_order_operation_id IS NOT NULL AND woo.work_order_id = wo.id)
+                    OR 
+                    (dt.work_order_operation_id IS NULL AND dt.root_card_id = wo.root_card_id AND wo.id = (
+                       SELECT id FROM work_orders WHERE root_card_id = dt.root_card_id ORDER BY id DESC LIMIT 1
+                    ))
+                 )
                  LEFT JOIN root_cards rc_alt ON wo.root_card_id = rc_alt.id
-                 LEFT JOIN root_cards rc_so ON dt.sales_order_id = rc_so.sales_order_id
+                 LEFT JOIN root_cards rc_so ON (
+                    dt.sales_order_id = rc_so.sales_order_id 
+                    AND rc_so.id = (SELECT id FROM root_cards WHERE sales_order_id = dt.sales_order_id ORDER BY id DESC LIMIT 1)
+                 )
                  LEFT JOIN projects p ON COALESCE(rc.project_id, rc_alt.project_id, rc_so.project_id) = p.id
                  LEFT JOIN sales_orders so ON COALESCE(dt.sales_order_id, rc.sales_order_id, rc_alt.sales_order_id, rc_so.sales_order_id, p.sales_order_id) = so.id
                  LEFT JOIN sales_order_details sod ON sod.id = (
@@ -106,9 +115,18 @@ class DepartmentTask {
        FROM department_tasks dt
        LEFT JOIN root_cards rc ON dt.root_card_id = rc.id
        LEFT JOIN work_order_operations woo ON dt.work_order_operation_id = woo.id
-       LEFT JOIN work_orders wo ON (woo.work_order_id = wo.id OR (dt.root_card_id = wo.root_card_id AND dt.work_order_operation_id IS NULL))
+       LEFT JOIN work_orders wo ON (
+          (dt.work_order_operation_id IS NOT NULL AND woo.work_order_id = wo.id)
+          OR 
+          (dt.work_order_operation_id IS NULL AND dt.root_card_id = wo.root_card_id AND wo.id = (
+             SELECT id FROM work_orders WHERE root_card_id = dt.root_card_id ORDER BY id DESC LIMIT 1
+          ))
+       )
        LEFT JOIN root_cards rc_alt ON wo.root_card_id = rc_alt.id
-       LEFT JOIN root_cards rc_so ON dt.sales_order_id = rc_so.sales_order_id
+       LEFT JOIN root_cards rc_so ON (
+          dt.sales_order_id = rc_so.sales_order_id 
+          AND rc_so.id = (SELECT id FROM root_cards WHERE sales_order_id = dt.sales_order_id ORDER BY id DESC LIMIT 1)
+       )
        LEFT JOIN projects p ON COALESCE(rc.project_id, rc_alt.project_id, rc_so.project_id) = p.id
        LEFT JOIN sales_orders so ON COALESCE(dt.sales_order_id, rc.sales_order_id, rc_alt.sales_order_id, rc_so.sales_order_id, p.sales_order_id) = so.id
        LEFT JOIN sales_order_details sod ON sod.id = (

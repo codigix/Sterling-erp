@@ -122,29 +122,44 @@ const InventoryTasksPage = () => {
     ) {
       navigate(`/inventory-manager/purchase-orders?${baseParams}`);
     } else if (taskTitle.includes("send") && taskTitle.includes("po")) {
-      navigate(`/inventory-manager/purchase-orders?${baseParams}`);
+      if (task.reference_id && task.reference_type === 'purchase_order') {
+        navigate(`/inventory-manager/purchase-orders/${task.reference_id}?${baseParams}`);
+      } else {
+        navigate(`/inventory-manager/purchase-orders?${baseParams}`);
+      }
     } else if (
       taskTitle.includes("receive") &&
       taskTitle.includes("material")
     ) {
-      navigate(`/inventory-manager/grn-processing?${baseParams}`);
+      if (task.reference_id && task.reference_type === 'purchase_order') {
+        navigate(`/inventory-manager/purchase-orders/${task.reference_id}?${baseParams}`);
+      } else {
+        // Fallback to purchase orders list
+        navigate(`/inventory-manager/purchase-orders?${baseParams}`);
+      }
     } else if (
       taskTitle.includes("approve") &&
       taskTitle.includes("purchase order")
     ) {
-      navigate(`/inventory-manager/purchase-orders?${baseParams}`);
+      if (task.reference_id && task.reference_type === 'purchase_order') {
+        navigate(`/inventory-manager/purchase-orders/${task.reference_id}?${baseParams}`);
+      } else {
+        navigate(`/inventory-manager/purchase-orders?${baseParams}`);
+      }
     } else if (taskTitle.includes("grn") || taskTitle.includes("processing")) {
       navigate(`/inventory-manager/grn-processing?${baseParams}`);
     } else if (taskTitle.includes("qc") || taskTitle.includes("inspection")) {
       navigate(`/inventory-manager/grn-processing?${baseParams}`);
     } else if (taskTitle.includes("stock") && taskTitle.includes("add")) {
-      navigate(`/inventory-manager/stock/view?${baseParams}`);
+      navigate(`/inventory-manager/grn-processing?${baseParams}`);
     } else if (taskTitle.includes("batch") || taskTitle.includes("location")) {
       navigate(`/inventory-manager/tracking/batches?${baseParams}`);
     } else if (taskTitle.includes("view") && taskTitle.includes("stock")) {
       navigate(`/inventory-manager/stock/view?${baseParams}`);
     } else if (taskTitle.includes("stock") && taskTitle.includes("movement")) {
       navigate(`/inventory-manager/stock/movements?${baseParams}`);
+    } else if (taskTitle.includes("release") && taskTitle.includes("material")) {
+      navigate(`/inventory-manager/material-requests?${baseParams}`);
     } else if (taskTitle.includes("reorder")) {
       navigate(`/inventory-manager/stock/reorder?${baseParams}`);
     } else {
@@ -569,28 +584,6 @@ const InventoryTasksPage = () => {
                       <Plus size={16} />
                       Add Task
                     </Button>
-                    
-                    {tasks.length > 0 && (
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        onClick={handleInitiateWorkflow}
-                        disabled={isInitiatingWorkflow}
-                        className="flex items-center gap-2 font-bold text-xs uppercase bg-blue-600 hover:bg-blue-700"
-                      >
-                        {isInitiatingWorkflow ? (
-                          <>
-                            <Loader2 size={16} className="animate-spin" />
-                            Starting...
-                          </>
-                        ) : (
-                          <>
-                            <Play size={16} />
-                            Start Workflow
-                          </>
-                        )}
-                      </Button>
-                    )}
                   </div>
                 </div>
 

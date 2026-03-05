@@ -68,6 +68,7 @@ const ProductionPlansPage = () => {
     const params = new URLSearchParams(location.search);
     const salesOrderId = params.get("salesOrderId");
     const openMaterialRequest = params.get("openMaterialRequest");
+    const openWorkOrder = params.get("openWorkOrder");
 
     if (openMaterialRequest === "true" && salesOrderId && plans.length > 0) {
       // Find the plan for this sales order (it might be in root_card_id or sales_order_id field)
@@ -75,6 +76,16 @@ const ProductionPlansPage = () => {
       if (plan) {
         handleSendMaterialRequest(plan.id);
         // Clear the query params after opening the modal
+        navigate("/department/production/plans", { replace: true });
+      }
+    }
+
+    if (openWorkOrder === "true" && salesOrderId && plans.length > 0) {
+      // Find the plan for this sales order
+      const plan = plans.find(p => p.sales_order_id == salesOrderId || p.root_card_id == salesOrderId);
+      if (plan) {
+        handleGenerateWorkOrders(plan.id);
+        // Clear the query params
         navigate("/department/production/plans", { replace: true });
       }
     }

@@ -4,7 +4,6 @@ import { useAuth } from "../../context/AuthContext";
 import NotificationBell from "../common/NotificationBell";
 import {
   Menu,
-  Search,
   User,
   LogOut,
   ChevronDown,
@@ -132,19 +131,7 @@ const DepartmentLayout = () => {
             </Link>
           </div>
 
-          {/* Center - Search */}
-          <div className="flex-1 max-w-md mx-6">
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center text-xs pointer-events-none">
-                <Search size={16} className="text-slate-400" />
-              </div>
-              <input
-                type="text"
-                className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700  dark: placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Search tasks..."
-              />
-            </div>
-          </div>
+          <div className="flex-1"></div>
 
           {/* Right side */}
           <div className="flex items-center text-xs space-x-4">

@@ -97,9 +97,18 @@ exports.createPurchaseOrder = async (req, res) => {
           // Step 5 is "Create Purchase Order"
           await RootCardInventoryTask.completeTaskByMRAndStep(material_request_id, 5, userId);
           
-          // Also set Step 6 "Send PO to Vendor" to in_progress if it's pending
+          // Link PO to Step 5, 6, 7, 8 tasks
           const tasks = await RootCardInventoryTask.getTasksByMaterialRequestId(material_request_id);
-          const step6Task = tasks.find(t => t.step_number === 6);
+          const stepsToLink = [5, 6, 7, 8];
+          for (const stepNum of stepsToLink) {
+            const task = tasks.find(t => t.step_number === stepNum);
+            if (task) {
+              await RootCardInventoryTask.updateTaskWithReference(task.id, purchaseOrderId, 'purchase_order', task.status);
+            }
+          }
+          
+          // Also set Step 6 "Send PO to Vendor" to in_progress if it's pending
+          const step6Task = tasks.find(t => t.step_number === 6 || t.step_name === 'Send PO to Vendor');
           if (step6Task && step6Task.status === 'pending') {
             await RootCardInventoryTask.updateTaskStatus(step6Task.id, 'in_progress', userId);
           }
@@ -157,6 +166,33 @@ exports.updatePurchaseOrderStatus = async (req, res) => {
     }
     
     await PurchaseOrder.updateStatus(id, status);
+    
+    // Handle workflow task transition if PO is approved
+    if (status === 'approved') {
+      try {
+        const purchaseOrder = await PurchaseOrder.findById(id);
+        
+        if (purchaseOrder && purchaseOrder.material_request_id) {
+          const userId = req.user ? req.user.id : null;
+          // Step 7 is "Approve Purchase Order"
+          await RootCardInventoryTask.completeTaskByMRAndStep(purchaseOrder.material_request_id, 7, userId);
+          
+          // Also set Step 8 "Receive Material" to in_progress if it's pending
+          const tasks = await RootCardInventoryTask.getTasksByMaterialRequestId(purchaseOrder.material_request_id);
+          const step8Task = tasks.find(t => t.step_number === 8 || t.step_name === 'Receive Material');
+          if (step8Task && step8Task.status === 'pending') {
+            await RootCardInventoryTask.updateTaskStatus(step8Task.id, 'in_progress', userId);
+          }
+          
+          // Sync overall workflow
+          await RootCardInventoryTask.syncMRWorkflow(purchaseOrder.material_request_id);
+          
+          console.log(`[PO-Approval] Automatically completed "Approve Purchase Order" task for MR ${purchaseOrder.material_request_id}`);
+        }
+      } catch (wfErr) {
+        console.error('[PO-Approval] Workflow update error:', wfErr);
+      }
+    }
 
     res.json({ message: 'Purchase order status updated successfully' });
   } catch (error) {
@@ -306,11 +342,13 @@ exports.sendPurchaseOrderEmail = async (req, res) => {
             // Step 6 is "Send PO to Vendor"
             await RootCardInventoryTask.completeTaskByMRAndStep(purchaseOrder.material_request_id, 6, userId);
             
-            // Also set Step 7 "Receive Material" to in_progress if it's pending
+            // Also set Step 7 "Approve Purchase Order" to in_progress if it's pending and link PO
             const tasks = await RootCardInventoryTask.getTasksByMaterialRequestId(purchaseOrder.material_request_id);
-            const step7Task = tasks.find(t => t.step_number === 7);
-            if (step7Task && step7Task.status === 'pending') {
-              await RootCardInventoryTask.updateTaskStatus(step7Task.id, 'in_progress', userId);
+            const step7Task = tasks.find(t => t.step_number === 7 || t.step_name === 'Approve Purchase Order');
+            if (step7Task) {
+              await RootCardInventoryTask.updateTaskWithReference(step7Task.id, id, 'purchase_order', 
+                step7Task.status === 'pending' ? 'in_progress' : step7Task.status
+              );
             }
             console.log(`[PO-Email] Automatically completed "Send PO to Vendor" task for MR ${purchaseOrder.material_request_id}`);
           } catch (wfErr) {

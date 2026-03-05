@@ -1,5 +1,8 @@
 const QCInspection = require('../../models/QCInspection');
 const pool = require('../../config/database');
+const RootCardInventoryTask = require('../../models/RootCardInventoryTask');
+const GRN = require('../../models/GRN');
+const PurchaseOrder = require('../../models/PurchaseOrder');
 
 exports.getGRNInspections = async (req, res) => {
   try {
@@ -263,6 +266,33 @@ exports.saveInspection = async (req, res) => {
         
         await conn.query(updateQuery, updateParams);
         conn.release();
+
+        // Handle workflow task transition
+        if (['passed', 'conditional', 'shortage', 'overage', 'failed', 'rejected'].includes(status)) {
+          try {
+            const grn = await GRN.findById(grnId);
+            if (grn && grn.po_id) {
+              const po = await PurchaseOrder.findById(grn.po_id);
+              if (po && po.material_request_id) {
+                const userId = req.user ? req.user.id : inspectorId || null;
+                // Step 10 is "QC Inspection"
+                await RootCardInventoryTask.completeTaskByMRAndStep(po.material_request_id, 10, userId);
+                
+                // Also set Step 11 "Stock Addition" to in_progress if it's pending (except for failed/rejected)
+                if (['passed', 'conditional', 'shortage', 'overage'].includes(status)) {
+                  const tasks = await RootCardInventoryTask.getTasksByMaterialRequestId(po.material_request_id);
+                  const step11Task = tasks.find(t => t.step_number === 11 || t.step_name === 'Stock Addition');
+                  if (step11Task && step11Task.status === 'pending') {
+                    await RootCardInventoryTask.updateTaskStatus(step11Task.id, 'in_progress', userId);
+                  }
+                }
+                console.log(`[QC-Inspection] Automatically completed "QC Inspection" task for MR ${po.material_request_id}`);
+              }
+            }
+          } catch (wfErr) {
+            console.warn('[QC-Inspection] Workflow update error:', wfErr.message);
+          }
+        }
         
         const message = existing && existing.length > 0 ? 'Inspection updated successfully' : 'Inspection created successfully';
         res.json({ message, id: inspectionId });

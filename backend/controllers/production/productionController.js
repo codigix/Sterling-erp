@@ -649,8 +649,11 @@ exports.internalCreateWorkflowTasks = async (rootCardId, userId, connection, typ
   
   // Cleanup existing workflow tasks of this type
   await connection.execute(
-    `DELETE FROM department_tasks WHERE root_card_id = ? AND JSON_EXTRACT(notes, '$.workflow_type') = ? AND JSON_EXTRACT(notes, '$.workflow_step') = true`,
-    [effectiveRootCardId, type]
+    `DELETE FROM department_tasks 
+     WHERE (root_card_id = ? OR sales_order_id = ?) 
+     AND JSON_EXTRACT(notes, '$.workflow_type') = ? 
+     AND JSON_EXTRACT(notes, '$.workflow_step') = true`,
+    [effectiveRootCardId, baseSalesOrderId, type]
   );
 
   const [workflowSteps] = await connection.execute(
@@ -658,29 +661,44 @@ exports.internalCreateWorkflowTasks = async (rootCardId, userId, connection, typ
      FROM ${workflowTable} WHERE is_active = TRUE ORDER BY step_order ASC`
   );
 
-  // Check if a production plan already exists for this root card
-  let planExists = false;
-  if (type === 'production') {
-    const [plans] = await connection.execute(
-      'SELECT id FROM production_plans WHERE root_card_id = ? LIMIT 1',
-      [effectiveRootCardId]
-    );
-    planExists = plans.length > 0;
-  }
-
-  // Check if material request already exists for inventory workflow
+  // Check if material request already exists for this sales order
   let mrExists = false;
-  if (type === 'inventory') {
+  if (type === 'production' || type === 'inventory') {
     const [mrs] = await connection.execute(
-      'SELECT id FROM material_requests WHERE sales_order_id = ? LIMIT 1',
+      'SELECT id, status FROM material_requests WHERE sales_order_id = ? LIMIT 1',
       [baseSalesOrderId]
     );
     mrExists = mrs.length > 0;
+    
+    // If it exists and is approved/completed, we'll mark the corresponding task
+    const mrCompleted = mrExists && (mrs[0].status === 'approved' || mrs[0].status === 'completed' || mrs[0].status === 'received');
+    if (mrCompleted) mrExists = 'completed'; 
+  }
+
+  // Check if work orders already exist for this root card
+  let woExists = false;
+  if (type === 'production') {
+    const [wos] = await connection.execute(
+      'SELECT id FROM work_orders WHERE root_card_id = ? LIMIT 1',
+      [effectiveRootCardId]
+    );
+    woExists = wos.length > 0;
   }
 
   if (workflowSteps.length === 0) {
     console.warn(`No active ${type} workflow steps defined`);
     return [];
+  }
+
+  // Check if a production plan already exists for this root card
+  let planExists = false;
+  if (type === 'production') {
+    const [plans] = await connection.execute(
+      'SELECT id, status FROM production_plans WHERE root_card_id = ? LIMIT 1',
+      [effectiveRootCardId]
+    );
+    planExists = plans.length > 0;
+    if (planExists && (plans[0].status === 'completed' || plans[0].status === 'approved' || plans[0].status === 'draft')) planExists = 'completed';
   }
 
   for (const step of workflowSteps) {
@@ -690,21 +708,23 @@ exports.internalCreateWorkflowTasks = async (rootCardId, userId, connection, typ
     if (roleId) {
       let initialStatus = step.step_order === 1 ? 'pending' : 'on_hold';
       
-      // If it's a production workflow and a plan already exists
-      if (type === 'production' && planExists) {
-        if (step.step_order === 1) {
+      // Handle Production Workflow Auto-Completion
+      if (type === 'production') {
+        if (step.step_order === 1 && planExists) {
+          initialStatus = planExists === 'completed' ? 'completed' : 'pending';
+        } else if (step.step_order === 2 && mrExists) {
+          initialStatus = mrExists === 'completed' ? 'completed' : 'pending';
+        } else if (step.step_order === 3 && woExists) {
           initialStatus = 'completed';
-        } else if (step.step_order === 2) {
-          initialStatus = 'pending';
         }
       }
 
-      // If it's an inventory workflow and a material request already exists
+      // Handle Inventory Workflow Auto-Completion
       if (type === 'inventory' && mrExists) {
         if (step.step_order === 1) {
-          initialStatus = 'completed';
+          initialStatus = mrExists === 'completed' ? 'completed' : 'pending';
         } else if (step.step_order === 2) {
-          initialStatus = 'pending';
+          initialStatus = 'pending'; // Always pending if MR exists but step 2 is not yet done
         }
       }
       

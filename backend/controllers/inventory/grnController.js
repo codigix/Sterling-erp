@@ -2,6 +2,7 @@ const GRN = require('../../models/GRN');
 const PurchaseOrder = require('../../models/PurchaseOrder');
 const Material = require('../../models/Material');
 const StockEntry = require('../../models/StockEntry');
+const RootCardInventoryTask = require('../../models/RootCardInventoryTask');
 const emailService = require('../../services/emailService');
 
 const generateVendorDiscrepancyEmail = (grnData, poData, grnItems, status) => {
@@ -271,6 +272,33 @@ exports.addToStock = async (req, res) => {
         if (grn.po_id) {
             await PurchaseOrder.updateStatus(grn.po_id, 'fulfilled');
         }
+
+        // 6. Handle workflow task transition
+        try {
+            let materialRequestId = null;
+            if (grn.po_id) {
+                const po = await PurchaseOrder.findById(grn.po_id);
+                materialRequestId = po ? po.material_request_id : null;
+            }
+
+            if (materialRequestId) {
+                const userId = req.user ? req.user.id : null;
+                // Step 9 is "GRN Processing"
+                await RootCardInventoryTask.completeTaskByMRAndStep(materialRequestId, 9, userId);
+                // Step 11 is "Stock Addition"
+                await RootCardInventoryTask.completeTaskByMRAndStep(materialRequestId, 11, userId);
+                
+                // Also set Step 12 "Release Material" to in_progress if it's pending
+                const tasks = await RootCardInventoryTask.getTasksByMaterialRequestId(materialRequestId);
+                const step12Task = tasks.find(t => t.step_number === 12 || t.step_name === 'Release Material');
+                if (step12Task && step12Task.status === 'pending') {
+                    await RootCardInventoryTask.updateTaskStatus(step12Task.id, 'in_progress', userId);
+                }
+                console.log(`[GRN-Stock] Completed "GRN Processing" and "Stock Addition" tasks for MR ${materialRequestId}`);
+            }
+        } catch (wfErr) {
+            console.warn('[GRN-Stock] Workflow update error:', wfErr.message);
+        }
         
         res.json({ message: 'Stock updated successfully' });
         
@@ -325,7 +353,7 @@ exports.createGRN = async (req, res) => {
       po_id: po_id || null,
       vendor_id: vendor_id || null,
       items: grnItems,
-      qc_status: qc_status || 'pending',
+      qc_status: 'pending_approval', // Set to pending_approval for initial state
       receipt_date,
       transporter_notes
     });
@@ -333,6 +361,39 @@ exports.createGRN = async (req, res) => {
     // Update Purchase Order status to 'goods arrival'
     if (po_id) {
       await PurchaseOrder.updateStatus(po_id, 'goods arrival');
+      
+      // Handle workflow task transition
+      try {
+        const po = await PurchaseOrder.findById(po_id);
+        if (po && po.material_request_id) {
+          const userId = req.user ? req.user.id : null;
+          // Step 8 is "Receive Material"
+          await RootCardInventoryTask.completeTaskByMRAndStep(po.material_request_id, 8, userId);
+          
+          // Link GRN to Step 9, 10, 11 tasks
+          const tasks = await RootCardInventoryTask.getTasksByMaterialRequestId(po.material_request_id);
+          const stepsToLink = [
+            { num: 9, name: 'GRN Processing' },
+            { num: 10, name: 'QC Inspection' },
+            { num: 11, name: 'Stock Addition' }
+          ];
+          for (const step of stepsToLink) {
+            const task = tasks.find(t => t.step_number === step.num || t.step_name === step.name);
+            if (task) {
+              await RootCardInventoryTask.updateTaskWithReference(task.id, grnId, 'grn', task.status);
+            }
+          }
+
+          // Also set Step 9 "GRN Processing" to in_progress if it's pending
+          const step9Task = tasks.find(t => t.step_number === 9 || t.step_name === 'GRN Processing');
+          if (step9Task && step9Task.status === 'pending') {
+            await RootCardInventoryTask.updateTaskStatus(step9Task.id, 'in_progress', userId);
+          }
+          console.log(`[GRN-Create] Automatically completed "Receive Material" task for MR ${po.material_request_id}`);
+        }
+      } catch (wfErr) {
+        console.warn('[GRN-Create] Workflow update error:', wfErr.message);
+      }
     }
 
     const newGRN = await GRN.findById(grnId);
@@ -377,6 +438,51 @@ exports.getGRNById = async (req, res) => {
     res.json(grn);
   } catch (error) {
     console.error('Get GRN error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+exports.approveGRN = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const grn = await GRN.findById(id);
+    
+    if (!grn) {
+      return res.status(404).json({ message: 'GRN not found' });
+    }
+    
+    // Transition from pending_approval to pending (ready for inspection)
+    await GRN.updateStatus(id, 'pending');
+
+    // Handle workflow task transition
+    try {
+      if (grn.po_id) {
+        const po = await PurchaseOrder.findById(grn.po_id);
+        if (po && po.material_request_id) {
+          const userId = req.user ? req.user.id : null;
+          // Step 9 is "GRN Processing"
+          await RootCardInventoryTask.completeTaskByMRAndStep(po.material_request_id, 9, userId);
+          
+          // Set Step 10 "QC Inspection" to in_progress if it's pending
+          const tasks = await RootCardInventoryTask.getTasksByMaterialRequestId(po.material_request_id);
+          const step10Task = tasks.find(t => t.step_number === 10 || t.step_name === 'QC Inspection');
+          if (step10Task && step10Task.status === 'pending') {
+            await RootCardInventoryTask.updateTaskStatus(step10Task.id, 'in_progress', userId);
+          }
+          
+          // Sync overall workflow
+          await RootCardInventoryTask.syncMRWorkflow(po.material_request_id);
+          
+          console.log(`[GRN-Approval] Automatically completed "GRN Processing" task for MR ${po.material_request_id}`);
+        }
+      }
+    } catch (wfErr) {
+      console.warn('[GRN-Approval] Workflow update error:', wfErr.message);
+    }
+    
+    res.json({ message: 'GRN approved and moved to QC Inspection' });
+  } catch (error) {
+    console.error('Approve GRN error:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 };

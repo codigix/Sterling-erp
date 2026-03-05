@@ -72,6 +72,9 @@ exports.getMRInventoryTasks = async (req, res) => {
 
     const mr = mrRows[0];
 
+    // Auto-sync workflow with actual PO/GRN states
+    await RootCardInventoryTask.syncMRWorkflow(mrId);
+
     let tasks = await RootCardInventoryTask.getTasksByMaterialRequestId(mrId, true);
     const progress = await RootCardInventoryTask.getMRWorkflowProgress(mrId);
 
