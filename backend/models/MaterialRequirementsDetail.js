@@ -42,6 +42,19 @@ class MaterialRequirementsDetail {
     return rows[0] ? this.formatRow(rows[0]) : null;
   }
 
+  static normalizeProcurementStatus(status) {
+    const validStatuses = ['pending', 'ordered', 'received', 'partial'];
+    const normalized = (status || '').toLowerCase();
+    
+    if (validStatuses.includes(normalized)) return normalized;
+    
+    // Map common frontend/workflow statuses to valid procurement ENUM values
+    if (normalized === 'in_progress') return 'pending';
+    if (normalized === 'completed') return 'received';
+    
+    return 'pending'; // Default fallback
+  }
+
   static async create(data) {
     const rootCardId = data.rootCardId || data.salesOrderId || data.sales_order_id;
     
@@ -58,14 +71,15 @@ class MaterialRequirementsDetail {
       rootCardId || null,
       stringifyJsonField(ensureArray(data.materials)) || '[]',
       data.totalMaterialCost || 0,
-      data.procurementStatus || 'pending',
-      data.notes || null
+      this.normalizeProcurementStatus(data.procurementStatus),
+      data.notes || null,
+      stringifyJsonField(data.materialDetailsTable || {})
     ];
 
     const [result] = await pool.execute(
       `INSERT INTO material_requirements_details 
-       (sales_order_id, materials, total_material_cost, procurement_status, notes)
-       VALUES (?, ?, ?, ?, ?)`,
+       (sales_order_id, materials, total_material_cost, procurement_status, notes, material_details_table)
+       VALUES (?, ?, ?, ?, ?, ?)`,
       [...params]
     );
     return result.insertId;
@@ -75,14 +89,15 @@ class MaterialRequirementsDetail {
     const params = [
       stringifyJsonField(ensureArray(data.materials)) || '[]',
       data.totalMaterialCost || 0,
-      data.procurementStatus || 'pending',
+      this.normalizeProcurementStatus(data.procurementStatus),
       data.notes || null,
+      stringifyJsonField(data.materialDetailsTable || {}),
       rootCardId
     ];
 
     await pool.execute(
       `UPDATE material_requirements_details 
-       SET materials = ?, total_material_cost = ?, procurement_status = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
+       SET materials = ?, total_material_cost = ?, procurement_status = ?, notes = ?, material_details_table = ?, updated_at = CURRENT_TIMESTAMP
        WHERE sales_order_id = ?`,
       params
     );
@@ -93,7 +108,7 @@ class MaterialRequirementsDetail {
       `UPDATE material_requirements_details 
        SET procurement_status = ?, updated_at = CURRENT_TIMESTAMP
        WHERE sales_order_id = ?`,
-      [status, rootCardId]
+      [this.normalizeProcurementStatus(status), rootCardId]
     );
   }
 
@@ -216,12 +231,20 @@ class MaterialRequirementsDetail {
 
   static async calculateTotalCost(materials) {
     if (!Array.isArray(materials)) return 0;
-    return materials.reduce((total, material) => {
+    let totalCost = 0;
+    
+    for (const material of materials) {
+      if (!material) continue;
+      
       const quantity = parseFloat(material.quantity) || 0;
       // Prioritize cost/valuation over selling rate for BOM calculations
-      const price = parseFloat(material.valuationRate || material.valuation_rate || material.unitCost || material.unit_cost || material.unitPrice || material.sellingRate || material.selling_rate || 0);
-      return total + (quantity * price);
-    }, 0);
+      const priceSource = material.valuationRate ?? material.valuation_rate ?? material.unitCost ?? material.unit_cost ?? material.unitPrice ?? material.sellingRate ?? material.selling_rate ?? 0;
+      const price = parseFloat(priceSource) || 0;
+      
+      totalCost += (quantity * price);
+    }
+    
+    return totalCost;
   }
 
   static formatRow(row) {
@@ -230,6 +253,7 @@ class MaterialRequirementsDetail {
       id: row.id,
       rootCardId: row.sales_order_id,
       materials: ensureArray(parseJsonField(row.materials, [])),
+      materialDetailsTable: parseJsonField(row.material_details_table, {}),
       totalMaterialCost: row.total_material_cost,
       procurementStatus: row.procurement_status,
       notes: row.notes,

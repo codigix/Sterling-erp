@@ -20,40 +20,45 @@ class MaterialRequirementsController {
       const data = req.body;
       const { assignedTo } = req.body;
 
-      console.log('[MaterialRequirements] Received data:');
-      console.log('  materials type:', typeof data.materials);
-      console.log('  materials value:', data.materials);
-      if (data.materials) {
-        console.log('  is array?', Array.isArray(data.materials));
-        console.log('  length:', data.materials.length);
-      }
+      console.log(`[MaterialRequirements] createOrUpdate for RootCard ${rootCardId}`);
+      console.log('  materials count:', data.materials ? (Array.isArray(data.materials) ? data.materials.length : 'not an array') : 'none');
 
       const validation = validateMaterialRequirements(data);
       if (!validation.isValid) {
         console.warn('Material Requirements validation warnings:', validation.errors);
       }
 
+      console.log('  calculating cost...');
       data.totalMaterialCost = await MaterialRequirementsDetail.calculateTotalCost(data.materials);
+      console.log('  total cost:', data.totalMaterialCost);
 
+      console.log('  finding existing detail...');
       let detail = await MaterialRequirementsDetail.findByRootCardId(rootCardId);
 
       if (detail) {
+        console.log('  updating existing detail...');
         await MaterialRequirementsDetail.update(rootCardId, data);
       } else {
+        console.log('  creating new detail...');
         data.rootCardId = rootCardId;
         await MaterialRequirementsDetail.create(data);
       }
 
+      console.log('  fetching updated detail...');
       const updated = await MaterialRequirementsDetail.findByRootCardId(rootCardId);
+      
+      console.log('  updating RootCardStep...');
       await RootCardStep.update(rootCardId, 3, { status: 'in_progress', data: updated, assignedTo });
       
       if (assignedTo) {
+        console.log('  assigning employee...');
         await RootCardStep.assignEmployee(rootCardId, 3, assignedTo);
-        // Task creation removed as per user request to keep them only in workflow tasks
       }
 
+      console.log('  success!');
       res.json(formatSuccessResponse(updated, 'Material requirements saved'));
     } catch (error) {
+      console.error('[MaterialRequirements] ERROR in createOrUpdate:', error);
       res.status(500).json(formatErrorResponse(error.message));
     }
   }

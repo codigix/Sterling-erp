@@ -96,33 +96,59 @@ class RootCardStep {
 
   static async update(rootCardId, stepId, data, connection = null) {
     const conn = connection || pool;
-    // Update legacy table
-    await conn.execute(
-      `UPDATE sales_order_steps 
-       SET status = ?, data = ?, assigned_to = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
-       WHERE sales_order_id = ? AND step_id = ?`,
-      [
-        data.status,
-        stringifyJsonField(data.data),
-        data.assignedTo || null,
-        data.notes || null,
-        rootCardId,
-        stepId
-      ]
-    );
+    console.log(`[RootCardStep] Updating step ${stepId} for rootCard ${rootCardId}`, {
+      status: data.status,
+      hasData: !!data.data,
+      assignedTo: data.assignedTo
+    });
+    
+    try {
+      let finalAssignedTo = null;
+      if (data.assignedTo && !isNaN(parseInt(data.assignedTo))) {
+        finalAssignedTo = parseInt(data.assignedTo);
+      } else if (typeof data.assignedTo === 'string' && data.assignedTo.trim() !== '') {
+        // Resolve loginId to numeric ID
+        const [rows] = await pool.execute('SELECT id FROM users WHERE loginId = ?', [data.assignedTo]);
+        if (rows.length > 0) {
+          finalAssignedTo = rows[0].id;
+        }
+      }
 
-    // Update new workflow table
-    await conn.execute(
-      `UPDATE sales_order_workflow_steps 
-       SET status = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
-       WHERE sales_order_id = ? AND step_number = ?`,
-      [
-        data.status,
-        data.notes || null,
-        rootCardId,
-        stepId
-      ]
-    );
+      // Update legacy table
+      console.log('  [RootCardStep] Updating sales_order_steps...');
+      const [legacyResult] = await conn.execute(
+        `UPDATE sales_order_steps 
+         SET status = ?, data = ?, assigned_to = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE sales_order_id = ? AND step_id = ?`,
+        [
+          data.status,
+          stringifyJsonField(data.data),
+          finalAssignedTo,
+          data.notes || null,
+          rootCardId,
+          stepId
+        ]
+      );
+      console.log(`  [RootCardStep] Legacy update successful: ${legacyResult.affectedRows} rows`);
+
+      // Update new workflow table
+      console.log('  [RootCardStep] Updating sales_order_workflow_steps...');
+      const [workflowResult] = await conn.execute(
+        `UPDATE sales_order_workflow_steps 
+         SET status = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE sales_order_id = ? AND step_number = ?`,
+        [
+          data.status,
+          data.notes || null,
+          rootCardId,
+          stepId
+        ]
+      );
+      console.log(`  [RootCardStep] Workflow update successful: ${workflowResult.affectedRows} rows`);
+    } catch (error) {
+      console.error('  [RootCardStep] FATAL ERROR in update:', error);
+      throw error;
+    }
   }
 
   static async updateStatus(rootCardId, stepId, status, extraData = {}, connection = null) {
@@ -218,21 +244,50 @@ class RootCardStep {
 
   static async assignEmployee(rootCardId, stepId, employeeId, connection = null) {
     const conn = connection || pool;
-    // Update legacy table
-    await conn.execute(
-      `UPDATE sales_order_steps 
-       SET assigned_to = ?, updated_at = CURRENT_TIMESTAMP
-       WHERE sales_order_id = ? AND step_id = ?`,
-      [employeeId, rootCardId, stepId]
-    );
+    console.log(`[RootCardStep] Assigning employee ${employeeId} to step ${stepId} for rootCard ${rootCardId}`);
 
-    // Update new workflow table
-    await conn.execute(
-      `UPDATE sales_order_workflow_steps 
-       SET assigned_employee_id = ?, assigned_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
-       WHERE sales_order_id = ? AND step_number = ?`,
-      [employeeId, rootCardId, stepId]
-    );
+    let finalEmployeeId = null;
+    if (employeeId && !isNaN(parseInt(employeeId))) {
+      finalEmployeeId = parseInt(employeeId);
+    } else if (typeof employeeId === 'string' && employeeId.trim() !== '') {
+      // If it's a loginId string (like 'inventory.manager'), try to resolve it to an ID
+      console.log(`  [RootCardStep] Resolving string employeeId: ${employeeId}`);
+      try {
+        const [rows] = await pool.execute('SELECT id FROM users WHERE loginId = ?', [employeeId]);
+        if (rows.length > 0) {
+          finalEmployeeId = rows[0].id;
+          console.log(`  [RootCardStep] Resolved ${employeeId} to ID ${finalEmployeeId}`);
+        } else {
+          console.warn(`  [RootCardStep] Could not resolve loginId: ${employeeId}. Setting to null.`);
+        }
+      } catch (err) {
+        console.error(`  [RootCardStep] Error resolving employeeId:`, err);
+      }
+    }
+
+    try {
+      // Update legacy table
+      console.log('  [RootCardStep] Updating sales_order_steps assignee...');
+      await conn.execute(
+        `UPDATE sales_order_steps 
+         SET assigned_to = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE sales_order_id = ? AND step_id = ?`,
+        [finalEmployeeId, rootCardId, stepId]
+      );
+
+      // Update new workflow table
+      console.log('  [RootCardStep] Updating sales_order_workflow_steps assignee...');
+      await conn.execute(
+        `UPDATE sales_order_workflow_steps 
+         SET assigned_employee_id = ?, assigned_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+         WHERE sales_order_id = ? AND step_number = ?`,
+        [finalEmployeeId, rootCardId, stepId]
+      );
+      console.log('  [RootCardStep] Assignment successful');
+    } catch (error) {
+      console.error('  [RootCardStep] FATAL ERROR in assignEmployee:', error);
+      throw error;
+    }
   }
 
   static async getStepProgress(rootCardId) {

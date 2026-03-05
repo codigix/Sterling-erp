@@ -736,7 +736,7 @@ const CreateQuotationModal = ({
                     <button
                       type="button"
                       onClick={() => setAnalysisMode(true)}
-                      className="text-xs font-medium text-blue-600 hover:text-blue-700 underline"
+                        className="text-xs font-medium text-blue-600 hover:text-blue-700 underline"
                     >
                       Re-Analyze
                     </button>
