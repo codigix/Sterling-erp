@@ -78,6 +78,7 @@ const EmployeeTasks = () => {
   };
 
   const handleUpdateTaskStatus = async (taskId, newStatus, extraDetails = null) => {
+    if (updatingTaskId === taskId) return;
     try {
       setUpdatingTaskId(taskId);
       

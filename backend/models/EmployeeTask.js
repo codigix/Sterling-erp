@@ -160,6 +160,26 @@ class EmployeeTask {
   static async createAssignedTask(employeeId, data, connection = null) {
     const db = connection || pool;
     
+    // Resolve employeeId if it's actually a userId
+    let finalEmployeeId = employeeId;
+    try {
+      // First check if this ID exists in employees table
+      const [empExists] = await db.execute('SELECT id FROM employees WHERE id = ?', [employeeId]);
+      if (empExists.length === 0) {
+        // If not, it might be a user_id, try to find the linked employee
+        const [linkedEmp] = await db.execute(
+          'SELECT e.id FROM employees e JOIN users u ON e.email = u.email WHERE u.id = ?',
+          [employeeId]
+        );
+        if (linkedEmp.length > 0) {
+          finalEmployeeId = linkedEmp[0].id;
+          console.log(`[EmployeeTask] Resolved userId ${employeeId} to employeeId ${finalEmployeeId}`);
+        }
+      }
+    } catch (resolveErr) {
+      console.warn('[EmployeeTask] Error resolving IDs:', resolveErr.message);
+    }
+
     // Validate salesOrderId if provided to avoid FK constraint failures
     let validatedSalesOrderId = data.salesOrderId || null;
     if (validatedSalesOrderId) {
@@ -175,11 +195,36 @@ class EmployeeTask {
       }
     }
 
+    // Resolve assignedBy if it's a userId (it usually is from req.user.id)
+    let finalAssignedBy = data.assignedBy || null;
+    if (finalAssignedBy) {
+      try {
+        const [assignerEmp] = await db.execute(
+          'SELECT e.id FROM employees e JOIN users u ON e.email = u.email WHERE u.id = ?',
+          [data.assignedBy]
+        );
+        if (assignerEmp.length > 0) {
+          finalAssignedBy = assignerEmp[0].id;
+        } else {
+          // If the assigner doesn't have an employee record, we might need to set to null 
+          // to avoid FK constraint failure since assigned_by REFERENCES employees(id)
+          const [directEmp] = await db.execute('SELECT id FROM employees WHERE id = ?', [data.assignedBy]);
+          if (directEmp.length === 0) {
+            console.warn(`[EmployeeTask] ⚠️ Assigner ID ${data.assignedBy} not found in employees table. Setting to null.`);
+            finalAssignedBy = null;
+          }
+        }
+      } catch (err) {
+        console.warn(`[EmployeeTask] ⚠️ Error resolving assigner ID:`, err.message);
+        finalAssignedBy = null;
+      }
+    }
+
     const [result] = await db.execute(
       `INSERT INTO employee_tasks (employee_id, title, description, type, production_plan_stage_id, work_order_operation_id, sales_order_id, priority, status, due_date, notes, assigned_by)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        employeeId,
+        finalEmployeeId,
         data.title,
         data.description || null,
         data.type || 'general',
@@ -190,7 +235,7 @@ class EmployeeTask {
         'pending',
         data.dueDate || null,
         data.notes || null,
-        data.assignedBy || null
+        finalAssignedBy
       ]
     );
 
@@ -208,16 +253,16 @@ class EmployeeTask {
         );
         if (stageRows.length > 0 && stageRows[0].is_blocked) {
           shouldNotify = false;
-          console.log(`[EmployeeTask] ℹ️ Task created for employee ${employeeId} but stage is blocked, no notification sent`);
+          console.log(`[EmployeeTask] ℹ️ Task created for employee ${finalEmployeeId} but stage is blocked, no notification sent`);
         }
       }
       
       if (shouldNotify) {
         // Find user_id from employee_id for notification
-        let userId = employeeId;
+        let userId = finalEmployeeId;
         const [users] = await db.execute(
           "SELECT u.id FROM users u JOIN employees e ON u.email = e.email WHERE e.id = ?", 
-          [employeeId]
+          [finalEmployeeId]
         );
         if (users.length > 0) {
           userId = users[0].id;
@@ -236,11 +281,19 @@ class EmployeeTask {
             // Find user_id for the assigner (from_user_id)
             let fromUserId = null;
             if (data.assignedBy) {
-              const [assignerUsers] = await db.execute(
-                "SELECT u.id FROM users u JOIN employees e ON u.email = e.email WHERE e.id = ?", 
-                [data.assignedBy]
-              );
-              if (assignerUsers.length > 0) fromUserId = assignerUsers[0].id;
+              // data.assignedBy is usually already a user_id from req.user.id
+              // Let's verify if it's a valid user_id first
+              const [userCheck] = await db.execute("SELECT id FROM users WHERE id = ?", [data.assignedBy]);
+              if (userCheck.length > 0) {
+                fromUserId = userCheck[0].id;
+              } else {
+                // If not found in users, it might be an employee_id
+                const [assignerUsers] = await db.execute(
+                  "SELECT u.id FROM users u JOIN employees e ON u.email = e.email WHERE e.id = ?", 
+                  [data.assignedBy]
+                );
+                if (assignerUsers.length > 0) fromUserId = assignerUsers[0].id;
+              }
             }
 
             await db.execute(

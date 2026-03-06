@@ -115,12 +115,12 @@ const InventoryTasksPage = () => {
       taskTitle.includes("receive") &&
       taskTitle.includes("quotation")
     ) {
-      navigate(`/inventory-manager/quotations/sent?${baseParams}&action=record`);
+      navigate(`/inventory-manager/quotations/received?${baseParams}&action=record`);
     } else if (
       taskTitle.includes("create") &&
       taskTitle.includes("purchase order")
     ) {
-      navigate(`/inventory-manager/purchase-orders?${baseParams}`);
+      navigate(`/inventory-manager/quotations/received?${baseParams}`);
     } else if (taskTitle.includes("send") && taskTitle.includes("po")) {
       if (task.reference_id && task.reference_type === 'purchase_order') {
         navigate(`/inventory-manager/purchase-orders/${task.reference_id}?${baseParams}`);

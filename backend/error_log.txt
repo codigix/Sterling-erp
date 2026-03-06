@@ -4,3 +4,45 @@ Message: Could not find production plan items in database.
 Stack: Error: Could not find production plan items in database.
     at generateWorkOrders (D:\passion\Sterling-erp\backend\controllers\production\productionPlanController.js:798:15)
     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+
+[2026-03-06T05:32:34.249Z] ERROR in generateWorkOrders:
+Message: Work Order INSERT failed for ITEM-CYLINDRICALSHELLASSE: Cannot add or update a child row: a foreign key constraint fails (`sterling_erp`.`work_orders`, CONSTRAINT `work_orders_ibfk_2` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE SET NULL)
+Stack: Error: Work Order INSERT failed for ITEM-CYLINDRICALSHELLASSE: Cannot add or update a child row: a foreign key constraint fails (`sterling_erp`.`work_orders`, CONSTRAINT `work_orders_ibfk_2` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE SET NULL)
+    at processItem (D:\passion\Sterling-erp\backend\controllers\production\productionPlanController.js:804:19)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async generateWorkOrders (D:\passion\Sterling-erp\backend\controllers\production\productionPlanController.js:892:26)
+
+[2026-03-06T05:32:50.731Z] ERROR in generateWorkOrders:
+Message: Work Order INSERT failed for ITEM-CYLINDRICALSHELLASSE: Cannot add or update a child row: a foreign key constraint fails (`sterling_erp`.`work_orders`, CONSTRAINT `work_orders_ibfk_2` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE SET NULL)
+Stack: Error: Work Order INSERT failed for ITEM-CYLINDRICALSHELLASSE: Cannot add or update a child row: a foreign key constraint fails (`sterling_erp`.`work_orders`, CONSTRAINT `work_orders_ibfk_2` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE SET NULL)
+    at processItem (D:\passion\Sterling-erp\backend\controllers\production\productionPlanController.js:804:19)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async generateWorkOrders (D:\passion\Sterling-erp\backend\controllers\production\productionPlanController.js:892:26)
+
+[2026-03-06T05:33:21.733Z] ERROR in generateWorkOrders:
+Message: Work Order INSERT failed for ITEM-CYLINDRICALSHELLASSE: Cannot add or update a child row: a foreign key constraint fails (`sterling_erp`.`work_orders`, CONSTRAINT `work_orders_ibfk_2` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE SET NULL)
+Stack: Error: Work Order INSERT failed for ITEM-CYLINDRICALSHELLASSE: Cannot add or update a child row: a foreign key constraint fails (`sterling_erp`.`work_orders`, CONSTRAINT `work_orders_ibfk_2` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE SET NULL)
+    at processItem (D:\passion\Sterling-erp\backend\controllers\production\productionPlanController.js:804:19)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async generateWorkOrders (D:\passion\Sterling-erp\backend\controllers\production\productionPlanController.js:892:26)
+
+[2026-03-06T05:35:46.871Z] ERROR in generateWorkOrders:
+Message: Work Order INSERT failed for ITEM-CYLINDRICALSHELLASSE: Cannot add or update a child row: a foreign key constraint fails (`sterling_erp`.`work_orders`, CONSTRAINT `work_orders_ibfk_2` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE SET NULL)
+Stack: Error: Work Order INSERT failed for ITEM-CYLINDRICALSHELLASSE: Cannot add or update a child row: a foreign key constraint fails (`sterling_erp`.`work_orders`, CONSTRAINT `work_orders_ibfk_2` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE SET NULL)
+    at processItem (D:\passion\Sterling-erp\backend\controllers\production\productionPlanController.js:804:19)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async generateWorkOrders (D:\passion\Sterling-erp\backend\controllers\production\productionPlanController.js:892:26)
+
+[2026-03-06T05:36:30.405Z] ERROR in generateWorkOrders:
+Message: Work Order INSERT failed for ITEM-CYLINDRICALSHELLASSE: Cannot add or update a child row: a foreign key constraint fails (`sterling_erp`.`work_orders`, CONSTRAINT `work_orders_ibfk_2` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE SET NULL)
+Stack: Error: Work Order INSERT failed for ITEM-CYLINDRICALSHELLASSE: Cannot add or update a child row: a foreign key constraint fails (`sterling_erp`.`work_orders`, CONSTRAINT `work_orders_ibfk_2` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE SET NULL)
+    at processItem (D:\passion\Sterling-erp\backend\controllers\production\productionPlanController.js:804:19)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async generateWorkOrders (D:\passion\Sterling-erp\backend\controllers\production\productionPlanController.js:892:26)
+
+[2026-03-06T05:41:54.903Z] ERROR in generateWorkOrders:
+Message: Work Order INSERT failed for ITEM-CYLINDRICALSHELLASSE: Cannot add or update a child row: a foreign key constraint fails (`sterling_erp`.`work_orders`, CONSTRAINT `work_orders_ibfk_2` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE SET NULL)
+Stack: Error: Work Order INSERT failed for ITEM-CYLINDRICALSHELLASSE: Cannot add or update a child row: a foreign key constraint fails (`sterling_erp`.`work_orders`, CONSTRAINT `work_orders_ibfk_2` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE SET NULL)
+    at processItem (D:\passion\Sterling-erp\backend\controllers\production\productionPlanController.js:804:19)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async generateWorkOrders (D:\passion\Sterling-erp\backend\controllers\production\productionPlanController.js:892:26)

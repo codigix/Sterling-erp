@@ -4,9 +4,11 @@ import { X, Plus, Trash2, CheckCircle, Calendar, DollarSign, User, Package, File
 import axios from "../../utils/api";
 import Swal from "sweetalert2";
 import toastUtils from "../../utils/toastUtils";
+import { useRootCardInventoryTask } from "../../hooks/useRootCardInventoryTask";
 
 const CreatePurchaseOrderModal = ({ isOpen, onClose, source, type, onPOCreated, editData, preFilledFromQuotation }) => {
   const navigate = useNavigate();
+  const { completeCurrentTask, isFromDepartmentTasks } = useRootCardInventoryTask();
   const [vendors, setVendors] = useState([]);
   const [materialRequests, setMaterialRequests] = useState([]);
   const [quotations, setQuotations] = useState([]);
@@ -269,6 +271,15 @@ const CreatePurchaseOrderModal = ({ isOpen, onClose, source, type, onPOCreated, 
         // Create new PO
         response = await axios.post("/inventory/purchase-orders", formData);
         toastUtils.success("Purchase Order created successfully");
+
+        // If we are coming from workflow tasks, complete the "Create Purchase Order" task
+        if (isFromDepartmentTasks()) {
+          try {
+            await completeCurrentTask("Purchase Order created");
+          } catch (taskError) {
+            console.error("Error completing workflow task:", taskError);
+          }
+        }
       }
       
       if (onPOCreated) onPOCreated();

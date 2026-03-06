@@ -16,7 +16,7 @@ const InlineOperationEdit = ({ operation, workOrderQuantity, onCancel, onSave, o
     vendorId: operation.vendor_id || '',
     type: operation.type || 'in-house',
     status: operation.status || 'pending',
-    plannedQty: workOrderQuantity || 0,
+    plannedQty: operation.quantity || workOrderQuantity || 0,
     producedQty: operation.produced_qty || 0,
     plannedStartDate: operation.planned_start_date ? new Date(operation.planned_start_date).toISOString().split('T')[0] : '',
     plannedEndDate: operation.planned_end_date ? new Date(operation.planned_end_date).toISOString().split('T')[0] : '',
@@ -208,7 +208,7 @@ const InlineOperationEdit = ({ operation, workOrderQuantity, onCancel, onSave, o
                   onChange={(e) => setFormData({ ...formData, producedQty: e.target.value })}
                 />
               </div>
-              <p className="text-[9px] text-emerald-600 font-bold mt-1">Limit: {workOrderQuantity}.00</p>
+              <p className="text-[9px] text-emerald-600 font-bold mt-1">Limit: {formData.plannedQty}.00</p>
             </div>
 
             {/* Start Date */}

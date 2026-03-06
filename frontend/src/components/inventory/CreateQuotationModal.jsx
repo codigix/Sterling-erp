@@ -141,12 +141,6 @@ const CreateQuotationModal = ({
 
     setUploadedFileName(file.name);
 
-    if (formData.items.length === 0) {
-      Swal.fire("Warning", "Please load items from a Material Request first", "warning");
-      e.target.value = ''; // Reset file input
-      return;
-    }
-
     const analysisFormData = new FormData();
     analysisFormData.append("file", file);
     analysisFormData.append("items", JSON.stringify(formData.items));

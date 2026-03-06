@@ -7,12 +7,16 @@ const SwipeButton = ({ onSwipeComplete, isLoading = false, isCompleted = false }
   const [isLocked, setIsLocked] = useState(isCompleted);
   const [maxDrag, setMaxDrag] = useState(0);
   const containerRef = useRef(null);
+  const isTriggeredRef = useRef(false);
 
   const HANDLE_SIZE = 64;
   const COMPLETION_THRESHOLD = 0.8;
 
   useEffect(() => {
     setIsLocked(isCompleted);
+    if (!isCompleted) {
+      isTriggeredRef.current = false;
+    }
   }, [isCompleted]);
 
   useEffect(() => {
@@ -46,7 +50,8 @@ const SwipeButton = ({ onSwipeComplete, isLoading = false, isCompleted = false }
       setDragX(newX);
 
       const dragPercentage = newX / maxDrag;
-      if (dragPercentage >= COMPLETION_THRESHOLD) {
+      if (dragPercentage >= COMPLETION_THRESHOLD && !isTriggeredRef.current) {
+        isTriggeredRef.current = true;
         setIsLocked(true);
         setIsDragging(false);
         setDragX(maxDrag);

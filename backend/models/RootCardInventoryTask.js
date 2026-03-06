@@ -225,7 +225,30 @@ class RootCardInventoryTask {
       if (!mrRows.length) return;
       const mr = mrRows[0];
 
-      // 1. Check for Purchase Orders
+      // 1. Check for Quotations
+      const [quotes] = await pool.execute('SELECT id, type, status FROM quotations WHERE material_request_id = ?', [mrId]);
+      
+      if (quotes.length > 0) {
+        const outbound = quotes.find(q => q.type === 'outbound');
+        const inbound = quotes.find(q => q.type === 'inbound');
+        
+        if (outbound) {
+          // Step 2: Create RFQ Quotation
+          await this.completeTaskByMRAndStep(mrId, 2, null);
+          
+          if (outbound.status === 'sent' || outbound.status === 'responded' || outbound.status === 'approved') {
+            // Step 3: Send Quotation to Vendor
+            await this.completeTaskByMRAndStep(mrId, 3, null);
+          }
+        }
+        
+        if (inbound) {
+          // Step 4: Receive Vendor Quotation
+          await this.completeTaskByMRAndStep(mrId, 4, null);
+        }
+      }
+
+      // 2. Check for Purchase Orders
       const [pos] = await pool.execute('SELECT id, status, po_number FROM purchase_orders WHERE material_request_id = ?', [mrId]);
       
       if (pos.length > 0) {
@@ -310,14 +333,23 @@ class RootCardInventoryTask {
   static async completeTaskByMRAndStep(mrId, stepNumber, completedBy, externalConnection = null) {
     const conn = externalConnection || pool;
     
+    // Ensure mrId and stepNumber are integers
+    const id = parseInt(mrId);
+    const stepNum = parseInt(stepNumber);
+    
+    if (isNaN(id) || isNaN(stepNum)) {
+      console.warn(`[RootCardInventoryTask] Invalid mrId (${mrId}) or stepNumber (${stepNumber}) for completeTaskByMRAndStep`);
+      return { affectedRows: 0 };
+    }
+
     // Find the step name from our current definition
-    const stepDef = RootCardInventoryTask.WORKFLOW_STEPS.find(s => s.step === stepNumber);
+    const stepDef = RootCardInventoryTask.WORKFLOW_STEPS.find(s => s.step === stepNum);
     const stepName = stepDef?.name;
 
     let query = `UPDATE root_card_inventory_tasks 
                  SET status = 'completed', completed_by = ?, completed_at = NOW()
                  WHERE material_request_id = ? AND (step_number = ?`;
-    let params = [completedBy, mrId, stepNumber];
+    let params = [completedBy, id, stepNum];
 
     if (stepName) {
       query += ` OR step_name = ?`;
@@ -332,7 +364,7 @@ class RootCardInventoryTask {
     if (result.affectedRows > 0 && stepName) {
       await conn.execute(
         `UPDATE root_card_inventory_tasks SET step_number = ? WHERE material_request_id = ? AND step_name = ?`,
-        [stepNumber, mrId, stepName]
+        [stepNum, id, stepName]
       ).catch(err => console.warn('Failed to sync step_number:', err.message));
     }
 

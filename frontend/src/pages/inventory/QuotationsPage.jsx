@@ -118,10 +118,11 @@ const QuotationsPage = ({ defaultTab }) => {
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
+    const searchString = location.search;
     if (tab === "outbound") {
-      navigate("/inventory-manager/quotations/sent");
+      navigate(`/inventory-manager/quotations/sent${searchString}`);
     } else {
-      navigate("/inventory-manager/quotations/received");
+      navigate(`/inventory-manager/quotations/received${searchString}`);
     }
   };
   const [stats, setStats] = useState({});
@@ -153,6 +154,10 @@ const QuotationsPage = ({ defaultTab }) => {
       const params = new URLSearchParams();
       if (searchQuery) params.append("search", searchQuery);
       if (statusFilter !== "all") params.append("status", statusFilter);
+      
+      const mrId = searchParams.get("materialRequestId") || searchParams.get("mrId");
+      if (mrId) params.append("material_request_id", mrId);
+      
       params.append("type", activeTab);
 
       const response = await axios.get(`/inventory/quotations?${params}`);
@@ -164,7 +169,7 @@ const QuotationsPage = ({ defaultTab }) => {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, statusFilter, activeTab]);
+  }, [searchQuery, statusFilter, activeTab, searchParams]);
 
   const fetchStats = useCallback(async () => {
     try {
@@ -220,6 +225,10 @@ const QuotationsPage = ({ defaultTab }) => {
           const params = new URLSearchParams();
           if (searchQuery) params.append("search", searchQuery);
           if (statusFilter !== "all") params.append("status", statusFilter);
+          
+          const mrId = searchParams.get("materialRequestId") || searchParams.get("mrId");
+          if (mrId) params.append("material_request_id", mrId);
+          
           params.append("type", activeTab);
 
           const [qRes, sRes] = await Promise.all([
@@ -235,7 +244,7 @@ const QuotationsPage = ({ defaultTab }) => {
       silentFetch();
     }, 30000);
     return () => clearInterval(interval);
-  }, [searchQuery, statusFilter, activeTab]);
+  }, [searchQuery, statusFilter, activeTab, searchParams]);
 
   // Auto-refresh communications when modal is open
   useEffect(() => {
@@ -585,13 +594,23 @@ const QuotationsPage = ({ defaultTab }) => {
 
       const response = await axios.post("/inventory/purchase-orders", payload);
 
+      // If we are coming from workflow tasks, complete the "Create Purchase Order" task
+      if (isFromDepartmentTasks()) {
+        try {
+          await completeCurrentTask("Purchase Order created from approved quotation");
+        } catch (taskError) {
+          console.error("Error completing workflow task:", taskError);
+          // Don't fail the whole process if task completion fails
+        }
+      }
+
       Swal.fire({
         icon: "success",
         title: "PO Created",
         text: `Purchase Order ${response.data.po_number} has been created successfully.`,
         confirmButtonColor: "#2563eb",
       }).then(() => {
-        navigate(`/inventory-manager/purchase-orders/${response.data.id}`);
+        navigate(`/inventory-manager/purchase-orders/${response.data.id}${location.search}`);
       });
     } catch (error) {
       console.error("Error creating PO from quote:", error);
@@ -1060,8 +1079,11 @@ const QuotationsPage = ({ defaultTab }) => {
         onClose={() => {
           setShowAddModal(false);
           setInitialData(null);
-          // Clear navigation state to prevent modal from reopening
-          window.history.replaceState({}, document.title);
+          // Clear action param but keep others (like taskId)
+          const params = new URLSearchParams(window.location.search);
+          params.delete('action');
+          const newSearch = params.toString();
+          window.history.replaceState(null, '', window.location.pathname + (newSearch ? '?' + newSearch : ''));
         }}
         onQuotationCreated={handleQuotationCreated}
         preFilledMaterials={location.state?.preFilledMaterials}
@@ -1213,7 +1235,7 @@ const QuotationsPage = ({ defaultTab }) => {
                 <button
                   onClick={() => {
                     setShowViewModal(false);
-                    navigate("/inventory-manager/purchase-orders", {
+                    navigate(`/inventory-manager/purchase-orders${location.search}`, {
                       state: { quotation: selectedQuotation },
                     });
                   }}

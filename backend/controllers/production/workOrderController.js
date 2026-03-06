@@ -126,13 +126,14 @@ const createOperation = async (req, res) => {
     const { operatorId, operationName, workOrderId } = req.body || {};
     const operationId = await WorkOrder.createOperation(req.body || {});
     
-    // Handle task assignment if operator is assigned removed as per user request
-    /*
+    // Handle task assignment if operator is assigned
     if (operatorId) {
       try {
         const wo = await WorkOrder.findById(workOrderId);
-        const taskTitle = `Job Card Operation: ${operationName}`;
-        const taskDescription = `Operation for Work Order: ${wo ? wo.work_order_no : 'N/A'}`;
+        const woNo = wo ? (wo.work_order_no?.split('-')?.pop() || wo.id) : 'N/A';
+        const jcId = `JC-${woNo}-${operationId}`;
+        const taskTitle = `Job Card: ${jcId} - ${operationName}`;
+        const taskDescription = `Job Card ${jcId} (${operationName}) for Work Order: ${wo ? wo.work_order_no : 'N/A'}`;
 
         await EmployeeTask.createAssignedTask(operatorId, {
           title: taskTitle,
@@ -151,7 +152,6 @@ const createOperation = async (req, res) => {
         console.warn("[WorkOrderController] Warning - could not create employee task:", taskError.message);
       }
     }
-    */
 
     res.status(201).json({ 
       message: "Job card created successfully", 
@@ -180,20 +180,74 @@ const updateOperation = async (req, res) => {
       return res.status(404).json({ message: "Operation not found" });
     }
 
-    // Handle task assignment if operator is assigned or changed removed as per user request
-    /*
+    // Handle task assignment if operator is assigned or changed
     try {
       const opId = operatorId ? parseInt(operatorId) : null;
-...
+      const prevOpId = existingOp?.operator_id ? parseInt(existingOp.operator_id) : null;
+
+      if (opId !== prevOpId) {
+        // Operator changed or newly assigned
+        // 1. Delete old tasks for this operation to avoid duplicates
+        await pool.execute(
+          "DELETE FROM employee_tasks WHERE work_order_operation_id = ?",
+          [id]
+        );
+
+        // 2. Create new task if new operator is assigned
+        if (opId) {
+          const wo = await WorkOrder.findById(existingOp.work_order_id);
+          const woNo = wo ? (wo.work_order_no?.split('-')?.pop() || wo.id) : 'N/A';
+          const jcId = `JC-${woNo}-${id}`;
+          const taskTitle = `Job Card: ${jcId} - ${operationName || existingOp.operation_name}`;
+          const taskDescription = `Job Card ${jcId} (${operationName || existingOp.operation_name}) for Work Order: ${wo ? wo.work_order_no : 'N/A'}`;
+
+          await EmployeeTask.createAssignedTask(opId, {
+            title: taskTitle,
+            description: taskDescription,
+            type: 'job_card',
+            priority: wo ? (wo.priority === 'critical' ? 'critical' : wo.priority === 'high' ? 'high' : 'medium') : 'medium',
+            dueDate: req.body.plannedEndDate || null,
+            notes: `Work Order ID: ${existingOp.work_order_id}`,
+            workOrderOperationId: id,
+            salesOrderId: wo ? wo.sales_order_id : null,
+            assignedBy: req.user?.id
+          });
+          console.log(`[WorkOrderController] Task reassigned from ${prevOpId} to ${opId} for operation ${id}`);
+        }
+      } else if (opId) {
+        // Operator same, check if task exists, if not create it
+        const [existingTasks] = await pool.execute(
+          "SELECT id FROM employee_tasks WHERE work_order_operation_id = ?",
+          [id]
+        );
+        if (existingTasks.length === 0) {
+          const wo = await WorkOrder.findById(existingOp.work_order_id);
+          const woNo = wo ? (wo.work_order_no?.split('-')?.pop() || wo.id) : 'N/A';
+          const jcId = `JC-${woNo}-${id}`;
+          const taskTitle = `Job Card: ${jcId} - ${operationName || existingOp.operation_name}`;
+          const taskDescription = `Job Card ${jcId} (${operationName || existingOp.operation_name}) for Work Order: ${wo ? wo.work_order_no : 'N/A'}`;
+
+          await EmployeeTask.createAssignedTask(opId, {
+            title: taskTitle,
+            description: taskDescription,
+            type: 'job_card',
+            priority: wo ? (wo.priority === 'critical' ? 'critical' : wo.priority === 'high' ? 'high' : 'medium') : 'medium',
+            dueDate: req.body.plannedEndDate || null,
+            notes: `Work Order ID: ${existingOp.work_order_id}`,
+            workOrderOperationId: id,
+            salesOrderId: wo ? wo.sales_order_id : null,
+            assignedBy: req.user?.id
+          });
+        }
+      }
     } catch (taskError) {
       console.warn("[WorkOrderController] Warning - could not handle employee task update:", taskError.message);
     }
-    */
 
     res.json({ message: "Operation updated successfully" });
   } catch (error) {
     console.error("Error in updateOperation:", error);
-    res.status(500).json({ message: "ZENCODER_DEBUG_UPDATE_FAILED", error: error.message });
+    res.status(500).json({ message: "Error updating operation" });
   }
 };
 
@@ -201,13 +255,11 @@ const deleteOperation = async (req, res) => {
   try {
     const { id } = req.params;
     
-    // Delete associated tasks first removed as per user request
-    /*
+    // Delete associated tasks first
     await pool.execute(
       "DELETE FROM employee_tasks WHERE work_order_operation_id = ?",
       [id]
     );
-    */
 
     const deleted = await WorkOrder.deleteOperation(id);
     if (!deleted) {
@@ -242,14 +294,60 @@ const startOperation = async (req, res) => {
       return res.status(404).json({ message: "Operation not found" });
     }
 
-    // Handle task assignment/update during start removed as per user request
-    /*
+    // Handle task assignment/update during start
     try {
-...
+      const opId = operatorId ? parseInt(operatorId) : (operation.operator_id ? parseInt(operation.operator_id) : null);
+      
+      if (opId) {
+        // 1. Check if task exists, if not create it
+        const [existingTasks] = await pool.execute(
+          "SELECT id FROM employee_tasks WHERE work_order_operation_id = ?",
+          [id]
+        );
+
+        if (existingTasks.length === 0) {
+          const wo = await WorkOrder.findById(operation.work_order_id);
+          await EmployeeTask.createAssignedTask(opId, {
+            title: `Job Card Operation: ${operation.operation_name}`,
+            description: `Operation for Work Order: ${wo ? wo.work_order_no : 'N/A'}`,
+            type: 'job_card',
+            priority: wo ? (wo.priority === 'critical' ? 'critical' : wo.priority === 'high' ? 'high' : 'medium') : 'medium',
+            dueDate: operation.planned_end_date || null,
+            notes: `Work Order ID: ${operation.work_order_id}`,
+            workOrderOperationId: id,
+            salesOrderId: wo ? wo.sales_order_id : null,
+            assignedBy: req.user?.id
+          });
+        }
+
+        // 2. Update task status to in_progress and SYNC STARTED_AT
+        await pool.execute(
+          "UPDATE employee_tasks SET status = 'in_progress', started_at = COALESCE(started_at, NOW()) WHERE work_order_operation_id = ?",
+          [id]
+        );
+        
+        // 3. Create a status update notification for the operator
+        const [users] = await pool.execute(
+          "SELECT u.id FROM users u JOIN employees e ON u.email = e.email WHERE e.id = ?", 
+          [opId]
+        );
+        if (users.length > 0) {
+          await AlertsNotification.create({
+            userId: users[0].id,
+            alertType: 'status_update',
+            message: `Task "${operation.operation_name}" has been started for you.`,
+            relatedTable: 'work_order_operations',
+            relatedId: id,
+            priority: 'medium',
+            link: '/employee/tasks'
+          });
+        }
+
+        console.log(`[WorkOrderController] Task status set to in_progress for operation ${id}`);
+      }
     } catch (taskError) {
       console.warn("[WorkOrderController] Could not sync task during start:", taskError.message);
     }
-    */
 
     res.json({ message: "Operation started successfully" });
   } catch (error) {
@@ -355,6 +453,40 @@ const completeProductionEntry = async (req, res) => {
       "UPDATE employee_tasks SET status = 'completed', completed_at = COALESCE(completed_at, NOW()) WHERE work_order_operation_id = ?",
       [id]
     );
+
+    // 3.5 Pass accepted quantity to the next operation in sequence
+    try {
+      // Calculate total accepted quantity for this operation
+      const [qualityRows] = await pool.execute(
+        "SELECT SUM(accepted_qty) as total_accepted FROM work_order_quality_entries WHERE operation_id = ?",
+        [id]
+      );
+      const totalAccepted = qualityRows[0].total_accepted || 0;
+
+      // Find all operations for this work order to determine the next one
+      const [allOps] = await pool.execute(
+        "SELECT id, sequence, status FROM work_order_operations WHERE work_order_id = ? ORDER BY sequence ASC, id ASC",
+        [workOrderId]
+      );
+
+      const currentIndex = allOps.findIndex(op => op.id === parseInt(id));
+      if (currentIndex !== -1 && currentIndex < allOps.length - 1) {
+        const nextOp = allOps[currentIndex + 1];
+        
+        // Update the next operation's quantity to manufacture (using work_order_qty or a specific target field)
+        // Note: The user wants "that produce quantity have to pass to next job card"
+        // In this system, 'target_qty' or 'work_order_qty' is used as the goal.
+        // We'll update the quantity for the next operation.
+        await pool.execute(
+          "UPDATE work_order_operations SET quantity = ? WHERE id = ?",
+          [totalAccepted, nextOp.id]
+        );
+        console.log(`[WorkOrderController] Passed ${totalAccepted} accepted units from operation ${id} to next operation ${nextOp.id}`);
+      }
+    } catch (qtyPassError) {
+      console.error("[WorkOrderController] Error passing quantity to next operation:", qtyPassError.message);
+      // Don't fail the whole request if this step fails, but log it
+    }
 
     // 4. Check if all operations for this work order are completed
     const [incompleteOps] = await pool.execute(

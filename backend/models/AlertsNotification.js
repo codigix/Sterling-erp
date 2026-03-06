@@ -5,44 +5,79 @@ class AlertsNotification {
   static async resolveUserId(userId) {
     if (!userId) return null;
     
-    // If it's a number, it's already a proper userId
-    if (!isNaN(userId) && userId !== null) return parseInt(userId);
-
     // Check cache first
     if (userCache.has(userId)) {
       return userCache.get(userId);
     }
 
-    let resolvedUserId = userId;
-    let usernameToFind = String(userId);
-    if (usernameToFind.startsWith('demo-')) {
-      usernameToFind = usernameToFind.replace('demo-', '');
-    }
+    let resolvedUserId = null;
+    let inputStr = String(userId);
     
     try {
-      const [users] = await pool.execute("SELECT id FROM users WHERE username = ?", [usernameToFind]);
-      if (users.length > 0) {
-        resolvedUserId = users[0].id;
-        console.log(`[AlertsNotification] Resolved user ${userId} to database user ${resolvedUserId}`);
-      } else {
-        // Try with underscore instead of dot for common mapping patterns
-        const normalizedUsername = usernameToFind.replace(/\./g, '_');
-        const [users2] = await pool.execute("SELECT id FROM users WHERE username = ?", [normalizedUsername]);
-        if (users2.length > 0) {
-          resolvedUserId = users2[0].id;
-          console.log(`[AlertsNotification] Resolved user ${userId} to database user ${resolvedUserId} (normalized username)`);
+      // 1. If it's a number, it could be a user_id or an employee_id
+      if (!isNaN(userId) && userId !== null) {
+        const numericId = parseInt(userId);
+        
+        // Strategy: We need to be careful because IDs can overlap.
+        // Let's first check if this ID exists in the employees table.
+        // If it does, we should find the corresponding user_id.
+        const [empRows] = await pool.execute(
+          "SELECT u.id FROM users u JOIN employees e ON u.email = e.email WHERE e.id = ?", 
+          [numericId]
+        );
+        
+        if (empRows.length > 0) {
+          resolvedUserId = empRows[0].id;
+          console.log(`[AlertsNotification] Resolved numeric ID ${userId} as employee_id -> user_id ${resolvedUserId}`);
+        } else {
+          // If not an employee ID, check if it's directly a user ID
+          const [userRows] = await pool.execute("SELECT id FROM users WHERE id = ?", [numericId]);
+          if (userRows.length > 0) {
+            resolvedUserId = userRows[0].id;
+            console.log(`[AlertsNotification] Resolved numeric ID ${userId} directly as user_id`);
+          }
+        }
+      }
+
+      // 2. If not yet resolved, handle string formats (usernames, emails, demo-*)
+      if (!resolvedUserId) {
+        let usernameToFind = inputStr;
+        if (usernameToFind.startsWith('demo-')) {
+          usernameToFind = usernameToFind.replace('demo-', '');
+        }
+        
+        // Try finding by username
+        const [users] = await pool.execute("SELECT id FROM users WHERE username = ?", [usernameToFind]);
+        if (users.length > 0) {
+          resolvedUserId = users[0].id;
+          console.log(`[AlertsNotification] Resolved username ${userId} to user_id ${resolvedUserId}`);
+        } else {
+          // Try with underscore instead of dot
+          const normalizedUsername = usernameToFind.replace(/\./g, '_');
+          const [users2] = await pool.execute("SELECT id FROM users WHERE username = ?", [normalizedUsername]);
+          if (users2.length > 0) {
+            resolvedUserId = users2[0].id;
+            console.log(`[AlertsNotification] Resolved username ${userId} (normalized) to user_id ${resolvedUserId}`);
+          } else {
+            // Try as email
+            const [users3] = await pool.execute("SELECT id FROM users WHERE email = ?", [usernameToFind]);
+            if (users3.length > 0) {
+              resolvedUserId = users3[0].id;
+              console.log(`[AlertsNotification] Resolved email ${userId} to user_id ${resolvedUserId}`);
+            }
+          }
         }
       }
       
-      // Cache the result
-      if (resolvedUserId && !isNaN(resolvedUserId)) {
-        userCache.set(userId, resolvedUserId);
+      // Cache the result if we resolved it
+      if (resolvedUserId) {
+        userCache.set(userId, parseInt(resolvedUserId));
       }
     } catch (err) {
       console.warn(`[AlertsNotification] Failed to resolve user ${userId}:`, err.message);
     }
     
-    return resolvedUserId;
+    return resolvedUserId || userId; // Fallback to original if all else fails
   }
 
   static async create(data, externalConnection = null) {
@@ -108,28 +143,8 @@ class AlertsNotification {
   }
 
   static async findByUserId(userId, filters = {}) {
-    let resolvedUserId = userId;
+    let resolvedUserId = await this.resolveUserId(userId);
     
-    if (String(userId).startsWith('demo-')) {
-      let demoUsername = String(userId).replace('demo-', '');
-      try {
-        const [users] = await pool.execute("SELECT id FROM users WHERE username = ?", [demoUsername]);
-        if (users.length > 0) {
-          resolvedUserId = users[0].id;
-          console.log(`[AlertsNotification.findByUserId] Resolved demo user ${userId} to database user ${resolvedUserId}`);
-        } else {
-          const normalizedUsername = demoUsername.replace(/\./g, '_');
-          const [users2] = await pool.execute("SELECT id FROM users WHERE username = ?", [normalizedUsername]);
-          if (users2.length > 0) {
-            resolvedUserId = users2[0].id;
-            console.log(`[AlertsNotification.findByUserId] Resolved demo user ${userId} to database user ${resolvedUserId} (normalized username)`);
-          }
-        }
-      } catch (err) {
-        console.warn(`[AlertsNotification.findByUserId] Failed to resolve demo user ${userId}:`, err.message);
-      }
-    }
-
     let query = `
       SELECT an.*, u.username AS recipient_name, fu.username AS sender_name
       FROM alerts_notifications an
@@ -173,27 +188,7 @@ class AlertsNotification {
   }
 
   static async markAllAsRead(userId) {
-    let resolvedUserId = userId;
-    
-    if (String(userId).startsWith('demo-')) {
-      let demoUsername = String(userId).replace('demo-', '');
-      try {
-        const [users] = await pool.execute("SELECT id FROM users WHERE username = ?", [demoUsername]);
-        if (users.length > 0) {
-          resolvedUserId = users[0].id;
-          console.log(`[AlertsNotification.markAllAsRead] Resolved demo user ${userId} to database user ${resolvedUserId}`);
-        } else {
-          const normalizedUsername = demoUsername.replace(/\./g, '_');
-          const [users2] = await pool.execute("SELECT id FROM users WHERE username = ?", [normalizedUsername]);
-          if (users2.length > 0) {
-            resolvedUserId = users2[0].id;
-            console.log(`[AlertsNotification.markAllAsRead] Resolved demo user ${userId} to database user ${resolvedUserId} (normalized username)`);
-          }
-        }
-      } catch (err) {
-        console.warn(`[AlertsNotification.markAllAsRead] Failed to resolve demo user ${userId}:`, err.message);
-      }
-    }
+    let resolvedUserId = await this.resolveUserId(userId);
 
     await pool.execute(
       'UPDATE alerts_notifications SET is_read = TRUE, read_at = NOW() WHERE user_id = ? AND is_read = FALSE',
@@ -213,27 +208,7 @@ class AlertsNotification {
   }
 
   static async getUnreadCount(userId) {
-    let resolvedUserId = userId;
-    
-    if (String(userId).startsWith('demo-')) {
-      let demoUsername = String(userId).replace('demo-', '');
-      try {
-        const [users] = await pool.execute("SELECT id FROM users WHERE username = ?", [demoUsername]);
-        if (users.length > 0) {
-          resolvedUserId = users[0].id;
-          console.log(`[AlertsNotification.getUnreadCount] Resolved demo user ${userId} to database user ${resolvedUserId}`);
-        } else {
-          const normalizedUsername = demoUsername.replace(/\./g, '_');
-          const [users2] = await pool.execute("SELECT id FROM users WHERE username = ?", [normalizedUsername]);
-          if (users2.length > 0) {
-            resolvedUserId = users2[0].id;
-            console.log(`[AlertsNotification.getUnreadCount] Resolved demo user ${userId} to database user ${resolvedUserId} (normalized username)`);
-          }
-        }
-      } catch (err) {
-        console.warn(`[AlertsNotification.getUnreadCount] Failed to resolve demo user ${userId}:`, err.message);
-      }
-    }
+    let resolvedUserId = await this.resolveUserId(userId);
 
     const [rows] = await pool.execute(
       'SELECT COUNT(*) AS unread_count FROM alerts_notifications WHERE user_id = ? AND is_read = FALSE',
@@ -243,34 +218,14 @@ class AlertsNotification {
   }
 
   static async getStats(userId) {
-    let resolvedUserId = userId;
-    
-    if (String(userId).startsWith('demo-')) {
-      let demoUsername = String(userId).replace('demo-', '');
-      try {
-        const [users] = await pool.execute("SELECT id FROM users WHERE username = ?", [demoUsername]);
-        if (users.length > 0) {
-          resolvedUserId = users[0].id;
-          console.log(`[AlertsNotification.getStats] Resolved demo user ${userId} to database user ${resolvedUserId}`);
-        } else {
-          const normalizedUsername = demoUsername.replace(/\./g, '_');
-          const [users2] = await pool.execute("SELECT id FROM users WHERE username = ?", [normalizedUsername]);
-          if (users2.length > 0) {
-            resolvedUserId = users2[0].id;
-            console.log(`[AlertsNotification.getStats] Resolved demo user ${userId} to database user ${resolvedUserId} (normalized username)`);
-          }
-        }
-      } catch (err) {
-        console.warn(`[AlertsNotification.getStats] Failed to resolve demo user ${userId}:`, err.message);
-      }
-    }
+    let resolvedUserId = await this.resolveUserId(userId);
 
     const [rows] = await pool.execute(
       `
         SELECT 
           COUNT(*) as total_alerts,
           SUM(CASE WHEN is_read = FALSE THEN 1 ELSE 0 END) as unread,
-          SUM(CASE WHEN alert_type = 'task_blocked' THEN 1 ELSE 0 END) as task_blocked,
+          SUM(CASE WHEN alert_type = 'task_assigned' THEN 1 ELSE 0 END) as task_assigned,
           SUM(CASE WHEN alert_type = 'status_update' THEN 1 ELSE 0 END) as status_update,
           SUM(CASE WHEN alert_type = 'delay_alert' THEN 1 ELSE 0 END) as delay_alert,
           SUM(CASE WHEN alert_type = 'material_shortage' THEN 1 ELSE 0 END) as material_shortage,
