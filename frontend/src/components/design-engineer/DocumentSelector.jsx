@@ -514,7 +514,7 @@ const DocumentSelector = ({ documentType, title, description }) => {
               </button>
             </div>
 
-            <div className="flex-1 overflow-auto bg-gray-100 rounded mb-4">
+            <div className="h-[70vh] overflow-auto bg-gray-100 rounded mb-4">
               {!viewerFile.url ? (
                 <div className="w-full h-full flex items-center justify-center p-8">
                   <div className="text-center">

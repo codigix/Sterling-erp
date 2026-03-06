@@ -771,12 +771,12 @@ exports.selectVendor = async (req, res) => { res.status(501).json({ message: 'No
  */
 async function notifyInventoryManagers(materialRequest, bulkCount = 0) {
   try {
-    // Find ONLY inventory managers and admins to notify (NOT all workers with inventory/procurement roles)
+    // Find ONLY inventory managers to notify (NOT all admins or workers)
     const [managers] = await pool.execute(`
       SELECT u.id, u.username, r.name as role_name
       FROM users u 
       JOIN roles r ON u.role_id = r.id 
-      WHERE LOWER(r.name) IN ('inventory_manager', 'inventory manager', 'admin', 'administrator', 'inventory', 'procurement', 'production_manager')
+      WHERE LOWER(r.name) IN ('inventory_manager', 'inventory manager', 'inventory', 'procurement')
       OR LOWER(u.username) IN ('inventory.manager', 'inventory_user', 'procurement.manger')
     `);
 
@@ -848,7 +848,9 @@ async function notifyProductionRelease(materialRequest, connection = null) {
     if (materialRequest.requested_by) recipients.add(materialRequest.requested_by);
     if (materialRequest.created_by) recipients.add(materialRequest.created_by);
     
-    // 2. Find ONLY Production role users to notify
+    // 2. We no longer notify ALL production users to avoid portal spam.
+    // Requester and creator (in step 1) are sufficient.
+    /*
     const [productionManagers] = await conn.execute(`
       SELECT u.id 
       FROM users u 
@@ -858,6 +860,7 @@ async function notifyProductionRelease(materialRequest, connection = null) {
     
     console.log('[notifyProductionRelease] Production role users found in DB:', productionManagers.length);
     productionManagers.forEach(u => recipients.add(u.id));
+    */
     
     const mrNumber = materialRequest.mr_number || materialRequest.id;
     const message = `Materials released for Request ${mrNumber}. Ready for production!`;

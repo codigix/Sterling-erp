@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from '../../utils/api';
 import { X, Loader2, AlertCircle } from 'lucide-react';
 import Swal from 'sweetalert2';
+import { toast } from 'react-toastify';
 
 const CreateSalesOrderModal = ({ onCancel, onSuccess, editData, preSelectedRootCardId }) => {
   const [loading, setLoading] = useState(false);
@@ -68,7 +69,7 @@ const CreateSalesOrderModal = ({ onCancel, onSuccess, editData, preSelectedRootC
       }
     } catch (error) {
       console.error('Fetch error:', error);
-      Swal.fire('Error', 'Failed to fetch required data', 'error');
+      toast.error('Failed to fetch required data');
     }
   };
 
@@ -152,7 +153,7 @@ const CreateSalesOrderModal = ({ onCancel, onSuccess, editData, preSelectedRootC
 
     } catch (error) {
       console.error('Error fetching root card details:', error);
-      Swal.fire('Error', 'Failed to fetch root card details', 'error');
+      toast.error('Failed to fetch root card details');
     } finally {
       setLoading(false);
     }
@@ -182,7 +183,7 @@ const CreateSalesOrderModal = ({ onCancel, onSuccess, editData, preSelectedRootC
     e.preventDefault();
     
     if (!formData.bomId || !formData.soNumber || (!formData.customerId && !formData.customerName) || !formData.orderDate || !formData.deliveryDate) {
-      Swal.fire('Warning', 'Please fill all required fields', 'warning');
+      toast.warning('Please fill all required fields');
       return;
     }
 
@@ -195,15 +196,15 @@ const CreateSalesOrderModal = ({ onCancel, onSuccess, editData, preSelectedRootC
 
       if (editData) {
         await axios.put(`sales/management/${editData.id}`, submitData);
-        Swal.fire('Success', 'Sales Order updated successfully', 'success');
+        toast.success('Sales Order updated successfully');
       } else {
         await axios.post('sales/management', submitData);
-        Swal.fire('Success', 'Sales Order created successfully', 'success');
+        toast.success('Sales Order created successfully');
       }
       onSuccess();
     } catch (error) {
       console.error('Submit error:', error);
-      Swal.fire('Error', error.response?.data?.message || `Failed to ${editData ? 'update' : 'create'} sales order`, 'error');
+      toast.error(error.response?.data?.message || `Failed to ${editData ? 'update' : 'create'} sales order`);
     } finally {
       setLoading(false);
     }

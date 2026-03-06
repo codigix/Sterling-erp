@@ -359,6 +359,9 @@ exports.initializeMRWorkflow = async (req, res) => {
 
     const result = await RootCardInventoryTask.initializeRootCardTasks(projectId, productionRootCardId, null, mrId);
 
+    // Sync workflow with actual PO/GRN states immediately after initialization
+    await RootCardInventoryTask.syncMRWorkflow(mrId);
+
     res.json({
       message: 'Workflow initialized successfully',
       tasksCreated: result.tasksCreated,

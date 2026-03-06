@@ -103,6 +103,21 @@ const resolveIds = async (input_id) => {
   let userId = id;
   let employee = null;
 
+  // SPECIAL MAPPING for Sudarshan Kale due to frontend hardcoding (ID 21)
+  if (id === '21' || id === 'demo-sudarshan.kale') {
+    const pool = require('../../config/database');
+    const [rows] = await pool.execute(
+      "SELECT e.id as emp_id, u.id as user_id FROM employees e JOIN users u ON e.email = u.email WHERE e.login_id = 'sudarshan.kale' OR u.username = 'sudarshan.kale' LIMIT 1"
+    );
+    if (rows.length > 0) {
+      console.log(`[resolveIds] SPECIAL MAPPING applied for Sudarshan: ${id} -> empId: ${rows[0].emp_id}, userId: ${rows[0].user_id}`);
+      empId = rows[0].emp_id;
+      userId = rows[0].user_id;
+      employee = await Employee.findById(empId);
+      return { empId, userId, employee };
+    }
+  }
+
   // Try finding by User ID first
   const emp = await Employee.findByUserId(id);
   if (emp) {
@@ -186,7 +201,13 @@ exports.getEmployeeStats = async (req, res) => {
       total: (workerStats[0]?.total || 0) + (assignedStats[0]?.total || 0),
       pending: (workerStats[0]?.pending || 0) + (assignedStats[0]?.pending || 0),
       in_progress: (workerStats[0]?.in_progress || 0) + (assignedStats[0]?.in_progress || 0),
-      completed: (workerStats[0]?.completed || 0) + (assignedStats[0]?.completed || 0)
+      completed: (workerStats[0]?.completed || 0) + (assignedStats[0]?.completed || 0),
+      // Also provide fields expected by frontend
+      tasksPending: (workerStats[0]?.pending || 0) + (assignedStats[0]?.pending || 0),
+      tasksInProgress: (workerStats[0]?.in_progress || 0) + (assignedStats[0]?.in_progress || 0),
+      tasksCompleted: (workerStats[0]?.completed || 0) + (assignedStats[0]?.completed || 0),
+      attendanceRate: 100, // Placeholder
+      hoursLogged: 0 // Placeholder
     };
 
     res.json(stats);
@@ -368,8 +389,27 @@ exports.getEmployeeAlerts = async (req, res) => {
     }
 
     console.log(`[getEmployeeAlerts] Final userId: ${userId}`);
-    const alerts = await AlertsNotification.findByUserId(userId);
-    console.log(`[getEmployeeAlerts] Found alerts: ${alerts.length}`);
+    const rawAlerts = await AlertsNotification.findByUserId(userId);
+    console.log(`[getEmployeeAlerts] Found alerts: ${rawAlerts.length}`);
+    
+    // Transform raw alerts to match frontend expectations
+    const alerts = rawAlerts.map(alert => ({
+      id: alert.id,
+      title: alert.alert_type ? alert.alert_type.replace(/_/g, ' ').toUpperCase() : 'Notification',
+      message: alert.message,
+      type: alert.priority === 'high' ? 'error' : alert.priority === 'medium' ? 'warning' : 'info',
+      alertType: alert.alert_type,
+      timestamp: alert.created_at,
+      created_at: alert.created_at,
+      read: !!alert.is_read,
+      is_read: !!alert.is_read,
+      priority: alert.priority,
+      link: alert.link,
+      relatedTable: alert.related_table,
+      relatedId: alert.related_id,
+      sender: alert.sender_name || 'System'
+    }));
+
     res.json(alerts);
   } catch (error) {
     console.error('Get alerts error:', error);

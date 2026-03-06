@@ -51,31 +51,8 @@ const alertsNotificationController = {
       const { userId: inputId } = req.params;
       const { isRead, alertType, priority, limit } = req.query;
 
-      // Resolve userId if it might be an employeeId or a demo username
-      let userId = inputId;
-      try {
-        // Handle demo-username resolution
-        if (isNaN(inputId) && String(inputId).startsWith('demo-')) {
-          const username = String(inputId).replace('demo-', '');
-          const [users] = await pool.execute("SELECT id FROM users WHERE username = ?", [username]);
-          if (users.length > 0) {
-            userId = users[0].id;
-            console.log(`[getUserAlerts] Resolved demo username ${inputId} to userId ${userId}`);
-          }
-        } else {
-          // Handle employeeId resolution
-          const [emps] = await pool.execute("SELECT id, email FROM employees WHERE id = ?", [inputId]);
-          if (emps.length > 0) {
-            const [users] = await pool.execute("SELECT id FROM users WHERE email = ?", [emps[0].email]);
-            if (users.length > 0) {
-              userId = users[0].id;
-              console.log(`[getUserAlerts] Resolved employeeId ${inputId} to userId ${userId}`);
-            }
-          }
-        }
-      } catch (err) {
-        console.warn('[getUserAlerts] ID resolution error:', err.message);
-      }
+      // Resolve userId using robust model logic
+      let userId = await AlertsNotification.resolveUserId(inputId);
 
       const filters = {};
       if (isRead !== undefined) {
@@ -91,13 +68,33 @@ const alertsNotificationController = {
         filters.limit = parseInt(limit);
       }
 
-      // If userId is still non-numeric and doesn't exist in our DB, return empty results
-      if (isNaN(userId) && String(userId).startsWith('demo-')) {
+      // If userId resolution failed and it's not numeric, return empty
+      if (!userId || (isNaN(userId) && String(userId).includes('.'))) {
         return res.json([]);
       }
 
       const alerts = await AlertsNotification.findByUserId(userId, filters);
-      res.json(alerts);
+      
+      // Transform raw alerts to match frontend expectations (especially for NotificationBell)
+      const transformedAlerts = alerts.map(alert => ({
+        ...alert,
+        id: alert.id,
+        title: alert.alert_type ? alert.alert_type.replace(/_/g, ' ').toUpperCase() : 'Notification',
+        message: alert.message,
+        type: alert.priority === 'high' ? 'error' : alert.priority === 'medium' ? 'warning' : 'info',
+        alertType: alert.alert_type,
+        timestamp: alert.created_at,
+        created_at: alert.created_at, // Keep original for groupNotifications
+        read: !!alert.is_read,
+        is_read: !!alert.is_read, // Keep original for filter(n => !n.is_read)
+        priority: alert.priority,
+        link: alert.link,
+        relatedTable: alert.related_table,
+        relatedId: alert.related_id,
+        sender: alert.sender_name || 'System'
+      }));
+
+      res.json(transformedAlerts);
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: 'Error fetching alerts', error: error.message });
@@ -153,17 +150,7 @@ const alertsNotificationController = {
   async getUnreadCount(req, res) {
     try {
       const { userId: inputId } = req.params;
-      // Resolve userId if it might be an employeeId or a demo username
-      let userId = inputId;
-      try {
-        if (isNaN(inputId) && String(inputId).startsWith('demo-')) {
-          const username = String(inputId).replace('demo-', '');
-          const [users] = await pool.execute("SELECT id FROM users WHERE username = ?", [username]);
-          if (users.length > 0) userId = users[0].id;
-        }
-      } catch (err) {
-        console.warn('[getUnreadCount] ID resolution error:', err.message);
-      }
+      let userId = await AlertsNotification.resolveUserId(inputId);
 
       const unreadCount = await AlertsNotification.getUnreadCount(userId);
       res.json({ unreadCount });
@@ -176,17 +163,7 @@ const alertsNotificationController = {
   async getAlertStats(req, res) {
     try {
       const { userId: inputId } = req.params;
-      // Resolve userId if it might be an employeeId or a demo username
-      let userId = inputId;
-      try {
-        if (isNaN(inputId) && String(inputId).startsWith('demo-')) {
-          const username = String(inputId).replace('demo-', '');
-          const [users] = await pool.execute("SELECT id FROM users WHERE username = ?", [username]);
-          if (users.length > 0) userId = users[0].id;
-        }
-      } catch (err) {
-        console.warn('[getAlertStats] ID resolution error:', err.message);
-      }
+      let userId = await AlertsNotification.resolveUserId(inputId);
 
       const stats = await AlertsNotification.getStats(userId);
       res.json(stats);

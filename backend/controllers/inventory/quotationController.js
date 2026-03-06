@@ -1,5 +1,6 @@
 const Quotation = require('../../models/Quotation');
 const Vendor = require('../../models/Vendor');
+const Material = require('../../models/Material');
 const emailService = require('../../services/emailService');
 const QuotationCommunication = require('../../models/QuotationCommunication');
 const RootCardInventoryTask = require('../../models/RootCardInventoryTask');
@@ -91,8 +92,12 @@ exports.analyzeQuotation = async (req, res) => {
     const items = JSON.parse(req.body.items || '[]');
     const file = req.file;
     
-    if (!file || !items || !Array.isArray(items)) {
-      return res.status(400).json({ message: 'File and items are required' });
+    if (!file) {
+      return res.status(400).json({ message: 'File is required' });
+    }
+
+    if (!Array.isArray(items)) {
+      return res.status(400).json({ message: 'Items must be an array' });
     }
 
     console.log(`📄 Analyzing file: ${file.originalname}, Size: ${file.size}, Items: ${items.length}`);
@@ -192,7 +197,17 @@ exports.analyzeQuotation = async (req, res) => {
             }
           });
           
-          cleanContext = cleanContext.replace(/[₹$€£,×x*|:]/g, ' ').replace(/\s+/g, ' ');
+          // Improved cleaning: Remove currency and common table separators
+          // but handle commas carefully (could be thousands separators)
+          let tempContext = cleanContext.replace(/[₹$€£×x*|:]/g, ' ');
+          
+          // Handle commas: if comma is between digits, remove it (assume thousands separator)
+          tempContext = tempContext.replace(/(\d),(\d)/g, '$1$2');
+          
+          // Now replace any remaining commas (not between digits) with space
+          tempContext = tempContext.replace(/,/g, ' ');
+          
+          cleanContext = tempContext.replace(/\s+/g, ' ');
           const numbers = cleanContext.match(/\d+(?:\.\d+)?/g) || [];
           const floats = numbers.map(n => parseFloat(n)).filter(n => n > 0);
           
@@ -243,6 +258,89 @@ exports.analyzeQuotation = async (req, res) => {
         unit_price: extractedPrice !== null ? extractedPrice : 0
       };
     });
+
+    // AUTO-DISCOVERY: Search for any other items from our inventory that might be in the PDF
+    try {
+      const allMaterials = await Material.findAll();
+      const existingCodes = new Set(analyzedItems.map(i => (i.item_code || "").toLowerCase().trim()));
+      
+      const lines = extractedText.split('\n').map(l => l.trim()).filter(l => l.length > 10);
+      
+      for (const material of allMaterials) {
+        const matCode = (material.itemCode || "").toLowerCase().trim();
+        if (!matCode || existingCodes.has(matCode)) continue;
+        
+        const matName = (material.itemName || "").toLowerCase().trim();
+        const normalize = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const normCode = normalize(matCode);
+        const normName = normCode.length > 5 ? normCode : normalize(matName);
+
+        for (const line of lines) {
+          const normLine = normalize(line);
+          if (normLine.includes(normCode) || (normName.length > 8 && normLine.includes(normName))) {
+            // Found a potential match in the PDF for a material we have in DB
+            // Now try to extract Qty and Price from this line
+            
+            let cleanContext = line;
+            [matCode, matName].forEach(s => {
+              if (s) {
+                s.split(/[^a-z0-9]/i).forEach(word => {
+                  if (word.length >= 3 && isNaN(word)) {
+                    const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    cleanContext = cleanContext.replace(new RegExp(escaped, 'gi'), ' ');
+                  }
+                });
+              }
+            });
+
+            let tempContext = cleanContext.replace(/[₹$€£×x*|:]/g, ' ');
+            tempContext = tempContext.replace(/(\d),(\d)/g, '$1$2');
+            tempContext = tempContext.replace(/,/g, ' ');
+            cleanContext = tempContext.replace(/\s+/g, ' ');
+            
+            const numbers = cleanContext.match(/\d+(?:\.\d+)?/g) || [];
+            const floats = numbers.map(n => parseFloat(n)).filter(n => n > 0);
+
+            if (floats.length >= 3) {
+              // Try to find Qty * Price = Total
+              for (let i = 0; i < floats.length; i++) {
+                for (let j = 0; j < floats.length; j++) {
+                  if (i === j) continue;
+                  for (let k = 0; k < floats.length; k++) {
+                    if (k === i || k === j) continue;
+                    
+                    const q = floats[i];
+                    const p = floats[j];
+                    const t = floats[k];
+                    
+                    if (Math.abs(q * p - t) < Math.max(2, t * 0.01)) {
+                      // High confidence match!
+                      analyzedItems.push({
+                        item_code: material.itemCode,
+                        description: material.itemName,
+                        quantity: q,
+                        unit_price: p,
+                        unit: material.unit || "",
+                        material_id: material.id,
+                        auto_discovered: true
+                      });
+                      existingCodes.add(matCode);
+                      break;
+                    }
+                  }
+                  if (existingCodes.has(matCode)) break;
+                }
+                if (existingCodes.has(matCode)) break;
+              }
+            }
+          }
+          if (existingCodes.has(matCode)) break;
+        }
+      }
+    } catch (discoveryError) {
+      console.error('Error during item auto-discovery:', discoveryError);
+      // Don't fail the whole request if discovery fails
+    }
 
     const total_amount = analyzedItems.reduce((sum, item) => sum + (parseFloat(item.quantity) * (parseFloat(item.unit_price) || 0)), 0);
 
@@ -304,82 +402,95 @@ exports.createQuotation = async (req, res) => {
   try {
     const { vendor_id, total_amount, valid_until, items, notes, status, type, reference_id, sales_order_id, root_card_id, material_request_id, document_path } = req.body;
     
-    if (!vendor_id) {
+    // Parse IDs to ensure they are integers for consistency
+    const mrId = material_request_id ? parseInt(material_request_id) : null;
+    const vendorId = vendor_id ? parseInt(vendor_id) : null;
+    const refId = reference_id ? parseInt(reference_id) : null;
+    const rootCardId = (sales_order_id || root_card_id) ? parseInt(sales_order_id || root_card_id) : null;
+
+    if (!vendorId) {
       return res.status(400).json({ message: 'Vendor is required' });
     }
 
-    const vendor = await Vendor.findById(vendor_id);
+    const vendor = await Vendor.findById(vendorId);
     if (!vendor) {
       return res.status(404).json({ message: 'Vendor not found' });
     }
     
     const quotationId = await Quotation.create({
-      vendor_id,
+      vendor_id: vendorId,
       total_amount: total_amount || 0,
       valid_until,
       items: items || [],
       notes,
       status: status || 'pending',
       type: type || 'outbound',
-      reference_id: reference_id || null,
-      sales_order_id: sales_order_id || root_card_id || null,
-      material_request_id: material_request_id || null,
+      reference_id: refId,
+      sales_order_id: rootCardId,
+      material_request_id: mrId,
       document_path: document_path || null
     });
     
+    const userId = req.user ? req.user.id : null;
+
     // If this is an RFQ (type outbound) linked to a material request, mark the workflow task as completed
-    if (material_request_id && (type === 'outbound' || !type)) {
+    if (mrId && (type === 'outbound' || !type)) {
       try {
-        const userId = req.user ? req.user.id : null;
         // Step 2 is "Create RFQ Quotation" in the inventory workflow
-        await RootCardInventoryTask.completeTaskByMRAndStep(material_request_id, 2, userId);
+        await RootCardInventoryTask.completeTaskByMRAndStep(mrId, 2, userId);
         
         // Also set Step 3 "Send Quotation to Vendor" to in_progress if it's pending
-        const tasks = await RootCardInventoryTask.getTasksByMaterialRequestId(material_request_id);
+        const tasks = await RootCardInventoryTask.getTasksByMaterialRequestId(mrId);
         const step3Task = tasks.find(t => t.step_number === 3);
         if (step3Task && step3Task.status === 'pending') {
           await RootCardInventoryTask.updateTaskStatus(step3Task.id, 'in_progress', userId);
         }
         
-        console.log(`[Quotation] Automatically completed "Create RFQ Quotation" task for MR ${material_request_id}`);
+        console.log(`[Quotation] Automatically completed "Create RFQ Quotation" task for MR ${mrId}`);
       } catch (err) {
         console.error('Error updating workflow task for quotation:', err);
       }
     }
     
     // If this is an inbound response to an outbound RFQ, update the original RFQ status
-    if (type === 'inbound' && reference_id) {
+    if (type === 'inbound' && refId) {
       try {
-        await Quotation.changeStatus(reference_id, 'responded');
+        await Quotation.changeStatus(refId, 'responded');
         
         // If linked to a material request, mark "Receive Vendor Quotation" task as completed
-        if (material_request_id) {
-          const userId = req.user ? req.user.id : null;
+        if (mrId) {
           // Step 4 is "Receive Vendor Quotation" in the inventory workflow
-          await RootCardInventoryTask.completeTaskByMRAndStep(material_request_id, 4, userId);
+          await RootCardInventoryTask.completeTaskByMRAndStep(mrId, 4, userId);
           
           // Also set Step 5 "Create Purchase Order" to in_progress if it's pending
-          const tasks = await RootCardInventoryTask.getTasksByMaterialRequestId(material_request_id);
+          const tasks = await RootCardInventoryTask.getTasksByMaterialRequestId(mrId);
           const step5Task = tasks.find(t => t.step_number === 5);
           if (step5Task && step5Task.status === 'pending') {
             await RootCardInventoryTask.updateTaskStatus(step5Task.id, 'in_progress', userId);
           }
-          console.log(`[Quotation] Automatically completed "Receive Vendor Quotation" task for MR ${material_request_id}`);
+          console.log(`[Quotation] Automatically completed "Receive Vendor Quotation" task for MR ${mrId}`);
+        }
+        
+        // Always sync workflow after creating inbound quotation
+        if (mrId) {
+          await RootCardInventoryTask.syncMRWorkflow(mrId);
         }
       } catch (e) {
         console.error('Error updating original RFQ status or workflow task:', e);
       }
-    } else if (type === 'inbound' && material_request_id) {
+    } else if (type === 'inbound' && mrId) {
       // Direct inbound record without reference_id
       try {
-        const userId = req.user ? req.user.id : null;
-        await RootCardInventoryTask.completeTaskByMRAndStep(material_request_id, 4, userId);
+        await RootCardInventoryTask.completeTaskByMRAndStep(mrId, 4, userId);
         
-        const tasks = await RootCardInventoryTask.getTasksByMaterialRequestId(material_request_id);
+        const tasks = await RootCardInventoryTask.getTasksByMaterialRequestId(mrId);
         const step5Task = tasks.find(t => t.step_number === 5);
         if (step5Task && step5Task.status === 'pending') {
           await RootCardInventoryTask.updateTaskStatus(step5Task.id, 'in_progress', userId);
         }
+
+        // Always sync workflow after creating inbound quotation
+        await RootCardInventoryTask.syncMRWorkflow(mrId);
       } catch (e) {
         console.error('Error updating workflow task for direct inbound quotation:', e);
       }
@@ -444,6 +555,12 @@ exports.approveQuotation = async (req, res) => {
     }
     
     await Quotation.changeStatus(id, 'approved');
+    
+    // Sync workflow if linked to a material request
+    if (quotation.material_request_id) {
+      await RootCardInventoryTask.syncMRWorkflow(quotation.material_request_id);
+    }
+
     const updatedQuotation = await Quotation.findById(id);
     if (updatedQuotation && updatedQuotation.items && typeof updatedQuotation.items === 'string') {
       updatedQuotation.items = JSON.parse(updatedQuotation.items);
@@ -491,6 +608,12 @@ exports.updateQuotationStatus = async (req, res) => {
     }
     
     await Quotation.changeStatus(id, status);
+
+    // Sync workflow if linked to a material request
+    if (quotation.material_request_id) {
+      await RootCardInventoryTask.syncMRWorkflow(quotation.material_request_id);
+    }
+
     const updatedQuotation = await Quotation.findById(id);
     if (updatedQuotation && updatedQuotation.items && typeof updatedQuotation.items === 'string') {
       updatedQuotation.items = JSON.parse(updatedQuotation.items);

@@ -137,14 +137,21 @@ const JobCardsPage = () => {
       const flattened = [];
       orders.forEach(wo => {
         if (wo.operations && Array.isArray(wo.operations)) {
-          wo.operations.forEach(op => {
+          // Sort operations by sequence if available, otherwise by ID
+          const sortedOps = [...wo.operations].sort((a, b) => (a.sequence || a.id) - (b.sequence || b.id));
+          
+          // Find the first operation that is not completed
+          const firstIncompleteOp = sortedOps.find(op => op.status !== 'completed');
+          
+          sortedOps.forEach(op => {
             flattened.push({
               ...op,
               work_order_no: wo.work_order_no,
               work_order_item: wo.item_name,
-              work_order_qty: wo.quantity,
+              work_order_full_qty: wo.quantity,
               is_material_ready: wo.is_material_ready,
-              sales_order_no: wo.sales_order_no
+              sales_order_no: wo.sales_order_no,
+              is_current_op: firstIncompleteOp ? firstIncompleteOp.id === op.id : false
             });
           });
         }
@@ -491,7 +498,7 @@ const JobCardsPage = () => {
                       {/* Qty To Man */}
                       <div className="col-span-1 text-center">
                         <div className="text-[12px] font-black text-slate-700">
-                          {parseFloat(op.work_order_qty).toFixed(2)}
+                          {parseFloat(op.quantity || 0).toFixed(2)}
                         </div>
                         <div className="text-[9px] text-slate-400 font-medium">units</div>
                       </div>
@@ -543,17 +550,27 @@ const JobCardsPage = () => {
                           <>
                             {!op.outward_challan_id ? (
                               <button
-                                onClick={() => handleOpenChallanModal(op, { id: op.work_order_id, work_order_no: op.work_order_no, quantity: op.work_order_qty })}
-                                className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
-                                title="Vendor Dispatch (Outward Challan)"
+                                onClick={() => op.is_current_op && handleOpenChallanModal(op, { id: op.work_order_id, work_order_no: op.work_order_no, quantity: op.work_order_qty })}
+                                disabled={!op.is_current_op}
+                                className={`p-1.5 rounded-lg transition-all ${
+                                  op.is_current_op 
+                                  ? 'text-slate-400 hover:text-indigo-600 hover:bg-indigo-50' 
+                                  : 'text-slate-200 cursor-not-allowed opacity-50'
+                                }`}
+                                title={op.is_current_op ? "Vendor Dispatch (Outward Challan)" : "Complete previous operations first"}
                               >
                                 <Truck size={16} />
                               </button>
                             ) : (
                               <button
-                                onClick={() => handleOpenInwardModal(op, { id: op.work_order_id, work_order_no: op.work_order_no, quantity: op.work_order_qty })}
-                                className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
-                                title="Vendor Receipt (Inward Challan)"
+                                onClick={() => op.is_current_op && handleOpenInwardModal(op, { id: op.work_order_id, work_order_no: op.work_order_no, quantity: op.work_order_qty })}
+                                disabled={!op.is_current_op}
+                                className={`p-1.5 rounded-lg transition-all ${
+                                  op.is_current_op 
+                                  ? 'text-emerald-600 hover:bg-emerald-50' 
+                                  : 'text-slate-200 cursor-not-allowed opacity-50'
+                                }`}
+                                title={op.is_current_op ? "Vendor Receipt (Inward Challan)" : "Complete previous operations first"}
                               >
                                 <Box size={16} />
                               </button>
@@ -563,21 +580,27 @@ const JobCardsPage = () => {
 
                         {op.status === 'in_progress' || op.status === 'completed' ? (
                           <button
-                            onClick={() => navigate(`/department/production/operations/${op.id}/entry`)}
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                            title="Production Entry"
+                            onClick={() => (op.status === 'completed' || op.is_current_op) && navigate(`/department/production/operations/${op.id}/entry`)}
+                            disabled={op.status !== 'completed' && !op.is_current_op}
+                            className={`p-2 rounded-lg transition-all ${
+                              (op.status === 'completed' || op.is_current_op)
+                              ? 'text-blue-600 hover:bg-blue-50'
+                              : 'text-slate-200 cursor-not-allowed opacity-50'
+                            }`}
+                            title={op.status === 'completed' ? "Production Entry (Completed)" : op.is_current_op ? "Production Entry" : "Complete previous operations first"}
                           >
                             <Zap size={18} fill="currentColor" />
                           </button>
                         ) : (
                           <button
-                            onClick={() => op.is_material_ready && handleStartOperation(op)}
-                            disabled={!op.is_material_ready}
-                            className={`p-2 rounded-lg transition-all ${op.is_material_ready
+                            onClick={() => op.is_material_ready && op.is_current_op && handleStartOperation(op)}
+                            disabled={!op.is_material_ready || !op.is_current_op}
+                            className={`p-2 rounded-lg transition-all ${
+                              op.is_material_ready && op.is_current_op
                                 ? 'text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50'
-                                : 'text-slate-200 cursor-not-allowed'
+                                : 'text-slate-200 cursor-not-allowed opacity-50'
                               }`}
-                            title="Start Operation"
+                            title={!op.is_material_ready ? "Materials Pending" : op.is_current_op ? "Start Operation" : "Complete previous operations first"}
                           >
                             <Play size={18} fill="currentColor" />
                           </button>
@@ -591,9 +614,14 @@ const JobCardsPage = () => {
                           <Edit2 size={18} />
                         </button>
                         <button
-                          onClick={() => handleDeleteOperation(op.id)}
-                          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                          title="Delete Operation"
+                          onClick={() => op.is_current_op && handleDeleteOperation(op.id)}
+                          disabled={!op.is_current_op && op.status !== 'completed'}
+                          className={`p-2 rounded-lg transition-all ${
+                            op.is_current_op || op.status === 'completed'
+                            ? 'text-slate-400 hover:text-red-600 hover:bg-red-50'
+                            : 'text-slate-200 cursor-not-allowed opacity-50'
+                          }`}
+                          title={op.is_current_op || op.status === 'completed' ? "Delete Operation" : "Complete previous operations first"}
                         >
                           <Trash2 size={18} />
                         </button>
