@@ -13,6 +13,37 @@ import axios from "../../../../utils/api";
 import Swal from "sweetalert2";
 import { showSuccess, showError } from "../../../../utils/toastUtils";
 
+const UOM_OPTIONS = [
+  "Acre", "Acre (US)", "Are", "Area", "Arshin", "Atmosphere", "Bar", "Barleycorn", "Barrel (Oil)", "Barrel(Beer)", 
+  "Box", "Btu (It)", "Btu (Mean)", "Btu (Th)", "Btu/Hour", "Btu/Minutes", "Btu/Seconds", "Bushel (UK)", 
+  "Bushel (US Dry Level)", "Caballeria", "Cable Length", "Cable Length (UK)", "Cable Length (US)", "Calibre", 
+  "Calorie (Food)", "Calorie (It)", "Calorie (Mean)", "Calorie (Th)", "Calorie/Seconds", "Carat", "Cental", 
+  "Centiarea", "Centigram/Litre", "Centilitre", "Centimeter", "Chain", "Cubic Centimeter", "Cubic Decimeter", 
+  "Cubic Foot", "Cubic Inch", "Cubic Meter", "Cubic Millimeter", "Cubic Yard", "Cup", "Day", "Decigram/Litre", 
+  "Decilitre", "Decimeter", "Dekagram/Litre", "Dram", "Dyne", "Ells (UK)", "Ems(Pica)", "Erg", "Fathom", 
+  "Fluid Ounce (UK)", "Fluid Ounce (US)", "Foot", "Foot Of Water", "Foot/Minute", "Foot/Second", "Furlong", 
+  "Gallon (UK)", "Gallon Dry (US)", "Gallon Liquid (US)", "Grain", "Grain/Cubic Foot", "Grain/Gallon (UK)", 
+  "Grain/Gallon (US)", "Gram", "Gram-Force", "Gram/Cubic Centimeter", "Gram/Cubic Meter", "Gram/Cubic Millimeter", 
+  "Gram/Litre", "Hand", "Hect hectare", "Hectogram/Litre", "Hectometer", "Hectopascal", "Horsepower", 
+  "Horsepower-Hours", "Hour", "Hundredweight (UK)", "Hundredweight (US)", "Inch", "Inch Pound-Force", 
+  "Inch/Minute", "Inch/Second", "Inches Of Mercury", "Inches Of Water", "Joule", "Joule/Meter", "Kg", 
+  "Kilocalorie", "Kilogram-Force", "Kilogram/Cubic Centimeter", "Kilogram/Cubic Meter", "Kilogram/Litre", 
+  "Kilojoule", "Kilometer", "Kilometer/Hour", "Kilopascal", "Kilopond", "Kilopound-Force", "Kilowatt", 
+  "Kilowatt-Hour", "Kip", "Knot", "Link", "Litre", "Litre-Atmosphere", "Manzana", "Medio Metro", "Megagram/Litre", 
+  "Megajoule", "Megawatt", "Meter", "Meter Of Water", "Meter/Second", "Microbar", "Microgram", "Microgram/Litre", 
+  "Micrometer", "Microsecond", "Mile", "Mile (Nautical)", "Mile/Hour", "Mile/Minute", "Mile/Second", "Millibar", 
+  "Milligram", "Milligram/Cubic Centimeter", "Milligram/Cubic Meter", "Milligram/Cubic Millimeter", "Milligram/Litre", 
+  "Millilitre", "Millimeter", "Millimeter Of Mercury", "Millimeter Of Water", "Millisecond", "Minute", 
+  "Nanogram/Litre", "Nanometer", "Nanosecond", "Newton", "Nos", "Ounce", "Ounce-Force", "Ounce/Cubic Foot", 
+  "Ounce/Cubic Inch", "Ounce/Gallon (UK)", "Ounce/Gallon (US)", "Pair", "Pascal", "Peck", "Pint (UK)", 
+  "Pint, Dry (US)", "Pint, Liquid (US)", "Pond", "Pood", "Pound", "Pound-Force", "Pound/Cubic Foot", 
+  "Pound/Cubic Inch", "Pound/Cubic Yard", "Pound/Gallon (UK)", "Pound/Gallon (US)", "Poundal", "Quart (UK)", 
+  "Quart Dry (US)", "Quart Liquid (US)", "Quintal", "Rod", "Sazhen", "Second", "Set", "Slug", "Square Centimeter", 
+  "Square Foot", "Square Inch", "Square Kilometer", "Square Meter", "Square Mile", "Square Yard", "Stone", 
+  "Tablespoon (US)", "Teaspoon", "Technical Atmosphere", "Ton-Force (UK)", "Ton-Force (US)", "Tonne", 
+  "Tonne-Force(Metric)", "Torr", "Unit", "Vara", "Versta", "Volt-Ampere", "Watt", "Watt-Hour", "Week", "Yard"
+].sort().map(unit => ({ value: unit, label: unit }));
+
 export default function Step3_MaterialRequirement({ readOnly = false }) {
   const { formData, updateField } = useFormData();
   const { state } = useRootCardContext();
@@ -604,12 +635,7 @@ export default function Step3_MaterialRequirement({ readOnly = false }) {
                     label="Default UOM *"
                     value={newItem.unit}
                     onChange={(value) => setNewItem({...newItem, unit: value})}
-                    options={[
-                      { value: "Nos", label: "Nos" },
-                      { value: "kg", label: "kg" },
-                      { value: "meters", label: "meters" },
-                      { value: "Set", label: "Set" }
-                    ]}
+                    options={UOM_OPTIONS}
                     allowCustom={true}
                     placeholder="Select or type UOM"
                   />
@@ -646,11 +672,7 @@ export default function Step3_MaterialRequirement({ readOnly = false }) {
                     label="Weight UOM"
                     value={newItem.weightUom}
                     onChange={(value) => setNewItem({...newItem, weightUom: value})}
-                    options={[
-                      { value: "kg", label: "kg" },
-                      { value: "gm", label: "gm" },
-                      { value: "ton", label: "ton" }
-                    ]}
+                    options={UOM_OPTIONS}
                     allowCustom={true}
                     placeholder="Select or type weight UOM"
                   />
